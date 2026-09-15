@@ -11,6 +11,7 @@ Chacun fabrique son île, la publie à son adresse, et va marcher sur celle des 
     src/store.js        seule couche qui parle à Supabase
     supabase/schema.sql tables, RLS, vue archipel — idempotent
     _redirects          Cloudflare Pages : catch-all, toute adresse sert index.html
+    build.sh            copie dans dist/ les seuls fichiers à publier
 
 Pas de build : ce sont des modules ES servis tels quels.
 
@@ -68,13 +69,23 @@ lu que par Cloudflare Pages. Seule la racine est testable ainsi.
 ## Déploiement
 
 Projet Pages **dansisland**, branche de production `main`, compte
-`simon@sababa.be`. Déploiement par upload direct — pas de build, pas d'intégration Git.
+`simon@sababa.be`.
 
-On ne pousse que les quatre fichiers du site : ni le schéma, ni les notes
-internes n'ont à être publics.
+`build.sh` prépare `dist/` avec les **quatre fichiers du site** et rien
+d'autre : ni `supabase/schema.sql`, ni `CLAUDE.md`, ni ce README n'ont à être
+servis publiquement. C'est le seul rôle du build — il n'y a toujours rien à
+compiler, ce sont des modules ES.
+
+Réglages de l'intégration Git, côté Cloudflare :
+
+    Build command       bash build.sh
+    Output directory    dist
+    Production branch   main
+
+Déploiement à la main, si besoin :
 
 ```bash
-D=$(mktemp -d) && mkdir -p "$D/src" && cp index.html _redirects "$D/" && cp src/*.js "$D/src/" && npx wrangler pages deploy "$D" --project-name dansisland --branch main
+./build.sh && npx wrangler pages deploy dist --project-name dansisland --branch main
 ```
 
 Après le déploiement, dans **Auth → URL Configuration** : Site URL sur
