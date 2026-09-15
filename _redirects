@@ -1,0 +1,3 @@
+# Cloudflare Pages : toutes les adresses d'îles sont servies par la même page.
+# Les fichiers réels (src/*.js) sont servis avant cette règle.
+/*    /index.html   200
