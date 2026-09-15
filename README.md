@@ -2,13 +2,15 @@
 
 Chacun fabrique son île, la publie à son adresse, et va marcher sur celle des autres.
 
+**En ligne : https://dansisland.pages.dev**
+
 ## Ce qu'il y a dans le dossier
 
     index.html          l'app entière (moteur isométrique + éditeur + panneaux)
-    src/config.js       URL et clé anon Supabase
+    src/config.js       URL et clé publishable Supabase
     src/store.js        seule couche qui parle à Supabase
     supabase/schema.sql tables, RLS, vue archipel — idempotent
-    _redirects          Cloudflare Pages : /dan et /simon servent index.html
+    _redirects          Cloudflare Pages : catch-all, toute adresse sert index.html
 
 Pas de build : ce sont des modules ES servis tels quels.
 
@@ -27,28 +29,57 @@ l'ancienne `anon` : Supabase ne propose plus les clés legacy sur les nouveaux
 projets. C'est pour ça que `store.js` charge `@supabase/supabase-js@2` et non une
 version épinglée plus ancienne — les clés publishable ne sont pas gérées avant 2.49.
 
-## Reste à faire
+## État
 
-1. Exécuter `supabase/schema.sql` dans l'éditeur SQL (voir lien ci-dessus).
-   Vérification : la requête ci-dessous doit répondre 200 et non 404.
+Le schéma est appliqué, le site est déployé, les URLs d'auth pointent sur le
+domaine public. Vérifié en production : création de compte, création d'île,
+vue `archipel`, et les pages d'île (`/simon`) en mode visiteur.
 
-       curl -s -o /dev/null -w "%{http_code}\n" \
-         "https://cgputbitzfgokpwbbind.supabase.co/rest/v1/archipel?select=slug&limit=1" \
-         -H "apikey: sb_publishable_3V1nUy5JTTqXw2CfGdFtrQ_3VG0iIP2"
+Deux choses ne sont pas encore éprouvées :
 
-2. Dans Auth → URL Configuration, mettre `http://localhost:8080` en Site URL
-   pour tester en local, puis le vrai domaine au déploiement. Sans ça le lien
-   magique renvoie vers `localhost:3000`.
-3. Déployer sur Cloudflare Pages (le dossier tel quel, `_redirects` fait le reste).
+- **Le livre d'or.** Aucun mot en base. Planter un mot chez soi valide
+  l'écriture ; il faut un second compte pour vérifier qu'un visiteur ne voit
+  pas les mots masqués.
+- **Le lien magique en conditions réelles.** Le SMTP par défaut de Supabase
+  est limité à 2 envois par heure — inutilisable au-delà d'une poignée de
+  testeurs. Brancher un vrai SMTP avant d'ouvrir à du monde.
 
-## Mise en route
+### Pas de renommage de slug dans l'app
 
-1. Coller `supabase/schema.sql` dans l'éditeur SQL Supabase.
-2. Renseigner `SUPABASE_ANON_KEY` dans `src/config.js`.
-3. Dans Supabase → Authentication → URL Configuration, ajouter le domaine
-   en Site URL et en Redirect URL.
-4. Servir le dossier : `python3 -m http.server 8080` (les adresses d'îles
-   ne marchent qu'une fois déployé, `_redirects` n'existe que sur Pages).
+Une fois l'île créée, le panneau bascule sur « copier le lien » : l'adresse
+n'est plus modifiable depuis l'interface. Ça se fait en SQL.
+
+```sql
+update public.iles set slug = 'nouveau' where slug = 'ancien';
+```
+
+## Mise en route en local
+
+1. Servir le dossier :
+
+       python3 -m http.server 8080
+
+2. Garder `http://localhost:8080` dans les **Redirect URLs** Supabase, sinon
+   le retour du lien magique est refusé.
+
+Les adresses d'îles (`/simon`) renvoient un 404 en local : `_redirects` n'est
+lu que par Cloudflare Pages. Seule la racine est testable ainsi.
+
+## Déploiement
+
+Projet Pages **dansisland**, branche de production `main`, compte
+`simon@sababa.be`. Déploiement par upload direct — pas de build, pas d'intégration Git.
+
+On ne pousse que les quatre fichiers du site : ni le schéma, ni les notes
+internes n'ont à être publics.
+
+```bash
+D=$(mktemp -d) && mkdir -p "$D/src" && cp index.html _redirects "$D/" && cp src/*.js "$D/src/" && npx wrangler pages deploy "$D" --project-name dansisland --branch main
+```
+
+Après le déploiement, dans **Auth → URL Configuration** : Site URL sur
+`https://dansisland.pages.dev`, et `https://dansisland.pages.dev/**` dans les
+Redirect URLs — le `/**` est nécessaire pour revenir sur une adresse d'île.
 
 ## Modèle
 
@@ -56,8 +87,17 @@ Une ligne par île. Tout le monde du jeu tient dans `iles.monde` (jsonb) :
 `tiles` (144 chiffres), `house`, `objects`, `me`, `pal`, `sky`.
 Les mots du livre d'or vivent à part, dans `mots`, pour être modérables un par un.
 
-La RLS est la seule protection : la clé anon est publique par construction.
+La RLS est la seule protection : la clé publishable est publique par construction.
 Ne jamais mettre la `service_role` dans `src/`.
+
+`iles.proprietaire` porte **deux** clés étrangères : vers `auth.users` et vers
+`profils`. La seconde n'est pas redondante — PostgREST ne traverse pas le schéma
+`auth`, et sans lien direct dans `public` l'embed `profils:proprietaire(pseudo)`
+de `chargerIle()` échoue en `PGRST200`.
+
+De même, `slug_libre()` doit refuser exactement ce que refusent les contraintes
+`iles_slug_forme` et `iles_slug_reserve` : si les listes divergent, le client
+annonce « libre » un slug que l'insert va rejeter.
 
 ## Sauvegarde
 
