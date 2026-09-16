@@ -660,32 +660,48 @@ function couleurSolConnu(k){ return SOLS.some(s=>s[0]===k); }
 const MEUBLE_NOMS={}; MEUBLE_GROUPS.forEach(g=>g[1].forEach(m=>{ MEUBLE_NOMS[m[0]]=m[1]; }));
 
 /* ================= l'économie =================
-   Deux clés dans le jsonb, `bourse` et `achats`, et rien en SQL. C'est la
-   même règle que l'intérieur : la donnée voyage avec l'île.
+   **La bourse n'est plus dans le jsonb.** Elle a sa table, `bourses`, que
+   la RLS laisse lire à son propriétaire et que personne ne peut écrire :
+   seules des fonctions `security definer` la modifient, et c'est le
+   serveur qui dit quel jour on est. Voir
+   `supabase/2026-09-16_bourse_serveur.sql`.
 
-   Le point à ne pas se cacher : **c'est l'honnêteté qui protège la caisse,
-   pas la base.** Le client écrit sa propre bourse, la console d'un
-   navigateur rend millionnaire en trente secondes, et avancer l'horloge du
-   téléphone refait les corvées du jour. Entre enfants qui se connaissent,
-   ça n'a aucune importance. Le jour où ça comptera, la réponse n'est pas un
-   contrôle de plus ici : c'est une fonction Postgres qui crédite et une
-   policy RLS qui interdit d'écrire `bourse` à la main. Donc du SQL, une
-   migration, et le serveur juge du temps.
+   Il a fallu le faire avant les visites payantes, pas après : une visite
+   crédite **quelqu'un d'autre** que celui qui joue. Un compte qui peut
+   s'écrire lui-même peut aussi écrire celui du voisin, et là ce n'est plus
+   de la triche solitaire.
 
-   La règle du jeu, elle, ne bouge pas : l'île grandit parce que des gens
-   sont passés. Une économie faite seulement de corvées la contredirait, et
-   c'est pour ça que la tonte est plafonnée par jour — de quoi voir un
-   compteur monter, pas de quoi s'enrichir seul en boucle. Les visites et
-   les trouvailles, qui rebranchent la bourse sur l'archipel, viendront
-   après. */
+   Ce qui suit n'est donc qu'un **miroir** de la ligne en base. On l'avance
+   tout de suite pour que le « +1 shell » tombe avec le geste, et le
+   serveur tranche juste après ; en jeu normal les deux disent la même
+   chose, et s'ils divergent c'est le serveur qui a raison.
+
+   Ce que le serveur ne peut pas faire, et il faut le dire : il ne voit pas
+   l'île. Quand le client annonce « j'ai tondu une touffe », personne ne
+   peut le contredire. Ce qui borne la triche, c'est le plafond du jour,
+   pas la preuve du geste. Les visites, elles, sont vérifiables de bout en
+   bout : c'est une ligne de `mots` qui déclenche le crédit, et le
+   bénéficiaire n'est pas celui qui appelle.
+
+   Tant que la migration n'est pas passée, ou hors ligne, ou sans compte,
+   le miroir vit seul dans `localStorage` : c'est ce qui fait que l'île de
+   démonstration reste jouable. Rien de ce qui s'y gagne ne remonte. */
 const SHELL0=10;                 // de quoi ouvrir la boutique le premier jour
 const POUSSE_MAX=8;              // touffes présentes au plus, d'un seul coup
 const GAIN_TONTE=1;              // par touffe
 const GAIN_BALADE=5;             // le tour de l'île avec le chien
-// Shells par jour et par corvée. `promenade` vaut exactement son gain :
-// le tour de l'île paie une fois par jour, et se refait autant qu'on veut.
-const PLAFOND={tonte:8, promenade:GAIN_BALADE};
+// Shells par jour et par gain. `promenade` vaut exactement son gain : le
+// tour de l'île paie une fois par jour, et se refait autant qu'on veut.
+// **Les vrais plafonds sont en SQL** (`plafond()`), et `chargerCatalogue()`
+// vient les recopier ici au chargement. Ceux-ci ne servent qu'à écrire
+// « il te reste 3 shells à gagner » avant la réponse, et hors ligne.
+const PLAFOND={tonte:8, promenade:GAIN_BALADE, mot_pose:10, mot_recu:25};
 const CADEAU_BASE=3;             // le cadeau du jour, avant la série
+// Les visites payantes. Laisser un mot chez quelqu'un rapporte 2 shells,
+// en recevoir un en rapporte 5 — et c'est le trigger `mots_credite` qui
+// crédite, jamais un appel du client. Ces deux nombres ne sont ici que
+// pour l'affichage, et `chargerCatalogue()` va chercher les vrais.
+let GAIN_MOT_POSE=2, GAIN_MOT_RECU=5;
 // Le catalogue. `ou` dit dans quel atelier l'objet réapparaît une fois
 // acheté : c'est la seule chose qui distingue un objet d'île d'un meuble.
 const BOUTIQUE=[
@@ -730,13 +746,22 @@ function shellsDe(b){
   const v = Number.isFinite(b.shells) ? b.shells : b.pieces;
   return Number.isFinite(v) ? Math.max(0,Math.floor(v)) : SHELL0;
 }
-// Une île d'avant l'économie reçoit une bourse pleine du premier jour ; une
-// île qui en a une la garde telle quelle.
+// Vrai dès que la base a répondu une fois : à partir de là, c'est elle qui
+// tient la bourse, et le miroir local n'est plus qu'un affichage.
+let bourseServeur=false;
+// Le dernier jour connu du serveur. Sert à reconnaître un jour qui tourne
+// sans confondre avec le tout premier chargement.
+let bourseJourVu='';
+// Hors ligne, sans compte, ou avant la migration : la bourse tient toute
+// seule dans le navigateur. Elle a sa propre clé et ne se mélange jamais à
+// celle du serveur.
+const BOURSE_LOCALE='dansisland:bourse';
+
+// Une île sans bourse en reçoit une du premier jour. L'ancienne clé
+// `pieces` se relit encore : `interieur.pieces`, ce sont les salles.
 function normaliserEconomie(w){
-  const b=(w.bourse&&typeof w.bourse==='object')?w.bourse:null;
+  const b=(w.bourse&&typeof w.bourse==='object') ? w.bourse : null;
   w.bourse={
-    // `pieces` était le nom de la veille : une bourse d'hier se relit, et
-    // `interieur.pieces` (les salles) cesse d'être un homonyme.
     shells: shellsDe(b),
     jour:   (b&&b.jour) ? String(b.jour) : aujourdhui(),
     faits:  (b&&b.faits&&typeof b.faits==='object') ? b.faits : {},
@@ -745,21 +770,46 @@ function normaliserEconomie(w){
     serie:  (b&&Number.isFinite(b.serie)) ? Math.max(0,Math.floor(b.serie)) : 0
   };
   // Un achat dont l'objet n'existe plus au catalogue n'a plus de sens.
-  w.achats=Array.isArray(w.achats) ? w.achats.filter(k=>VERROU[k]) : [];
-  // Un objet libre hier, payant aujourd'hui : l'île qui en porte déjà un le
-  // garde. Sans ça, le phare posé la semaine dernière reste sur l'île mais
-  // son pinceau disparaît de l'atelier, et ça ressemble à une panne.
-  // Les souvenirs (`de`) ne comptent pas : sinon une visite chez un ami
-  // débloquerait la boutique et la boutique ne servirait plus à rien.
-  const offrir=k=>{ if(VERROU[k] && w.achats.indexOf(k)<0) w.achats.push(k); };
-  (w.objects||[]).forEach(o=>{ if(!o.de) offrir(o.t); });
-  const sal=w.interieur&&w.interieur.pieces;
-  if(sal) Object.keys(sal).forEach(q=>(sal[q].meubles||[]).forEach(m=>offrir(m.t)));
+  w.achats = Array.isArray(w.achats) ? w.achats.filter(k=>VERROU[k]) : [];
+  // Le cadeau d'un objet devenu payant à qui en avait déjà un posé était
+  // fait ici, à chaque chargement. C'est une reprise d'historique : elle
+  // se fait une fois, dans la migration, du côté qui tient les achats.
   return w;
+}
+function bourseLocale(){
+  try{ return JSON.parse(localStorage.getItem(BOURSE_LOCALE)||'null'); }catch(e){ return null; }
+}
+// La bourse du navigateur, pour qui joue sans compte. Lue une fois au
+// démarrage, elle ne sert plus dès que la base répond — et la réponse de
+// la base l'écrase, jamais l'inverse.
+function relireBourseLocale(){
+  const l=bourseLocale(); if(!l) return;
+  mine.bourse={ shells:shellsDe(l), jour:l.jour||aujourdhui(),
+                faits:(l.faits&&typeof l.faits==='object')?l.faits:{},
+                pousse:l.pousse||'', cadeau:l.cadeau||'', serie:Math.max(0,l.serie|0) };
+  mine.achats=Array.isArray(l.achats)?l.achats.filter(k=>VERROU[k]):[];
+}
+function garderBourseLocale(){
+  if(bourseServeur) return;         // la base est la source, rien à doubler
+  try{ localStorage.setItem(BOURSE_LOCALE,
+    JSON.stringify(Object.assign({},mine.bourse,{achats:mine.achats}))); }catch(e){}
+}
+// La ligne qui revient de la base remplace le miroir, sans discussion.
+function appliquerBourse(r){
+  if(!r) return;
+  bourseServeur=true; bourseJourVu=r.jour||'';
+  mine.bourse={ shells:Math.max(0,r.shells|0), jour:r.jour||aujourdhui(),
+                faits:(r.faits&&typeof r.faits==='object')?r.faits:{},
+                pousse:r.pousse||'', cadeau:r.cadeau||'', serie:r.serie|0 };
+  mine.achats=Array.isArray(r.achats)?r.achats.filter(k=>VERROU[k]):[];
+  buildAll();
 }
 // Un objet du catalogue ne s'affiche dans l'atelier qu'une fois acheté ;
 // tout le reste passe toujours.
 function achete(k){ return !VERROU[k] || (mine.achats||[]).indexOf(k)>=0; }
+// On avance le miroir tout de suite — le « +1 shell » doit tomber avec le
+// geste — et on demande au serveur juste après. S'il refuse, sa réponse
+// écrase le miroir : c'est lui qui a raison, pas l'écran.
 function gagner(n,quoi){
   const b=mine.bourse;
   if(quoi){
@@ -767,7 +817,10 @@ function gagner(n,quoi){
     if(f>=p) return 0;
     n=Math.min(n,p-f); b.faits[quoi]=f+n;
   }
-  b.shells+=n; return n;
+  b.shells+=n;
+  if(n&&quoi&&bourseServeur) store.bourseGagner(quoi,n).then(appliquerBourse).catch(()=>{});
+  else garderBourseLocale();
+  return n;
 }
 
 /* ---- la tonte ----
@@ -809,16 +862,32 @@ function fairePousser(){
 // passer. Deux marqueurs et non un : `jour` borne les gains, `pousse` borne
 // la repousse. Sans le second, une île ouverte aujourd'hui n'aurait sa
 // première touffe que demain.
-function reveiller(){
+async function reveiller(){
+  // Avec un compte et une île, c'est le serveur qui dit quel jour on est.
+  // Avancer l'horloge du téléphone ne refait plus les corvées de la veille.
+  if(store.configure && moi && ileId){
+    try{
+      const avant=bourseJourVu;
+      appliquerBourse(await store.bourseDuJour());
+      const veille = avant && avant!==bourseJourVu;
+      let n=0;
+      if(mine.bourse.pousse!==mine.bourse.jour && await store.bourseRepousse()){
+        n=fairePousser(); if(n){ saveMine(); buildAll(); }
+      }
+      // Le tout premier chargement se tait : le message d'accueil vient de
+      // s'afficher, et le rayer aussitôt n'apprend rien à personne.
+      if(veille) say('<b>Un jour nouveau.</b> Ton cadeau t’attend dans la <b>Boutique</b>'+
+        (n ? (', et '+n+' touffe'+(n>1?'s':'')+' ont repoussé.') : '.'));
+      return;
+    }catch(e){ /* migration pas encore passée, ou hors ligne : bourse locale */ }
+  }
   const j=aujourdhui(), b=mine.bourse;
   const veille=b.jour!==j, premiere=!b.pousse;
   let bouge=false, n=0;
   if(veille){ b.jour=j; b.faits={}; bouge=true; }
   if(b.pousse!==j){ b.pousse=j; n=fairePousser(); bouge=true; }
   if(!bouge) return;
-  saveMine(); buildAll();
-  // Le tout premier chargement se tait : le message d'accueil vient de
-  // s'afficher, et le rayer aussitôt n'apprend rien à personne.
+  garderBourseLocale(); saveMine(); buildAll();
   if(veille && !premiere)
     say('<b>Un jour nouveau.</b> Ton cadeau t’attend dans la <b>Boutique</b>'+
         (n ? (', et '+n+' touffe'+(n>1?'s':'')+' ont repoussé.') : '.'));
@@ -989,6 +1058,7 @@ if(brouillon&&brouillon.monde){
 mine.mots=mine.mots||[];
 normaliserInterieur(mine);   // une île neuve ne passe pas par recentrer()
 normaliserEconomie(mine);
+relireBourseLocale();        // sans compte, la bourse tient dans le navigateur
 let moi=null, ileId=null, monSlug=null, monPseudo=null;
 let voisins=DEMO;               // l'archipel public, ou les îles de démo
 let etatSauvegarde='', motsNouveaux=0, compteCharge=false;
@@ -998,9 +1068,14 @@ const hero={x:9.5,y:11.5,face:'bas',moving:false};
 let target=null;
 
 // Le monde part en base ; `mots` et les clés locales restent hors du jsonb.
+// La seule liste qui compte : une clé oubliée ici s'efface à la sauvegarde
+// suivante, sans erreur et sans trace. `bourse` et `achats` en sont sortis
+// le 16/09 au soir et n'ont plus rien à y faire : ils vivent dans la table
+// `bourses`, que le client ne peut pas écrire. Les y remettre serait rendre
+// la caisse au navigateur.
 function mondeNu(w){
   return {name:w.name, pal:w.pal, sky:w.sky, tiles:w.tiles, house:w.house, me:w.me, rayon:w.rayon, ambiance:w.ambiance,
-          interieur:w.interieur, bourse:w.bourse, achats:w.achats,
+          interieur:w.interieur,
           objects:(w.objects||[]).filter(o=>o.t!=='panneau')};
 }
 function saveMine(){
@@ -2544,15 +2619,19 @@ requestAnimationFrame(frame);
 const COUPE1=[[0,0]], COUPE5=[[0,0],[1,0],[-1,0],[0,1],[0,-1]];
 function tondre(){
   const x=Math.floor(hero.x), y=Math.floor(hero.y);
-  let coupe=0, n=0;
+  let coupe=0;
   (achete('moteur')?COUPE5:COUPE1).forEach(d=>{
     const cx=x+d[0], cy=y+d[1];
     if(cx<0||cy<0||cx>=GRID||cy>=GRID) return;
     const i=cy*GRID+cx;
     if(mine.tiles[i]!==HAUTE) return;
-    mine.tiles[i]=HERBE; coupe++; n+=gagner(GAIN_TONTE,'tonte');
+    mine.tiles[i]=HERBE; coupe++;
   });
   if(!coupe) return;
+  // Un seul gain pour la passe entière : avec le moteur, cinq touffes
+  // tombent dans la même frame, et cinq allers-retours au serveur pour un
+  // coup de tondeuse, c'est quatre de trop.
+  const n=gagner(coupe*GAIN_TONTE,'tonte');
   const reste=touffesSur(mine);
   tondeuseJusqua=performance.now()+1100;
   saveMine(); son('tonte'); if(n) setTimeout(()=>son('piece'),150); buildAll();
@@ -3216,6 +3295,23 @@ function buildIle(){
       world.mots.push(m); replanter(world); i.value=''; son('mot');
       if(world===mine) faireGrandir();
       say('Mot plant\u00e9. Marche \u00e0 c\u00f4t\u00e9 du panneau pour le relire.'); buildAll();
+      // Le crédit n'est pas demandé : c'est le trigger `mots_credite` qui
+      // l'a posé au moment de l'insert. On relit sa propre bourse, et on
+      // dit ce qu'on y trouve de plus. Celle de l'hôte ne nous regarde pas.
+      if(visiting && bourseServeur){
+        const avant=mine.bourse.shells;
+        try{
+          appliquerBourse(await store.bourseDuJour());
+          const d=mine.bourse.shells-avant;
+          if(d>0) say('Mot plant\u00e9 chez <b>'+esc(world.owner)+'</b>. <b>+'+d+' shell'+(d>1?'s':'')+
+            '</b> \u00b7 et <b>'+GAIN_MOT_RECU+'</b> pour '+esc(world.owner)+', qui les trouvera en rentrant.');
+          else if((mine.bourse.faits.mot_pose||0)>=PLAFOND.mot_pose)
+            say('Mot plant\u00e9 chez <b>'+esc(world.owner)+'</b>. Les visites ont d\u00e9j\u00e0 tout donn\u00e9 '+
+                'pour aujourd\u2019hui — mais il le lira quand m\u00eame.');
+          else say('Mot plant\u00e9 chez <b>'+esc(world.owner)+'</b>. Tu lui as d\u00e9j\u00e0 \u00e9crit aujourd\u2019hui : '+
+            'les shells, c\u2019est une fois par personne et par jour.');
+        }catch(e){}
+      }
     }catch(e){ say('Mot refus\u00e9 : '+esc(e.message||e)); }
   };
   const r2=document.createElement('div'); r2.className='row'; r2.appendChild(add);
@@ -3398,6 +3494,19 @@ function buildBoutique(){
     ? ('Un <b>chien</b> posé sur ton île demande sa promenade. Va le voir, sors-le, et reste près de lui le temps d’un tour : <b>'+
        marche+' shells</b>, une fois par jour. Il y en a un dans ton atelier, au rayon <b>Bestioles</b>.')
     : 'Ton chien a eu sa promenade aujourd’hui. Tu peux le ressortir autant que tu veux, il ne rapportera plus rien avant demain.'));
+
+  // Les visites. C'est la meilleure source, et de loin : c'est voulu.
+  // L'île grandit parce que des gens sont passés, jamais parce que le
+  // temps passe — une économie de corvées solitaires dirait le contraire.
+  const pose=b.faits.mot_pose||0, recu=b.faits.mot_recu||0;
+  const rp=Math.max(0,PLAFOND.mot_pose-pose), rr=Math.max(0,PLAFOND.mot_recu-recu);
+  p.appendChild(hint('<b>Va voir les voisins.</b> Laisser un mot chez quelqu’un rapporte <b>'+
+    GAIN_MOT_POSE+' shells</b>, en recevoir un en rapporte <b>'+GAIN_MOT_RECU+'</b>. '+
+    'Une fois par personne et par jour : dix mots chez le même ami ne comptent que pour un.'));
+  p.appendChild(hint(
+    (rp ? ('Il te reste <b>'+rp+' shells</b> à gagner aujourd’hui en allant écrire chez les autres')
+        : ('Tu as écrit partout où ça rapportait aujourd’hui')) + ', et <b>'+
+    (rr ? (rr+' shells') : 'rien de plus') + '</b> à recevoir de ceux qui passeront chez toi.'));
   p.appendChild(rule());
 
   const choisi = vitrine ? BOUTIQUE.find(a=>a.k===vitrine) : null;
@@ -3427,7 +3536,9 @@ function buildBoutique(){
   p.appendChild(rule());
   p.appendChild(hint('Tout se paie en <b>shells</b>, la monnaie de l’île. On les gagne en jouant, jamais avec de l’argent : il n’y a rien à acheter ici avec autre chose que des shells.'));
   p.appendChild(hint('Un objet s’achète <b>une fois, pour toujours</b> : il rejoint ton atelier et tu en poses autant que tu veux, sans repayer. Ce qui est acheté apparaît dans l’onglet <b>Île</b> ou dans <b>Dedans</b>, dans son rayon. Ce qui est <b>pour toi</b> n’a pas d’atelier : ça agit dès l’achat.'));
-  p.appendChild(hint('La bourse vit avec ton île : elle te suit d’un appareil à l’autre dès que tu es connecté. Elle est tenue par ton navigateur, pas par un coffre-fort : entre vous, c’est l’honnêteté qui compte.'));
+  p.appendChild(hint(bourseServeur
+    ? 'Ta bourse est tenue par le serveur, pas par ton navigateur : elle te suit d’un appareil à l’autre, et c’est lui qui compte les jours. Les shells qu’une visite rapporte, c’est le mot planté qui les déclenche — personne ne peut les demander.'
+    : 'Tu joues sans compte : cette bourse ne vit que dans ce navigateur, et rien n’en sort. Connecte-toi et crée ton île pour qu’elle te suive, et pour que les visites rapportent.'));
 }
 // Le comptoir : ce qu'on a choisi, ce que ça coûte, et le seul bouton qui
 // débite. Il dit « il te manque 8 shells » là où on vient de cliquer.
@@ -3449,11 +3560,18 @@ function comptoir(a){
     w.appendChild(hint('Va tondre ta pelouse, et reviens : la tonte donne <b>'+PLAFOND.tonte+' shells</b> par jour, et le cadeau du jour s’y ajoute.'));
   return w;
 }
-function acheter(a){
+// C'est le serveur qui débite, et c'est lui qui connaît le prix : le
+// comptoir n'a fait qu'annoncer. Rien de tout ça ne part dans `monde`.
+async function acheter(a){
   const b=mine.bourse;
   if(achete(a.k) || b.shells<a.prix) return;   // le comptoir l'a déjà dit
-  b.shells-=a.prix; mine.achats.push(a.k); vitrine=null;
-  saveMine(); son('achat'); buildAll();
+  if(bourseServeur){
+    try{ appliquerBourse(await store.bourseAcheter(a.k)); }
+    catch(e){ say('Achat refusé : '+esc(e.message||e)); return; }
+  }else{
+    b.shells-=a.prix; mine.achats.push(a.k); garderBourseLocale();
+  }
+  vitrine=null; son('achat'); buildAll();
   // Un équipement n'a pas d'atelier : il agit tout de suite, sur place.
   if(EQUIPEMENT[a.k]){ say('<b>'+esc(a.n)+'</b> est à toi, et ça marche déjà. '+esc(a.d)); return; }
   ouvrirOnglet(a.ou==='ile'?'ile':'dedans');
@@ -3470,25 +3588,45 @@ function jourDecale(n){
   const d=new Date(); d.setDate(d.getDate()+n);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-function cadeauDispo(){ return mine.bourse && mine.bourse.cadeau!==aujourdhui(); }
-function ouvrirCadeau(){
+// Le jour de référence : celui du serveur dès qu'il en donne un, sinon
+// celui du téléphone. Un cadeau du jour compté sur l'horloge locale
+// s'ouvre deux fois en avançant la montre.
+function jourDuJeu(){ return bourseJourVu || aujourdhui(); }
+function cadeauDispo(){ return mine.bourse && mine.bourse.cadeau!==jourDuJeu(); }
+function nomArticle(k){ const a=BOUTIQUE.find(x=>x.k===k); return a?a.n:k; }
+async function ouvrirCadeau(){
   if(!cadeauDispo()) return;
   const b=mine.bourse;
-  b.serie = (b.cadeau===jourDecale(-1)) ? (b.serie||0)+1 : 1;
-  b.cadeau = aujourdhui();
-  const offert = (b.serie%7===0)
-    ? BOUTIQUE.filter(a=>!achete(a.k)).sort((x,y)=>x.prix-y.prix)[0] : null;
   let msg;
-  if(offert){
-    mine.achats.push(offert.k);
-    msg='<b>Sept jours d’affilée.</b> La boutique t’offre <b>'+esc(offert.n)+'</b>, sans rien prendre dans ta bourse.';
+  if(bourseServeur){
+    let r;
+    try{ r=await store.bourseCadeau(); }
+    catch(e){ say('Le cadeau n’a pas pu s’ouvrir : '+esc(e.message||e)); return; }
+    if(r.deja){ appliquerBourse(r); return; }
+    msg = r.offert
+      ? ('<b>Sept jours d’affilée.</b> La boutique t’offre <b>'+esc(nomArticle(r.offert))+
+         '</b>, sans rien prendre dans ta bourse.')
+      : ('<b>Cadeau du jour : +'+r.gain+' shell'+(r.gain>1?'s':'')+'.</b> '+((r.serie|0)>1
+          ? (r.serie+' jours d’affilée — reviens demain, il grossit encore.')
+          : 'Reviens demain et il sera plus gros.'));
+    appliquerBourse(r);
   }else{
-    const n=CADEAU_BASE+Math.min(b.serie,7); b.shells+=n;
-    msg='<b>Cadeau du jour : +'+n+' shell'+(n>1?'s':'')+'.</b> '+(b.serie>1
-      ? (b.serie+' jours d’affilée — reviens demain, il grossit encore.')
-      : 'Reviens demain et il sera plus gros.');
+    b.serie = (b.cadeau===jourDecale(-1)) ? (b.serie||0)+1 : 1;
+    b.cadeau = aujourdhui();
+    const offert = (b.serie%7===0)
+      ? BOUTIQUE.filter(a=>!achete(a.k)).sort((x,y)=>x.prix-y.prix)[0] : null;
+    if(offert){
+      mine.achats.push(offert.k);
+      msg='<b>Sept jours d’affilée.</b> La boutique t’offre <b>'+esc(offert.n)+'</b>, sans rien prendre dans ta bourse.';
+    }else{
+      const n=CADEAU_BASE+Math.min(b.serie,7); b.shells+=n;
+      msg='<b>Cadeau du jour : +'+n+' shell'+(n>1?'s':'')+'.</b> '+(b.serie>1
+        ? (b.serie+' jours d’affilée — reviens demain, il grossit encore.')
+        : 'Reviens demain et il sera plus gros.');
+    }
+    garderBourseLocale();
   }
-  vitrine=null; saveMine(); son('achat'); buildAll(); say(msg);
+  vitrine=null; son('achat'); buildAll(); say(msg);
 }
 
 function thumb(g,w){
@@ -3645,18 +3783,42 @@ async function chargerArchipel(){
   }catch(e){ voisins=DEMO; }
 }
 
+// Les prix et les plafonds sont en SQL. Ceux qu'on porte en dur ne servent
+// qu'à afficher quelque chose avant la réponse, et hors ligne : c'est le
+// serveur qui débite et qui plafonne. Deux listes qui divergent, et la
+// vitrine annonce un prix que l'achat refuse.
+async function chargerCatalogue(){
+  if(!store.configure) return;
+  try{
+    const rows=await store.catalogue();
+    const prix={}; rows.forEach(r=>{ prix[r.k]=r.prix; });
+    BOUTIQUE.forEach(a=>{ if(Number.isFinite(prix[a.k])) a.prix=prix[a.k]; });
+    BOUTIQUE.forEach(a=>{ VERROU[a.k]=a.prix; });
+  }catch(e){}
+  try{
+    const e=await store.economie(), pl=e.plafonds||{}, g=e.gains||{};
+    Object.keys(pl).forEach(k=>{ if(Number.isFinite(pl[k])) PLAFOND[k]=pl[k]; });
+    if(Number.isFinite(g.mot_pose)) GAIN_MOT_POSE=g.mot_pose;
+    if(Number.isFinite(g.mot_recu)) GAIN_MOT_RECU=g.mot_recu;
+  }catch(e){}
+}
+
 async function demarrer(){
   peindreCompte();
   if(store.configure){
     store.surChangementDeCompte(async(u)=>{
       const avant = moi && moi.id;
       moi=u; compteCharge=true;
-      if(u && u.id!==avant) await chargerMonCompte();
-      if(!u){ ileId=null; monSlug=null; monPseudo=null; }
+      if(u && u.id!==avant){ await chargerMonCompte(); reveiller(); }
+      // Déconnecté, la bourse du serveur n'est plus lisible : le miroir
+      // repasse en local. Rien de ce qu'on y gagnera ne remontera, et la
+      // reconnexion écrasera le tout par la ligne en base.
+      if(!u){ ileId=null; monSlug=null; monPseudo=null; bourseServeur=false; bourseJourVu=''; }
       peindreCompte(); buildAll();
     });
     moi = await store.utilisateur();
     compteCharge = true;
+    await chargerCatalogue();
     if(moi) await chargerMonCompte();
     await chargerArchipel();
     peindreCompte();
@@ -3681,6 +3843,11 @@ async function chargerMonCompte(){
         mine.name=ile.nom;
       }
       mine.id=ile.id; mine.slug=ile.slug; mine.aMoi=true;
+      // La bourse arrive avec le compte, pas une seconde plus tard : sans
+      // ça l'écran affiche 10 shells le temps d'un battement, puis le vrai
+      // chiffre, et on croit avoir perdu sa monnaie.
+      try{ appliquerBourse(await store.bourseDuJour()); }
+      catch(e){ /* migration pas passée : la bourse locale tient le temps qu'il faut */ }
       mine.house.roofShape=ROOFMAP[mine.house.roofShape]||'pointu';
       if(!GROUNDS.find(g=>g.k===(mine.pal&&mine.pal.k))) mine.pal=GROUNDS[0];
       mine.mots = await store.motsDe(ile.id);
@@ -3688,7 +3855,8 @@ async function chargerMonCompte(){
       const vu = ile.vu_le ? new Date(ile.vu_le).getTime() : 0;
       motsNouveaux = mine.mots.filter(m=>m.auteur!==moi.id && new Date(m.cree_le).getTime()>vu).length;
       if(motsNouveaux) say('<b>'+motsNouveaux+' nouveau'+(motsNouveaux>1?'x mots':' mot')+
-        '</b> depuis ton dernier passage. Va les lire dans l\u2019onglet \u00cele.');
+        '</b> depuis ton dernier passage, et des <b>shells</b> avec. '+
+        'Va les lire dans l\u2019onglet \u00cele.');
       try{ await store.marquerVu(ile.id); }catch(e){}
       const grandi=rayonPour(mine.mots.length);
       if(grandi>(mine.rayon||RAYON0)){ mine.rayon=grandi; }

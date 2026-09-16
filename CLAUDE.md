@@ -73,28 +73,19 @@ Rien ne s'achète avec autre chose que des shells. Il n'y a pas de paiement
 réel dans ce jeu et il n'y en aura pas : ne jamais brancher quoi que ce soit
 qui y ressemble.
 
-Deux clés de plus dans `monde` : `bourse` et `achats`. **Aucune migration
-SQL**, comme l'intérieur. Toutes deux sont dans `mondeNu()` : une clé oubliée
-là s'efface à la sauvegarde suivante, sans erreur et sans trace.
-
-    bourse = { pieces: 42, jour: '2026-09-17', faits: {tonte:5}, pousse: '2026-09-17' }
-    achats = ['fontaine','moulin']
+**`bourse` et `achats` ne sont plus dans `monde`.** Ils sont sortis de
+`mondeNu()` le 16/09 au soir : voir la section « la bourse côté serveur »
+plus bas. Les y remettre serait rendre la caisse au navigateur.
 
 **`jour` et `pousse` sont deux marqueurs, pas un.** `jour` remet les plafonds
 de gain à zéro, `pousse` autorise une repousse des herbes. Les fondre en un
 seul, et une île ouverte aujourd'hui n'aurait sa première touffe que demain.
+Les deux sont tenus par le serveur, dans deux fonctions différentes.
 
 **La valeur de tuile `4` est les hautes herbes.** `encode()` colle les cases
 bout à bout et `decode()` les relit chiffre par chiffre : une valeur de tuile
 à deux chiffres casserait tous les codes de sauvegarde. Onze valeurs au
 maximum, donc, et pas une de plus.
-
-**C'est l'honnêteté qui protège la caisse, pas la base.** Le client écrit sa
-propre bourse et lit sa propre horloge. Ne pas empiler des garde-fous côté
-client en croyant fermer le trou : la seule vraie réponse est une fonction
-Postgres qui crédite et une policy RLS qui interdit d'écrire `bourse`. Donc
-du SQL, et le serveur juge du temps. À décider avant d'ajouter les visites
-payantes, pas après.
 
 Corollaire tenu : `tondre()` ne passe pas par `memoriser()`, donc `Ctrl+Z`
 peut faire repousser une touffe déjà tondue. Ce n'est pas un oubli : c'est le
@@ -168,6 +159,54 @@ Le bouton rose du cadre n'est plus « la porte » : c'est `rose-btn`,
 le chien, une porte. L'ordre dans `agir()` compte, et il est le même que
 dans `proximity()` : les deux doivent rester d'accord, sinon le bouton
 annonce un geste et la touche en fait un autre.
+
+## La bourse côté serveur, et les visites payantes — 16/09/2026
+
+`supabase/2026-09-16_bourse_serveur.sql`, **rejouable** (la reprise depuis
+le jsonb ne trouve plus rien à reprendre une fois qu'elle a tourné).
+Contrairement à `2026-09-16_grille18.sql`, celle-ci se rejoue sans casse.
+
+La bourse a quitté `monde` pour la table `bourses`, une ligne par **joueur**
+(pas par île : c'est la personne qui visite, et c'est elle qu'on crédite).
+
+Les règles à ne pas défaire :
+
+1. **`bourses` n'a aucune policy d'écriture.** Pas une policy restrictive :
+   pas de policy du tout. RLS refuse par défaut, et ce vide *est* la
+   protection. Ne pas « réparer » en ajoutant une policy `update`.
+2. **`bourse_crediter(joueur, quoi, n)` n'est jamais exposée.** Elle prend
+   un joueur en paramètre parce que les visites créditent l'hôte ; exposée,
+   elle laisserait n'importe qui créditer n'importe qui. Elle est révoquée
+   de `public`, `anon` et `authenticated`, et c'est la ligne la plus
+   importante du fichier.
+3. **Le client ne demande jamais `mot_pose` ni `mot_recu`.**
+   `bourse_gagner()` les refuse par son nom. Les visites se créditent par le
+   trigger `mots_credite`, sur l'insert dans `mots` : le bénéficiaire n'est
+   pas l'appelant, et c'est ce qui les rend vérifiables.
+4. **Les prix et les plafonds sont en SQL** (`catalogue`, `plafond()`). Ce
+   que porte `index.html` n'est qu'un affichage de secours, recopié depuis
+   la base au chargement par `chargerCatalogue()`. Même piège que
+   `slug_libre()` face aux contraintes : deux listes qui divergent, et la
+   vitrine annonce un prix que l'achat refuse.
+5. **Le temps est celui du serveur** (`jour_du_jeu()`, heure de Bruxelles,
+   pas UTC). Le client n'a plus le droit de décider quel jour on est :
+   `jourDuJeu()` renvoie le jour connu du serveur, pas `aujourdhui()`.
+
+Ce que ça ne fait pas, et il ne faut pas prétendre le contraire : **le
+serveur ne voit pas l'île.** « J'ai tondu une touffe » n'est pas
+vérifiable. Ce qui borne la triche sur les corvées, c'est le plafond du
+jour, pas la preuve du geste. Inutile d'empiler des contrôles côté client
+pour ça.
+
+Côté `index.html`, `mine.bourse` et `mine.achats` ne sont plus qu'un
+**miroir** : on l'avance tout de suite pour que le « +1 shell » tombe avec
+le geste, et la réponse du serveur l'écrase. Jamais l'inverse.
+`appliquerBourse()` est le seul endroit qui écrit ce miroir depuis la base.
+
+Sans compte, hors ligne, ou avant que la migration ne soit passée, la bourse
+tient seule dans `localStorage` sous `dansisland:bourse`. C'est ce qui garde
+l'île de démonstration jouable ; ce n'est pas une porte de sortie pour qui
+voudrait s'écrire des shells, puisque rien n'en remonte.
 
 ## Reste du contexte
 

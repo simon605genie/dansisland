@@ -39,6 +39,18 @@ vue `archipel`, et les pages d'île (`/simon`) en mode visiteur.
 
 Pas encore éprouvé :
 
+- **La bourse côté serveur.** `supabase/2026-09-16_bourse_serveur.sql` n'a
+  pas été joué au moment où il a été écrit : il n'y avait pas de Postgres
+  sous la main pour le relire autrement qu'à l'œil. Tant qu'il n'est pas
+  passé, le client retombe sur sa bourse locale sans rien casser — mais les
+  shells gagnés entre-temps restent dans le navigateur. À jouer dans
+  [l'éditeur SQL](https://supabase.com/dashboard/project/cgputbitzfgokpwbbind/sql/new),
+  d'un bloc, en vérifiant que l'en-tête dit bien « dansisland ».
+- **Les visites payantes en vrai.** Elles demandent deux comptes : un qui
+  plante, un qui reçoit. Le crédit du visiteur se voit tout de suite dans
+  le murmure ; celui de l'hôte ne se vérifie qu'en se reconnectant avec
+  l'autre compte.
+
 - **Le livre d'or.** Aucun mot en base. Planter un mot chez soi valide
   l'écriture ; il faut un second compte pour vérifier qu'un visiteur ne voit
   pas les mots masqués.
@@ -303,9 +315,13 @@ L'âme du jeu tient en une phrase : **l'île grandit parce que des gens sont
 passés**, jamais parce que le temps passe. Une économie faite seulement de
 corvées la contredirait : on s'enrichirait seul, en boucle, et l'archipel ne
 servirait plus à rien. C'est pourquoi la tonte est plafonnée à huit shells
-par jour, et la promenade du chien à cinq. De quoi voir un compteur monter, pas de quoi vivre sans voisins.
-Les visites payantes et les trouvailles, qui rebranchent la bourse sur
-l'archipel, viendront après et deviendront la meilleure source.
+par jour, et la promenade du chien à cinq. De quoi voir un compteur monter,
+pas de quoi vivre sans voisins.
+
+Les **visites**, elles, ne sont pas bridées si serré : trente-cinq shells
+par jour contre treize pour les corvées. C'est la meilleure source, et de
+loin, et c'est exprès. Un enfant qui joue seul avance ; un enfant qui va
+voir les autres avance vraiment.
 
 ### La tonte
 
@@ -426,19 +442,68 @@ Un équipement n'a pas d'atelier : il agit dès l'achat, et l'onglet **Toi** en
 donne la liste, acquis ou pas. Un pouvoir qu'on a payé et qu'on ne retrouve
 nulle part finit par s'oublier.
 
+### Les visites payantes
+
+Laisser un mot chez quelqu'un rapporte **2 shells**, en recevoir un en
+rapporte **5**. Une fois par personne et par jour : dix mots chez le même
+ami ne comptent que pour un, sinon deux enfants se financent en boucle et
+l'archipel n'a plus d'intérêt. Chez soi, rien.
+
+C'est **le seul gain que le serveur peut vérifier de bout en bout**. Il ne
+se demande pas : c'est le trigger `mots_credite`, sur l'insert dans `mots`,
+qui crédite les deux comptes. Le client n'appelle rien, et `bourse_gagner()`
+refuse explicitement `mot_pose` et `mot_recu` — ouvrir cette porte-là
+viderait les visites de leur sens.
+
+L'hôte n'a rien à faire et n'a pas à être là : il trouve les shells en
+rentrant, avec les mots. Le visiteur, lui, voit son gain tout de suite,
+parce qu'il relit sa propre bourse après avoir planté. Celle de l'hôte ne
+le regarde pas, et la RLS ne la lui montrerait pas.
+
+Un mot supprimé ne reprend pas les shells. C'est voulu : on ne punit pas le
+propriétaire qui fait le ménage sur son mur.
+
+Plafonds du jour : **10** shells à gagner en allant écrire (cinq
+personnes), **25** à recevoir (cinq personnes). Trente-cinq contre les
+treize des corvées, et c'est tout le propos.
+
 ### Le point honnête
 
-**C'est l'honnêteté qui protège la caisse, pas la base.** Le client écrit sa
-propre bourse et lit sa propre horloge : la console d'un navigateur rend
-millionnaire en trente secondes, et avancer la date du téléphone refait les
-corvées du jour. Entre enfants qui se connaissent, ça n'a aucune importance
-et ça ne vaut pas le coût d'y répondre.
+**Ce n'est plus l'honnêteté qui protège la caisse.** Jusqu'au 16/09 au soir,
+le client écrivait sa propre bourse et lisait sa propre horloge : la console
+d'un navigateur rendait millionnaire en trente secondes. Tant que l'économie
+n'était faite que de corvées solitaires, ça n'avait aucune importance. Les
+visites changent ça : elles créditent **quelqu'un d'autre** que celui qui
+joue, et un compte qui peut s'écrire lui-même peut aussi écrire celui du
+voisin.
 
-Le jour où ça comptera, la réponse n'est pas un contrôle de plus côté client :
-c'est une **fonction Postgres** qui crédite le compte et une policy RLS qui
-interdit d'écrire `bourse` directement. Autrement dit du SQL, une migration,
-et le serveur qui devient juge du temps. À décider avant d'écrire les visites
-payantes, pas après.
+Ce qui a été fait, avant d'écrire les visites et pas après :
+
+- la bourse quitte `iles.monde` et prend sa table, `bourses` ;
+- cette table n'a **aucune policy d'écriture**. Pas une policy restrictive :
+  pas de policy du tout, et RLS refuse par défaut. Ce vide *est* la
+  protection ;
+- seules des fonctions `security definer` la modifient. `bourse_crediter()`,
+  qui prend un joueur en paramètre parce que les visites créditent l'hôte,
+  n'est **jamais exposée** : elle est révoquée de `public`, `anon` et
+  `authenticated` ;
+- le temps est celui du serveur (`jour_du_jeu()`, en heure de Bruxelles).
+  Avancer la date du téléphone ne refait plus les corvées de la veille ;
+- les **prix** et les **plafonds** sont en SQL (`catalogue`, `plafond()`).
+  Le client les lit au lieu de les recopier : deux listes qui divergent, et
+  la vitrine annonce un prix que l'achat refuse.
+
+Ce que ça ne fait pas, et il faut le dire : **le serveur ne voit pas l'île.**
+Quand le client annonce « j'ai tondu une touffe », personne ne peut le
+contredire. Ce qui borne la triche sur les corvées, c'est le plafond du
+jour, pas la preuve du geste. Les visites, elles, sont vérifiables : il y a
+une ligne dans `mots`, signée d'un compte, sur l'île d'un autre.
+
+Sans compte, hors ligne, ou avant que la migration ne soit passée, la bourse
+tient toute seule dans `localStorage`, sous sa propre clé
+(`dansisland:bourse`). C'est ce qui garde l'île de démonstration jouable.
+Rien de ce qui s'y gagne ne remonte, et la réponse de la base écrase le
+miroir local, jamais l'inverse.
 
 Conséquence assumée : `tondre()` ne passe pas par `memoriser()`, donc
 `Ctrl+Z` peut faire repousser une touffe déjà tondue. Ce n'est pas un oubli,
@@ -453,12 +518,17 @@ Un souvenir déjà rapporté du même hôte et du même type est refusé.
 
 ## Modèle
 
-Une ligne par île. Tout le monde du jeu tient dans `iles.monde` (jsonb) :
-`tiles` (324 chiffres), `house`, `objects`, `me`, `pal`, `sky`, `interieur`,
-`bourse`, `achats`.
+Une ligne par île. Le monde du jeu tient dans `iles.monde` (jsonb) :
+`tiles` (324 chiffres), `house`, `objects`, `me`, `pal`, `sky`, `interieur`.
 `mondeNu()` est la seule liste qui compte : **une clé oubliée là, et chaque
 sauvegarde l'efface en silence.**
-Les mots du livre d'or vivent à part, dans `mots`, pour être modérables un par un.
+
+`bourse` et `achats` en sont **sortis le 16/09 au soir** et n'ont plus rien
+à y faire : ils vivent dans `bourses`, une table que le client ne peut pas
+écrire. Les y remettre serait rendre la caisse au navigateur.
+
+Les mots du livre d'or vivent à part, dans `mots`, pour être modérables un
+par un — et c'est un trigger sur cette table qui paie les visites.
 
 La RLS est la seule protection : la clé publishable est publique par construction.
 Ne jamais mettre la `service_role` dans `src/`.

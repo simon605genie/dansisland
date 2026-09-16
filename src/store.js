@@ -106,6 +106,69 @@ export async function archipel(limite = 40) {
   return data || [];
 }
 
+/* ---------------- la bourse ----------------
+   Elle ne vit plus dans `iles.monde` : elle a sa table, `bourses`, que la
+   RLS laisse lire à son propriétaire et que **personne** ne peut écrire.
+   Seules les fonctions `security definer` ci-dessous la modifient, et
+   c'est le serveur qui dit quel jour on est.
+
+   Chacune remonte l'erreur telle quelle : tant que la migration
+   `2026-09-16_bourse_serveur.sql` n'est pas passée, PostgREST répond
+   « function does not exist » et l'app retombe sur sa bourse locale.
+   C'est la seule raison d'être de ce chemin-là — pas une porte de sortie
+   pour qui voudrait s'écrire des shells. */
+
+export async function bourseDuJour() {
+  const { data, error } = await sb.rpc('bourse_du_jour');
+  if (error) throw error;
+  return data;
+}
+
+// Réclame la repousse des herbes du jour. Vrai à qui l'obtient — une fois
+// par jour et par joueur, le serveur tenant le marqueur.
+export async function bourseRepousse() {
+  const { data, error } = await sb.rpc('bourse_repousse');
+  if (error) throw error;
+  return data === true;
+}
+
+// Les corvées, et elles seules : `mot_pose` et `mot_recu` sont refusés
+// côté serveur. Les visites se créditent en plantant un mot, pas en le
+// demandant.
+export async function bourseGagner(quoi, n) {
+  const { data, error } = await sb.rpc('bourse_gagner', { quoi, n });
+  if (error) throw error;
+  return data;
+}
+
+export async function bourseAcheter(article) {
+  const { data, error } = await sb.rpc('bourse_acheter', { article });
+  if (error) throw error;
+  return data;
+}
+
+export async function bourseCadeau() {
+  const { data, error } = await sb.rpc('bourse_cadeau');
+  if (error) throw error;
+  return data;
+}
+
+// Les prix et les plafonds vivent en SQL : le client les lit au lieu de
+// les recopier. Sans réponse, il garde ceux qu'il porte en dur, qui ne
+// servent qu'à afficher — c'est le serveur qui débite.
+export async function catalogue() {
+  const { data, error } = await sb.from('catalogue').select('k, prix, rayon');
+  if (error) throw error;
+  return data || [];
+}
+
+// Plafonds du jour et gains des visites, en un seul aller-retour.
+export async function economie() {
+  const { data, error } = await sb.rpc('economie');
+  if (error) throw error;
+  return data || {};
+}
+
 /* ---------------- livre d'or ---------------- */
 
 export async function motsDe(ileId) {
