@@ -139,6 +139,8 @@ a{color:var(--link)}
   .word svg{display:none}
   #compte{padding:6px 10px; font-size:12.5px; gap:7px}
   #compte input{min-width:130px}
+  /* Six onglets dans 290 px : c'est la seule largeur où « Boutique » déborde. */
+  .tabs button{font-size:11px; padding:11px 0}
 }
 /* Portrait étroit : le jeu d'abord, le discours ensuite. */
 @media (max-width:640px){
@@ -188,6 +190,8 @@ a{color:var(--link)}
   box-shadow:0 2px 0 rgba(11,60,93,.18);
 }
 .plate.guest{background:var(--pink); color:#0B3C5D}
+/* La bourse. Elle suit le joueur, pas l'île : on la voit aussi en visite. */
+.plate.sous{background:var(--sand); color:#0B3C5D}
 .plate.bouton{pointer-events:auto; cursor:pointer; border:0; margin-left:auto}
 .plate.bouton[aria-pressed="false"]{background:#3D5A70; color:#CBD9E2}
 /* La porte : le même geste que la touche E, pour qui joue au doigt. */
@@ -205,10 +209,10 @@ a{color:var(--link)}
 
 /* ---------- atelier ---------- */
 .atelier{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden}
-.tabs{display:grid; grid-template-columns:repeat(5,1fr); background:var(--sunk); border-bottom:1px solid var(--line)}
+.tabs{display:grid; grid-template-columns:repeat(6,1fr); background:var(--sunk); border-bottom:1px solid var(--line)}
 .tabs button{
   appearance:none; background:none; border:0; border-right:1px solid var(--line);
-  padding:13px 2px; font-family:"Baloo 2",sans-serif; font-size:13.5px; font-weight:700; color:var(--ink-3);
+  padding:13px 1px; font-family:"Baloo 2",sans-serif; font-size:12.5px; font-weight:700; color:var(--ink-3);
   cursor:pointer;
 }
 .tabs button:last-child{border-right:0}
@@ -237,6 +241,27 @@ a{color:var(--link)}
 .obj canvas{width:60px; height:60px; display:block}
 .obj:hover{border-color:var(--teal); color:var(--ink)}
 .obj[aria-pressed="true"]{background:var(--navy); border-color:var(--navy); color:#FAF6EA}
+/* ---------- la boutique ---------- */
+.tresor{
+  font-family:"Baloo 2",sans-serif; font-weight:700; font-size:14.5px; color:#0B3C5D;
+  background:var(--sand); border-radius:13px; padding:11px 15px; margin:0;
+}
+.tresor b{font-family:"Baloo 2",sans-serif; font-size:27px; line-height:1; margin-right:5px}
+.obj .prix{font-family:"Baloo 2",sans-serif; font-size:12px; font-weight:700; color:var(--link)}
+.obj.cher{opacity:.5}
+.obj.acquis{background:var(--mint); border-color:var(--mint); color:#0B3C5D; cursor:default}
+.obj.acquis .prix{color:#0B3C5D}
+.comptoir{
+  background:var(--sunk); border:1.5px solid var(--line); border-radius:13px;
+  padding:12px; display:flex; flex-direction:column; gap:9px;
+}
+.comptoir .hint{color:var(--ink-2)}
+/* La pastille du cadeau du jour, sur l'onglet Boutique. */
+.tabs button.cadeau{position:relative}
+.tabs button.cadeau::after{
+  content:''; position:absolute; top:7px; right:7px; width:8px; height:8px;
+  border-radius:50%; background:var(--pink); box-shadow:0 0 0 2px var(--sunk);
+}
 .sw{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
 .sw button{
   width:27px;height:27px;border-radius:9px;cursor:pointer;border:2.5px solid transparent;
@@ -332,6 +357,7 @@ footer{padding:42px 0 58px; color:var(--ink-3); font-size:13.5px; border-top:1.5
       <div class="hud">
         <span class="plate" id="hud-name">L'île de Dan</span>
         <span class="plate" id="hud-mode">Chez toi</span>
+        <span class="plate sous" id="hud-sous">0 shell</span>
         <button class="plate bouton porte" id="porte-btn" type="button" hidden>Entrer</button>
         <button class="plate bouton" id="son-btn" type="button" aria-pressed="true">🔊 Son</button>
       </div>
@@ -347,12 +373,14 @@ footer{padding:42px 0 58px; color:var(--ink-3); font-size:13.5px; border-top:1.5
         <button role="tab" aria-selected="false" data-tab="ile">Île</button>
         <button role="tab" aria-selected="false" data-tab="dedans">Dedans</button>
         <button role="tab" aria-selected="false" data-tab="voisins">Voisins</button>
+        <button role="tab" aria-selected="false" data-tab="boutique">Boutique</button>
       </div>
       <div class="panel on" id="p-toi"></div>
       <div class="panel" id="p-maison"></div>
       <div class="panel" id="p-ile"></div>
       <div class="panel" id="p-dedans"></div>
       <div class="panel" id="p-voisins"></div>
+      <div class="panel" id="p-boutique"></div>
     </aside>
   </section>
 
@@ -542,7 +570,11 @@ function shadowDiamond(c,cx,cy,a){
 // Le miroir horizontal échange exactement les deux axes de l'isométrie,
 // c'est tout ce que « tourner » veut dire ici : pas un dessin de plus.
 // Déclaré ici et pas près des dessins : mkBot() le lit au chargement.
-const PIVOT_ILE={banc:1,barriere:1,cloture:1,ponton:1,boutique:1};
+const PIVOT_ILE={banc:1,barriere:1,cloture:1,ponton:1,boutique:1,balancoire:1,
+                 hamac:1,toboggan:1,tente:1};
+// Ce qui éclaire la nuit, et la hauteur de la flamme. Le phare, lui, porte
+// sa lumière dans son propre dessin.
+const LUEUR={lampe:34, feudecamp:16};
 
 const TWI=72, THI=36, HX=TWI/2, HY=THI/2, MURH=86;
 // `mur:'nw'` = la paroi du fond à gauche (x=0), l'index porte sur y.
@@ -574,17 +606,18 @@ function couleurSol(k){ const s=SOLS.find(s=>s[0]===k); return s?s[2]:SOLS[0][2]
 function couleurMur(k){ const m=MURS.find(m=>m[0]===k); return m?m[2]:MURS[0][2]; }
 
 const MEUBLE_GROUPS=[
-  ['Salon',     [['canape','Canapé'],['fauteuil','Fauteuil'],['tablebasse','Table basse'],['tapis','Tapis']]],
+  ['Salon',     [['canape','Canapé'],['fauteuil','Fauteuil'],['tablebasse','Table basse'],['tapis','Tapis'],['tapisrond','Tapis rond'],['poele','Poêle à bois']]],
   ['Nuit',      [['lit','Lit'],['chevet','Table de nuit'],['commode','Commode'],['lampadaire','Lampe']]],
-  ['Rangement', [['etagere','Étagère'],['bureau','Bureau'],['chaise','Chaise'],['malle','Malle']]],
-  ['Déco',      [['plante','Plante'],['tableau','Tableau'],['vase','Vase'],['horloge','Horloge']]]
+  ['Rangement', [['etagere','Étagère'],['bureau','Bureau'],['chaise','Chaise'],['malle','Malle'],['bibliotheque','Bibliothèque']]],
+  ['Déco',      [['plante','Plante'],['tableau','Tableau'],['vase','Vase'],['horloge','Horloge'],['aquarium','Aquarium'],['guirlande','Guirlande'],['tele','Télévision'],['piano','Piano']]]
 ];
 // L'encombrement est une propriété du meuble, pas de son exemplaire : il
 // vit dans le catalogue, jamais dans le jsonb. Tourner un meuble échange
 // les deux dimensions, rien d'autre.
-const TAILLE={canape:[2,1], lit:[2,2], bureau:[2,1], commode:[2,1], etagere:[2,1], tapis:[2,2]};
+const TAILLE={canape:[2,1], lit:[2,2], bureau:[2,1], commode:[2,1], etagere:[2,1], tapis:[2,2],
+              tapisrond:[2,2], aquarium:[2,1], bibliotheque:[2,1], piano:[2,1]};
 // Les « plats » se posent au sol, sous les autres, et ne bloquent pas la marche.
-const PLAT={tapis:true};
+const PLAT={tapis:true, tapisrond:true};
 function emprise(t,o){ const s=TAILLE[t]||[1,1]; return o==='sw' ? [s[1],s[0]] : [s[0],s[1]]; }
 function casesDe(m){
   const s=emprise(m.t,m.o), out=[];
@@ -620,6 +653,169 @@ function normaliserInterieur(w){
 }
 function couleurSolConnu(k){ return SOLS.some(s=>s[0]===k); }
 const MEUBLE_NOMS={}; MEUBLE_GROUPS.forEach(g=>g[1].forEach(m=>{ MEUBLE_NOMS[m[0]]=m[1]; }));
+
+/* ================= l'économie =================
+   Deux clés dans le jsonb, `bourse` et `achats`, et rien en SQL. C'est la
+   même règle que l'intérieur : la donnée voyage avec l'île.
+
+   Le point à ne pas se cacher : **c'est l'honnêteté qui protège la caisse,
+   pas la base.** Le client écrit sa propre bourse, la console d'un
+   navigateur rend millionnaire en trente secondes, et avancer l'horloge du
+   téléphone refait les corvées du jour. Entre enfants qui se connaissent,
+   ça n'a aucune importance. Le jour où ça comptera, la réponse n'est pas un
+   contrôle de plus ici : c'est une fonction Postgres qui crédite et une
+   policy RLS qui interdit d'écrire `bourse` à la main. Donc du SQL, une
+   migration, et le serveur juge du temps.
+
+   La règle du jeu, elle, ne bouge pas : l'île grandit parce que des gens
+   sont passés. Une économie faite seulement de corvées la contredirait, et
+   c'est pour ça que la tonte est plafonnée par jour — de quoi voir un
+   compteur monter, pas de quoi s'enrichir seul en boucle. Les visites et
+   les trouvailles, qui rebranchent la bourse sur l'archipel, viendront
+   après. */
+const SHELL0=10;                 // de quoi ouvrir la boutique le premier jour
+const POUSSE_MAX=8;              // touffes présentes au plus, d'un seul coup
+const GAIN_TONTE=1;              // par touffe
+const PLAFOND={tonte:8};         // shells par jour et par corvée
+const CADEAU_BASE=3;             // le cadeau du jour, avant la série
+// Le catalogue. `ou` dit dans quel atelier l'objet réapparaît une fois
+// acheté : c'est la seule chose qui distingue un objet d'île d'un meuble.
+const BOUTIQUE=[
+  {ou:'ile',   k:'chat',        n:'Chat',              prix:12, c:'#E4A95C', d:'Il s’assied où il veut et ne s’en excuse pas.'},
+  {ou:'ile',   k:'herisson',    n:'Hérisson',          prix:14, c:'#8B6F4E', d:'Il traverse la pelouse sans se presser.'},
+  {ou:'ile',   k:'puits',       n:'Puits',             prix:16, c:'#8F98A6', d:'Un seau, une corde, et un fond qu’on ne voit pas.'},
+  {ou:'ile',   k:'fontaine',    n:'Fontaine',          prix:18, c:'#D9CDB4', d:'Elle fait le bruit qu’on croit entendre.'},
+  {ou:'ile',   k:'feudecamp',   n:'Feu de camp',       prix:20, c:'#F2A93B', d:'Il éclaire l’île la nuit, comme un lampadaire.'},
+  {ou:'ile',   k:'hamac',       n:'Hamac',             prix:24, c:'#F48CA8', d:'Deux piquets et une toile qui pend. Rien à faire.'},
+  {ou:'ile',   k:'balancoire',  n:'Balançoire',        prix:25, c:'#A9764A', d:'Une planche, deux cordes, et c’est déjà une cour.'},
+  {ou:'ile',   k:'tente',       n:'Tente',             prix:28, c:'#5EC6B3', d:'On campe chez soi. C’est permis.'},
+  {ou:'ile',   k:'mare',        n:'Mare aux canards',  prix:30, c:'#45CFE8', d:'Un canard, deux nénuphars, de l’eau qui ne va nulle part.'},
+  {ou:'ile',   k:'phare',       n:'Phare',             prix:30, c:'#FDFBF2', d:'Le repère qu’on voit depuis l’archipel.'},
+  {ou:'ile',   k:'renard',      n:'Renard',            prix:32, c:'#E08A4B', d:'Il vient, il regarde, il ne demande rien.'},
+  {ou:'ile',   k:'boutique',    n:'Échoppe',           prix:35, c:'#FDFBF2', d:'Un auvent rayé, et l’île a un centre.'},
+  {ou:'ile',   k:'toboggan',    n:'Toboggan',          prix:38, c:'#45CFE8', d:'Une échelle, une glissade, on recommence.'},
+  {ou:'ile',   k:'moulin',      n:'Moulin',            prix:40, c:'#FDFBF2', d:'On le voit de loin. C’est tout l’intérêt.'},
+  {ou:'ile',   k:'cabane',      n:'Cabane perchée',    prix:45, c:'#A9764A', d:'Une échelle, un plancher dans l’arbre, une fenêtre allumée.'},
+  {ou:'ile',   k:'statue',      n:'Statue',            prix:50, c:'#D9CDB4', d:'En pierre, le bras levé, pour longtemps.'},
+  {ou:'ile',   k:'montgolfiere',n:'Montgolfière',      prix:60, c:'#F48CA8', d:'Amarrée au sol, mais elle y pense.'},
+  {ou:'dedans',k:'tapisrond',   n:'Tapis rond',        prix:12, c:'#F48CA8', d:'Deux cases au sol, sous tout le reste.'},
+  {ou:'dedans',k:'guirlande',   n:'Guirlande',         prix:14, c:'#F4D6A0', d:'Cinq ampoules le long du mur.'},
+  {ou:'dedans',k:'bibliotheque',n:'Bibliothèque',      prix:20, c:'#8B5E3C', d:'Trois rangs de livres, et personne pour les ranger.'},
+  {ou:'dedans',k:'poele',       n:'Poêle à bois',      prix:22, c:'#3F4A52', d:'Le feu qu’on voit par la porte.'},
+  {ou:'dedans',k:'tele',        n:'Télévision',        prix:30, c:'#3F4A52', d:'Elle passe toujours la même chose.'},
+  {ou:'dedans',k:'aquarium',    n:'Aquarium',          prix:35, c:'#8B5E3C', d:'Deux poissons qui ne s’arrêtent jamais.'},
+  {ou:'dedans',k:'piano',       n:'Piano',             prix:45, c:'#2A3238', d:'Douze touches noires, et le couvercle fermé.'},
+  {ou:'toi',   k:'bottes',      n:'Bottes',            prix:25, c:'#B44C6C', d:'Tu marches un tiers plus vite, dehors comme dedans.'},
+  {ou:'toi',   k:'moteur',      n:'Tondeuse à moteur', prix:45, c:'#2E7D5B', d:'Elle tond les quatre cases voisines en passant.'}
+];
+// Le rayon « Pour toi » ne vend pas des objets à poser mais ce que le
+// bonhomme sait faire. Rien n'entre dans `objects` ni dans les meubles :
+// `achats` suffit, et le moteur lit la liste au moment d'agir.
+const EQUIPEMENT={bottes:1, moteur:1};
+const VERROU={}; BOUTIQUE.forEach(a=>{ VERROU[a.k]=a.prix; });
+// La date du joueur, pas celle d'un serveur : voir l'avertissement plus haut.
+function aujourdhui(){ const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+// Les shells d'une bourse déjà en base, sous leur ancien nom s'il le faut.
+function shellsDe(b){
+  if(!b) return SHELL0;
+  const v = Number.isFinite(b.shells) ? b.shells : b.pieces;
+  return Number.isFinite(v) ? Math.max(0,Math.floor(v)) : SHELL0;
+}
+// Une île d'avant l'économie reçoit une bourse pleine du premier jour ; une
+// île qui en a une la garde telle quelle.
+function normaliserEconomie(w){
+  const b=(w.bourse&&typeof w.bourse==='object')?w.bourse:null;
+  w.bourse={
+    // `pieces` était le nom de la veille : une bourse d'hier se relit, et
+    // `interieur.pieces` (les salles) cesse d'être un homonyme.
+    shells: shellsDe(b),
+    jour:   (b&&b.jour) ? String(b.jour) : aujourdhui(),
+    faits:  (b&&b.faits&&typeof b.faits==='object') ? b.faits : {},
+    pousse: (b&&b.pousse) ? String(b.pousse) : '',
+    cadeau: (b&&b.cadeau) ? String(b.cadeau) : '',
+    serie:  (b&&Number.isFinite(b.serie)) ? Math.max(0,Math.floor(b.serie)) : 0
+  };
+  // Un achat dont l'objet n'existe plus au catalogue n'a plus de sens.
+  w.achats=Array.isArray(w.achats) ? w.achats.filter(k=>VERROU[k]) : [];
+  // Un objet libre hier, payant aujourd'hui : l'île qui en porte déjà un le
+  // garde. Sans ça, le phare posé la semaine dernière reste sur l'île mais
+  // son pinceau disparaît de l'atelier, et ça ressemble à une panne.
+  // Les souvenirs (`de`) ne comptent pas : sinon une visite chez un ami
+  // débloquerait la boutique et la boutique ne servirait plus à rien.
+  const offrir=k=>{ if(VERROU[k] && w.achats.indexOf(k)<0) w.achats.push(k); };
+  (w.objects||[]).forEach(o=>{ if(!o.de) offrir(o.t); });
+  const sal=w.interieur&&w.interieur.pieces;
+  if(sal) Object.keys(sal).forEach(q=>(sal[q].meubles||[]).forEach(m=>offrir(m.t)));
+  return w;
+}
+// Un objet du catalogue ne s'affiche dans l'atelier qu'une fois acheté ;
+// tout le reste passe toujours.
+function achete(k){ return !VERROU[k] || (mine.achats||[]).indexOf(k)>=0; }
+function gagner(n,quoi){
+  const b=mine.bourse;
+  if(quoi){
+    const p=PLAFOND[quoi]||0, f=b.faits[quoi]||0;
+    if(f>=p) return 0;
+    n=Math.min(n,p-f); b.faits[quoi]=f+n;
+  }
+  b.shells+=n; return n;
+}
+
+/* ---- la tonte ----
+   Une case d'herbe (0) se laisse gagner par les hautes herbes (4). La
+   traverser la tond. C'est la corvée la moins chère à écrire : elle ne
+   demande aucun objet neuf, seulement des cases, et elle se joue en
+   marchant — un bouton qui donne des shells n'est pas un jeu.
+   `4` est une valeur de tuile comme les autres : elle part en base dans
+   `tiles`, elle tient en un chiffre (encode() colle les cases bout à bout),
+   et aucune migration ne la précède. */
+const HERBE=0, SABLE=1, EAU=2, CHEMIN=3, HAUTE=4;
+function touffesSur(w){ let n=0; const t=w.tiles||[];
+  for(let i=0;i<t.length;i++) if(t[i]===HAUTE) n++; return n; }
+// On ne fait pousser que sur de l'herbe nue, dans le rayon acquis, hors de
+// la maison, de son seuil et de ce qui est posé : une touffe sous un arbre
+// est une touffe qu'on ne verra jamais et qu'on ne tondra donc jamais.
+function fairePousser(){
+  let manque=POUSSE_MAX-touffesSur(mine);
+  if(manque<=0) return 0;
+  const h=mine.house, seuils=porteIle(h), libres=[];
+  for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++){
+    if(mine.tiles[y*GRID+x]!==HERBE) continue;
+    if(!dansLeRayon(x,y,mine)) continue;
+    if(x>=h.x-1&&x<=h.x+2&&y>=h.y-1&&y<=h.y+2) continue;
+    if(seuils.some(c=>c.x===x&&c.y===y)) continue;
+    if((mine.objects||[]).some(o=>o.x===x&&o.y===y)) continue;
+    libres.push(y*GRID+x);
+  }
+  let pousse=0;
+  while(manque>0 && libres.length){
+    mine.tiles[libres.splice(Math.floor(Math.random()*libres.length),1)[0]]=HAUTE;
+    manque--; pousse++;
+  }
+  return pousse;
+}
+// Le passage du jour, en un seul endroit : les plafonds repartent à zéro et
+// les herbes repoussent une fois. Appelé au chargement et toutes les
+// minutes, sinon une session laissée ouverte la nuit ne le voit jamais
+// passer. Deux marqueurs et non un : `jour` borne les gains, `pousse` borne
+// la repousse. Sans le second, une île ouverte aujourd'hui n'aurait sa
+// première touffe que demain.
+function reveiller(){
+  const j=aujourdhui(), b=mine.bourse;
+  const veille=b.jour!==j, premiere=!b.pousse;
+  let bouge=false, n=0;
+  if(veille){ b.jour=j; b.faits={}; bouge=true; }
+  if(b.pousse!==j){ b.pousse=j; n=fairePousser(); bouge=true; }
+  if(!bouge) return;
+  saveMine(); buildAll();
+  // Le tout premier chargement se tait : le message d'accueil vient de
+  // s'afficher, et le rayer aussitôt n'apprend rien à personne.
+  if(veille && !premiere)
+    say('<b>Un jour nouveau.</b> Ton cadeau t’attend dans la <b>Boutique</b>'+
+        (n ? (', et '+n+' touffe'+(n>1?'s':'')+' ont repoussé.') : '.'));
+}
+
 
 /* ================= modèle ================= */
 function baseTiles(r,sandW){
@@ -658,6 +854,8 @@ function recentrer(w){
   if(w.house && w.house.cheminee===undefined) w.house.cheminee=true;
   // L'intérieur est arrivé après : une île d'avant reçoit trois pièces vides.
   normaliserInterieur(w);
+  // L'économie est arrivée après : une île d'avant reçoit une bourse.
+  normaliserEconomie(w);
   return w;
 }
 function defaultWorld(){
@@ -672,7 +870,7 @@ function defaultWorld(){
       {t:'buisson',x:8,y:3,c:'#2E7D5B'},{t:'fleur',x:7,y:3,c:'#F48CA8'},
       {t:'fleur',x:4,y:8,c:'#F48CA8'},{t:'lampe',x:6,y:7,c:'#F4D6A0'},
       {t:'banc',x:7,y:8,c:'#8B5E3C'},{t:'barriere',x:3,y:5,c:'#FDFBF2'},
-      {t:'boutique',x:8,y:5,c:'#FDFBF2'},{t:'phare',x:9,y:2,c:'#FDFBF2'},
+      {t:'sapin',x:8,y:5,c:'#2E7D6B'},{t:'fleur',x:9,y:2,c:'#B44C6C'},
       {t:'rocher',x:3,y:9,c:'#7E8CA0'},{t:'chien',x:6,y:9,c:'#C89A63'},
       {t:'crabe',x:2,y:8,c:'#F0736E'},{t:'mouette',x:10,y:5,c:'#FDFBF2'},
       {t:'ponton',x:6,y:10,c:'#A9764A'},{t:'coffre',x:3,y:4,c:'#8B5E3C'}
@@ -782,6 +980,7 @@ if(brouillon&&brouillon.monde){
 }
 mine.mots=mine.mots||[];
 normaliserInterieur(mine);   // une île neuve ne passe pas par recentrer()
+normaliserEconomie(mine);
 let moi=null, ileId=null, monSlug=null, monPseudo=null;
 let voisins=DEMO;               // l'archipel public, ou les îles de démo
 let etatSauvegarde='', motsNouveaux=0, compteCharge=false;
@@ -793,7 +992,7 @@ let target=null;
 // Le monde part en base ; `mots` et les clés locales restent hors du jsonb.
 function mondeNu(w){
   return {name:w.name, pal:w.pal, sky:w.sky, tiles:w.tiles, house:w.house, me:w.me, rayon:w.rayon, ambiance:w.ambiance,
-          interieur:w.interieur,
+          interieur:w.interieur, bourse:w.bourse, achats:w.achats,
           objects:(w.objects||[]).filter(o=>o.t!=='panneau')};
 }
 function saveMine(){
@@ -880,6 +1079,43 @@ function drawChar(c,px,py,a,s,face,t){
     c.beginPath(); c.arc(3.6+fx,hy+fy,3.4,0,Math.PI*2); c.stroke(); }
   else if(a.acc==='couronne'){ c.fillStyle='#F4D6A0'; c.beginPath(); c.moveTo(-8,hy-8); c.lineTo(-8,hy-14); c.lineTo(-4,hy-10.5); c.lineTo(0,hy-15.5); c.lineTo(4,hy-10.5); c.lineTo(8,hy-14); c.lineTo(8,hy-8); c.closePath(); c.fill(); }
   c.restore();
+}
+
+/* ---- la tondeuse ----
+   On ne tond pas à mains nues. Elle sort quand il y a une touffe sous les
+   pieds ou juste à côté, et rentre une seconde après la dernière : une
+   tondeuse portée en permanence n'aurait plus rien à dire. Elle n'est pas
+   un objet de l'île — rien en base, rien à poser, rien à acheter. */
+let tondeuseJusqua=0;
+// La même, en deux tailles : celle qu'on pousse, et celle qui a un moteur.
+// Un outil amélioré qui ne se voit pas n'a pas été amélioré.
+function tondeuse(c,t,gros){
+  c.save(); c.translate(0,Math.sin(t/(gros?32:45))*(gros?1.2:0.8));
+  c.strokeStyle='#3A4750'; c.lineWidth=2.6; c.lineCap='round';
+  c.beginPath(); c.moveTo(-3,-9); c.lineTo(-13,-30); c.stroke();
+  c.beginPath(); c.moveTo(3,-8); c.lineTo(-8,-30); c.stroke();
+  c.strokeStyle='#2A3238'; c.lineWidth=3.2;
+  c.beginPath(); c.moveTo(-16,-31); c.lineTo(-5,-29); c.stroke();
+  if(gros) isoBox(c,-13,6,7,12,'#4D5A64');        // le bac à herbe, derrière
+  isoBox(c,0,0,gros?13:11,gros?11:9,gros?'#2E7D5B':'#D8443F');
+  if(gros){
+    isoBox(c,1,-11,6,7,'#3A4750');                // le bloc moteur
+    c.fillStyle='#F2A93B'; rr(c,-8,-13,10,3,1.5); c.fill();
+  }
+  c.fillStyle='#8AA3B2'; rr(c,-6,gros?-18:-16,12,5,2); c.fill();
+  c.fillStyle='#2A3238';
+  [[gros?-11:-9,2],[gros?10:8,-1]].forEach(d=>{
+    c.beginPath(); c.ellipse(d[0],d[1],gros?4.2:3.6,gros?3:2.6,0,0,Math.PI*2); c.fill(); });
+  c.restore();
+}
+// Où elle se tient, en repère écran : devant lui quand il vient vers la
+// caméra, derrière quand il s'en va.
+const POS_TONDEUSE={bas:[0,14], haut:[0,-10], droite:[20,6], gauche:[-20,6]};
+function tondeuseVisible(t){ return t<tondeuseJusqua; }
+// Une touffe sous les pieds ou sur une des quatre cases voisines.
+function herbeAcote(){
+  const x=Math.floor(hero.x), y=Math.floor(hero.y);
+  return [[0,0],[1,0],[-1,0],[0,1],[0,-1]].some(d=>tileAt(x+d[0],y+d[1])===HAUTE);
 }
 
 /* ================= objets en volume ================= */
@@ -1055,6 +1291,223 @@ const DRAW={
     c.fillStyle=ROOF; c.beginPath(); c.ellipse(-3,-12,6.2,3,0.35,0,Math.PI*2); c.fill();
     c.fillStyle='#F2A93B'; c.beginPath(); c.moveTo(10,-15.2); c.lineTo(14.5,-14.2); c.lineTo(10,-13); c.closePath(); c.fill();
     c.fillStyle=NAVY; c.beginPath(); c.arc(7.8,-16.2,0.95,0,Math.PI*2); c.fill();
+  }  ,
+  /* ---- ce que vend la boutique ----
+     Mêmes primitives que le reste : rien de nouveau au moteur, seulement du
+     dessin. Un objet acheté est un objet comme les autres, il se pose, se
+     tourne s'il suit un axe, s'efface et se ramène en souvenir. */
+  chat(c,C){
+    const f=C||'#E4A95C';
+    c.strokeStyle=f; c.lineWidth=3; c.lineCap='round';
+    c.beginPath(); c.moveTo(-6,-4); c.quadraticCurveTo(-15,-5,-13,-15); c.stroke();
+    c.fillStyle=f; c.beginPath(); c.moveTo(-7,0);
+    c.quadraticCurveTo(-8,-15,0,-16); c.quadraticCurveTo(8,-15,7,0); c.closePath(); c.fill();
+    c.fillStyle=shade(f,16); c.beginPath(); c.ellipse(2,-2,5,2.6,0,0,Math.PI*2); c.fill();
+    c.fillStyle=f; c.beginPath(); c.arc(1,-22,7,0,Math.PI*2); c.fill();
+    c.beginPath(); c.moveTo(-5,-26); c.lineTo(-6.5,-33); c.lineTo(0.5,-28); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(7,-26); c.lineTo(8.5,-33); c.lineTo(1.5,-28); c.closePath(); c.fill();
+    c.fillStyle=PINK; c.beginPath(); c.arc(1,-20.5,1.5,0,Math.PI*2); c.fill();
+    c.fillStyle=NAVY;
+    c.beginPath(); c.ellipse(-2.4,-24,1.1,2.1,0,0,Math.PI*2); c.fill();
+    c.beginPath(); c.ellipse(4.6,-24,1.1,2.1,0,0,Math.PI*2); c.fill();
+    c.strokeStyle='rgba(11,60,93,.35)'; c.lineWidth=0.9;
+    [[-6,-21,-13,-22],[-6,-19.5,-13,-18],[8,-21,15,-22],[8,-19.5,15,-18]].forEach(m=>{
+      c.beginPath(); c.moveTo(m[0],m[1]); c.lineTo(m[2],m[3]); c.stroke(); });
+  },
+  fontaine(c,C){
+    const s=C||'#D9CDB4';
+    isoBox(c,0,0,18,6,s);
+    isoTop(c,0,-6,13,shade(SEA,-6));
+    isoTop(c,0,-6.5,9,shade(SEA,14));
+    isoBox(c,0,-6,5,12,shade(s,4));
+    isoTop(c,0,-18,8,shade(s,22));
+    c.strokeStyle='rgba(120,225,245,.9)'; c.lineWidth=2.2; c.lineCap='round';
+    [-1,1].forEach(g=>{ c.beginPath(); c.moveTo(0,-21);
+      c.quadraticCurveTo(g*10,-31,g*11,-13); c.stroke(); });
+    c.fillStyle='#FDFBF2';
+    [[-4,-27],[5,-29],[0,-33]].forEach(d=>{ c.beginPath(); c.arc(d[0],d[1],1.8,0,Math.PI*2); c.fill(); });
+  },
+  balancoire(c,C){
+    const w=C||'#A9764A';
+    c.strokeStyle=shade(w,-8); c.lineWidth=3.4; c.lineCap='round';
+    [[-13,6],[13,-6]].forEach(q=>{
+      c.beginPath(); c.moveTo(q[0]-5,q[1]+2); c.lineTo(q[0],q[1]-30); c.stroke();
+      c.beginPath(); c.moveTo(q[0]+5,q[1]-2); c.lineTo(q[0],q[1]-30); c.stroke(); });
+    c.beginPath(); c.moveTo(-13,-24); c.lineTo(13,-36); c.stroke();
+    c.strokeStyle='rgba(11,60,93,.45)'; c.lineWidth=1.5;
+    [[-5,-27.7,-11],[5,-32.3,-15]].forEach(d=>{
+      c.beginPath(); c.moveTo(d[0],d[1]); c.lineTo(d[0],d[2]); c.stroke(); });
+    isoBox(c,0,-10,7,2.5,PINK);
+  },
+  mare(c,C){
+    const eau=C||SEA;
+    c.fillStyle=shade(LEAF,-10); c.beginPath(); c.ellipse(0,-2,23,11.5,0,0,Math.PI*2); c.fill();
+    c.fillStyle=shade(eau,-18); c.beginPath(); c.ellipse(0,-2,19,9.4,0,0,Math.PI*2); c.fill();
+    c.fillStyle=eau;            c.beginPath(); c.ellipse(-1,-3,17,8.2,0,0,Math.PI*2); c.fill();
+    c.strokeStyle='rgba(255,255,255,.5)'; c.lineWidth=1.3;
+    [[-7,-5,5],[5,-1,7]].forEach(d=>{ c.beginPath(); c.ellipse(d[0],d[1],d[2],d[2]*0.45,0,0,Math.PI*2); c.stroke(); });
+    c.fillStyle='#3E7A52';
+    [[-11,-6],[8,-7]].forEach(d=>{ c.beginPath(); c.ellipse(d[0],d[1],4.4,2.2,0,0,Math.PI*2); c.fill(); });
+    c.fillStyle=PINK; c.beginPath(); c.arc(8,-8.5,2,0,Math.PI*2); c.fill();
+    c.fillStyle='#FDFBF2'; c.beginPath(); c.ellipse(0,-9,7,4.4,0,0,Math.PI*2); c.fill();
+    c.beginPath(); c.arc(5.5,-14,3.6,0,Math.PI*2); c.fill();
+    c.fillStyle='#F2A93B'; c.beginPath();
+    c.moveTo(8.5,-14.4); c.lineTo(12.5,-13.6); c.lineTo(8.5,-12.6); c.closePath(); c.fill();
+    c.fillStyle=NAVY; c.beginPath(); c.arc(6.6,-15,0.95,0,Math.PI*2); c.fill();
+  },
+  moulin(c,C){
+    const w=C||CREAM;
+    isoBox(c,0,0,15,34,w);
+    c.fillStyle=shade(w,-30); rr(c,-4,-21,8,11,1.5); c.fill();
+    isoPyr(c,0,-34,17,15,ROOF);
+    c.save(); c.translate(7,-40);
+    for(let i=0;i<4;i++){
+      const a=i*Math.PI/2+0.45, ex=Math.cos(a)*21, ey=Math.sin(a)*21;
+      c.strokeStyle=BROWN; c.lineWidth=2.6; c.lineCap='round';
+      c.beginPath(); c.moveTo(0,0); c.lineTo(ex,ey); c.stroke();
+      c.fillStyle=i%2?'rgba(253,251,242,.95)':'rgba(244,214,160,.95)';
+      c.beginPath(); c.ellipse(ex*0.66,ey*0.66,7.5,3.2,a,0,Math.PI*2); c.fill();
+    }
+    c.fillStyle=BROWN; c.beginPath(); c.arc(0,0,3,0,Math.PI*2); c.fill();
+    c.restore();
+  },
+  cabane(c,C){
+    const w=C||'#A9764A';
+    c.fillStyle=BROWN; c.beginPath();
+    c.moveTo(-5,0); c.lineTo(-3,-27); c.lineTo(3,-27); c.lineTo(5,0); c.closePath(); c.fill();
+    c.fillStyle=shade(LEAF,-22); c.beginPath(); c.ellipse(-13,-19,10,8,0,0,Math.PI*2); c.fill();
+    c.fillStyle=shade(LEAF,-6);  c.beginPath(); c.ellipse(13,-20,10,8,0,0,Math.PI*2); c.fill();
+    c.strokeStyle=shade(w,-24); c.lineWidth=1.7; c.lineCap='butt';
+    [-10,-5].forEach(x=>{ c.beginPath(); c.moveTo(x,1); c.lineTo(x+2,-27); c.stroke(); });
+    for(let i=0;i<5;i++){ const y=-2-i*5, t=(y+2)/-25;
+      c.beginPath(); c.moveTo(-10+2*t,y); c.lineTo(-5+2*t,y-0.6); c.stroke(); }
+    isoTop(c,0,-28,17,shade(w,-16));
+    isoBox(c,0,-30,13,20,w);
+    c.fillStyle=shade(w,-38); rr(c,-4.5,-45,9,9,1.5); c.fill();
+    c.fillStyle='#FFE9A8'; rr(c,-3.2,-43.8,6.4,6.6,1); c.fill();
+    isoPyr(c,0,-50,15,13,ROOF);
+    c.fillStyle=shade(LEAF,12); c.beginPath(); c.ellipse(-15,-45,11,9,0,0,Math.PI*2); c.fill();
+    c.fillStyle=shade(LEAF,22); c.beginPath(); c.ellipse(15,-47,11,9,0,0,Math.PI*2); c.fill();
+    c.fillStyle=PINK;
+    [[-17,-50],[16,-52],[-12,-38]].forEach(d=>{ c.beginPath(); c.arc(d[0],d[1],2.4,0,Math.PI*2); c.fill(); });
+  },
+  montgolfiere(c,C){
+    const b=C||PINK;
+    isoBox(c,0,0,5,3,BROWN);
+    c.strokeStyle='rgba(11,60,93,.45)'; c.lineWidth=1.4;
+    c.beginPath(); c.moveTo(0,-3); c.lineTo(-6,-19); c.stroke();
+    isoBox(c,0,-30,8,11,'#C89A63');
+    c.strokeStyle='rgba(11,60,93,.4)'; c.lineWidth=1.2;
+    [-7,7].forEach(x=>{ c.beginPath(); c.moveTo(x,-40); c.lineTo(x*1.15,-48); c.stroke(); });
+    c.fillStyle=shade(b,-20); c.beginPath(); c.ellipse(0,-68,23,23,0,0,Math.PI*2); c.fill();
+    [[-15,shade(b,8)],[0,CREAM],[15,shade(b,8)]].forEach(d=>{
+      c.fillStyle=d[1]; c.beginPath(); c.ellipse(d[0],-68,6,21.5,0,0,Math.PI*2); c.fill(); });
+    c.fillStyle='rgba(255,255,255,.28)'; c.beginPath(); c.ellipse(-9,-76,5.5,8,0.35,0,Math.PI*2); c.fill();
+    c.fillStyle=shade(b,-32); c.beginPath(); c.ellipse(0,-46,9,4,0,0,Math.PI*2); c.fill();
+  }  ,
+  herisson(c,C){
+    const f=C||'#8B6F4E';
+    c.strokeStyle=shade(f,-40); c.lineWidth=1.7; c.lineCap='round';
+    for(let i=0;i<12;i++){ const a=Math.PI+i/11*Math.PI;
+      c.beginPath(); c.moveTo(-1+Math.cos(a)*8,-7+Math.sin(a)*5.5);
+      c.lineTo(-1+Math.cos(a)*15,-7+Math.sin(a)*12); c.stroke(); }
+    c.fillStyle=f; c.beginPath(); c.ellipse(-1,-7,11,7.5,0,0,Math.PI*2); c.fill();
+    c.fillStyle=shade(f,22); c.beginPath(); c.ellipse(7.5,-6,6,4.6,0,0,Math.PI*2); c.fill();
+    c.fillStyle=NAVY; c.beginPath(); c.arc(7,-8.5,1.1,0,Math.PI*2); c.fill();
+    c.beginPath(); c.arc(12.6,-5.4,1.3,0,Math.PI*2); c.fill();
+  },
+  puits(c,C){
+    const m=C||'#8F98A6';
+    isoBox(c,0,0,15,13,m);
+    isoTop(c,0,-13,10,'#243645');
+    c.fillStyle=BROWN; c.fillRect(-10,-40,3.4,28); c.fillRect(6.6,-40,3.4,28);
+    c.fillStyle=ROOF; c.beginPath();
+    c.moveTo(-16,-37); c.lineTo(16,-37); c.lineTo(0,-53); c.closePath(); c.fill();
+    c.fillStyle=shade(ROOF,20); c.beginPath();
+    c.moveTo(0,-53); c.lineTo(16,-37); c.lineTo(2,-37); c.closePath(); c.fill();
+    c.strokeStyle='rgba(11,60,93,.55)'; c.lineWidth=1.3;
+    c.beginPath(); c.moveTo(0,-37); c.lineTo(0,-25); c.stroke();
+    isoBox(c,0,-21,5,4,'#A9764A');
+  },
+  feudecamp(c,C){
+    const f=C||'#F2A93B';
+    c.fillStyle='#7E8CA0';
+    for(let i=0;i<7;i++){ const a=i/7*Math.PI*2;
+      c.beginPath(); c.ellipse(Math.cos(a)*13,Math.sin(a)*6.5,4,2.6,0,0,Math.PI*2); c.fill(); }
+    c.strokeStyle=BROWN; c.lineWidth=3.4; c.lineCap='round';
+    [[-9,0,9,-8],[-9,-6,9,1],[0,2,0,-8]].forEach(d=>{
+      c.beginPath(); c.moveTo(d[0],d[1]-2); c.lineTo(d[2],d[3]-2); c.stroke(); });
+    c.fillStyle=shade(f,-26); c.beginPath(); c.moveTo(-9,-5);
+    c.quadraticCurveTo(-4,-21,0,-31); c.quadraticCurveTo(5,-19,9,-5); c.closePath(); c.fill();
+    c.fillStyle=f; c.beginPath(); c.moveTo(-6,-5);
+    c.quadraticCurveTo(-2,-17,1,-25); c.quadraticCurveTo(5,-15,6,-5); c.closePath(); c.fill();
+    c.fillStyle='#FFE08A'; c.beginPath(); c.moveTo(-3,-5);
+    c.quadraticCurveTo(0,-13,1,-18); c.quadraticCurveTo(4,-12,3.5,-5); c.closePath(); c.fill();
+  },
+  hamac(c,C){
+    const t=C||'#F48CA8';
+    isoBox(c,-15,7,3,27,BROWN); isoBox(c,15,-7,3,27,BROWN);
+    c.fillStyle=shade(t,-16); c.beginPath();
+    c.moveTo(-13,-20); c.quadraticCurveTo(0,-12,13,-34);
+    c.quadraticCurveTo(0,0,-13,-20); c.closePath(); c.fill();
+    c.fillStyle=t; c.beginPath();
+    c.moveTo(-13,-20); c.quadraticCurveTo(0,-14,13,-34);
+    c.quadraticCurveTo(0,-4,-13,-20); c.closePath(); c.fill();
+    c.strokeStyle=shade(t,26); c.lineWidth=1.6;
+    [-6,0,6].forEach(k=>{ c.beginPath(); c.moveTo(k-3,-19+k*-0.55);
+      c.lineTo(k+3,-11+k*-0.55); c.stroke(); });
+  },
+  tente(c,C){
+    const t=C||'#5EC6B3';
+    c.fillStyle=shade(t,-24); c.beginPath();
+    c.moveTo(-19,5); c.lineTo(2,13); c.lineTo(0,-31); c.closePath(); c.fill();
+    c.fillStyle=t; c.beginPath();
+    c.moveTo(19,-3); c.lineTo(2,13); c.lineTo(0,-31); c.closePath(); c.fill();
+    c.fillStyle=shade(t,-48); c.beginPath();
+    c.moveTo(-4,11); c.lineTo(0,-23); c.lineTo(5,9); c.closePath(); c.fill();
+    c.fillStyle=shade(t,30); c.beginPath();
+    c.moveTo(-4,11); c.lineTo(0,-23); c.lineTo(-9,7); c.closePath(); c.fill();
+    c.strokeStyle=shade(t,-38); c.lineWidth=2; c.lineCap='round';
+    c.beginPath(); c.moveTo(0,-31); c.lineTo(2,13); c.stroke();
+    c.fillStyle=SAND; c.beginPath(); c.arc(0,-33,2.4,0,Math.PI*2); c.fill();
+  },
+  renard(c,C){
+    const f=C||'#E08A4B';
+    c.fillStyle=f; c.beginPath(); c.moveTo(-7,-7);
+    c.quadraticCurveTo(-21,-9,-18,-23); c.quadraticCurveTo(-11,-16,-6,-12); c.closePath(); c.fill();
+    c.fillStyle='#FDFBF2'; c.beginPath(); c.arc(-17.5,-22,3.4,0,Math.PI*2); c.fill();
+    c.fillStyle=shade(f,-30); c.fillRect(-6,-4,2.6,4); c.fillRect(2,-4,2.6,4);
+    c.fillStyle=f; rr(c,-9,-14,17,10,5); c.fill();
+    c.beginPath(); c.arc(9,-18,5.8,0,Math.PI*2); c.fill();
+    c.beginPath(); c.moveTo(4.5,-22); c.lineTo(3.5,-30); c.lineTo(9.5,-24); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(13.5,-22); c.lineTo(15.5,-30); c.lineTo(9.5,-24); c.closePath(); c.fill();
+    c.fillStyle='#FDFBF2'; c.beginPath(); c.ellipse(12,-15,4.2,3.4,0.3,0,Math.PI*2); c.fill();
+    c.fillStyle=NAVY; c.beginPath(); c.arc(14.8,-15.6,1.3,0,Math.PI*2); c.fill();
+    c.beginPath(); c.arc(9.6,-19,1,0,Math.PI*2); c.fill();
+  },
+  toboggan(c,C){
+    const g=C||'#45CFE8';
+    c.strokeStyle=BROWN; c.lineWidth=2.6; c.lineCap='round';
+    [-17,-12].forEach(x=>{ c.beginPath(); c.moveTo(x,3); c.lineTo(x+3,-30); c.stroke(); });
+    for(let i=0;i<4;i++){ const y=-2-i*7;
+      c.beginPath(); c.moveTo(-16,y); c.lineTo(-11,y+1); c.stroke(); }
+    isoBox(c,-13,-30,6,3,BROWN);
+    c.lineJoin='round';
+    c.strokeStyle=shade(g,-24); c.lineWidth=10;
+    c.beginPath(); c.moveTo(-12,-32); c.quadraticCurveTo(7,-28,15,-2); c.stroke();
+    c.strokeStyle=g; c.lineWidth=5.5;
+    c.beginPath(); c.moveTo(-12,-32); c.quadraticCurveTo(7,-28,15,-2); c.stroke();
+  },
+  statue(c,C){
+    const p=C||'#D9CDB4';
+    isoBox(c,0,0,15,7,shade(p,-18));
+    isoBox(c,0,-7,11,9,p);
+    isoBox(c,0,-16,5,15,shade(p,8));
+    c.fillStyle=shade(p,-12);
+    c.beginPath(); c.ellipse(-8,-27,3.2,7.5,0.5,0,Math.PI*2); c.fill();
+    c.beginPath(); c.ellipse(8,-32,3.2,8.5,-0.8,0,Math.PI*2); c.fill();
+    c.fillStyle=shade(p,18); c.beginPath(); c.arc(0,-38,6.2,0,Math.PI*2); c.fill();
+    c.fillStyle=shade(p,28); c.beginPath(); c.ellipse(0,-44,7,3,0,0,Math.PI*2); c.fill();
   }
 };
 function dessinDe(g,t,col,o){
@@ -1062,9 +1515,10 @@ function dessinDe(g,t,col,o){
   (DRAW[t]||DRAW.rocher)(g,col); g.restore();
 }
 const OBJ_GROUPS=[
-  ['Nature',[['arbre','Arbre à fleurs'],['palmier','Palmier'],['sapin','Sapin'],['buisson','Buisson'],['cactus','Cactus'],['fleur','Fleur'],['rocher','Rocher']]],
-  ['Village',[['boutique','Boutique'],['phare','Phare'],['ponton','Ponton'],['lampe','Lampadaire'],['banc','Banc'],['barriere','Barrière'],['cloture','Clôture'],['coffre','Coffre']]],
-  ['Bestioles',[['chien','Chien'],['tortue','Tortue'],['crabe','Crabe'],['mouette','Mouette']]]
+  ['Nature',[['arbre','Arbre à fleurs'],['palmier','Palmier'],['sapin','Sapin'],['buisson','Buisson'],['cactus','Cactus'],['fleur','Fleur'],['rocher','Rocher'],['mare','Mare aux canards'],['puits','Puits']]],
+  ['Village',[['boutique','Échoppe'],['phare','Phare'],['ponton','Ponton'],['lampe','Lampadaire'],['banc','Banc'],['barriere','Barrière'],['cloture','Clôture'],['coffre','Coffre'],['fontaine','Fontaine'],['moulin','Moulin'],['statue','Statue']]],
+  ['Dehors',[['feudecamp','Feu de camp'],['hamac','Hamac'],['tente','Tente'],['balancoire','Balançoire'],['toboggan','Toboggan'],['cabane','Cabane perchée'],['montgolfiere','Montgolfière']]],
+  ['Bestioles',[['chien','Chien'],['tortue','Tortue'],['crabe','Crabe'],['mouette','Mouette'],['chat','Chat'],['herisson','Hérisson'],['renard','Renard']]]
 ];
 
 function drawHouse(c,h,t){
@@ -1216,7 +1670,7 @@ function drawTiles(t){
   for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++){
     const k=tileAt(x,y); if(k===2) continue;
     const q=iso(x,y), n=h2(x,y);
-    const base = k===1?p.sand : k===3?p.path : p.grass;
+    const base = k===1?p.sand : k===3?p.path : k===HAUTE?shade(p.grass,-12) : p.grass;
     const col = shade(base,(n-0.5)*7);
     const cy=q.y+TH/2-LIFT;
     const sw=tileAt(x,y+1)===2, se=tileAt(x+1,y)===2;
@@ -1228,6 +1682,27 @@ function drawTiles(t){
     isoTop(ctx,q.x,cy,TW/2,col);
     if(k!==1&&n>0.8){ ctx.fillStyle='rgba(255,255,255,.16)';
       ctx.beginPath(); ctx.ellipse(q.x+(n-0.5)*18,cy+(n*13%8)-4,5.5,2.4,0,0,Math.PI*2); ctx.fill(); }
+  }
+  // Les touffes en second passage : dans la boucle des cases, le talus de
+  // sable de la case suivante viendrait leur passer dessus.
+  for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++){
+    if(tileAt(x,y)!==HAUTE) continue;
+    const q=iso(x,y);
+    ctx.save(); ctx.translate(q.x,q.y+TH/2-LIFT); touffe(ctx,p.grass,h2(x*3.1,y*7.7)); ctx.restore();
+  }
+}
+// Une dizaine de brins, tirés de la même graine que le reste du terrain :
+// deux touffes voisines ne se ressemblent pas, et elles ne bougent pas
+// d'une visite à l'autre.
+function touffe(c,g,n){
+  c.lineCap='round'; c.lineWidth=2.2;
+  for(let i=0;i<10;i++){
+    const r=h2(i*3.3+n*97, i*1.7+n*53), a=(i/10+n)*Math.PI*2;
+    const bx=Math.cos(a)*(3+r*6), by=Math.sin(a)*(1.5+r*3);
+    const ht=8+r*9, sg=(i%2)?1:-1;
+    c.strokeStyle=shade(g, i%3===0 ? -34 : (i%3===1 ? -8 : 20));
+    c.beginPath(); c.moveTo(bx,by);
+    c.quadraticCurveTo(bx+sg*3, by-ht*0.6, bx+sg*7, by-ht); c.stroke();
   }
 }
 // Le pas de la porte, posé sur l'île. Sans lui, rien ne dit qu'on peut
@@ -1279,7 +1754,16 @@ function drawWorld(t){
     items.push({d:hx+hy, f:()=>drawChar(ctx,q.x,q.y-LIFT,world.me,0.95,'bas',t)});
   }
   const hp=iso(hero.x,hero.y);
-  items.push({d:hero.x+hero.y, f:()=>drawChar(ctx,hp.x,hp.y-LIFT,mine.me,1,hero.face,hero.moving?t:0)});
+  items.push({d:hero.x+hero.y, f:()=>{
+    const m=tondeuseVisible(t), derriere=(hero.face==='haut'||hero.face==='gauche');
+    const poser=()=>{ const d=POS_TONDEUSE[hero.face]||POS_TONDEUSE.bas;
+      ctx.save(); ctx.translate(hp.x+d[0],hp.y-LIFT+d[1]);
+      if(derriere) ctx.scale(-1,1);
+      shadowDiamond(ctx,0,0,11); tondeuse(ctx,t,achete('moteur')); ctx.restore(); };
+    if(m&&derriere) poser();
+    drawChar(ctx,hp.x,hp.y-LIFT,mine.me,1,hero.face,hero.moving?t:0);
+    if(m&&!derriere) poser();
+  }});
   items.sort((a,b)=>a.d-b.d).forEach(i=>i.f());
 
   if(world.sky!=='jour'){
@@ -1290,8 +1774,8 @@ function drawWorld(t){
     const glow=(gx,gy,r,a)=>{ const g=ctx.createRadialGradient(gx,gy,0,gx,gy,r);
       g.addColorStop(0,'rgba(255,224,160,'+a+')'); g.addColorStop(1,'rgba(255,224,160,0)');
       ctx.fillStyle=g; ctx.beginPath(); ctx.arc(gx,gy,r,0,Math.PI*2); ctx.fill(); };
-    world.objects.forEach(o=>{ if(o.t==='lampe'){ const q=ctr(o.x,o.y);
-      glow(q.x,q.y-LIFT-34,72,world.sky==='nuit'?0.5:0.3); } });
+    world.objects.forEach(o=>{ if(LUEUR[o.t]){ const q=ctr(o.x,o.y);
+      glow(q.x,q.y-LIFT-LUEUR[o.t],72,world.sky==='nuit'?0.5:0.3); } });
     const hq=iso(world.house.x+1,world.house.y+1);
     glow(hq.x,hq.y-LIFT-22,86,world.sky==='nuit'?0.34:0.2);
     ctx.restore();
@@ -1353,6 +1837,16 @@ function pieds(c,s,h,col,ins){
 // Le centre de la face sud-est d'un pavé : là où se posent une horloge,
 // un tiroir, un cadran.
 function faceSE(u,h){ return {x:u*HX/2, y:u*HY/2-h/2}; }
+// Un rectangle plaqué sur cette même face : `t` va du coin sud au coin est,
+// `k` monte depuis la base du pavé. Sans lui, un écran ou un rang de livres
+// se dessine à plat et sort du meuble : la face descend d'un demi en x.
+function faceRect(c,u,v,y0,t0,t1,k0,k1,col){
+  const S={x:(u-v)*HX/2, y:(u+v)*HY/2-(y0||0)}, E={x:(u+v)*HX/2, y:(u-v)*HY/2-(y0||0)};
+  const P=(t,k)=>({x:S.x+(E.x-S.x)*t, y:S.y+(E.y-S.y)*t-k});
+  const a=P(t0,k0), b=P(t1,k0), d=P(t1,k1), e=P(t0,k1);
+  c.fillStyle=col; c.beginPath();
+  c.moveTo(a.x,a.y); c.lineTo(b.x,b.y); c.lineTo(d.x,d.y); c.lineTo(e.x,e.y); c.closePath(); c.fill();
+}
 
 const DRAWM={
   canape(c,C,s,o){
@@ -1469,6 +1963,101 @@ const DRAWM={
     c.beginPath(); c.moveTo(f.x*0.6,f.y-18); c.lineTo(f.x*0.6+4.5,f.y-21); c.stroke();
     c.beginPath(); c.moveTo(f.x*0.6,f.y-18); c.lineTo(f.x*0.6-1,f.y-25); c.stroke();
     c.fillStyle=SAND; c.beginPath(); c.arc(f.x*0.6,f.y+14,3.4,0,Math.PI*2); c.fill();
+  }  ,
+  /* ---- ce que vend la boutique, côté maison ---- */
+  tapisrond(c,C,s){
+    const disque=(u,col)=>{ c.fillStyle=col; c.beginPath(); c.ellipse(0,0,u*HX,u*HY,0,0,Math.PI*2); c.fill(); };
+    disque(s[0]*0.48, shade(C,-18));
+    disque(s[0]*0.40, C);
+    disque(s[0]*0.27, shade(C,22));
+    disque(s[0]*0.13, shade(C,-8));
+  },
+  poele(c,C){
+    const m=C||'#3F4A52';
+    pave(c,0.54,0.54,4,shade(m,-26));
+    pave(c,0.44,0.44,34,m,4);
+    pave(c,0.17,0.17,26,shade(m,-12),38);
+    pave(c,0.24,0.24,3,shade(m,6),62);
+    c.fillStyle='#2A3238'; c.beginPath(); c.ellipse(7,-19,6.4,7,0,0,Math.PI*2); c.fill();
+    c.fillStyle='#F2A93B'; c.beginPath(); c.ellipse(7,-18,4.6,5,0,0,Math.PI*2); c.fill();
+    c.fillStyle='#FFE08A'; c.beginPath(); c.ellipse(7,-16.5,2.6,3,0,0,Math.PI*2); c.fill();
+  },
+  aquarium(c,C,s){
+    const m=C||'#8B5E3C';
+    pieds(c,s,20,shade(m,-22));
+    pave(c,s[0]-0.22,s[1]-0.22,6,m,20);
+    pave(c,s[0]-0.34,s[1]-0.34,25,shade(SEA,-10),26);
+    pave(c,s[0]-0.28,s[1]-0.28,3,shade(m,8),51);
+    // Sable, plantes et poissons vivent sur la face qui regarde la caméra :
+    // elle descend d'un demi en x, et un dessin plat posé dessus dépasse du
+    // verre. P() y ramène chaque point, ANG y couche chaque ellipse.
+    const u=s[0]-0.34, fx=u*HX/2, fy=u*HY/2-38, ANG=-Math.atan2(HY,HX);
+    const P=(dx,dy)=>({x:fx+dx, y:fy+dy-dx*HY/HX});
+    let q=P(0,9);
+    c.fillStyle='rgba(244,214,160,.9)'; c.beginPath(); c.ellipse(q.x,q.y,10,2.4,ANG,0,Math.PI*2); c.fill();
+    c.fillStyle='#3E7A52';
+    [[-6,8],[5,9]].forEach(d=>{
+      const a=P(d[0],d[1]), m=P(d[0]+3.5,d[1]-8), t=P(d[0]+0.5,d[1]-14), e=P(d[0]+2.6,d[1]);
+      c.beginPath(); c.moveTo(a.x,a.y); c.quadraticCurveTo(m.x,m.y,t.x,t.y);
+      c.lineTo(e.x,e.y); c.closePath(); c.fill(); });
+    const poisson=(dx,dy,col)=>{
+      const o=P(dx,dy), t1=P(dx-3.8,dy), t2=P(dx-8,dy-3), t3=P(dx-8,dy+3), oe=P(dx+2,dy-0.8);
+      c.fillStyle=col; c.beginPath(); c.ellipse(o.x,o.y,4.4,2.8,ANG,0,Math.PI*2); c.fill();
+      c.beginPath(); c.moveTo(t1.x,t1.y); c.lineTo(t2.x,t2.y); c.lineTo(t3.x,t3.y); c.closePath(); c.fill();
+      c.fillStyle=NAVY; c.beginPath(); c.arc(oe.x,oe.y,0.8,0,Math.PI*2); c.fill(); };
+    poisson(-3,-3,'#F2A93B'); poisson(7,3,PINK);
+    q=P(-9,-2);
+    c.fillStyle='rgba(255,255,255,.16)'; c.beginPath(); c.ellipse(q.x,q.y,2.6,8,0.35,0,Math.PI*2); c.fill();
+  }  ,
+  guirlande(c,C,s,o){
+    const b=C||'#F4D6A0';
+    c.save();
+    if(o==='sw') dec(c,-0.44,0); else dec(c,0,-0.44);
+    const ux = o==='sw' ? -HX : HX, uy = HY, Y=-50;
+    const pt=t=>({x:t*ux*1.8, y:t*uy*1.8+Y+Math.cos(t*Math.PI*2.4)*-5+5});
+    c.strokeStyle='rgba(11,60,93,.45)'; c.lineWidth=1.5;
+    c.beginPath();
+    for(let k=0;k<=24;k++){ const q=pt(-0.46+k*0.0383); k?c.lineTo(q.x,q.y):c.moveTo(q.x,q.y); }
+    c.stroke();
+    [PINK,b,MINT,b,PINK].forEach((col,i)=>{
+      const q=pt((i-2)*0.21);
+      c.fillStyle=col; c.beginPath(); c.ellipse(q.x,q.y+5,3.2,4.2,0,0,Math.PI*2); c.fill();
+      c.fillStyle='rgba(255,255,255,.55)'; c.beginPath(); c.arc(q.x-1,q.y+3.6,1,0,Math.PI*2); c.fill(); });
+    c.restore();
+  },
+  bibliotheque(c,C,s,o){
+    const w=C||'#8B5E3C';
+    adosse(c,s,o,0.34,72,w);
+    c.save();
+    let u,v;
+    if(o==='sw'){ dec(c,-(s[0]/2-0.17),0); u=0.34; v=s[1]-0.14; }
+    else        { dec(c,0,-(s[1]/2-0.17)); u=s[0]-0.14; v=0.34; }
+    const LIVRES=[PINK,MINT,SAND,TEAL,CREAM,'#B44C6C','#F2A93B'];
+    [6,28,50].forEach((y,r)=>{
+      faceRect(c,u,v,0, 0.05,0.95, y, y+2.5, shade(w,-44));
+      for(let i=0;i<7;i++){ const t0=0.08+i*0.122;
+        faceRect(c,u,v,0, t0,t0+0.095, y+2.5, y+2.5+13+((i*7+r*3)%6), LIVRES[(i+r*2)%7]); } });
+    c.restore();
+  },
+  tele(c,C){
+    const m=C||'#3F4A52';
+    pave(c,0.68,0.46,15,BROWN);
+    pave(c,0.62,0.13,25,m,15);
+    faceRect(c,0.62,0.13,15, 0.07,0.93, 3,22, '#12293A');
+    faceRect(c,0.62,0.13,15, 0.13,0.55, 6,19, 'rgba(94,198,179,.55)');
+    faceRect(c,0.62,0.13,15, 0.58,0.88, 9,19, 'rgba(244,140,168,.5)');
+    faceRect(c,0.68,0.46,0, 0.2,0.8, 3,10, shade(BROWN,-30));
+  },
+  piano(c,C,s,o){
+    const m=C||'#2A3238';
+    pieds(c,s,12,shade(m,-24),0.2);
+    pave(c,s[0]-0.22,s[1]-0.26,34,m,12);
+    pave(c,s[0]-0.14,s[1]-0.2,4,shade(m,14),46);
+    const u=s[0]-0.22, v=s[1]-0.26;
+    faceRect(c,u,v,12, 0.06,0.94, 22,29, '#FAF6EA');
+    for(let i=0;i<12;i++){ const t=0.1+i*0.07;
+      faceRect(c,u,v,12, t,t+0.028, 24.5,29, '#1B222A'); }
+    faceRect(c,u,v,12, 0.06,0.94, 21,22, shade(m,-40));
   }
 };
 
@@ -1913,7 +2502,7 @@ function frame(t){
   }
   if(dx||dy){
     const m=Math.hypot(dx,dy)||1; dx/=m; dy/=m;
-    const sp=(dedans?0.0031:0.0042)*dt;
+    const sp=(dedans?0.0031:0.0042)*dt*(achete('bottes')?1.34:1);
     const nx=hero.x+dx*sp, ny=hero.y+dy*sp;
     if(!blocked(nx,hero.y)) hero.x=nx;
     if(!blocked(hero.x,ny)) hero.y=ny;
@@ -1922,11 +2511,38 @@ function frame(t){
     hero.moving=true;
   } else hero.moving=false;
   surveillerLeTrajet(dt);
+  if(!dedans&&!visiting){ if(herbeAcote()) tondeuseJusqua=t+1100; tondre(); }
   proximity();
   if(dedans) drawInterieur(t); else drawWorld(t);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+// On tond la case sous ses pieds. Chez soi seulement : l'île des autres ne
+// se modifie pas, et le plafond du jour vaut même si on annule pour faire
+// repousser la touffe — c'est lui qui borne la corvée, pas la tuile.
+// Le moteur élargit la coupe aux quatre cases voisines. Il ne rapporte pas
+// plus : le plafond du jour ne bouge pas, c'est la corvée qui raccourcit.
+const COUPE1=[[0,0]], COUPE5=[[0,0],[1,0],[-1,0],[0,1],[0,-1]];
+function tondre(){
+  const x=Math.floor(hero.x), y=Math.floor(hero.y);
+  let coupe=0, n=0;
+  (achete('moteur')?COUPE5:COUPE1).forEach(d=>{
+    const cx=x+d[0], cy=y+d[1];
+    if(cx<0||cy<0||cx>=GRID||cy>=GRID) return;
+    const i=cy*GRID+cx;
+    if(mine.tiles[i]!==HAUTE) return;
+    mine.tiles[i]=HERBE; coupe++; n+=gagner(GAIN_TONTE,'tonte');
+  });
+  if(!coupe) return;
+  const reste=touffesSur(mine);
+  tondeuseJusqua=performance.now()+1100;
+  saveMine(); son('tonte'); if(n) setTimeout(()=>son('piece'),150); buildAll();
+  say(n
+    ? ('Tondu'+(coupe>1?(' \u00d7'+coupe):'')+'. <b>+'+n+' shell'+(n>1?'s':'')+'</b> \u00b7 '+
+       (reste ? ('encore '+reste+' touffe'+(reste>1?'s':'')) : 'la pelouse est nette'))
+    : 'Tondu, mais la tonte a d\u00e9j\u00e0 tout donn\u00e9 pour aujourd\u2019hui.');
+}
 
 /* ================= le son =================
    Rien n'est téléchargé. Les trois ambiances et les bruits d'outil sont
@@ -1983,7 +2599,10 @@ const SONS={
   mot:    ()=>{ souffle(880,'sine',0.35,0.13); setTimeout(()=>souffle(1320,'sine',0.45,0.09),70); },
   annule: ()=>{ souffle(300,'sine',0.16,0.12,520); },
   grandir:()=>{ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>souffle(f,'sine',0.5,0.11),i*110)); },
-  arrivee:()=>{ souffle(392,'triangle',0.25,0.10); setTimeout(()=>souffle(587,'triangle',0.3,0.08),110); }
+  arrivee:()=>{ souffle(392,'triangle',0.25,0.10); setTimeout(()=>souffle(587,'triangle',0.3,0.08),110); },
+  piece:  ()=>{ souffle(1046,'sine',0.16,0.11); setTimeout(()=>souffle(1568,'sine',0.20,0.08),60); },
+  tonte:  ()=>{ choc(0.16,620,0.13); setTimeout(()=>choc(0.10,900,0.07),90); },
+  achat:  ()=>{ [659,880,1109,1318].forEach((f,i)=>setTimeout(()=>souffle(f,'triangle',0.4,0.10),i*95)); }
 };
 function son(n){ if(!sonCoupe && SONS[n]) try{ SONS[n](); }catch(e){} }
 
@@ -2199,6 +2818,18 @@ function buildToi(){
   p.appendChild(swatches('Tenue','me.outfit',CLOTH));
   p.appendChild(chips('Accessoire','me.acc',[['aucun','Aucun'],['chapeau','Chapeau'],['lunettes','Lunettes'],['couronne','Couronne'],['cape','Cape']]));
   p.appendChild(hint('Les pastilles sont les couleurs de la charte. La pipette au bout de chaque rangée ouvre tout le spectre — c\'est ça, « tout est donnée ».'));
+
+  // L'équipement se voit ici, pas seulement dans la vitrine : un pouvoir
+  // qu'on a acheté et qu'on ne retrouve nulle part finit par s'oublier.
+  p.appendChild(rule());
+  const fe=field('Ton équipement'), le=document.createElement('ul'); le.className='gb';
+  BOUTIQUE.filter(a=>a.ou==='toi').forEach(a=>{
+    const li=document.createElement('li');
+    li.innerHTML = achete(a.k)
+      ? ('<b>'+esc(a.n)+'</b> — '+esc(a.d))
+      : ('<span style="opacity:.65"><b>'+esc(a.n)+'</b> — '+esc(a.d)+' <i>('+a.prix+' shells à la Boutique)</i></span>');
+    le.appendChild(li); });
+  fe.appendChild(le); p.appendChild(fe);
   paintPreview();
 }
 function paintPreview(){
@@ -2293,7 +2924,11 @@ function buildIle(){
     b.onclick=()=>{tool.mode=m;tool.kind=k;buildAll();}; bt.appendChild(b); });
   ft.appendChild(bt); p.appendChild(ft);
 
-  OBJ_GROUPS.forEach(([title,items])=>{
+  OBJ_GROUPS.forEach(([title,items0])=>{
+    // Un objet de la boutique n'apparaît ici qu'une fois acheté : un bouton
+    // mort dans l'atelier n'apprend rien, la boutique le dit mieux.
+    const items=items0.filter(([v])=>achete(v));
+    if(!items.length) return;
     const fo=field(title), bo=document.createElement('div'); bo.className='objs';
     items.forEach(([v,n])=>{
       const b=document.createElement('button'); b.className='obj'; b.type='button';
@@ -2306,6 +2941,11 @@ function buildIle(){
       b.onclick=()=>{tool.mode='objet';tool.kind=v;buildAll();}; bo.appendChild(b); });
     fo.appendChild(bo); p.appendChild(fo);
   });
+  // Ce qui manque ici est à la boutique, et on le dit : un atelier plus court
+  // qu'hier sans explication ressemble à une panne.
+  const verrous=BOUTIQUE.filter(a=>a.ou==='ile'&&!achete(a.k)).length;
+  if(verrous) p.appendChild(hint('Il y a <b>'+verrous+' objet'+(verrous>1?'s':'')+
+    '</b> de plus \u00e0 la <b>Boutique</b>. On les ach\u00e8te une fois, et on en pose ensuite autant qu\u2019on veut.'));
   const fe=field('Corriger'), be=document.createElement('div'); be.className='chips';
   const e=document.createElement('button'); e.className='chip'; e.type='button'; e.textContent='⌫ Gomme';
   e.setAttribute('aria-pressed',String(tool.mode==='gomme'));
@@ -2316,7 +2956,7 @@ function buildIle(){
   be.appendChild(e); be.appendChild(tr); fe.appendChild(be); p.appendChild(fe);
   p.appendChild(chipsLibre('Sens',[['se','\u2198 Vers la droite'],['sw','\u2199 Vers la gauche']],tool.orient,
     v=>{ tool.orient=v; buildAll(); }));
-  p.appendChild(hint('Le sens ne change que ce qui suit un axe : <b>banc</b>, <b>barrière</b>, <b>clôture</b>, <b>ponton</b>, <b>boutique</b>. Un arbre est pareil des deux côtés. <b>\u27f3 Tourner</b> retourne ce qui est déjà posé, sans l\'effacer.'));
+  p.appendChild(hint('Le sens ne change que ce qui suit un axe : <b>banc</b>, <b>barrière</b>, <b>clôture</b>, <b>ponton</b>, <b>échoppe</b>, <b>balançoire</b>, <b>hamac</b>, <b>toboggan</b>, <b>tente</b>. Un arbre est pareil des deux côtés. <b>\u27f3 Tourner</b> retourne ce qui est déjà posé, sans l\'effacer.'));
 
   const fc=field('Couleur de l\'objet'), bc=document.createElement('div'); bc.className='sw';
   OBJ_COLORS.forEach(c=>{
@@ -2413,10 +3053,36 @@ function buildIle(){
 
 // L'aperçu d'un objet : le même dessin que sur l'île, à la couleur
 // choisie. Un nom seul ne dit pas ce qu'on va poser.
+// Ce que porte le bonhomme n'est ni un objet d'île ni un meuble : il lui
+// faut son propre dessin, et sa propre vignette.
+const DRAWT={
+  bottes(c,C){
+    const w=C||'#B44C6C';
+    [[-8,4],[8,-4]].forEach(d=>{
+      c.save(); c.translate(d[0],d[1]);
+      c.fillStyle=shade(w,-26); rr(c,-5,-11,15,9,3.5); c.fill();
+      c.fillStyle=w;            rr(c,-5,-34,10,26,3.5); c.fill();
+      c.fillStyle=shade(w,22);  rr(c,-5.5,-36,11,5,2.5); c.fill();
+      c.fillStyle='#2A3238';    rr(c,-6,-3,17,4,2); c.fill();
+      c.restore(); });
+  },
+  moteur(c){ tondeuse(c,0,true); }
+};
+function apercuToi(g,t,col){
+  g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,60,60);
+  g.save(); g.translate(30,44);
+  g.save(); g.scale(0.60,0.60); shadowDiamond(g,0,0,15); g.restore();
+  g.scale(0.62,0.62); (DRAWT[t]||DRAWT.bottes)(g,col); g.restore();
+}
+// Un objet plus haut qu'une case déborde de sa vignette et se fait couper la
+// tête. L'ombre, elle, reste à la taille de la case : c'est le sol, pas l'objet.
+const APERCU_ECH={phare:0.44, moulin:0.50, cabane:0.44, montgolfiere:0.40,
+                  puits:0.50, statue:0.50, toboggan:0.54};
 function apercuObjet(g,t,col,o){
   g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,60,60);
-  g.save(); g.translate(30,45); g.scale(0.60,0.60);
-  shadowDiamond(g,0,0,15);
+  g.save(); g.translate(30,45);
+  g.save(); g.scale(0.60,0.60); shadowDiamond(g,0,0,15); g.restore();
+  const e=APERCU_ECH[t]||0.60; g.scale(e,e);
   dessinDe(g,t,col,PIVOT_ILE[t]?o:null);
   g.restore();
 }
@@ -2477,8 +3143,10 @@ function buildDedans(){
   bm.appendChild(mb); bm.appendChild(gb); bm.appendChild(tb); fm.appendChild(bm); p.appendChild(fm);
 
   MEUBLE_GROUPS.forEach(g=>{
+    const meubles=g[1].filter(m=>achete(m[0]));
+    if(!meubles.length) return;
     const fo=field(g[0]), bo=document.createElement('div'); bo.className='objs';
-    g[1].forEach(m=>{
+    meubles.forEach(m=>{
       const b=document.createElement('button'); b.className='obj'; b.type='button'; b.title=m[1];
       b.setAttribute('aria-pressed',String(tool.mode==='meuble'&&tool.kind===m[0]));
       const c=document.createElement('canvas'); c.width=120; c.height=120;
@@ -2490,6 +3158,9 @@ function buildDedans(){
       b.onclick=()=>{ tool.mode='meuble'; tool.kind=m[0]; buildAll(); };
       bo.appendChild(b); });
     fo.appendChild(bo); p.appendChild(fo); });
+  const verrousM=BOUTIQUE.filter(a=>a.ou==='dedans'&&!achete(a.k)).length;
+  if(verrousM) p.appendChild(hint('Il y a <b>'+verrousM+' meuble'+(verrousM>1?'s':'')+
+    '</b> de plus \u00e0 la <b>Boutique</b>.'));
 
   const fc=field('Couleur du meuble'), bc=document.createElement('div'); bc.className='sw';
   OBJ_COLORS.forEach(k=>{
@@ -2506,6 +3177,138 @@ function buildDedans(){
     '</b> fait '+def.w+'x'+def.h+' cases et porte <b>'+nb+' meuble'+(nb>1?'s':'')+'</b>. '+
     '<b>Ctrl+Z</b> annule ici comme dehors.'));
   p.appendChild(hint('Le <b>sens</b> s\'applique au moment de poser ; <b>\u27f3 Tourner</b> retourne un meuble déjà en place. Un meuble ne se pose pas sur une porte ni sur un autre meuble ; le tapis, si : il vit au sol, sous le reste.'));
+}
+
+
+/* ---- la boutique ----
+   On débloque un type d'objet, une fois, pour toujours. Pas de paiement à
+   chaque pose : un enfant qui efface une fontaine pour la remettre deux
+   cases plus loin aurait perdu son argent, et il pleure. Une fois la
+   fontaine achetée, il en pose dix s'il veut.
+
+   L'achat se fait en deux temps, et c'est délibéré. Un clic qui débite
+   soixante shells sans rien montrer ressemble à une panne quand on n'a pas
+   de quoi payer : le murmure qui explique est en bas du cadre, à trois
+   écrans du doigt qui vient de cliquer. Choisir un article ouvre donc un
+   comptoir, juste sous la vitrine, qui dit le prix, ce qui manque, et porte
+   le bouton qui paie. */
+let vitrine=null;                 // l'article choisi, pas encore acheté
+function buildBoutique(){
+  const p=document.getElementById('p-boutique'); p.innerHTML='';
+  const b=mine.bourse;
+
+  if(cadeauDispo()){
+    const fc=field('Le cadeau du jour'), r=document.createElement('div'); r.className='row';
+    const bt=document.createElement('button'); bt.className='btn primary';
+    bt.textContent='🎁 Ouvrir mon cadeau';
+    bt.onclick=()=>ouvrirCadeau();
+    r.appendChild(bt); fc.appendChild(r); p.appendChild(fc);
+    p.appendChild(hint(b.serie
+      ? ('Tu es venu <b>'+b.serie+' jour'+(b.serie>1?'s':'')+'</b> d’affilée. Chaque jour de plus grossit le cadeau, et le septième, la boutique t’offre un objet.')
+      : 'Reviens demain, et le cadeau sera plus gros. Sept jours d’affilée, et la boutique t’offre un objet.'));
+    p.appendChild(rule());
+  }
+
+  const ft=field('Ta bourse'), t=document.createElement('p'); t.className='tresor';
+  t.innerHTML='<b>'+b.shells+'</b> shell'+(b.shells>1?'s':'');
+  ft.appendChild(t); p.appendChild(ft);
+
+  const gagne=b.faits.tonte||0, reste=Math.max(0,PLAFOND.tonte-gagne), touffes=touffesSur(mine);
+  p.appendChild(hint(reste
+    ? ('Des <b>hautes herbes</b> poussent sur ta pelouse chaque jour. Marche dessus pour les tondre : <b>1 shell</b> la touffe. Il en reste <b>'+
+       touffes+'</b> à tondre, et <b>'+reste+' shell'+(reste>1?'s':'')+'</b> à gagner aujourd’hui.')
+    : 'Tu as gagné tout ce que la tonte donne aujourd’hui. Les herbes repousseront demain.'));
+  p.appendChild(rule());
+
+  const choisi = vitrine ? BOUTIQUE.find(a=>a.k===vitrine) : null;
+  [['toi','Pour toi'],['ile','Sur ton île'],['dedans','Dans ta maison']].forEach(([ou,titre])=>{
+    const f=field(titre), g=document.createElement('div'); g.className='objs';
+    BOUTIQUE.filter(a=>a.ou===ou).forEach(a=>{
+      const eu=achete(a.k), cher=!eu&&b.shells<a.prix;
+      const bt=document.createElement('button'); bt.type='button';
+      bt.className='obj'+(eu?' acquis':(cher?' cher':''));
+      bt.setAttribute('aria-pressed',String(vitrine===a.k));
+      bt.title=a.n+' — '+a.d;
+      const c=document.createElement('canvas'); c.width=120; c.height=120;
+      // La vitrine montre chaque objet à sa teinte naturelle, pas à celle du
+      // pinceau : vingt vignettes toutes vertes ne donnent envie de rien.
+      if(ou==='ile')         apercuObjet(c.getContext('2d'),a.k,a.c,'se');
+      else if(ou==='dedans')  apercuMeuble(c.getContext('2d'),a.k,a.c,'se');
+      else                    apercuToi(c.getContext('2d'),a.k,a.c);
+      const nom=document.createElement('span'); nom.textContent=a.n;
+      const prix=document.createElement('span'); prix.className='prix';
+      prix.textContent = eu ? '✓ à toi' : (a.prix+' shells');
+      bt.appendChild(c); bt.appendChild(nom); bt.appendChild(prix);
+      bt.onclick=()=>{ vitrine = (vitrine===a.k) ? null : a.k; buildAll(); };
+      g.appendChild(bt); });
+    f.appendChild(g); p.appendChild(f);
+    if(choisi && choisi.ou===ou) p.appendChild(comptoir(choisi)); });
+
+  p.appendChild(rule());
+  p.appendChild(hint('Tout se paie en <b>shells</b>, la monnaie de l’île. On les gagne en jouant, jamais avec de l’argent : il n’y a rien à acheter ici avec autre chose que des shells.'));
+  p.appendChild(hint('Un objet s’achète <b>une fois, pour toujours</b> : il rejoint ton atelier et tu en poses autant que tu veux, sans repayer. Ce qui est acheté apparaît dans l’onglet <b>Île</b> ou dans <b>Dedans</b>, dans son rayon. Ce qui est <b>pour toi</b> n’a pas d’atelier : ça agit dès l’achat.'));
+  p.appendChild(hint('La bourse vit avec ton île : elle te suit d’un appareil à l’autre dès que tu es connecté. Elle est tenue par ton navigateur, pas par un coffre-fort : entre vous, c’est l’honnêteté qui compte.'));
+}
+// Le comptoir : ce qu'on a choisi, ce que ça coûte, et le seul bouton qui
+// débite. Il dit « il te manque 8 shells » là où on vient de cliquer.
+function comptoir(a){
+  const w=document.createElement('div'); w.className='comptoir';
+  const h=document.createElement('p'); h.className='hint';
+  h.innerHTML='<b>'+esc(a.n)+'</b> — '+esc(a.d);
+  const r=document.createElement('div'); r.className='row';
+  const ok=document.createElement('button'); ok.className='btn primary';
+  const manque=a.prix-mine.bourse.shells;
+  if(achete(a.k)){ ok.textContent='Déjà à toi'; ok.disabled=true; }
+  else if(manque>0){ ok.textContent='Il te manque '+manque+' shell'+(manque>1?'s':''); ok.disabled=true; }
+  else { ok.textContent='Acheter pour '+a.prix+' shells'; ok.onclick=()=>acheter(a); }
+  const non=document.createElement('button'); non.className='btn'; non.textContent='Laisser';
+  non.onclick=()=>{ vitrine=null; buildAll(); };
+  r.appendChild(ok); r.appendChild(non);
+  w.appendChild(h); w.appendChild(r);
+  if(manque>0 && !achete(a.k))
+    w.appendChild(hint('Va tondre ta pelouse, et reviens : la tonte donne <b>'+PLAFOND.tonte+' shells</b> par jour, et le cadeau du jour s’y ajoute.'));
+  return w;
+}
+function acheter(a){
+  const b=mine.bourse;
+  if(achete(a.k) || b.shells<a.prix) return;   // le comptoir l'a déjà dit
+  b.shells-=a.prix; mine.achats.push(a.k); vitrine=null;
+  saveMine(); son('achat'); buildAll();
+  // Un équipement n'a pas d'atelier : il agit tout de suite, sur place.
+  if(EQUIPEMENT[a.k]){ say('<b>'+esc(a.n)+'</b> est à toi, et ça marche déjà. '+esc(a.d)); return; }
+  ouvrirOnglet(a.ou==='ile'?'ile':'dedans');
+  say('<b>'+esc(a.n)+'</b> est à toi. Tu la trouveras dans ton atelier, et tu peux en poser autant que tu veux.');
+}
+
+/* ---- le cadeau du jour ----
+   Revenir doit valoir quelque chose, et se voir. Le cadeau ne tombe pas
+   tout seul dans la bourse : on l'ouvre, sinon il n'y a pas de moment.
+   La série compte les jours d'affilée et grossit le cadeau ; elle repart à
+   un dès qu'un jour est sauté. Le septième jour donne un objet plutôt que
+   des shells : c'est le seul endroit où la boutique donne. */
+function jourDecale(n){
+  const d=new Date(); d.setDate(d.getDate()+n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function cadeauDispo(){ return mine.bourse && mine.bourse.cadeau!==aujourdhui(); }
+function ouvrirCadeau(){
+  if(!cadeauDispo()) return;
+  const b=mine.bourse;
+  b.serie = (b.cadeau===jourDecale(-1)) ? (b.serie||0)+1 : 1;
+  b.cadeau = aujourdhui();
+  const offert = (b.serie%7===0)
+    ? BOUTIQUE.filter(a=>!achete(a.k)).sort((x,y)=>x.prix-y.prix)[0] : null;
+  let msg;
+  if(offert){
+    mine.achats.push(offert.k);
+    msg='<b>Sept jours d’affilée.</b> La boutique t’offre <b>'+esc(offert.n)+'</b>, sans rien prendre dans ta bourse.';
+  }else{
+    const n=CADEAU_BASE+Math.min(b.serie,7); b.shells+=n;
+    msg='<b>Cadeau du jour : +'+n+' shell'+(n>1?'s':'')+'.</b> '+(b.serie>1
+      ? (b.serie+' jours d’affilée — reviens demain, il grossit encore.')
+      : 'Reviens demain et il sera plus gros.');
+  }
+  vitrine=null; saveMine(); son('achat'); buildAll(); say(msg);
 }
 
 function thumb(g,w){
@@ -2680,6 +3483,9 @@ async function demarrer(){
   }
   replanter(mine);
   routerDepuisURL();
+  reveiller();
+  // Une session laissée ouverte la nuit doit voir le jour passer.
+  setInterval(reveiller, 60000);
 }
 
 async function chargerMonCompte(){
@@ -2725,12 +3531,14 @@ function freeTile(w){
 }
 function encode(w){
   return btoa(unescape(encodeURIComponent(JSON.stringify(
-    {n:w.name,p:w.pal.k,s:w.sky,t:w.tiles.join(''),h:w.house,o:w.objects,m:w.me,i:w.interieur}))));
+    {n:w.name,p:w.pal.k,s:w.sky,t:w.tiles.join(''),h:w.house,o:w.objects,m:w.me,i:w.interieur,
+     b:w.bourse,a:w.achats}))));
 }
 function decode(s){
   const o=JSON.parse(decodeURIComponent(escape(atob(s))));
   return {name:o.n, pal:GROUNDS.find(g=>g.k===o.p)||GROUNDS[0], sky:o.s,
-    tiles:String(o.t).split('').map(Number), house:o.h, objects:o.o, me:o.m, interieur:o.i};
+    tiles:String(o.t).split('').map(Number), house:o.h, objects:o.o, me:o.m, interieur:o.i,
+    bourse:o.b, achats:o.a};
 }
 
 // La carte postale : le cadre tel qu'il est à l'écran, plus le nom de
@@ -2802,6 +3610,11 @@ function hudSync(){
   m.textContent = dedans ? ('Chez toi · '+pieceDef(piece).n)
     : (visiting ? 'Invité chez '+world.owner : (tool.mode==='marche'?'Chez toi':'Chez toi · édition'));
   m.className='plate'+(visiting?' guest':'');
+  const n=mine.bourse?mine.bourse.shells:0;
+  document.getElementById('hud-sous').textContent = n+' shell'+(n>1?'s':'');
+  // Un cadeau qu'on ne voit pas n'est pas un cadeau : l'onglet le porte.
+  const ob=[...document.querySelectorAll('.tabs button')].find(x=>x.dataset.tab==='boutique');
+  if(ob) ob.classList.toggle('cadeau', cadeauDispo());
   cv.classList.toggle('walking', tool.mode==='marche');
 }
 // L'onglet ouvert est un état du jeu, pas seulement un clic : franchir une
@@ -2817,7 +3630,7 @@ function ouvrirOnglet(nom){
 document.querySelectorAll('.tabs button').forEach(b=>{ b.onclick=()=>ouvrirOnglet(b.dataset.tab); });
 document.getElementById('son-btn').onclick=()=>couperLeSon(!sonCoupe);
 peindreSon();
-function buildAll(){ buildToi(); buildMaison(); buildIle(); buildDedans(); buildVoisins(); hudSync(); }
+function buildAll(){ buildToi(); buildMaison(); buildIle(); buildDedans(); buildVoisins(); buildBoutique(); hudSync(); }
 buildAll();
 // Annoncer des touches à quelqu'un qui n'a pas de clavier, c'est le perdre.
 say(matchMedia('(pointer:coarse)').matches

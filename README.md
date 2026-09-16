@@ -280,6 +280,138 @@ large hors rayon, et une case occupée par un objet ou par un mot du livre
 d'or, en le disant. Si le bonhomme se retrouve dans les murs, il est
 reposé devant la porte.
 
+## La bourse et la boutique
+
+Une bourse, une corvée, un cadeau quotidien, vingt-quatre objets à débloquer.
+Le tout vit dans le même jsonb que le reste : `monde.bourse` et
+`monde.achats`, **aucune migration SQL**, comme l'intérieur.
+
+    bourse = { shells: 42, jour: '2026-09-17', faits: {tonte:5},
+               pousse: '2026-09-17', cadeau: '2026-09-17', serie: 4 }
+    achats = ['fontaine','moulin']
+
+La monnaie s'appelle le **shell**, pas la pièce : `interieur.pieces`, ce sont
+les salles de la maison, et l'homonyme portait à confusion. `shellsDe()`
+relit l'ancien nom pour une bourse écrite avant le changement.
+
+**Payant veut dire payant en shells.** Il n'y a pas d'argent réel dans ce
+jeu, et il n'y en aura pas.
+
+### La règle qu'on ne casse pas
+
+L'âme du jeu tient en une phrase : **l'île grandit parce que des gens sont
+passés**, jamais parce que le temps passe. Une économie faite seulement de
+corvées la contredirait : on s'enrichirait seul, en boucle, et l'archipel ne
+servirait plus à rien. C'est pourquoi la tonte est plafonnée à huit shells
+par jour. De quoi voir un compteur monter, pas de quoi vivre sans voisins.
+Les visites payantes et les trouvailles, qui rebranchent la bourse sur
+l'archipel, viendront après et deviendront la meilleure source.
+
+### La tonte
+
+Une case d'herbe (`0`) se laisse gagner par les hautes herbes (`4`). La
+traverser la tond et rapporte un shell. Le bonhomme sort une **tondeuse** dès
+qu'une touffe est sous ses pieds ou sur une case voisine, et la range une
+seconde après la dernière : on ne tond pas à mains nues, et une tondeuse
+portée en permanence n'aurait plus rien à dire. Elle n'est pas un objet de
+l'île — rien en base, rien à poser, rien à acheter. Huit touffes au plus sur l'île, une
+repousse par jour, huit shells par jour : c'est la corvée la moins chère à
+écrire, elle ne demande aucun objet neuf, et elle **se joue en marchant**. Un
+bouton qui donne des shells ne serait pas un jeu.
+
+`4` est une valeur de tuile comme les autres : elle part en base dans
+`tiles`, elle tient en un chiffre — `encode()` colle les cases bout à bout,
+une valeur à deux chiffres casserait tous les codes de sauvegarde — et rien
+ne la précède en SQL.
+
+Les herbes ne poussent ni sur le sable, ni hors du rayon acquis, ni sous un
+objet, ni contre la maison ou son pas de porte : une touffe qu'on ne voit pas
+est une touffe qu'on ne tondra jamais.
+
+`jour` et `pousse` sont **deux marqueurs et non un** : le premier remet les
+plafonds à zéro, le second autorise la repousse. Fondus en un seul, une île
+ouverte aujourd'hui n'aurait sa première touffe que demain.
+
+### Le cadeau du jour
+
+Revenir doit valoir quelque chose, et se voir. Une pastille rose s'allume sur
+l'onglet Boutique, et un bouton ouvre le cadeau : `3 + série` shells, jusqu'à
+dix. La **série** compte les jours d'affilée et repart à un dès qu'un jour est
+sauté. Tous les sept jours d'affilée, la boutique offre un objet — le moins
+cher de ceux qui manquent — plutôt que des shells.
+
+Le cadeau ne tombe pas tout seul dans la bourse : on l'ouvre. Sans le geste,
+il n'y a pas de moment.
+
+### Ce qu'on achète
+
+Dix-sept objets d'île, de 12 à 60 shells : chat, hérisson, puits, fontaine,
+feu de camp, hamac, balançoire, tente, mare aux canards, phare, renard,
+échoppe, toboggan, moulin, cabane perchée, statue, montgolfière. Et sept
+meubles, de 12 à 45 : tapis rond, guirlande, bibliothèque, poêle à bois,
+télévision, aquarium, piano.
+
+Le **phare** et l'**échoppe** étaient libres jusqu'au 16/09 au soir. Une île
+qui en porte déjà un le garde : `normaliserEconomie()` crédite `achats` pour
+tout type verrouillé déjà posé, sinon le pinceau disparaîtrait de l'atelier
+d'un joueur qui avait l'objet la veille. Les souvenirs rapportés d'un voisin
+(`o.de`) sont exclus de ce cadeau, sinon une visite chez un ami débloquerait
+la boutique.
+
+**On débloque un type d'objet une fois, pour toujours.** Pas de paiement à
+chaque pose : un enfant qui efface une fontaine pour la remettre deux cases
+plus loin aurait perdu son argent, et il pleure. Une fois la fontaine
+achetée, il en pose dix s'il veut.
+
+**L'achat se fait en deux temps.** Choisir un article ouvre un comptoir sous
+la vitrine : le prix, ce qui manque, et le bouton qui paie. La version d'avant
+achetait au clic et annonçait le refus dans le murmure, en bas du cadre :
+sur téléphone, à trois écrans du doigt qui venait de cliquer. Ça se vivait
+comme « je clique et rien ne se passe ». Le refus doit être là où est le
+doigt.
+
+Un objet verrouillé n'apparaît pas dans l'atelier : un bouton mort n'apprend
+rien, la vitrine le dit mieux. Un encart sous les objets dit combien il en
+reste à la boutique, sans quoi un atelier plus court qu'hier ressemble à une
+panne.
+
+Rien n'a été ajouté aux îles bot : on y ramènerait un souvenir gratuit, et la
+boutique ne servirait plus à rien.
+
+### Ce qu'on porte
+
+Un troisième rayon, **Pour toi**, ne vend pas des objets à poser mais ce que
+le bonhomme sait faire. Rien n'entre dans `objects` ni dans les meubles :
+`achats` suffit, et le moteur lit la liste au moment d'agir.
+
+- **Bottes**, 25 shells. La marche passe de 1 à 1,34, dehors comme dedans.
+- **Tondeuse à moteur**, 45 shells. La coupe s'élargit aux quatre cases
+  voisines. Elle **ne rapporte pas plus** : le plafond du jour ne bouge pas,
+  c'est la corvée qui raccourcit. Le dessin change aussi, bac à herbe et bloc
+  moteur : un outil amélioré qui ne se voit pas n'a pas été amélioré.
+
+Un équipement n'a pas d'atelier : il agit dès l'achat, et l'onglet **Toi** en
+donne la liste, acquis ou pas. Un pouvoir qu'on a payé et qu'on ne retrouve
+nulle part finit par s'oublier.
+
+### Le point honnête
+
+**C'est l'honnêteté qui protège la caisse, pas la base.** Le client écrit sa
+propre bourse et lit sa propre horloge : la console d'un navigateur rend
+millionnaire en trente secondes, et avancer la date du téléphone refait les
+corvées du jour. Entre enfants qui se connaissent, ça n'a aucune importance
+et ça ne vaut pas le coût d'y répondre.
+
+Le jour où ça comptera, la réponse n'est pas un contrôle de plus côté client :
+c'est une **fonction Postgres** qui crédite le compte et une policy RLS qui
+interdit d'écrire `bourse` directement. Autrement dit du SQL, une migration,
+et le serveur qui devient juge du temps. À décider avant d'écrire les visites
+payantes, pas après.
+
+Conséquence assumée : `tondre()` ne passe pas par `memoriser()`, donc
+`Ctrl+Z` peut faire repousser une touffe déjà tondue. Ce n'est pas un oubli,
+c'est le plafond du jour qui borne la corvée, jamais la tuile.
+
 ## Les souvenirs
 
 Chez un voisin, s'arrêter à côté d'un objet propose de le ramener.
@@ -290,7 +422,8 @@ Un souvenir déjà rapporté du même hôte et du même type est refusé.
 ## Modèle
 
 Une ligne par île. Tout le monde du jeu tient dans `iles.monde` (jsonb) :
-`tiles` (324 chiffres), `house`, `objects`, `me`, `pal`, `sky`, `interieur`.
+`tiles` (324 chiffres), `house`, `objects`, `me`, `pal`, `sky`, `interieur`,
+`bourse`, `achats`.
 `mondeNu()` est la seule liste qui compte : **une clé oubliée là, et chaque
 sauvegarde l'efface en silence.**
 Les mots du livre d'or vivent à part, dans `mots`, pour être modérables un par un.
