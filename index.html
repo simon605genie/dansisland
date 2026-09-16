@@ -473,6 +473,29 @@ function mondeNu(w){
 function saveMine(){
   store.planifierSauvegarde(ileId, mondeNu(mine), mine.name, e=>{ etatSauvegarde=e; peindreCompte(); });
 }
+
+/* ---- annulation ----
+   Un editeur ou un clic detruit une heure de travail sans recours n'est pas
+   un editeur. On garde les derniers etats du terrain, des objets et de la
+   maison ; les panneaux du livre d'or sont exclus, replanter() les remet. */
+const HISTO_MAX=60; const histo=[];
+function memoriser(){
+  histo.push(JSON.stringify({
+    t:mine.tiles,
+    o:(mine.objects||[]).filter(o=>o.t!=='panneau'),
+    h:mine.house
+  }));
+  if(histo.length>HISTO_MAX) histo.shift();
+}
+function annuler(){
+  if(!histo.length){ say('Rien \u00e0 annuler.'); return; }
+  const e=JSON.parse(histo.pop());
+  mine.tiles=e.t; mine.objects=e.o; mine.house=e.h;
+  replanter(mine);
+  if(!visiting) world=mine;
+  saveMine(); buildAll();
+  say(histo.length?('Annul\u00e9. Encore '+histo.length+' pas en arri\u00e8re.'):'Annul\u00e9.');
+}
 function motsDe(w){ return (w.mots||[]).filter(m=>!m.masque); }
 // Replante les panneaux du livre d'or dans le décor.
 function replanter(w){
@@ -900,6 +923,7 @@ addEventListener('keydown',e=>{
   if(e.target.matches('input,textarea')) return;
   keys[e.key.toLowerCase()]=true;
   if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); if(!visiting) annuler(); }
 });
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 
@@ -917,11 +941,20 @@ cv.addEventListener('click',e=>{
   if(q.x<0||q.y<0||q.x>=GRID||q.y>=GRID) return;
   if(tool.mode==='marche'){ target={x:q.fx,y:q.fy}; return; }
   if(visiting){ say('Tu es invité chez '+esc(world.owner)+" — on ne touche pas à l'île des autres."); return; }
-  if(tool.mode==='terrain'){ world.tiles[q.y*GRID+q.x]=tool.kind; }
-  else if(tool.mode==='gomme'){ world.objects=world.objects.filter(o=>!(o.x===q.x&&o.y===q.y)); }
+  // On ne memorise que si le clic change vraiment quelque chose : sinon la
+  // pile se remplit de pas qui n'annulent rien.
+  if(tool.mode==='terrain'){
+    if(world.tiles[q.y*GRID+q.x]===tool.kind) return;
+    memoriser(); world.tiles[q.y*GRID+q.x]=tool.kind;
+  }
+  else if(tool.mode==='gomme'){
+    if(!world.objects.some(o=>o.t!=='panneau'&&o.x===q.x&&o.y===q.y)) return;
+    memoriser(); world.objects=world.objects.filter(o=>o.t==='panneau'||!(o.x===q.x&&o.y===q.y));
+  }
   else if(tool.mode==='objet'){
     if(world.tiles[q.y*GRID+q.x]===2){ say("On ne plante rien dans l'eau."); return; }
     if(q.x>=world.house.x&&q.x<=world.house.x+1&&q.y>=world.house.y&&q.y<=world.house.y+1){ say('La maison occupe déjà cette case.'); return; }
+    memoriser();
     world.objects=world.objects.filter(o=>!(o.x===q.x&&o.y===q.y));
     world.objects.push({t:tool.kind,x:q.x,y:q.y,c:tool.color});
   }
@@ -1108,12 +1141,16 @@ function buildIle(){
   bc.appendChild(pk); fc.appendChild(bc); p.appendChild(fc);
 
   const row=document.createElement('div'); row.className='row';
+  const un=document.createElement('button'); un.className='btn'; un.textContent='\u21b6 Annuler';
+  un.disabled=!histo.length; un.onclick=()=>annuler();
   const rst=document.createElement('button'); rst.className='btn'; rst.textContent='Vider les objets';
-  rst.onclick=()=>{mine.objects=[]; saveMine(); buildAll();};
+  rst.onclick=()=>{ if(!(mine.objects||[]).some(o=>o.t!=='panneau')) return;
+    memoriser(); mine.objects=(mine.objects||[]).filter(o=>o.t==='panneau'); saveMine(); buildAll(); };
   const nw=document.createElement('button'); nw.className='btn'; nw.textContent='Nouveau relief';
-  nw.onclick=()=>{mine.tiles=baseTiles(5.4+Math.random()*0.9,0.74+Math.random()*0.12); saveMine();};
-  row.appendChild(rst); row.appendChild(nw); p.appendChild(row);
-  p.appendChild(hint('Le curseur suit la grille isométrique : le losange rose montre la case visée.'));
+  nw.onclick=()=>{ memoriser();
+    mine.tiles=baseTiles(5.4+Math.random()*0.9,0.74+Math.random()*0.12); saveMine(); buildAll(); };
+  row.appendChild(un); row.appendChild(rst); row.appendChild(nw); p.appendChild(row);
+  p.appendChild(hint('Le curseur suit la grille isométrique : le losange rose montre la case visée. <b>Ctrl+Z</b> revient en arrière, jusqu\u2019\u00e0 '+HISTO_MAX+' fois.'));
   p.appendChild(rule());
 
   // ---- livre d'or ----
