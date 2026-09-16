@@ -118,7 +118,7 @@ export async function planterMot(ileId, texte, x, y, nom) {
   return data;
 }
 
-// Modération : le propriétaire masque, il ne détruit pas.
+// Modération : masquer garde le mot en base, supprimerMot l'efface pour de bon.
 export async function masquerMot(id, masque = true) {
   const { error } = await sb.from('mots').update({ masque }).eq('id', id);
   if (error) throw error;

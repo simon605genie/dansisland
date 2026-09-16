@@ -1114,6 +1114,69 @@ function buildIle(){
   nw.onclick=()=>{mine.tiles=baseTiles(5.4+Math.random()*0.9,0.74+Math.random()*0.12); saveMine();};
   row.appendChild(rst); row.appendChild(nw); p.appendChild(row);
   p.appendChild(hint('Le curseur suit la grille isométrique : le losange rose montre la case visée.'));
+  p.appendChild(rule());
+
+  // ---- livre d'or ----
+  // `cible` = l'id en base, ou null quand l'ile n'y est pas encore (demo, hors ligne)
+  const cible = (world===mine) ? ileId : (world.demo ? null : world.id);
+  const jeModere = !visiting || world.aMoi;
+  const gf=field('Livre d\u2019or \u2014 '+(world.name||'')), ul=document.createElement('ul'); ul.className='gb';
+  const notes=(world.mots||[]).filter(m=>jeModere||!m.masque);
+  if(!notes.length){ const li=document.createElement('li'); li.style.color='var(--ink-3)';
+    li.textContent='Personne n\u2019est encore pass\u00e9.'; ul.appendChild(li); }
+  notes.slice(-8).forEach(m=>{
+    const li=document.createElement('li');
+    li.style.display='flex'; li.style.alignItems='baseline'; li.style.gap='8px';
+    const t=document.createElement('span'); t.style.flex='1';
+    t.innerHTML='<b>'+esc(m.auteur_nom)+'</b> \u2014 '+esc(m.texte)+(m.masque?' <i style="opacity:.6">(masqu\u00e9)</i>':'');
+    li.appendChild(t);
+    if(jeModere&&m.id&&cible){
+      const x=document.createElement('button'); x.className='chip'; x.type='button';
+      x.style.padding='1px 8px'; x.textContent=m.masque?'montrer':'masquer';
+      x.onclick=async()=>{ try{ await store.masquerMot(m.id,!m.masque); m.masque=!m.masque;
+        replanter(world); buildAll(); }catch(e){ say('Modération impossible : '+esc(e.message||e)); } };
+      li.appendChild(x);
+    }
+    // Supprimer : chez soi n'importe quel mot, ailleurs seulement les siens
+    // (c'est exactement ce que laisse passer la policy RLS mots_suppr).
+    if(jeModere || !cible || (moi && m.auteur && m.auteur===moi.id)){
+      const d=document.createElement('button'); d.className='chip'; d.type='button';
+      d.style.padding='1px 8px'; d.textContent='supprimer';
+      d.onclick=async()=>{
+        if(!confirm('Supprimer ce mot ? C\u2019est d\u00e9finitif.')) return;
+        try{
+          if(m.id && cible) await store.supprimerMot(m.id);   // sinon : mot local, rien en base
+          world.mots=(world.mots||[]).filter(n=>n!==m);
+          replanter(world); if(world===mine) saveMine();
+          say('Mot supprim\u00e9.'); buildAll();
+        }catch(e){ say('Suppression impossible : '+esc(e.message||e)); }
+      };
+      li.appendChild(d);
+    }
+    ul.appendChild(li);
+  });
+  gf.appendChild(ul);
+  const i=document.createElement('input'); i.type='text'; i.maxLength=200;
+  i.placeholder = visiting ? 'Un mot pour '+(world.owner||'')+'\u2026' : 'Un mot sur ton propre mur\u2026';
+  const add=document.createElement('button'); add.className='btn primary'; add.textContent='Planter le mot';
+  add.onclick=async()=>{
+    const v=i.value.trim(); if(!v) return;
+    const spot=freeTile(world);
+    if(!spot){ say('Plus une case de libre pour planter un mot.'); return; }
+    if(!cible){                                      // ile de demo ou hors ligne : tout reste local
+      world.mots.push({id:null,auteur_nom:(monPseudo||mine.me.name||'Quelqu\u2019un'),texte:v,case_x:spot.x,case_y:spot.y,masque:false});
+      replanter(world); if(world===mine) saveMine();
+      i.value=''; say('Mot plant\u00e9 (\u00eele de d\u00e9mo : rien n\u2019est envoy\u00e9).'); buildAll(); return;
+    }
+    if(!moi){ say('Connecte-toi pour laisser un mot chez quelqu\u2019un.'); return; }
+    try{
+      const m=await store.planterMot(cible,v,spot.x,spot.y,monPseudo||mine.me.name);
+      world.mots.push(m); replanter(world); i.value='';
+      say('Mot plant\u00e9. Marche \u00e0 c\u00f4t\u00e9 du panneau pour le relire.'); buildAll();
+    }catch(e){ say('Mot refus\u00e9 : '+esc(e.message||e)); }
+  };
+  const r2=document.createElement('div'); r2.className='row'; r2.appendChild(add);
+  gf.appendChild(i); gf.appendChild(r2); p.appendChild(gf);
 }
 
 function thumb(g,w){
@@ -1156,52 +1219,6 @@ function buildVoisins(){
     d.appendChild(c); d.appendChild(txt); d.appendChild(b); list.appendChild(d);
   });
   f.appendChild(list); p.appendChild(f); p.appendChild(rule());
-
-  // ---- livre d'or ----
-  // `cible` = l'id en base, ou null quand l'ile n'y est pas encore (demo, hors ligne)
-  const cible = (world===mine) ? ileId : (world.demo ? null : world.id);
-  const jeModere = !visiting || world.aMoi;
-  const gf=field('Livre d\u2019or \u2014 '+(world.name||'')), ul=document.createElement('ul'); ul.className='gb';
-  const notes=(world.mots||[]).filter(m=>jeModere||!m.masque);
-  if(!notes.length){ const li=document.createElement('li'); li.style.color='var(--ink-3)';
-    li.textContent='Personne n\u2019est encore pass\u00e9.'; ul.appendChild(li); }
-  notes.slice(-8).forEach(m=>{
-    const li=document.createElement('li');
-    li.style.display='flex'; li.style.alignItems='baseline'; li.style.gap='8px';
-    const t=document.createElement('span'); t.style.flex='1';
-    t.innerHTML='<b>'+esc(m.auteur_nom)+'</b> \u2014 '+esc(m.texte)+(m.masque?' <i style="opacity:.6">(masqu\u00e9)</i>':'');
-    li.appendChild(t);
-    if(jeModere&&m.id&&cible){
-      const x=document.createElement('button'); x.className='chip'; x.type='button';
-      x.style.padding='1px 8px'; x.textContent=m.masque?'montrer':'masquer';
-      x.onclick=async()=>{ try{ await store.masquerMot(m.id,!m.masque); m.masque=!m.masque;
-        replanter(world); buildAll(); }catch(e){ say('Modération impossible : '+esc(e.message||e)); } };
-      li.appendChild(x);
-    }
-    ul.appendChild(li);
-  });
-  gf.appendChild(ul);
-  const i=document.createElement('input'); i.type='text'; i.maxLength=200;
-  i.placeholder = visiting ? 'Un mot pour '+(world.owner||'')+'\u2026' : 'Un mot sur ton propre mur\u2026';
-  const add=document.createElement('button'); add.className='btn primary'; add.textContent='Planter le mot';
-  add.onclick=async()=>{
-    const v=i.value.trim(); if(!v) return;
-    const spot=freeTile(world);
-    if(!spot){ say('Plus une case de libre pour planter un mot.'); return; }
-    if(!cible){                                      // ile de demo ou hors ligne : tout reste local
-      world.mots.push({id:null,auteur_nom:(monPseudo||mine.me.name||'Quelqu\u2019un'),texte:v,case_x:spot.x,case_y:spot.y,masque:false});
-      replanter(world); if(world===mine) saveMine();
-      i.value=''; say('Mot plant\u00e9 (\u00eele de d\u00e9mo : rien n\u2019est envoy\u00e9).'); buildAll(); return;
-    }
-    if(!moi){ say('Connecte-toi pour laisser un mot chez quelqu\u2019un.'); return; }
-    try{
-      const m=await store.planterMot(cible,v,spot.x,spot.y,monPseudo||mine.me.name);
-      world.mots.push(m); replanter(world); i.value='';
-      say('Mot plant\u00e9. Marche \u00e0 c\u00f4t\u00e9 du panneau pour le relire.'); buildAll();
-    }catch(e){ say('Mot refus\u00e9 : '+esc(e.message||e)); }
-  };
-  const r2=document.createElement('div'); r2.className='row'; r2.appendChild(add);
-  gf.appendChild(i); gf.appendChild(r2); p.appendChild(gf); p.appendChild(rule());
 
   // ---- sauvegarde / restauration hors ligne ----
   const sf=field('Code de sauvegarde'), ta=document.createElement('textarea');
