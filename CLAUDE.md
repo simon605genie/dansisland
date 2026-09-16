@@ -26,6 +26,13 @@ construction — c'est la RLS qui protège. Ne jamais y mettre `sb_secret_` ni
 `service_role`. `store.js` charge `@supabase/supabase-js@2` : les versions
 antérieures à 2.49 ne gèrent pas les clés publishable.
 
+## La migration SQL du 16/09/2026
+
+`supabase/2026-09-16_grille18.sql` décale les mots de trois cases, pour
+accompagner le passage de la grille de 12x12 à 18x18. **Elle n'est pas
+idempotente** : la rejouer décale de trois cases de plus. `schema.sql`,
+lui, reste réexécutable sans casse.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

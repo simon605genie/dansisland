@@ -6,10 +6,11 @@ Chacun fabrique son île, la publie à son adresse, et va marcher sur celle des 
 
 ## Ce qu'il y a dans le dossier
 
-    index.html          l'app entière (moteur isométrique + éditeur + panneaux)
+    index.html          l'app entière (moteur isométrique + éditeur + son + panneaux)
     src/config.js       URL et clé publishable Supabase
     src/store.js        seule couche qui parle à Supabase
     supabase/schema.sql tables, RLS, vue archipel — idempotent
+    supabase/2026-09-16_grille18.sql  migration à jouer une seule fois
     _redirects          Cloudflare Pages : catch-all, toute adresse sert index.html
     build.sh            copie dans dist/ les seuls fichiers à publier
 
@@ -36,7 +37,7 @@ Le schéma est appliqué, le site est déployé, les URLs d'auth pointent sur le
 domaine public. Vérifié en production : création de compte, création d'île,
 vue `archipel`, et les pages d'île (`/simon`) en mode visiteur.
 
-Deux choses ne sont pas encore éprouvées :
+Pas encore éprouvé :
 
 - **Le livre d'or.** Aucun mot en base. Planter un mot chez soi valide
   l'écriture ; il faut un second compte pour vérifier qu'un visiteur ne voit
@@ -44,6 +45,12 @@ Deux choses ne sont pas encore éprouvées :
 - **Le lien magique en conditions réelles.** Le SMTP par défaut de Supabase
   est limité à 2 envois par heure — inutilisable au-delà d'une poignée de
   testeurs. Brancher un vrai SMTP avant d'ouvrir à du monde.
+
+- **Le ramassage d'un souvenir en marchant.** La touche `E` et la bulle de
+  proximité n'ont pas pu être essayées en pilotage automatique : un
+  navigateur en arrière-plan met `requestAnimationFrame` en pause, donc le
+  bonhomme ne marche pas. À essayer à la main chez un voisin qui a des
+  objets.
 
 ### Pas de renommage de slug dans l'app
 
@@ -91,6 +98,47 @@ Déploiement à la main, si besoin :
 Après le déploiement, dans **Auth → URL Configuration** : Site URL sur
 `https://dansisland.pages.dev`, et `https://dansisland.pages.dev/**` dans les
 Redirect URLs — le `/**` est nécessaire pour revenir sur une adresse d'île.
+
+## La grille, et pourquoi elle fait 18
+
+Elle a fait 12x12 jusqu'au 16/09/2026. Le rayon de l'île, lui, est une
+donnée : `monde.rayon`. Il part à 7,0 et gagne 0,13 par mot reçu dans le
+livre d'or, plafonné à 8,3. **L'île grandit parce que des gens sont
+passés**, jamais parce que le temps passe. On ne peut ni peindre ni poser
+hors du rayon acquis.
+
+La grille est fixe et large, le rayon bouge : c'est ce qui évite de
+refaire une migration à chaque fois que l'île doit grandir.
+
+Les coordonnées écrites en dur dans `index.html` datent du 12x12 et
+passent par `depuis12()`. Les îles déjà en base passent par
+`recentrer()` au chargement, qui déplace `tiles`, `house` et `objects` de
+trois cases. Les mots, eux, vivent en colonnes SQL et ne peuvent pas être
+décalés côté client : c'est le rôle de `supabase/2026-09-16_grille18.sql`,
+**à ne jouer qu'une fois**.
+
+## Le son
+
+Aucun fichier audio dans le dépôt, et rien à charger. Les trois ambiances
+(vagues, oiseaux, nuit) et les bruits d'outil sont synthétisés par l'API
+Web Audio : du bruit filtré dont le volume respire pour la mer, des notes
+glissées pour les oiseaux, une stridulation pour les grillons. Pas de
+licence à vérifier, pas de poids à héberger.
+
+L'ambiance appartient à l'île (`monde.ambiance`) : un visiteur entend
+celle que le propriétaire a choisie. Le bouton **Son** du cadre, lui, est
+une préférence de joueur, gardée dans `localStorage`.
+
+Un navigateur refuse de faire du bruit avant un geste de l'utilisateur :
+le contexte audio ne s'ouvre qu'au premier clic sur la page. C'est normal
+que le premier chargement soit silencieux.
+
+## Les souvenirs
+
+Chez un voisin, s'arrêter à côté d'un objet propose de le ramener.
+On ne vole rien : c'est une copie, signée `de: <pseudo de l'hôte>`, posée
+sur une case libre de sa propre île. L'île visitée n'est pas touchée.
+Un souvenir déjà rapporté du même hôte et du même type est refusé.
 
 ## Modèle
 

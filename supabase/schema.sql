@@ -26,8 +26,12 @@ create table if not exists public.iles (
   publiee      boolean not null default false,
   monde        jsonb not null,
   cree_le      timestamptz not null default now(),
-  maj_le       timestamptz not null default now()
+  maj_le       timestamptz not null default now(),
+  -- Dernier coup d'oeil du propriétaire sur son propre livre d'or.
+  vu_le        timestamptz not null default now()
 );
+
+alter table public.iles add column if not exists vu_le timestamptz not null default now();
 
 create unique index if not exists iles_slug_unique         on public.iles (lower(slug));
 create unique index if not exists iles_proprietaire_unique on public.iles (proprietaire);
@@ -69,21 +73,41 @@ create table if not exists public.mots (
   auteur     uuid references auth.users(id) on delete set null,
   auteur_nom text not null default 'Quelqu''un',
   texte      text not null check (char_length(btrim(texte)) between 1 and 200),
-  case_x     smallint not null check (case_x between 0 and 11),
-  case_y     smallint not null check (case_y between 0 and 11),
+  case_x     smallint not null check (case_x between 0 and 17),
+  case_y     smallint not null check (case_y between 0 and 17),
   masque     boolean not null default false,
   cree_le    timestamptz not null default now()
 );
 
 create index if not exists mots_ile_idx on public.mots (ile, cree_le desc);
 
+-- La grille est passée de 12x12 à 18x18 le 16/09/2026. Les bornes suivent.
+-- Le décalage des mots déjà plantés est une migration à part, non
+-- rejouable : supabase/2026-09-16_grille18.sql.
+alter table public.mots drop constraint if exists mots_case_x_check;
+alter table public.mots drop constraint if exists mots_case_y_check;
+alter table public.mots drop constraint if exists mots_case_x_grille;
+alter table public.mots drop constraint if exists mots_case_y_grille;
+alter table public.mots add  constraint mots_case_x_grille check (case_x between 0 and 17);
+alter table public.mots add  constraint mots_case_y_grille check (case_y between 0 and 17);
+
 -- ------------------------------------------------------------
 -- maj_le se tient à jour tout seul
 -- ------------------------------------------------------------
+-- maj_le ne bouge que si le contenu de l'île a bougé. Sans ce filtre,
+-- marquer vu_le suffirait à faire remonter l'île en tête de l'archipel :
+-- regarder son propre livre d'or passerait pour une mise à jour.
 create or replace function public.touch_maj_le()
 returns trigger language plpgsql as $$
 begin
-  new.maj_le = now();
+  if new.monde   is distinct from old.monde
+  or new.nom     is distinct from old.nom
+  or new.slug    is distinct from old.slug
+  or new.publiee is distinct from old.publiee then
+    new.maj_le = now();
+  else
+    new.maj_le = old.maj_le;
+  end if;
   return new;
 end $$;
 

@@ -92,6 +92,14 @@ export async function chargerIle(slug) {
   return data;
 }
 
+// « Qui est passé » : on retient la date du dernier coup d'oeil du
+// propriétaire. Le trigger touch_maj_le ignore cette colonne, sinon
+// regarder sa propre île la ferait remonter en tête de l'archipel.
+export async function marquerVu(id) {
+  const { error } = await sb.from('iles').update({ vu_le: new Date().toISOString() }).eq('id', id);
+  if (error) throw error;
+}
+
 export async function archipel(limite = 40) {
   const { data, error } = await sb.from('archipel').select('*').limit(limite);
   if (error) throw error;
