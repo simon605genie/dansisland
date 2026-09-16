@@ -551,6 +551,67 @@ const DEMO=[
 ];
 DEMO.forEach((d,i)=>{ d.slug=d.id; d.demo=true; d.mots=[]; d.ambiance=['vagues','oiseaux','nuit'][i]||'vagues'; });
 
+/* ---- les îles bot ----
+   Dix-sept îles de plus, fabriquées à partir d'une graine : tout le monde
+   voit exactement les mêmes. Ce ne sont pas des comptes et elles ne
+   vivent pas en base ; les mots qu'on y laisse restent dans le
+   navigateur. C'est de quoi marcher dans un archipel habité avant qu'il
+   le soit vraiment, et de quoi éprouver la visite, les souvenirs et
+   l'annuaire sans attendre d'avoir du monde. */
+const COUL_OBJ={arbre:'#2E7D5B',palmier:'#2E7D5B',sapin:'#2E7D6B',buisson:'#2E7D5B',
+  cactus:'#6FA37A',fleur:'#F48CA8',rocher:'#7E8CA0',boutique:'#FDFBF2',phare:'#FDFBF2',
+  ponton:'#A9764A',lampe:'#F4D6A0',banc:'#8B5E3C',barriere:'#FDFBF2',cloture:'#FDFBF2',
+  coffre:'#8B5E3C',chien:'#C89A63',tortue:'#5EA36B',crabe:'#F0736E',mouette:'#FDFBF2'};
+// Chaque île a son parti pris : une île qui mélange tout ne ressemble à rien.
+const THEMES=[
+  {n:'plage',  v:['palmier','palmier','fleur','rocher','crabe','mouette','ponton','banc']},
+  {n:'foret',  v:['sapin','sapin','arbre','buisson','buisson','rocher','banc','lampe']},
+  {n:'desert', v:['cactus','cactus','rocher','rocher','coffre','crabe','barriere']},
+  {n:'village',v:['boutique','lampe','lampe','barriere','cloture','banc','fleur','arbre']},
+  {n:'port',   v:['phare','ponton','ponton','mouette','coffre','rocher','lampe','cloture']}
+];
+const NOMS_ILE=['La Crique','Sable-Rose','Trois-Palmiers','Le Phare Bleu','Anse Douce',
+  'Cap Mouette','La Tortue','Vent d\u2019Ouest','Bois-Joli','Petite Houle','L\u2019Écume',
+  'Baie Claire','Roche-Ronde','Les Tamaris','Fleur-de-Sel','Longue-Vue','Havre Vert'];
+const NOMS_GENS=['Zoé','Malik','Inès','Tom','Sarah','Ilan','Maya','Jonas','Alba','Ruben',
+  'Nina','Elias','Chloé','Adam','Léa','Sacha','Rita'];
+function mkBot(i){
+  const d=(k)=>h2(i*7.31+k*13.17, i*3.77+k*5.91);          // la graine, stable d'une visite à l'autre
+  const pick=(k,arr)=>arr[Math.floor(d(k)*arr.length)%arr.length];
+  const qui=NOMS_GENS[i], nom=NOMS_ILE[i];
+  const slug=nom.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+  const r=6.3+d(3)*1.9, c=(GRID-1)/2;
+  const theme=pick(4,THEMES);
+  const hx=Math.round(c-2+d(5)*3), hy=Math.round(c-2+d(6)*3);
+  const w={
+    id:slug, slug, name:nom, owner:qui, bot:true, demo:true, mots:[],
+    pal:pick(1,GROUNDS), sky:pick(2,['jour','jour','jour','crépuscule','nuit']),
+    ambiance:pick(7,['vagues','vagues','oiseaux','nuit']),
+    rayon:r, tiles:baseTiles(r,0.74+d(8)*0.10),
+    house:{x:hx,y:hy,wall:pick(9,WALLS),roof:pick(10,ROOFS),door:pick(11,DOORS),
+      roofShape:pick(12,['pointu','pointu','dome','plat']),
+      volets:pick(13,['aucun','creme','bois','toit','porte']),
+      cheminee:d(14)>0.35, sign:'Chez '+qui},
+    me:{name:qui,body:pick(15,['rond','élancé','costaud']),skin:pick(16,SKINS),
+      hair:pick(17,['aucun','vague','chignon','piquants','longs']),hairC:pick(18,HAIRS),
+      eyes:pick(19,['rond','joyeux','malin','calme','endormi']),outfit:pick(20,CLOTH),
+      acc:pick(21,['aucun','chapeau','lunettes','couronne','cape'])},
+    objects:[]
+  };
+  const combien=11+Math.floor(d(22)*8);
+  for(let k=0,essais=0; k<combien && essais<260; essais++){
+    const x=Math.floor(d(30+essais*2)*GRID), y=Math.floor(d(31+essais*2)*GRID);
+    if(w.tiles[y*GRID+x]===2) continue;                       // pas dans l'eau
+    if(x>=w.house.x-1&&x<=w.house.x+2&&y>=w.house.y-1&&y<=w.house.y+2) continue;
+    if(w.objects.some(o=>o.x===x&&o.y===y)) continue;
+    const t=theme.v[Math.floor(d(40+essais)*theme.v.length)%theme.v.length];
+    w.objects.push({t,x,y,c:COUL_OBJ[t]||'#8AA3B2'}); k++;
+  }
+  return w;
+}
+for(let i=0;i<NOMS_ILE.length;i++) DEMO.push(mkBot(i));   // 3 faites à la main + 17 = 20
+
 let mine=defaultWorld();
 const brouillon=store.brouillonLocal();
 if(brouillon&&brouillon.monde){
@@ -560,7 +621,7 @@ if(brouillon&&brouillon.monde){
 mine.mots=mine.mots||[];
 let moi=null, ileId=null, monSlug=null, monPseudo=null;
 let voisins=DEMO;               // l'archipel public, ou les îles de démo
-let etatSauvegarde='', motsNouveaux=0;
+let etatSauvegarde='', motsNouveaux=0, compteCharge=false;
 let world=mine, visiting=null;
 let tool={mode:'marche',kind:null,color:OBJ_COLORS[0]};
 const hero={x:9.5,y:11.5,face:'bas',moving:false};
@@ -1640,11 +1701,19 @@ function peindreCompte(){
   const txt=(t,cls)=>{const e=document.createElement('span'); if(cls)e.className=cls; e.innerHTML=t; return e;};
 
   if(!store.configure){
+    compteCharge=true;
     ajout(txt('<b>Mode d\u00e9mo.</b> Renseigne la cl\u00e9 <span class="mono">anon</span> dans <span class="mono">src/config.js</span> pour brancher les comptes et les \u00eeles publiques.'));
     return;
   }
+  if(!compteCharge){
+    // Tant que la session n'est pas revenue, on ne sait pas encore qui est
+    // là : proposer de se connecter à quelqu'un de déjà connecté, c'est
+    // l'inviter à croire qu'il ne l'est pas.
+    ajout(txt('Chargement de ton compte\u2026'));
+    return;
+  }
   if(!moi){
-    ajout(txt('Re\u00e7ois un lien de connexion par e-mail \u2014 pas de mot de passe \u00e0 retenir.'));
+    ajout(txt('Re\u00e7ois un lien de connexion par e-mail, pas de mot de passe \u00e0 retenir.'));
     const mail=document.createElement('input'); mail.type='email'; mail.placeholder='toi@exemple.be';
     const go2=document.createElement('button'); go2.className='btn primary'; go2.textContent='Recevoir mon lien';
     go2.onclick=async()=>{
@@ -1701,7 +1770,9 @@ async function chargerArchipel(){
       pal:(r.palette&&r.palette.grass)?r.palette:GROUNDS[0],
       me:r.avatar||defaultWorld().me, nbMots:Number(r.mots)||0
     }));
-    voisins = autres.length ? autres : DEMO;
+    // Les bots ne remplacent plus l'archipel, ils le complètent : sinon ils
+    // disparaissent à la première vraie île et on n'a plus rien à visiter.
+    voisins = autres.concat(DEMO);
   }catch(e){ voisins=DEMO; }
 }
 
@@ -1710,12 +1781,13 @@ async function demarrer(){
   if(store.configure){
     store.surChangementDeCompte(async(u)=>{
       const avant = moi && moi.id;
-      moi=u;
+      moi=u; compteCharge=true;
       if(u && u.id!==avant) await chargerMonCompte();
       if(!u){ ileId=null; monSlug=null; monPseudo=null; }
       peindreCompte(); buildAll();
     });
     moi = await store.utilisateur();
+    compteCharge = true;
     if(moi) await chargerMonCompte();
     await chargerArchipel();
     peindreCompte();

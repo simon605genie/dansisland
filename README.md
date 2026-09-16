@@ -153,6 +153,24 @@ Un navigateur refuse de faire du bruit avant un geste de l'utilisateur :
 le contexte audio ne s'ouvre qu'au premier clic sur la page. C'est normal
 que le premier chargement soit silencieux.
 
+## Les îles bot
+
+Vingt îles peuplent l'archipel : trois écrites à la main, dix-sept
+fabriquées par `mkBot()` à partir d'une graine, donc identiques pour tout
+le monde. Chacune a son parti pris (plage, forêt, désert, village, port) :
+une île qui mélange tout ne ressemble à rien.
+
+Ce ne sont pas des comptes. Elles n'existent pas en base, `iles` n'a pas
+de ligne pour elles, et les mots qu'on y laisse restent dans le
+navigateur. Elles servent à éprouver la visite, les souvenirs et
+l'annuaire sans attendre d'avoir du monde. Elles complètent l'archipel
+réel au lieu de le remplacer, sinon elles disparaîtraient à la première
+vraie île.
+
+Leur slug vient de leur nom (`/la-crique`). `go()` regarde les bots avant
+la base : si un jour quelqu'un réserve un de ces slugs, c'est le bot qui
+gagnerait. À surveiller le jour où on ouvre les inscriptions.
+
 ## Les souvenirs
 
 Chez un voisin, s'arrêter à côté d'un objet propose de le ramener.
