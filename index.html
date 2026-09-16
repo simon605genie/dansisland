@@ -47,6 +47,12 @@
   --line:#E2D8C2;
   --accent:var(--pink);
   --on-accent:#0B3C5D;
+  /* Ce qui est choisi. En clair c'est le navy ; en sombre le navy **est** la
+     couleur des cartes (--card), et un chip sélectionné devenait donc
+     invisible : « Jour », « Vagues », « Marcher » se lisaient comme du texte
+     mort. Un jeton à part, et le piège ne peut plus revenir. */
+  --sel:#0B3C5D;
+  --on-sel:#FAF6EA;
   --link:var(--teal);
   --shadow:0 1px 0 rgba(11,60,93,.05), 0 10px 28px -16px rgba(11,60,93,.45);
   --r:16px;
@@ -61,12 +67,15 @@
     --ink-3:#75A0B1;
     --line:#14567A;
     --link:var(--mint);
+    --sel:#5EC6B3;
+    --on-sel:#062434;
     --shadow:0 1px 0 rgba(0,0,0,.35), 0 12px 32px -18px rgba(0,0,0,.9);
   }
 }
 :root[data-theme="dark"]{
   --paper:#062434; --card:#0B3C5D; --sunk:#051D2A; --ink:#F6F1E2; --ink-2:#A9CBD6;
   --ink-3:#75A0B1; --line:#14567A; --link:var(--mint);
+  --sel:#5EC6B3; --on-sel:#062434;
   --shadow:0 1px 0 rgba(0,0,0,.35), 0 12px 32px -18px rgba(0,0,0,.9);
 }
 
@@ -137,19 +146,51 @@ a{color:var(--link)}
   .mark{width:34px; height:34px; border-radius:9px}
   .word h1{font-size:19px}
   .word svg{display:none}
+  /* La carte de connexion tenait sur deux lignes et poussait le jeu sous
+     l'écran : en paysage court, la hauteur est la denrée rare. Tout se
+     resserre pour qu'elle tienne sur une seule. */
   #compte{padding:6px 10px; font-size:12.5px; gap:7px}
-  #compte input{min-width:130px}
+  #compte input{min-width:110px; flex:1 1 110px; padding:6px 9px; font-size:13px}
+  #compte .btn{font-size:12.5px; padding:6px 10px}
   /* Six onglets dans 290 px : c'est la seule largeur où « Boutique » déborde. */
   .tabs button{font-size:11px; padding:11px 0}
 }
-/* Portrait étroit : le jeu d'abord, le discours ensuite. */
+/* Portrait étroit : le jeu d'abord, le discours ensuite.
+   Le défaut qu'on répare ici : sur un téléphone, le logo et la carte de
+   connexion mangeaient le premier tiers de l'écran et il fallait défiler
+   pour voir son île. On arrive sur un jeu, pas sur une page. */
 @media (max-width:640px){
   .tagline{display:none}
+  .mast{padding:14px 0 10px; gap:10px 18px}
+  .mark{width:38px; height:38px; border-radius:10px}
+  .word h1{font-size:25px}
+  .word svg{display:none}
+  .compte{padding:9px 11px; margin-bottom:11px; font-size:13px; gap:7px 9px}
+  .compte input[type=text],.compte input[type=email]{min-width:150px}
   .hud{inset:9px 9px auto 9px; gap:6px}
   .plate{font-size:12px; padding:4px 10px}
   .objs{grid-template-columns:repeat(3,1fr)}
   /* Le cadre est court en portrait : la bulle ne doit pas manger l'île. */
   .whisper{left:8px; right:8px; bottom:8px; font-size:11.5px; line-height:1.3; padding:7px 10px}
+  /* Le nom de l'île part : `hud-mode` dit déjà chez qui on est, et c'est
+     ce qui compte. À trois plaques, le bouton Son passait à la ligne et se
+     posait sur le ciel. */
+  #hud-name{display:none}
+  .plate .mot{display:none}
+  .panel{padding:14px; max-height:none}
+}
+/* Très étroit : les six onglets n'entrent plus, « Boutique » débordait. */
+@media (max-width:430px){
+  .wrap{padding:0 8px}
+  /* La carte de connexion tenait sur trois lignes et repoussait le jeu
+     sous l'écran. La phrase se fait petite, le champ et le bouton
+     partagent une ligne. */
+  .compte{font-size:12px; gap:6px}
+  .compte>span{flex:1 1 100%; line-height:1.35}
+  .compte input[type=text],.compte input[type=email]{min-width:0; flex:1 1 110px; font-size:13.5px; padding:8px 10px}
+  .compte .btn{font-size:13px; padding:8px 11px}
+  .tabs button{font-size:10.5px; padding:12px 0; letter-spacing:-.01em}
+  .viewport{border-radius:13px}
 }
 @media (max-width:980px) and (orientation:landscape) and (max-height:560px){
   .whisper{font-size:11.5px; padding:6px 10px}
@@ -173,15 +214,15 @@ a{color:var(--link)}
 /* La bulle occupe le bas du cadre : elle recule pour laisser le pad libre,
    sinon on lit le murmure à travers son propre pouce. */
 .viewport.avecpad .whisper{left:138px}
-@media (max-width:640px){ .viewport.avecpad .whisper{left:118px} }
+@media (max-width:640px){ .viewport.avecpad .whisper{left:104px} }
 @media (orientation:landscape) and (max-height:560px){ .viewport.avecpad .whisper{left:108px} }
 .pad .knob{
   width:50px; height:50px; border-radius:50%; background:var(--pink);
   border:2.5px solid #FAF6EA; box-shadow:0 3px 10px rgba(11,60,93,.3);
   pointer-events:none; will-change:transform;
 }
-@media (max-width:640px){ .pad{left:10px; bottom:10px; width:98px; height:98px} .pad .knob{width:44px;height:44px} }
-@media (orientation:landscape) and (max-height:560px){ .pad{width:88px;height:88px} .pad .knob{width:40px;height:40px} }
+@media (max-width:640px){ .pad{left:10px; bottom:10px; width:86px; height:86px; background:rgba(11,60,93,.14)} .pad .knob{width:40px;height:40px} }
+@media (orientation:landscape) and (max-height:560px){ .pad{width:76px;height:76px; background:rgba(11,60,93,.14)} .pad .knob{width:36px;height:36px} }
 
 .hud{position:absolute; inset:13px 13px auto 13px; display:flex; gap:8px; align-items:center; pointer-events:none; flex-wrap:wrap}
 .plate{
@@ -192,6 +233,7 @@ a{color:var(--link)}
 .plate.guest{background:var(--pink); color:#0B3C5D}
 /* La bourse. Elle suit le joueur, pas l'île : on la voit aussi en visite. */
 .plate.sous{background:var(--sand); color:#0B3C5D}
+.plate.sous b{font-size:15px; font-weight:800}
 .plate.bouton{pointer-events:auto; cursor:pointer; border:0; margin-left:auto}
 .plate.bouton[aria-pressed="false"]{background:#3D5A70; color:#CBD9E2}
 /* Le bouton rose : le même geste que la touche E, pour qui joue au doigt.
@@ -201,6 +243,10 @@ a{color:var(--link)}
 /* Le compteur de la balade. Le murmure du bas s'efface, pas lui. */
 .plate.balade{background:var(--pink); color:#0B3C5D}
 .plate.balade[hidden]{display:none}
+/* La bourse qui monte. Un chiffre qui change tout seul ne se remarque pas ;
+   le mouvement, si. Neutralisé par prefers-reduced-motion, plus haut. */
+@keyframes sousmonte{0%{transform:none}32%{transform:scale(1.16)}100%{transform:none}}
+.plate.sous.gagne{animation:sousmonte .42s ease}
 .whisper{
   position:absolute; left:13px; right:13px; bottom:13px; pointer-events:none;
   font-size:13.5px; padding:10px 14px; border-radius:12px; color:#0B3C5D;
@@ -233,7 +279,7 @@ a{color:var(--link)}
   border:1.5px solid var(--line); background:var(--paper); color:var(--ink-2);
 }
 .chip:hover{border-color:var(--teal); color:var(--ink)}
-.chip[aria-pressed="true"]{background:var(--navy); border-color:var(--navy); color:#FAF6EA}
+.chip[aria-pressed="true"]{background:var(--sel); border-color:var(--sel); color:var(--on-sel)}
 .objs{display:grid; grid-template-columns:repeat(4,1fr); gap:6px}
 .obj{
   appearance:none; cursor:pointer; padding:3px 2px 5px;
@@ -242,9 +288,19 @@ a{color:var(--link)}
   font-family:"Nunito",sans-serif; font-size:10.5px; font-weight:700;
   line-height:1.15; color:var(--ink-2); text-align:center;
 }
-.obj canvas{width:60px; height:60px; display:block}
+/* Les objets sont dessinés pour le papier clair du jeu, pas pour le fond
+   d'une carte. En thème sombre, un ponton vert foncé sur un bleu nuit ne se
+   devine plus : la vignette garde donc son propre fond, toujours le même,
+   et l'atelier montre enfin ce qu'on va poser. */
+.obj canvas{width:60px; height:60px; display:block; border-radius:10px; background:#FDFBF0}
 .obj:hover{border-color:var(--teal); color:var(--ink)}
-.obj[aria-pressed="true"]{background:var(--navy); border-color:var(--navy); color:#FAF6EA}
+/* L'anneau rose, et pas un aplat : dans la boutique, « acquis » est déjà un
+   fond menthe, et en thème sombre la sélection l'est aussi. Deux états de
+   la même couleur, c'est un état de moins. */
+.obj[aria-pressed="true"]{
+  background:var(--sel); border-color:var(--sel); color:var(--on-sel);
+  box-shadow:0 0 0 3px var(--pink);
+}
 /* ---------- la boutique ---------- */
 .tresor{
   font-family:"Baloo 2",sans-serif; font-weight:700; font-size:14.5px; color:#0B3C5D;
@@ -252,9 +308,28 @@ a{color:var(--link)}
 }
 .tresor b{font-family:"Baloo 2",sans-serif; font-size:27px; line-height:1; margin-right:5px}
 .obj .prix{font-family:"Baloo 2",sans-serif; font-size:12px; font-weight:700; color:var(--link)}
-.obj.cher{opacity:.5}
+.obj.cher{opacity:.62}
+.obj.cher .prix{color:var(--ink-3)}
 .obj.acquis{background:var(--mint); border-color:var(--mint); color:#0B3C5D; cursor:default}
 .obj.acquis .prix{color:#0B3C5D}
+/* Ce qui rapporte aujourd'hui. Quatre paragraphes de texte disaient la
+   même chose et personne ne les lisait : une barre se lit d'un coup d'œil,
+   et « 3/8 » dit tout de suite ce qu'il reste à faire. */
+.gains{display:flex; flex-direction:column; gap:7px}
+.gain{
+  display:grid; grid-template-columns:1fr auto; gap:1px 10px; align-items:baseline;
+  background:var(--sunk); border:1.5px solid var(--line); border-radius:12px; padding:9px 12px;
+}
+.gain b{font-family:"Baloo 2",sans-serif; font-size:14px; font-weight:700; color:var(--ink)}
+.gain .n{font-family:"Baloo 2",sans-serif; font-size:13px; font-weight:700; color:var(--ink-2); white-space:nowrap}
+.gain small{grid-column:1/-1; font-size:11.5px; color:var(--ink-3); line-height:1.4}
+.gain .bar{grid-column:1/-1; height:6px; border-radius:999px; overflow:hidden; margin-top:5px;
+            background:rgba(11,60,93,.16)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .gain .bar{background:rgba(0,0,0,.30)} }
+:root[data-theme="dark"] .gain .bar{background:rgba(0,0,0,.30)}
+.gain .bar i{display:block; height:100%; border-radius:999px; background:var(--mint); transition:width .35s ease}
+.gain.plein{border-color:var(--mint)}
+.gain.plein .n{color:var(--ink)}
 .comptoir{
   background:var(--sunk); border:1.5px solid var(--line); border-radius:13px;
   padding:12px; display:flex; flex-direction:column; gap:9px;
@@ -271,7 +346,7 @@ a{color:var(--link)}
   width:27px;height:27px;border-radius:9px;cursor:pointer;border:2.5px solid transparent;
   box-shadow:0 0 0 1.5px var(--line) inset;
 }
-.sw button[aria-pressed="true"]{border-color:var(--navy); box-shadow:0 0 0 1.5px var(--card) inset}
+.sw button[aria-pressed="true"]{border-color:var(--sel); box-shadow:0 0 0 1.5px var(--card) inset}
 .sw input[type=color]{width:31px;height:29px;padding:0;border:1.5px solid var(--line);border-radius:9px;background:var(--paper);cursor:pointer}
 input[type=text]{
   font-family:"Nunito",sans-serif; font-size:14.5px; padding:9px 12px; border-radius:11px;
@@ -291,6 +366,15 @@ textarea{
 .btn:disabled{opacity:.45; cursor:default}
 .row{display:flex; gap:7px; flex-wrap:wrap}
 .hint{font-size:13px; color:var(--ink-3); line-height:1.5; margin:0}
+/* Au doigt, les cibles grandissent. Trente pixels de haut, c'est un chip
+   qu'on rate une fois sur trois ; les recommandations disent quarante-quatre. */
+@media (pointer:coarse){
+  .chip{padding:9px 14px; font-size:14px}
+  .btn{padding:11px 16px}
+  .sw button{width:32px; height:32px}
+  .sw input[type=color]{width:36px; height:34px}
+  .tabs button{padding:15px 0}
+}
 .rule{height:1.5px; background:var(--line); border:0; margin:2px 0}
 #preview{width:100%; height:152px; display:block; border-radius:12px; background:var(--sunk); border:1.5px solid var(--line)}
 
@@ -364,7 +448,7 @@ footer{padding:42px 0 58px; color:var(--ink-3); font-size:13.5px; border-top:1.5
         <span class="plate sous" id="hud-sous">0 shell</span>
         <span class="plate balade" id="hud-balade" hidden>🐾</span>
         <button class="plate bouton rose" id="rose-btn" type="button" hidden>Entrer</button>
-        <button class="plate bouton" id="son-btn" type="button" aria-pressed="true">🔊 Son</button>
+        <button class="plate bouton" id="son-btn" type="button" aria-pressed="true" aria-label="Son"></button>
       </div>
       <div class="whisper" id="whisper"></div>
       <div class="pad" id="pad" hidden aria-hidden="true"><span class="knob" id="knob"></span></div>
@@ -2900,9 +2984,14 @@ function couperLeSon(v){
   if(v) arreterAmbiance(); else majAmbiance();
   peindreSon();
 }
+// L'icône reste toujours, le mot disparaît en portrait étroit : à trois
+// plaques dans le bandeau, « Son coupé » poussait le bouton à la ligne et
+// il se posait sur le ciel de l'île.
 function peindreSon(){
   const b=document.getElementById('son-btn'); if(!b) return;
-  b.textContent = sonCoupe ? '🔇 Son coupé' : '🔊 Son';
+  const t = sonCoupe ? ['🔇','Son coupé'] : ['🔊','Son'];
+  b.innerHTML = t[0]+' <span class="mot">'+t[1]+'</span>';
+  b.setAttribute('aria-label', sonCoupe ? 'Remettre le son' : 'Couper le son');
   b.setAttribute('aria-pressed', String(!sonCoupe));
 }
 // Le premier geste de l'utilisateur est le seul moment où le navigateur
@@ -3480,33 +3569,32 @@ function buildBoutique(){
   t.innerHTML='<b>'+b.shells+'</b> shell'+(b.shells>1?'s':'');
   ft.appendChild(t); p.appendChild(ft);
 
-  const gagne=b.faits.tonte||0, reste=Math.max(0,PLAFOND.tonte-gagne), touffes=touffesSur(mine);
-  p.appendChild(hint(reste
-    ? ('Des <b>hautes herbes</b> poussent sur ta pelouse chaque jour. Marche dessus pour les tondre : <b>1 shell</b> la touffe. Il en reste <b>'+
-       touffes+'</b> à tondre, et <b>'+reste+' shell'+(reste>1?'s':'')+'</b> à gagner aujourd’hui.')
-    : 'Tu as gagné tout ce que la tonte donne aujourd’hui. Les herbes repousseront demain.'));
-
-  // Rien ici ne regarde les objets posés : la gomme et le pinceau ne
-  // reconstruisent pas les panneaux, et un texte qui dépendrait du chien
-  // présent resterait en retard d'un geste. Celui-ci vaut dans les deux cas.
-  const marche=Math.max(0,PLAFOND.promenade-(b.faits.promenade||0));
-  p.appendChild(hint(marche
-    ? ('Un <b>chien</b> posé sur ton île demande sa promenade. Va le voir, sors-le, et reste près de lui le temps d’un tour : <b>'+
-       marche+' shells</b>, une fois par jour. Il y en a un dans ton atelier, au rayon <b>Bestioles</b>.')
-    : 'Ton chien a eu sa promenade aujourd’hui. Tu peux le ressortir autant que tu veux, il ne rapportera plus rien avant demain.'));
-
-  // Les visites. C'est la meilleure source, et de loin : c'est voulu.
-  // L'île grandit parce que des gens sont passés, jamais parce que le
-  // temps passe — une économie de corvées solitaires dirait le contraire.
-  const pose=b.faits.mot_pose||0, recu=b.faits.mot_recu||0;
-  const rp=Math.max(0,PLAFOND.mot_pose-pose), rr=Math.max(0,PLAFOND.mot_recu-recu);
-  p.appendChild(hint('<b>Va voir les voisins.</b> Laisser un mot chez quelqu’un rapporte <b>'+
-    GAIN_MOT_POSE+' shells</b>, en recevoir un en rapporte <b>'+GAIN_MOT_RECU+'</b>. '+
-    'Une fois par personne et par jour : dix mots chez le même ami ne comptent que pour un.'));
-  p.appendChild(hint(
-    (rp ? ('Il te reste <b>'+rp+' shells</b> à gagner aujourd’hui en allant écrire chez les autres')
-        : ('Tu as écrit partout où ça rapportait aujourd’hui')) + ', et <b>'+
-    (rr ? (rr+' shells') : 'rien de plus') + '</b> à recevoir de ceux qui passeront chez toi.'));
+  // Ce qui rapporte aujourd'hui, en quatre lignes plutôt qu'en quatre
+  // paragraphes. Une barre dit d'un coup d'œil ce qu'il reste à prendre ;
+  // le texte, lui, disait la même chose et se sautait.
+  const f=b.faits||{}, touffes=touffesSur(mine);
+  const gains=[
+    ['Tondre la pelouse', 'tonte', touffes
+      ? ('Marche sur les hautes herbes : 1 shell la touffe, et il en reste <b>'+touffes+'</b> sur ton île.')
+      : 'La pelouse est nette. Les herbes repousseront demain.'],
+    ['Sortir le chien', 'promenade',
+      'Va voir ton chien, sors-le, et reste près de lui le temps d’un tour de l’île. Il y en a un dans ton atelier, au rayon <b>Bestioles</b>.'],
+    ['Laisser un mot chez quelqu’un', 'mot_pose',
+      '<b>'+GAIN_MOT_POSE+' shells</b> par personne, une fois par jour. Va dans l’onglet <b>Voisins</b>.'],
+    ['Recevoir un mot chez toi', 'mot_recu',
+      '<b>'+GAIN_MOT_RECU+' shells</b> par personne qui passe. Rien à faire : partage l’adresse de ton île.']
+  ];
+  const fg=field('Ce qui rapporte aujourd’hui');
+  const box=document.createElement('div'); box.className='gains';
+  gains.forEach(([nom,cle,quoi])=>{
+    const p0=PLAFOND[cle]||0, fait=Math.min(f[cle]||0,p0), plein=p0&&fait>=p0;
+    const d=document.createElement('div'); d.className='gain'+(plein?' plein':'');
+    d.innerHTML='<b>'+nom+'</b><span class="n">'+fait+' / '+p0+'</span>'+
+      '<div class="bar"><i style="width:'+(p0?Math.round(fait/p0*100):0)+'%"></i></div>'+
+      '<small>'+(plein?'C’est tout pour aujourd’hui. Ça repart demain.':quoi)+'</small>';
+    box.appendChild(d);
+  });
+  fg.appendChild(box); p.appendChild(fg);
   p.appendChild(rule());
 
   const choisi = vitrine ? BOUTIQUE.find(a=>a.k===vitrine) : null;
@@ -3942,6 +4030,10 @@ async function go(slug){
   if(blocked(hero.x,hero.y)){ hero.x=(GRID-1)/2; hero.y=(GRID-1)/2; }
   tool.mode='marche'; tool.kind=null; target=null;
   majAmbiance(); son('arrivee');
+  // L'onglet du navigateur dit chez qui on est : c'est ce qu'on lit dans
+  // ses favoris et dans l'historique, et « Dan's Island » partout ne
+  // distingue rien.
+  document.title = visiting ? ((world.name||'Une île')+' · Dan’s Island') : 'Dan’s Island';
   hudSync(); buildAll();
   if(visiting) say('Tu d\u00e9barques chez <b>'+esc(world.owner)+'</b>. Marche, lis, laisse un mot — mais tu ne peux rien changer.');
 }
@@ -3953,6 +4045,7 @@ function routerDepuisURL(){
   const slug=location.pathname.replace(/^\/+|\/+$/g,'').toLowerCase();
   go(slug||'me');
 }
+let sousAffiches=null;              // le dernier chiffre montré, pour voir la hausse
 function hudSync(){
   document.getElementById('hud-name').textContent = world.name || 'Sans nom';
   // Le compteur de la balade. Dans le bandeau et pas dans le murmure : le
@@ -3964,8 +4057,18 @@ function hudSync(){
   m.textContent = dedans ? ('Chez toi · '+pieceDef(piece).n)
     : (visiting ? 'Invité chez '+world.owner : (tool.mode==='marche'?'Chez toi':'Chez toi · édition'));
   m.className='plate'+(visiting?' guest':'');
+  // Un gain qui se contente de changer un chiffre ne se voit pas. La
+  // plaque sursaute quand la bourse monte : c'est le seul moment où le
+  // joueur regarde ailleurs que ses pieds.
   const n=mine.bourse?mine.bourse.shells:0;
-  document.getElementById('hud-sous').textContent = n+' shell'+(n>1?'s':'');
+  const hs=document.getElementById('hud-sous');
+  // Le coquillage d'abord : une monnaie se reconnaît avant de se lire, et
+  // en portrait étroit le mot part sans que la plaque cesse de parler.
+  hs.innerHTML = '🐚 <b>'+n+'</b> <span class="mot">shell'+(n>1?'s':'')+'</span>';
+  if(sousAffiches!==null && n>sousAffiches){
+    hs.classList.remove('gagne'); void hs.offsetWidth; hs.classList.add('gagne');
+  }
+  sousAffiches=n;
   // Un cadeau qu'on ne voit pas n'est pas un cadeau : l'onglet le porte.
   const ob=[...document.querySelectorAll('.tabs button')].find(x=>x.dataset.tab==='boutique');
   if(ob) ob.classList.toggle('cadeau', cadeauDispo());
@@ -3987,8 +4090,10 @@ peindreSon();
 function buildAll(){ buildToi(); buildMaison(); buildIle(); buildDedans(); buildVoisins(); buildBoutique(); hudSync(); }
 buildAll();
 // Annoncer des touches à quelqu'un qui n'a pas de clavier, c'est le perdre.
+// Le cadre est court en portrait : trois lignes de bulle couvraient
+// l'île qu'on vient d'ouvrir. Deux suffisent à dire la même chose.
 say(matchMedia('(pointer:coarse)').matches
-  ? 'Touche l\u2019île pour t\u2019y déplacer. Quand un pinceau est actif, la touche pose.'
+  ? 'Touche l\u2019île pour marcher. Avec un pinceau actif, la touche pose.'
   : 'Flèches ou ZQSD pour marcher. Clic pour te déplacer, ou pour poser quand un pinceau est actif.');
 demarrer();
 })();
