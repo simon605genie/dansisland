@@ -156,6 +156,30 @@ a{color:var(--link)}
 .viewport{position:relative; background:#FDFBF0; border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden}
 #world{display:block; width:100%; height:auto; touch-action:manipulation; cursor:crosshair}
 #world.walking{cursor:pointer}
+/* Le pad. Il n'apparaît que sur un écran tactile : au clavier les flèches
+   font déjà le travail, et un joystick qu'on ne peut pas prendre en main
+   n'est qu'un bouton de plus qui mange l'île.
+   `touch-action:none` est indispensable ici, sinon le navigateur part en
+   défilement dès que le doigt glisse et le bonhomme ne bouge jamais. */
+.pad{
+  position:absolute; left:14px; bottom:14px; width:112px; height:112px; border-radius:50%;
+  background:rgba(11,60,93,.20); border:2px solid rgba(11,60,93,.28);
+  touch-action:none; -webkit-user-select:none; user-select:none; z-index:3;
+  display:grid; place-items:center;
+}
+.pad[hidden]{display:none}
+/* La bulle occupe le bas du cadre : elle recule pour laisser le pad libre,
+   sinon on lit le murmure à travers son propre pouce. */
+.viewport.avecpad .whisper{left:138px}
+@media (max-width:640px){ .viewport.avecpad .whisper{left:118px} }
+@media (orientation:landscape) and (max-height:560px){ .viewport.avecpad .whisper{left:108px} }
+.pad .knob{
+  width:50px; height:50px; border-radius:50%; background:var(--pink);
+  border:2.5px solid #FAF6EA; box-shadow:0 3px 10px rgba(11,60,93,.3);
+  pointer-events:none; will-change:transform;
+}
+@media (max-width:640px){ .pad{left:10px; bottom:10px; width:98px; height:98px} .pad .knob{width:44px;height:44px} }
+@media (orientation:landscape) and (max-height:560px){ .pad{width:88px;height:88px} .pad .knob{width:40px;height:40px} }
 
 .hud{position:absolute; inset:13px 13px auto 13px; display:flex; gap:8px; align-items:center; pointer-events:none; flex-wrap:wrap}
 .plate{
@@ -312,6 +336,8 @@ footer{padding:42px 0 58px; color:var(--ink-3); font-size:13.5px; border-top:1.5
         <button class="plate bouton" id="son-btn" type="button" aria-pressed="true">🔊 Son</button>
       </div>
       <div class="whisper" id="whisper"></div>
+      <div class="pad" id="pad" hidden aria-hidden="true"><span class="knob" id="knob"></span></div>
+
     </div>
 
     <aside class="atelier">
@@ -1824,6 +1850,52 @@ function poserMaison(x,y){
   buildAll(); say('Maison déplacée.');
 }
 
+/* ---- le pad tactile ----
+   Au doigt, le clic-pour-aller-là suffit tant qu'on longe un mur : la
+   maison et l'eau arrêtent le trajet et le bonhomme reste planté. Un pad
+   rend la marche continue, et on le pousse contre l'obstacle jusqu'à ce
+   qu'il glisse. Il ne remplace rien : le clavier, le clic et le toucher
+   marchent toujours. */
+const padEl=document.getElementById('pad'), knobEl=document.getElementById('knob');
+let pad=null, padId=null;
+const PAD_ZONE=0.22;                    // en deçà, c'est un doigt qui tremble
+function padPose(e){
+  const r=padEl.getBoundingClientRect(), R=r.width/2;
+  let dx=(e.clientX-(r.left+R))/R, dy=(e.clientY-(r.top+R))/R;
+  const d=Math.hypot(dx,dy);
+  if(d>1){ dx/=d; dy/=d; }
+  knobEl.style.transform='translate('+(dx*R*0.62)+'px,'+(dy*R*0.62)+'px)';
+  pad = (d<PAD_ZONE) ? null : {x:dx,y:dy};
+  if(pad) target=null;                  // le doigt reprend la main sur le clic
+}
+function padFin(){
+  pad=null; padId=null; knobEl.style.transform='translate(0,0)';
+}
+padEl.addEventListener('pointerdown',e=>{
+  padId=e.pointerId; padEl.setPointerCapture(e.pointerId); padPose(e); e.preventDefault();
+});
+padEl.addEventListener('pointermove',e=>{ if(e.pointerId===padId){ padPose(e); e.preventDefault(); } });
+['pointerup','pointercancel','pointerleave'].forEach(k=>
+  padEl.addEventListener(k,e=>{ if(e.pointerId===padId) padFin(); }));
+// Un écran tactile, ou rien : au clavier, les flèches font déjà le travail.
+if(matchMedia('(pointer:coarse)').matches){
+  padEl.hidden=false; padEl.setAttribute('aria-hidden','false');
+  document.querySelector('.viewport').classList.add('avecpad');
+}
+
+/* ---- le trajet qui n'avance plus ----
+   Le clic pose une cible et le bonhomme y va en ligne droite, un axe à la
+   fois. Contre un angle de la maison, les deux axes se bloquent et il
+   pousse dans le vide sans jamais arriver : c'est ça, « il se coince ».
+   On abandonne la cible au lieu de le laisser gigoter. */
+let immobileDepuis=0, ox0=0, oy0=0;
+function surveillerLeTrajet(dt){
+  if(!target){ immobileDepuis=0; return; }
+  if(Math.hypot(hero.x-ox0,hero.y-oy0)>0.02){ ox0=hero.x; oy0=hero.y; immobileDepuis=0; return; }
+  immobileDepuis+=dt;
+  if(immobileDepuis>420){ target=null; immobileDepuis=0; }
+}
+
 let last=0;
 function frame(t){
   const dt=Math.min(34,t-last); last=t;
@@ -1832,6 +1904,8 @@ function frame(t){
   if(keys.arrowdown||keys.s){ dx+=1; dy+=1; }
   if(keys.arrowleft||keys.q||keys.a){ dx-=1; dy+=1; }
   if(keys.arrowright||keys.d){ dx+=1; dy-=1; }
+  // Le pad est en repère écran : on le repasse dans les axes de l'île.
+  if(pad){ dx += pad.y + pad.x; dy += pad.y - pad.x; }
   if(dx||dy) target=null;
   if(target){
     const ax=target.x-hero.x, ay=target.y-hero.y, d=Math.hypot(ax,ay);
@@ -1847,6 +1921,7 @@ function frame(t){
       ? (dx+dy>0?'bas':'haut') : (dx-dy>0?'droite':'gauche');
     hero.moving=true;
   } else hero.moving=false;
+  surveillerLeTrajet(dt);
   proximity();
   if(dedans) drawInterieur(t); else drawWorld(t);
   requestAnimationFrame(frame);
