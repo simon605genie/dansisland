@@ -5,7 +5,7 @@ set -euo pipefail
 
 rm -rf dist
 mkdir -p dist/src
-cp index.html _redirects dist/
+cp index.html _redirects og.png dist/   # og.png : l'aperçu des liens partagés
 cp src/config.js src/store.js dist/src/
 
 echo "dist/ prêt :"

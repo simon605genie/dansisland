@@ -2,6 +2,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B3C5D">
 <title>Dan's Island</title>
+<meta name="description" content="Fabrique ton île, publie-la à ton adresse, va marcher chez les voisins et laisse-leur un mot.">
+<link rel="canonical" href="https://dansisland.pages.dev/">
+<!-- L'aperçu partagé (WhatsApp, Messages, Slack, Signal). Ces robots ne
+     lisent pas le JavaScript : tout doit être écrit ici, en dur, et l'image
+     doit être un vrai fichier servi à une adresse absolue en https.
+     `?v=` est ce qui force WhatsApp à relire une image déjà mise en cache :
+     le changer à chaque nouvelle og.png, sinon l'ancienne reste des jours. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Dan's Island">
+<meta property="og:locale" content="fr_BE">
+<meta property="og:url" content="https://dansisland.pages.dev/">
+<meta property="og:title" content="Dan's Island">
+<meta property="og:description" content="Fabrique ton île, publie-la à ton adresse, va marcher chez les voisins et laisse-leur un mot.">
+<meta property="og:image" content="https://dansisland.pages.dev/og.png?v=1">
+<meta property="og:image:secure_url" content="https://dansisland.pages.dev/og.png?v=1">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Une île isométrique avec sa maison, son phare et ses palmiers.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Dan's Island">
+<meta name="twitter:description" content="Fabrique ton île, publie-la à ton adresse, va marcher chez les voisins et laisse-leur un mot.">
+<meta name="twitter:image" content="https://dansisland.pages.dev/og.png?v=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap">
@@ -143,6 +166,9 @@ a{color:var(--link)}
 .plate.guest{background:var(--pink); color:#0B3C5D}
 .plate.bouton{pointer-events:auto; cursor:pointer; border:0; margin-left:auto}
 .plate.bouton[aria-pressed="false"]{background:#3D5A70; color:#CBD9E2}
+/* La porte : le même geste que la touche E, pour qui joue au doigt. */
+.plate.bouton.porte{background:var(--pink); color:#0B3C5D}
+.plate.bouton.porte[hidden]{display:none}
 .whisper{
   position:absolute; left:13px; right:13px; bottom:13px; pointer-events:none;
   font-size:13.5px; padding:10px 14px; border-radius:12px; color:#0B3C5D;
@@ -155,10 +181,10 @@ a{color:var(--link)}
 
 /* ---------- atelier ---------- */
 .atelier{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden}
-.tabs{display:grid; grid-template-columns:repeat(4,1fr); background:var(--sunk); border-bottom:1px solid var(--line)}
+.tabs{display:grid; grid-template-columns:repeat(5,1fr); background:var(--sunk); border-bottom:1px solid var(--line)}
 .tabs button{
   appearance:none; background:none; border:0; border-right:1px solid var(--line);
-  padding:13px 4px; font-family:"Baloo 2",sans-serif; font-size:14.5px; font-weight:700; color:var(--ink-3);
+  padding:13px 2px; font-family:"Baloo 2",sans-serif; font-size:13.5px; font-weight:700; color:var(--ink-3);
   cursor:pointer;
 }
 .tabs button:last-child{border-right:0}
@@ -282,6 +308,7 @@ footer{padding:42px 0 58px; color:var(--ink-3); font-size:13.5px; border-top:1.5
       <div class="hud">
         <span class="plate" id="hud-name">L'île de Dan</span>
         <span class="plate" id="hud-mode">Chez toi</span>
+        <button class="plate bouton porte" id="porte-btn" type="button" hidden>Entrer</button>
         <button class="plate bouton" id="son-btn" type="button" aria-pressed="true">🔊 Son</button>
       </div>
       <div class="whisper" id="whisper"></div>
@@ -292,11 +319,13 @@ footer{padding:42px 0 58px; color:var(--ink-3); font-size:13.5px; border-top:1.5
         <button role="tab" aria-selected="true" data-tab="toi">Toi</button>
         <button role="tab" aria-selected="false" data-tab="maison">Maison</button>
         <button role="tab" aria-selected="false" data-tab="ile">Île</button>
+        <button role="tab" aria-selected="false" data-tab="dedans">Dedans</button>
         <button role="tab" aria-selected="false" data-tab="voisins">Voisins</button>
       </div>
       <div class="panel on" id="p-toi"></div>
       <div class="panel" id="p-maison"></div>
       <div class="panel" id="p-ile"></div>
+      <div class="panel" id="p-dedans"></div>
       <div class="panel" id="p-voisins"></div>
     </aside>
   </section>
@@ -384,8 +413,19 @@ function faireGrandir(){
 function dansLeRayon(x,y,w){ w=w||world;
   const c=(GRID-1)/2; return Math.hypot(x-c,y-c) <= (w.rayon||RAYON0); }
 const CW=768, CH=500;
-function iso(x,y){ return {x: OX+(x-y)*TW/2, y: OY+(x+y)*TH/2}; }
-function unIso(sx,sy){ const dx=sx-OX, dy=sy-OY; return {x: dy/TH+dx/TW, y: dy/TH-dx/TW}; }
+// La caméra. Elle vaut l'île tant qu'on est dehors, et la pièce dès qu'on
+// entre : c'est la seule chose que l'intérieur change au moteur. Tout ce
+// qui passe par iso()/unIso(), le curseur, le tri de profondeur et le
+// bonhomme, suit sans une ligne de plus.
+// `probe` est ce qu'on ajoute à l'ordonnée d'un clic avant de repasser par
+// unIso(). Le losange peint pour la case (x,y) est le quadrilatère
+// iso(x,y)…iso(x,y+1) remonté de `lift` : rendre le clic exact demande donc
+// d'ajouter `lift`, et rien d'autre. La valeur d'avant, LIFT-TH/2, sondait
+// un demi-losange trop haut et visait une case en haut à gauche de celle
+// qu'on croyait cliquer, quatre fois sur sept.
+const vue={ox:OX, oy:OY, tw:TW, th:TH, lift:LIFT, probe:LIFT};
+function iso(x,y){ return {x: vue.ox+(x-y)*vue.tw/2, y: vue.oy+(x+y)*vue.th/2}; }
+function unIso(sx,sy){ const dx=sx-vue.ox, dy=sy-vue.oy; return {x: dy/vue.th+dx/vue.tw, y: dy/vue.th-dx/vue.tw}; }
 function ctr(x,y){ return iso(x+0.5,y+0.5); }
 
 /* ================= palettes (charte DAN'S ISLAND) ================= */
@@ -465,6 +505,83 @@ function shadowDiamond(c,cx,cy,a){
   c.beginPath(); c.ellipse(cx,cy,a,a/2,0,0,Math.PI*2); c.fill();
 }
 
+/* ================= l'intérieur : l'architecture =================
+   La ligne est ici : la forme des pièces, leur taille, leurs portes sont
+   du code ; seule la décoration part en base, dans `monde.interieur`. Si
+   j'élargis le salon un jour, aucune île n'a à être migrée. C'est la même
+   règle que dehors, où la forme de la maison est en dur et où seules ses
+   couleurs sont de la donnée. */
+const TWI=72, THI=36, HX=TWI/2, HY=THI/2, MURH=86;
+// `mur:'nw'` = la paroi du fond à gauche (x=0), l'index porte sur y.
+// `mur:'ne'` = la paroi du fond à droite (y=0), l'index porte sur x.
+// Les deux parois près de la caméra ne sont pas dessinées : on regarde
+// dans une boîte ouverte, sinon la pièce est un mur.
+const PIECES=[
+  {k:'salon',   n:'Salon',   w:8, h:6, portes:[{mur:'nw',i:4,vers:'dehors'},{mur:'ne',i:6,vers:'chambre'}]},
+  {k:'chambre', n:'Chambre', w:6, h:5, portes:[{mur:'nw',i:1,vers:'salon'},{mur:'ne',i:4,vers:'atelier'}]},
+  {k:'atelier', n:'Atelier', w:6, h:5, portes:[{mur:'nw',i:1,vers:'chambre'}]}
+];
+function pieceDef(k){ return PIECES.find(p=>p.k===k) || PIECES[0]; }
+// La case devant une porte, celle sur laquelle on se met pour passer.
+function casePorte(p){ return p.mur==='nw' ? {x:0,y:p.i} : {x:p.i,y:0}; }
+function estPorte(def,x,y){ return def.portes.some(p=>{ const c=casePorte(p); return c.x===x&&c.y===y; }); }
+
+const SOLS=[['parquet','Parquet','#D9A468'],['bois','Bois clair','#E7CDA0'],
+            ['carreau','Carreaux','#E9E3D3'],['moquette','Moquette','#C9A7A2'],
+            ['beton','Béton','#C8C6BE'],['sable','Sable','#F2E0BC']];
+const MURS=[['creme','Crème','#FAF6EA'],['menthe','Menthe','#C3E5DB'],['sable','Sable','#F1DDB6'],
+            ['rose','Rose','#F3C7D2'],['bois','Bois','#C79A6B'],['marine','Marine','#2E4A6B']];
+function couleurSol(k){ const s=SOLS.find(s=>s[0]===k); return s?s[2]:SOLS[0][2]; }
+function couleurMur(k){ const m=MURS.find(m=>m[0]===k); return m?m[2]:MURS[0][2]; }
+
+const MEUBLE_GROUPS=[
+  ['Salon',     [['canape','Canapé'],['fauteuil','Fauteuil'],['tablebasse','Table basse'],['tapis','Tapis']]],
+  ['Nuit',      [['lit','Lit'],['chevet','Table de nuit'],['commode','Commode'],['lampadaire','Lampe']]],
+  ['Rangement', [['etagere','Étagère'],['bureau','Bureau'],['chaise','Chaise'],['malle','Malle']]],
+  ['Déco',      [['plante','Plante'],['tableau','Tableau'],['vase','Vase'],['horloge','Horloge']]]
+];
+// L'encombrement est une propriété du meuble, pas de son exemplaire : il
+// vit dans le catalogue, jamais dans le jsonb. Tourner un meuble échange
+// les deux dimensions, rien d'autre.
+const TAILLE={canape:[2,1], lit:[2,2], bureau:[2,1], commode:[2,1], etagere:[2,1], tapis:[2,2]};
+// Les « plats » se posent au sol, sous les autres, et ne bloquent pas la marche.
+const PLAT={tapis:true};
+function emprise(t,o){ const s=TAILLE[t]||[1,1]; return o==='sw' ? [s[1],s[0]] : [s[0],s[1]]; }
+function casesDe(m){
+  const s=emprise(m.t,m.o), out=[];
+  for(let j=0;j<s[1];j++) for(let i=0;i<s[0];i++) out.push({x:m.x+i,y:m.y+j});
+  return out;
+}
+
+function interieurNu(){
+  const p={};
+  PIECES.forEach(q=>{ p[q.k]={sol:'parquet', mur:'creme', meubles:[]}; });
+  return {v:1, pieces:p};
+}
+// Une île d'avant l'intérieur, ou une pièce ajoutée après coup, reçoit sa
+// part vide au chargement. Même mécanique que les volets et la cheminée.
+function normaliserInterieur(w){
+  const it = (w.interieur && w.interieur.pieces) ? w.interieur : interieurNu();
+  it.v=1;
+  PIECES.forEach(q=>{
+    let d=it.pieces[q.k];
+    if(!d || typeof d!=='object') d=it.pieces[q.k]={sol:'parquet',mur:'creme',meubles:[]};
+    if(!couleurSolConnu(d.sol)) d.sol='parquet';
+    if(!MURS.some(m=>m[0]===d.mur)) d.mur='creme';
+    if(!Array.isArray(d.meubles)) d.meubles=[];
+    d.meubles=d.meubles.filter(m=>{
+      if(!m||typeof m!=='object'||!MEUBLE_NOMS[m.t]) return false;
+      m.x=Math.round(m.x); m.y=Math.round(m.y);
+      if(m.o!=='sw') m.o='se';
+      const s=emprise(m.t,m.o);
+      return m.x>=0 && m.y>=0 && m.x+s[0]<=q.w && m.y+s[1]<=q.h;
+    });
+  });
+  w.interieur=it; return it;
+}
+function couleurSolConnu(k){ return SOLS.some(s=>s[0]===k); }
+const MEUBLE_NOMS={}; MEUBLE_GROUPS.forEach(g=>g[1].forEach(m=>{ MEUBLE_NOMS[m[0]]=m[1]; }));
+
 /* ================= modèle ================= */
 function baseTiles(r,sandW){
   const t=[], c=(GRID-1)/2;
@@ -500,6 +617,8 @@ function recentrer(w){
   // Volets et cheminée sont arrivés après : une maison d'avant les reçoit.
   if(w.house && w.house.volets===undefined)   w.house.volets='creme';
   if(w.house && w.house.cheminee===undefined) w.house.cheminee=true;
+  // L'intérieur est arrivé après : une île d'avant reçoit trois pièces vides.
+  normaliserInterieur(w);
   return w;
 }
 function defaultWorld(){
@@ -619,17 +738,19 @@ if(brouillon&&brouillon.monde){
   if(mine.house) mine.house.roofShape=ROOFMAP[mine.house.roofShape]||'pointu';
 }
 mine.mots=mine.mots||[];
+normaliserInterieur(mine);   // une île neuve ne passe pas par recentrer()
 let moi=null, ileId=null, monSlug=null, monPseudo=null;
 let voisins=DEMO;               // l'archipel public, ou les îles de démo
 let etatSauvegarde='', motsNouveaux=0, compteCharge=false;
 let world=mine, visiting=null;
-let tool={mode:'marche',kind:null,color:OBJ_COLORS[0]};
+let tool={mode:'marche',kind:null,color:OBJ_COLORS[0],orient:'se'};
 const hero={x:9.5,y:11.5,face:'bas',moving:false};
 let target=null;
 
 // Le monde part en base ; `mots` et les clés locales restent hors du jsonb.
 function mondeNu(w){
   return {name:w.name, pal:w.pal, sky:w.sky, tiles:w.tiles, house:w.house, me:w.me, rayon:w.rayon, ambiance:w.ambiance,
+          interieur:w.interieur,
           objects:(w.objects||[]).filter(o=>o.t!=='panneau')};
 }
 function saveMine(){
@@ -645,7 +766,8 @@ function memoriser(){
   histo.push(JSON.stringify({
     t:mine.tiles,
     o:(mine.objects||[]).filter(o=>o.t!=='panneau'),
-    h:mine.house
+    h:mine.house,
+    i:mine.interieur                     // sinon poser dedans est irrattrapable
   }));
   if(histo.length>HISTO_MAX) histo.shift();
 }
@@ -653,9 +775,10 @@ function annuler(){
   if(!histo.length){ say('Rien \u00e0 annuler.'); return; }
   const e=JSON.parse(histo.pop());
   mine.tiles=e.t; mine.objects=e.o; mine.house=e.h;
+  if(e.i) mine.interieur=e.i;
   replanter(mine);
   if(!visiting) world=mine;
-  saveMine(); buildAll(); son('annule');
+  saveMine(); degager(); buildAll(); son('annule');
   say(histo.length?('Annul\u00e9. Encore '+histo.length+' pas en arri\u00e8re.'):'Annul\u00e9.');
 }
 function motsDe(w){ return (w.mots||[]).filter(m=>!m.masque); }
@@ -891,6 +1014,15 @@ const DRAW={
     c.fillStyle=NAVY; c.beginPath(); c.arc(7.8,-16.2,0.95,0,Math.PI*2); c.fill();
   }
 };
+// Un banc, une barrière, un ponton suivent un axe de la grille : sans
+// orientation ils regardent tous du même côté et l'île a l'air peignée.
+// Le miroir horizontal échange exactement les deux axes de l'isométrie,
+// c'est tout ce que « tourner » veut dire ici : pas un dessin de plus.
+const PIVOT_ILE={banc:1,barriere:1,cloture:1,ponton:1,boutique:1};
+function dessinDe(g,t,col,o){
+  g.save(); if(o==='sw') g.scale(-1,1);
+  (DRAW[t]||DRAW.rocher)(g,col); g.restore();
+}
 const OBJ_GROUPS=[
   ['Nature',[['arbre','Arbre à fleurs'],['palmier','Palmier'],['sapin','Sapin'],['buisson','Buisson'],['cactus','Cactus'],['fleur','Fleur'],['rocher','Rocher']]],
   ['Village',[['boutique','Boutique'],['phare','Phare'],['ponton','Ponton'],['lampe','Lampadaire'],['banc','Banc'],['barriere','Barrière'],['cloture','Clôture'],['coffre','Coffre']]],
@@ -961,6 +1093,7 @@ fitDPR(); addEventListener('resize',fitDPR);
 
 function tileAt(x,y){ if(x<0||y<0||x>=GRID||y>=GRID) return 2; return world.tiles[y*GRID+x]; }
 function blocked(tx,ty){
+  if(dedans) return blockedDedans(tx,ty);
   const x=Math.floor(tx), y=Math.floor(ty);
   if(x<0||y<0||x>=GRID||y>=GRID) return true;
   if(tileAt(x,y)===2) return true;
@@ -1064,11 +1197,17 @@ function drawWorld(t){
   ocean(t); drawTiles(t);
 
   if(tool.mode!=='marche'&&hover.x>=0&&!visiting){
-    const q=iso(hover.x,hover.y), lift=tileAt(hover.x,hover.y)===2?-3:LIFT;
-    const cy=q.y+TH/2-lift;
+    // Deux cases sur deux quand on déplace la maison : viser une seule case
+    // et en couvrir quatre, c'est se tromper une fois sur deux.
+    const n = tool.mode==='maison' ? 2 : 1;
     ctx.strokeStyle='rgba(244,140,168,.95)'; ctx.lineWidth=2.5;
-    ctx.beginPath(); ctx.moveTo(q.x,cy-TH/2); ctx.lineTo(q.x+TW/2,cy);
-    ctx.lineTo(q.x,cy+TH/2); ctx.lineTo(q.x-TW/2,cy); ctx.closePath(); ctx.stroke();
+    for(let j=0;j<n;j++) for(let i=0;i<n;i++){
+      const hx=hover.x+i, hy=hover.y+j;
+      if(hx>=GRID||hy>=GRID) continue;
+      const q=iso(hx,hy), lift=tileAt(hx,hy)===2?-3:LIFT, cy=q.y+TH/2-lift;
+      ctx.beginPath(); ctx.moveTo(q.x,cy-TH/2); ctx.lineTo(q.x+TW/2,cy);
+      ctx.lineTo(q.x,cy+TH/2); ctx.lineTo(q.x-TW/2,cy); ctx.closePath(); ctx.stroke();
+    }
   }
 
   const items=[];
@@ -1078,7 +1217,7 @@ function drawWorld(t){
     items.push({d:o.x+o.y+1, f:()=>{
       ctx.save(); ctx.translate(c0.x,c0.y-LIFT);
       shadowDiamond(ctx,0,0,12);
-      (DRAW[o.t]||DRAW.rocher)(ctx,o.c||'#8AA3B2'); ctx.restore();
+      dessinDe(ctx,o.t,o.c||'#8AA3B2',o.o); ctx.restore();
     }});
   });
   if(visiting){
@@ -1105,6 +1244,444 @@ function drawWorld(t){
   }
 }
 
+/* ================= l'intérieur : le rendu =================
+   Même projection, même tri par x+y, même sprite. La pièce est une boîte
+   ouverte : on ne dessine que les deux parois du fond, celles près de la
+   caméra sont omises. C'est le seul moyen de voir dedans, et ça ne coûte
+   pas une seconde géométrie. */
+let dedans=false, piece='salon';
+let posIle=null;                       // là où on a laissé le bonhomme dehors
+let ongletAvant=null;                  // l'atelier ouvert avant d'entrer
+// Une porte franchie en marchant doit se réarmer : sans ça, on ressort sur
+// le paillasson de dehors et on rentre aussitôt, en boucle.
+let sasArme=true;
+
+function pieceData(w){ w=w||mine; return (w.interieur&&w.interieur.pieces[piece]) || interieurNu().pieces[piece]; }
+function majVue(){
+  if(dedans){
+    const p=pieceDef(piece);
+    vue.tw=TWI; vue.th=THI; vue.lift=0; vue.probe=0;   // sol plat : rien à ajouter
+    vue.ox=CW/2 + (p.h-p.w)*TWI/4;
+    vue.oy=(CH + MURH - (p.w+p.h)*THI/2)/2;
+  } else { vue.ox=OX; vue.oy=OY; vue.tw=TW; vue.th=TH; vue.lift=LIFT; vue.probe=LIFT; }
+}
+
+/* ---- volumes sur la grille de la pièce ---- */
+// Un décalage exprimé en cases, pas en pixels : c'est la grille qui compte.
+function dec(c,dx,dy){ c.translate((dx-dy)*HX,(dx+dy)*HY); }
+// Un pavé de u x v cases, haut de h, posé à y0 du sol, centré sur l'origine.
+function pave(c,u,v,h,col,y0,flancsSeuls){
+  y0=y0||0;
+  const N={x:(v-u)*HX/2, y:(-u-v)*HY/2-y0}, E={x:(u+v)*HX/2, y:(u-v)*HY/2-y0},
+        S={x:(u-v)*HX/2, y:(u+v)*HY/2-y0}, W={x:(-u-v)*HX/2, y:(v-u)*HY/2-y0};
+  if(h>0){
+    const q=(p,r,k)=>{ c.fillStyle=k; c.beginPath();
+      c.moveTo(p.x,p.y); c.lineTo(r.x,r.y); c.lineTo(r.x,r.y-h); c.lineTo(p.x,p.y-h); c.closePath(); c.fill(); };
+    q(W,S,shade(col,-30)); q(S,E,shade(col,-10));
+    if(flancsSeuls) return;
+  }
+  c.fillStyle=shade(col,h>0?16:0); c.beginPath();
+  c.moveTo(N.x,N.y-h); c.lineTo(E.x,E.y-h); c.lineTo(S.x,S.y-h); c.lineTo(W.x,W.y-h); c.closePath(); c.fill();
+}
+// Le dossier d'un meuble, contre la paroi du fond : le côté dépend de
+// l'orientation, c'est tout ce que « tourner » veut dire ici.
+function adosse(c,s,o,ep,h,col,y0){
+  c.save();
+  if(o==='sw'){ dec(c,-(s[0]/2-ep/2),0); pave(c,ep,s[1]-0.14,h,col,y0); }
+  else        { dec(c,0,-(s[1]/2-ep/2)); pave(c,s[0]-0.14,ep,h,col,y0); }
+  c.restore();
+}
+function pieds(c,s,h,col,ins){
+  ins=ins||0.17; const ax=s[0]/2-ins, ay=s[1]/2-ins;
+  [[-ax,-ay],[ax,-ay],[-ax,ay],[ax,ay]].forEach(d=>{
+    c.save(); dec(c,d[0],d[1]); pave(c,0.13,0.13,h,col); c.restore(); });
+}
+// Le centre de la face sud-est d'un pavé : là où se posent une horloge,
+// un tiroir, un cadran.
+function faceSE(u,h){ return {x:u*HX/2, y:u*HY/2-h/2}; }
+
+const DRAWM={
+  canape(c,C,s,o){
+    pave(c,s[0]-0.22,s[1]-0.22,16,C);
+    adosse(c,s,o,0.26,38,shade(C,-10));
+    const ax=o==='sw'?0:s[0]/2-0.14, ay=o==='sw'?s[1]/2-0.14:0;
+    [[-ax,-ay],[ax,ay]].forEach(d=>{ c.save(); dec(c,d[0],d[1]);
+      pave(c, o==='sw'?s[0]-0.22:0.26, o==='sw'?0.26:s[1]-0.22, 26, shade(C,8)); c.restore(); });
+    c.save(); dec(c, o==='sw'?0:-0.34, o==='sw'?-0.34:0);
+    pave(c,0.5,0.5,3,shade(C,24),16); c.restore();
+  },
+  fauteuil(c,C,s,o){
+    pave(c,0.74,0.74,16,C);
+    adosse(c,[0.78,0.78],o,0.22,36,shade(C,-10));
+    const ax=o==='sw'?0:0.31, ay=o==='sw'?0.31:0;
+    [[-ax,-ay],[ax,ay]].forEach(d=>{ c.save(); dec(c,d[0],d[1]);
+      pave(c,o==='sw'?0.74:0.2, o==='sw'?0.2:0.74, 25, shade(C,8)); c.restore(); });
+  },
+  tablebasse(c,C){
+    pieds(c,[0.82,0.82],17,BROWN);
+    pave(c,0.86,0.86,5,C,17);
+  },
+  tapis(c,C,s){
+    pave(c,s[0]-0.12,s[1]-0.12,0,shade(C,-16),1);
+    pave(c,s[0]-0.46,s[1]-0.46,0,C,1.6);
+    pave(c,s[0]-0.95,s[1]-0.95,0,shade(C,22),2.2);
+  },
+  lit(c,C,s,o){
+    pave(c,s[0]-0.26,s[1]-0.26,19,'#FDFBF2');
+    adosse(c,s,o,0.2,52,BROWN);
+    c.save(); dec(c, o==='sw'?0:0.36, o==='sw'?0.36:0);
+    pave(c, o==='sw'?s[0]-0.3:s[0]-0.95, o==='sw'?s[1]-0.95:s[1]-0.3, 4, C, 19); c.restore();
+    c.save(); dec(c, o==='sw'?0:-0.52, o==='sw'?-0.52:0);
+    pave(c, o==='sw'?0.72:0.42, o==='sw'?0.42:0.72, 7, '#F6F1E2', 19); c.restore();
+  },
+  chevet(c,C){
+    pave(c,0.5,0.5,30,C);
+    pave(c,0.5,0.5,2.5,shade(C,-46),16,true);
+    pave(c,0.58,0.56,2.5,shade(C,10),30);
+    const f=faceSE(0.5,30); c.fillStyle=SAND;
+    [9,23].forEach(y=>{ c.beginPath(); c.arc(f.x*0.5,f.y+15-y,1.7,0,Math.PI*2); c.fill(); });
+  },
+  commode(c,C,s){
+    pave(c,s[0]-0.22,s[1]-0.28,44,C);
+    [13,28].forEach(y=>pave(c,s[0]-0.22,s[1]-0.28,2.5,shade(C,-46),y,true));
+    pave(c,s[0]-0.14,s[1]-0.2,2.5,shade(C,10),44);
+    const f=faceSE(s[0]-0.22,0); c.fillStyle=SAND;
+    [6,21,36].forEach(y=>{ c.beginPath(); c.arc(f.x*0.5,f.y-y,1.8,0,Math.PI*2); c.fill(); });
+  },
+  lampadaire(c,C){
+    pave(c,0.34,0.34,3,'#3A4750');
+    pave(c,0.07,0.07,52,'#4E5B65',3);
+    pave(c,0.44,0.44,16,C,53);
+    pave(c,0.3,0.3,2,shade(C,34),52);
+  },
+  etagere(c,C,s,o){
+    const ax=o==='sw'?0:s[0]/2-0.09, ay=o==='sw'?s[1]/2-0.09:0;
+    [[-ax,-ay],[ax,ay]].forEach(d=>{ c.save(); dec(c,d[0],d[1]);
+      pave(c,o==='sw'?s[0]-0.2:0.16, o==='sw'?0.16:s[1]-0.2, 66, shade(C,-6)); c.restore(); });
+    [0,21,43,64].forEach(y=>pave(c,s[0]-0.24,s[1]-0.28,3,C,y));
+    ['#B44C6C','#148A9C','#F4D6A0','#2E7D5B'].forEach((k,i)=>{
+      c.save(); dec(c, o==='sw'?0:-0.22+i*0.15, o==='sw'?-0.22+i*0.15:0);
+      pave(c,0.09,0.09,13,k, i%2?24:46); c.restore(); });
+  },
+  bureau(c,C,s,o){
+    pieds(c,s,32,BROWN,0.14);
+    pave(c,s[0]-0.12,s[1]-0.14,5,C,32);
+    c.save(); dec(c, o==='sw'?0:0.38, o==='sw'?0.38:0);
+    pave(c, o==='sw'?s[0]-0.24:0.52, o==='sw'?0.52:s[1]-0.24, 28, shade(C,-14)); c.restore();
+  },
+  chaise(c,C,s,o){
+    pieds(c,[0.56,0.56],23,BROWN,0.1);
+    pave(c,0.56,0.56,4,C,23);
+    c.save(); dec(c, o==='sw'?-0.22:0, o==='sw'?0:-0.22);
+    pave(c, o==='sw'?0.12:0.5, o==='sw'?0.5:0.12, 28, shade(C,-6), 27); c.restore();
+  },
+  malle(c,C){
+    pave(c,0.66,0.56,22,C);
+    pave(c,0.7,0.6,9,shade(C,-16),22);
+    pave(c,0.66,0.56,2.5,SAND,9,true);
+  },
+  plante(c,C){
+    pave(c,0.34,0.34,22,'#C4703F');
+    pave(c,0.4,0.4,4,'#A85C33',20);
+    c.strokeStyle='#3E7A52'; c.lineWidth=2.2; c.lineCap='round';
+    for(let i=0;i<5;i++){ const a=-Math.PI/2+(i-2)*0.42;
+      c.beginPath(); c.moveTo(0,-19); c.quadraticCurveTo(Math.cos(a)*12,-30,Math.cos(a)*20,-36+Math.sin(a)*8); c.stroke(); }
+    for(let i=0;i<5;i++){ const a=-Math.PI/2+(i-2)*0.42;
+      c.fillStyle=shade(C,i%2?12:-10); c.beginPath();
+      c.ellipse(Math.cos(a)*20,-36+Math.sin(a)*8,8,5.4,a+Math.PI/2,0,Math.PI*2); c.fill(); }
+  },
+  tableau(c,C,s,o){
+    adosse(c,[0.9,0.9],o,0.1,52,BROWN);
+    c.save();
+    if(o==='sw'){ dec(c,-0.34,0); pave(c,0.05,0.5,36,C,8); }
+    else        { dec(c,0,-0.34); pave(c,0.5,0.05,36,C,8); }
+    c.restore();
+  },
+  vase(c,C){
+    c.fillStyle=shade(C,-16); c.beginPath(); c.ellipse(0,-9,10,11,0,0,Math.PI*2); c.fill();
+    c.fillStyle=C; c.beginPath(); c.ellipse(-2.5,-10,7,9.4,0,0,Math.PI*2); c.fill();
+    c.fillStyle=shade(C,-8); c.fillRect(-3.4,-27,6.8,12);
+    c.fillStyle=shade(C,16); c.beginPath(); c.ellipse(0,-27,3.6,1.8,0,0,Math.PI*2); c.fill();
+    c.strokeStyle='#3E7A52'; c.lineWidth=1.8; c.lineCap='round';
+    [[-9,-42],[0,-47],[9,-40]].forEach(d=>{ c.beginPath(); c.moveTo(0,-27); c.quadraticCurveTo(d[0]*0.5,-37,d[0],d[1]); c.stroke(); });
+    [[-9,-42,PINK],[0,-47,'#F6F1E2'],[9,-40,PINK]].forEach(d=>{
+      c.fillStyle=d[2]; c.beginPath(); c.arc(d[0],d[1],4,0,Math.PI*2); c.fill(); });
+  },
+  horloge(c,C){
+    pave(c,0.42,0.3,70,C);
+    const f=faceSE(0.42,70);
+    c.fillStyle='#FAF6EA'; c.beginPath(); c.ellipse(f.x*0.6,f.y-18,8.4,9,0,0,Math.PI*2); c.fill();
+    c.strokeStyle=NAVY; c.lineWidth=1.4; c.lineCap='round';
+    c.beginPath(); c.moveTo(f.x*0.6,f.y-18); c.lineTo(f.x*0.6+4.5,f.y-21); c.stroke();
+    c.beginPath(); c.moveTo(f.x*0.6,f.y-18); c.lineTo(f.x*0.6-1,f.y-25); c.stroke();
+    c.fillStyle=SAND; c.beginPath(); c.arc(f.x*0.6,f.y+14,3.4,0,Math.PI*2); c.fill();
+  }
+};
+
+/* ---- ce qui occupe une case ---- */
+function meubleA(x,y,d){
+  d=d||pieceData();
+  return (d.meubles||[]).find(m=>!PLAT[m.t] && casesDe(m).some(c=>c.x===x&&c.y===y)) || null;
+}
+function blockedDedans(tx,ty){
+  const p=pieceDef(piece), x=Math.floor(tx), y=Math.floor(ty);
+  if(x<0||y<0||x>=p.w||y>=p.h) return true;
+  return !!meubleA(x,y);
+}
+// Après une annulation, le bonhomme peut se retrouver sous un meuble revenu.
+function degager(){
+  if(!dedans || !blockedDedans(hero.x,hero.y)) return;
+  const p=pieceDef(piece);
+  for(let y=0;y<p.h;y++) for(let x=0;x<p.w;x++)
+    if(!blockedDedans(x+0.5,y+0.5)){ hero.x=x+0.5; hero.y=y+0.5; target=null; return; }
+}
+
+/* ---- poser, effacer ---- */
+function poserMeuble(x,y){
+  const p=pieceDef(piece), d=pieceData(), s=emprise(tool.kind,tool.orient), plat=!!PLAT[tool.kind];
+  if(x+s[0]>p.w || y+s[1]>p.h){ say('Il n’y a pas la place ici : ce meuble occupe '+s[0]+'x'+s[1]+' cases.'); return; }
+  const cases=[]; for(let j=0;j<s[1];j++) for(let i=0;i<s[0];i++) cases.push({x:x+i,y:y+j});
+  if(!plat){
+    if(cases.some(c=>estPorte(p,c.x,c.y))){ say('Ne bouche pas le passage.'); return; }
+    if(cases.some(c=>c.x===Math.floor(hero.x)&&c.y===Math.floor(hero.y))){ say('Tu es debout dessus.'); return; }
+  }
+  memoriser();
+  d.meubles=(d.meubles||[]).filter(m=>{
+    if(!!PLAT[m.t]!==plat) return true;                       // les tapis vivent sous le reste
+    return !casesDe(m).some(c=>cases.some(k=>k.x===c.x&&k.y===c.y));
+  });
+  d.meubles.push({t:tool.kind,x:x,y:y,o:tool.orient,c:tool.color});
+  son('poser'); saveMine();
+}
+// Tourner un meuble en place. Le nouvel encombrement doit tenir : un lit
+// deux cases sur une, retourné au ras du mur, sort de la pièce.
+function tournerMeuble(x,y){
+  const p=pieceDef(piece), d=pieceData();
+  const m=(d.meubles||[]).find(k=>casesDe(k).some(c=>c.x===x&&c.y===y));
+  if(!m){ say('Rien à tourner ici.'); return; }
+  // Un meuble carré garde son encombrement : tourner ne déplace que son dos.
+  const o = m.o==='sw' ? 'se' : 'sw', s=emprise(m.t,o);
+  if(m.x+s[0]>p.w || m.y+s[1]>p.h){ say('Pas la place de le tourner ici.'); return; }
+  const cases=[]; for(let j=0;j<s[1];j++) for(let i=0;i<s[0];i++) cases.push({x:m.x+i,y:m.y+j});
+  if(!PLAT[m.t]){
+    if(cases.some(c=>estPorte(p,c.x,c.y))){ say('Tourné, il bloquerait le passage.'); return; }
+    if(cases.some(c=>c.x===Math.floor(hero.x)&&c.y===Math.floor(hero.y))){ say('Tu es debout dessus.'); return; }
+    if((d.meubles||[]).some(k=>k!==m&&!PLAT[k.t]&&casesDe(k).some(c=>cases.some(q=>q.x===c.x&&q.y===c.y)))){
+      say('Un autre meuble est dans le passage.'); return; }
+  }
+  memoriser(); m.o=o; son('poser'); saveMine(); buildAll();
+}
+function effacerMeuble(x,y){
+  const d=pieceData();
+  const cible = meubleA(x,y,d) || (d.meubles||[]).find(m=>PLAT[m.t]&&casesDe(m).some(c=>c.x===x&&c.y===y));
+  if(!cible) return;
+  memoriser();
+  d.meubles=d.meubles.filter(m=>m!==cible);
+  son('gomme'); saveMine();
+}
+
+/* ---- entrer, sortir, passer d'une pièce à l'autre ---- */
+// Les deux cases devant la porte. La première est celle de la façade
+// dessinée par maisonAu() ; la seconde est celle où go() dépose les
+// arrivants. On accepte les deux, et la maison au bord de la grille reste
+// accessible.
+function porteIle(h){ return [{x:h.x+2,y:h.y+1},{x:h.x+1,y:h.y+2}]; }
+// Le seuil, au sens strict : la case devant la porte dessinée. Marcher
+// dessus fait entrer. L'autre case devant la maison reste une zone
+// d'invite, avec la touche et le bouton, mais n'ouvre pas toute seule.
+function seuilSousLesPieds(){
+  if(dedans||visiting||!world.house) return false;
+  const c=porteIle(world.house)[0];
+  return Math.floor(hero.x)===c.x && Math.floor(hero.y)===c.y;
+}
+function devantLaPorte(){
+  if(dedans || !world.house) return false;
+  return porteIle(world.house).some(c=>Math.hypot(c.x+0.5-hero.x,c.y+0.5-hero.y)<0.95);
+}
+function porteSousLesPieds(){
+  if(!dedans) return null;
+  const x=Math.floor(hero.x), y=Math.floor(hero.y);
+  return pieceDef(piece).portes.find(q=>{ const c=casePorte(q); return c.x===x&&c.y===y; }) || null;
+}
+function aCoteDeLaPorte(p){ return p.mur==='nw' ? {x:1,y:p.i} : {x:p.i,y:1}; }
+
+function entrer(k){
+  if(visiting){ say('La porte de <b>'+esc(world.owner)+'</b> est fermée. Pour l’instant, on ne visite que le dehors.'); return; }
+  posIle={x:hero.x,y:hero.y};
+  ongletAvant=ongletOuvert();
+  dedans=true; piece=k||'salon'; sasArme=false;
+  const p=pieceDef(piece), e=p.portes.find(q=>q.vers==='dehors')||p.portes[0];
+  const c=e?aCoteDeLaPorte(e):{x:Math.floor(p.w/2),y:Math.floor(p.h/2)};
+  hero.x=c.x+0.5; hero.y=c.y+0.5; hero.face='bas'; target=null;
+  majVue(); degager(); tool.mode='marche'; tool.kind=null;
+  son('arrivee'); majAmbiance(); hudSync(); buildAll(); ouvrirOnglet('dedans');
+  say('Tu rentres chez toi. Marche jusqu’à une porte pour changer de pièce ou ressortir.');
+}
+function sortir(){
+  dedans=false; sasArme=false; majVue();
+  const h=world.house, essais=[];
+  if(posIle) essais.push(posIle);
+  essais.push({x:h.x+2.5,y:h.y+1.5},{x:h.x+1.5,y:h.y+2.5},{x:(GRID-1)/2,y:(GRID-1)/2});
+  const ok=essais.find(e=>!blocked(e.x,e.y)) || essais[essais.length-1];
+  hero.x=ok.x; hero.y=ok.y; hero.face='bas'; target=null;
+  posIle=null; tool.mode='marche'; tool.kind=null;
+  son('arrivee'); majAmbiance(); hudSync(); buildAll();
+  ouvrirOnglet(ongletAvant||'ile'); ongletAvant=null;
+  say('Te revoilà dehors.');
+}
+function allerPiece(k,depuis){
+  const p=pieceDef(k); piece=k;
+  const retour=p.portes.find(q=>q.vers===depuis);
+  const c=retour?aCoteDeLaPorte(retour):{x:Math.floor(p.w/2),y:Math.floor(p.h/2)};
+  hero.x=c.x+0.5; hero.y=c.y+0.5; target=null; sasArme=false;
+  majVue(); degager(); son('arrivee'); hudSync(); buildAll();
+  say('Te voilà dans le <b>'+p.n.toLowerCase()+'</b>.');
+}
+function franchir(){
+  const p=porteSousLesPieds(); if(!p) return false;
+  if(p.vers==='dehors') sortir(); else allerPiece(p.vers,piece);
+  return true;
+}
+// Un seul geste pour entrer, passer, sortir : la touche E, et le bouton du
+// cadre pour qui n'a pas de clavier.
+function actionPorte(){
+  if(dedans){ if(!franchir()) say('Il n’y a pas de porte ici.'); return; }
+  if(devantLaPorte()) entrer('salon');
+}
+
+function clicDedans(q){
+  const def=pieceDef(piece);
+  if(q.x<0||q.y<0||q.x>=def.w||q.y>=def.h) return;
+  if(tool.mode==='marche'){ target={x:q.fx,y:q.fy}; return; }
+  if(tool.mode==='meuble'){ poserMeuble(q.x,q.y); return; }
+  if(tool.mode==='gomme'){ effacerMeuble(q.x,q.y); return; }
+  if(tool.mode==='tourner'){ tournerMeuble(q.x,q.y); return; }
+  say('Ce pinceau-là ne sert que dehors.');
+}
+
+/* ---- le dessin d'une pièce ---- */
+function quadMur(A,B,y0,y1,col){
+  ctx.fillStyle=col; ctx.beginPath();
+  ctx.moveTo(A.x,A.y-y0); ctx.lineTo(B.x,B.y-y0); ctx.lineTo(B.x,B.y-y1); ctx.lineTo(A.x,A.y-y1); ctx.closePath(); ctx.fill();
+}
+function paroi(def,murC,cote){
+  // cote 'ne' : la paroi y=0, en haut à droite, face tournée vers +y (la sombre).
+  // cote 'nw' : la paroi x=0, en haut à gauche, face tournée vers +x (la claire).
+  const n = cote==='ne' ? def.w : def.h;
+  const face = shade(murC, cote==='ne' ? -18 : -2);
+  for(let i=0;i<n;i++){
+    const A = cote==='ne' ? iso(i,0)   : iso(0,i+1);
+    const B = cote==='ne' ? iso(i+1,0) : iso(0,i);
+    const porte = def.portes.find(p=>p.mur===cote && p.i===i);
+    if(porte){
+      const lerp=(t)=>({x:A.x+(B.x-A.x)*t, y:A.y+(B.y-A.y)*t});
+      // La paroi reste entière, on y creuse l'ouverture : c'est ce qui donne
+      // les jambages. Une bande noire posée sur le mur ferait un tableau.
+      quadMur(A,B,0,MURH,face);
+      quadMur(A,B,0,7,shade(face,-16));
+      const g=lerp(0.15), d=lerp(0.85), HP=MURH-26;
+      quadMur(g,d,0,HP,'#2B3A45');
+      quadMur(g,d,0,5,'#1B262E');                              // le pas de la porte
+      quadMur(g,d,HP-3,HP,shade(murC,-52));                    // le linteau
+      quadMur(lerp(0.12),g,0,HP,shade(face,-26));              // jambages
+      quadMur(d,lerp(0.88),0,HP,shade(face,-14));
+    } else {
+      quadMur(A,B,0,MURH,face);
+      quadMur(A,B,0,7,shade(face,-16));                       // plinthe
+    }
+    quadMur(A,B,MURH,MURH+5,shade(murC,26));                  // épaisseur, vue du dessus
+  }
+}
+function solPiece(def,d){
+  const base=couleurSol(d.sol), demi=vue.tw/2;
+  for(let y=0;y<def.h;y++) for(let x=0;x<def.w;x++){
+    const q=iso(x,y), cy=q.y+vue.th/2, n=h2(x,y);
+    let col=shade(base,(n-0.5)*6);
+    if(d.sol==='carreau') col=shade(base,(x+y)%2?-13:7);
+    if(d.sol==='moquette'||d.sol==='sable') col=shade(base,(n-0.5)*13);
+    isoTop(ctx,q.x,cy,demi,col);
+    if(d.sol==='parquet'||d.sol==='bois'){
+      ctx.strokeStyle='rgba(88,58,30,.17)'; ctx.lineWidth=1.2;
+      [0.34,0.67].forEach(k=>{ const a=iso(x,y+k), b=iso(x+1,y+k);
+        ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); });
+      const a=iso(x+((x+y)%2?0.5:0.25),y), b=iso(x+((x+y)%2?0.5:0.25),y+1);
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    }
+    if(d.sol==='carreau'){
+      ctx.strokeStyle='rgba(120,110,90,.22)'; ctx.lineWidth=1;
+      const N=iso(x,y),E=iso(x+1,y),S=iso(x+1,y+1),W=iso(x,y+1);
+      ctx.beginPath(); ctx.moveTo(N.x,N.y); ctx.lineTo(E.x,E.y); ctx.lineTo(S.x,S.y); ctx.lineTo(W.x,W.y); ctx.closePath(); ctx.stroke();
+    }
+  }
+  // Les deux arêtes proches reçoivent une tranche : sans elle le sol flotte
+  // au lieu d'être le fond d'une boîte.
+  const EP=9;
+  const tranche=(P,Q,col)=>{ ctx.fillStyle=col; ctx.beginPath();
+    ctx.moveTo(P.x,P.y); ctx.lineTo(Q.x,Q.y); ctx.lineTo(Q.x,Q.y+EP); ctx.lineTo(P.x,P.y+EP); ctx.closePath(); ctx.fill(); };
+  tranche(iso(def.w,0), iso(def.w,def.h), shade(base,-16));
+  tranche(iso(0,def.h), iso(def.w,def.h), shade(base,-34));
+
+  // Le paillasson devant chaque porte : sans lui on cherche la sortie. Le
+  // liséré sombre est ce qui le fait exister sur un parquet comme sur du
+  // béton : une seule couleur disparaîtrait sur la moitié des sols.
+  def.portes.forEach(p=>{ const c=casePorte(p), q=iso(c.x,c.y);
+    const col = p.vers==='dehors' ? '#E4B36A' : '#9FB6C0';
+    ctx.save(); ctx.translate(q.x,q.y+vue.th/2);
+    pave(ctx,0.7,0.7,0,'#4A4034',1.2);
+    pave(ctx,0.56,0.56,0,col,1.8);
+    pave(ctx,0.34,0.34,0,shade(col,20),2.4);
+    ctx.restore(); });
+}
+function dessinerMeuble(m){
+  const s=emprise(m.t,m.o), q=iso(m.x+s[0]/2, m.y+s[1]/2);
+  ctx.save(); ctx.translate(q.x,q.y);
+  if(!PLAT[m.t]){ ctx.globalAlpha=0.2; ctx.fillStyle='#0B3C5D';
+    ctx.beginPath(); ctx.ellipse(0,0,s[0]*HX*0.5,s[1]*HY*0.62,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
+  (DRAWM[m.t]||DRAWM.malle)(ctx,m.c||'#8B5E3C',s,m.o||'se');
+  ctx.restore();
+}
+function drawInterieur(t){
+  const def=pieceDef(piece), d=pieceData();
+  ctx.clearRect(0,0,CW,CH);
+  const tone=skyTone();
+  ctx.fillStyle=tone.paper; ctx.fillRect(0,0,CW,CH);
+
+  const murC=couleurMur(d.mur);
+  paroi(def,murC,'nw'); paroi(def,murC,'ne');
+  solPiece(def,d);
+
+  if(tool.mode!=='marche' && hover.x>=0 && hover.x<def.w && hover.y>=0 && hover.y<def.h){
+    const q=iso(hover.x,hover.y), cy=q.y+vue.th/2;
+    ctx.strokeStyle='rgba(244,140,168,.95)'; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.moveTo(q.x,cy-vue.th/2); ctx.lineTo(q.x+vue.tw/2,cy);
+    ctx.lineTo(q.x,cy+vue.th/2); ctx.lineTo(q.x-vue.tw/2,cy); ctx.closePath(); ctx.stroke();
+  }
+
+  (d.meubles||[]).filter(m=>PLAT[m.t]).forEach(dessinerMeuble);
+
+  const items=[];
+  (d.meubles||[]).filter(m=>!PLAT[m.t]).forEach(m=>{
+    const s=emprise(m.t,m.o);
+    items.push({d:(m.x+s[0]/2)+(m.y+s[1]/2), f:()=>dessinerMeuble(m)});
+  });
+  const hp=iso(hero.x,hero.y);
+  items.push({d:hero.x+hero.y, f:()=>drawChar(ctx,hp.x,hp.y,mine.me,1.25,hero.face,hero.moving?t:0)});
+  items.sort((a,b)=>a.d-b.d).forEach(i=>i.f());
+
+  if(world.sky!=='jour'){
+    ctx.save();
+    ctx.fillStyle = world.sky==='nuit' ? 'rgba(12,30,58,.44)' : 'rgba(128,56,76,.2)';
+    ctx.fillRect(0,0,CW,CH);
+    ctx.globalCompositeOperation='lighter';
+    (d.meubles||[]).forEach(m=>{ if(m.t!=='lampadaire') return;
+      const s=emprise(m.t,m.o), q=iso(m.x+s[0]/2,m.y+s[1]/2);
+      const g=ctx.createRadialGradient(q.x,q.y-50,0,q.x,q.y-50,118);
+      g.addColorStop(0,'rgba(255,224,160,.58)'); g.addColorStop(1,'rgba(255,224,160,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(q.x,q.y-50,118,0,Math.PI*2); ctx.fill(); });
+    ctx.restore();
+  }
+}
+
 /* ================= boucle & entrées ================= */
 const keys={}, hover={x:-1,y:-1};
 addEventListener('keydown',e=>{
@@ -1112,21 +1689,26 @@ addEventListener('keydown',e=>{
   keys[e.key.toLowerCase()]=true;
   if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); if(!visiting) annuler(); }
-  if(e.key.toLowerCase()==='e' && souvenirProche){ e.preventDefault(); ramasserSouvenir(); }
+  if(e.key.toLowerCase()==='e'){
+    if(souvenirProche){ e.preventDefault(); ramasserSouvenir(); }
+    else if(dedans || devantLaPorte()){ e.preventDefault(); actionPorte(); }
+  }
 });
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 
 function pt(e){ const r=cv.getBoundingClientRect(), s=CW/r.width;
   return {x:(e.clientX-r.left)*s, y:(e.clientY-r.top)*s}; }
 function tileFrom(e){
-  const p=pt(e), u=unIso(p.x,p.y+LIFT-TH/2);
+  const p=pt(e), u=unIso(p.x,p.y+vue.probe);
   return {x:Math.floor(u.x), y:Math.floor(u.y), fx:u.x, fy:u.y};
 }
 cv.addEventListener('mousemove',e=>{ const q=tileFrom(e);
-  hover.x=(q.x>=0&&q.y>=0&&q.x<GRID&&q.y<GRID)?q.x:-1; hover.y=q.y; });
+  const lx=dedans?pieceDef(piece).w:GRID, ly=dedans?pieceDef(piece).h:GRID;
+  hover.x=(q.x>=0&&q.y>=0&&q.x<lx&&q.y<ly)?q.x:-1; hover.y=q.y; });
 cv.addEventListener('mouseleave',()=>{hover.x=-1;});
 cv.addEventListener('click',e=>{
   const q=tileFrom(e);
+  if(dedans){ clicDedans(q); return; }
   if(q.x<0||q.y<0||q.x>=GRID||q.y>=GRID) return;
   if(tool.mode==='marche'){ target={x:q.fx,y:q.fy}; return; }
   if(visiting){ say('Tu es invité chez '+esc(world.owner)+" — on ne touche pas à l'île des autres."); return; }
@@ -1148,10 +1730,42 @@ cv.addEventListener('click',e=>{
     if(q.x>=world.house.x&&q.x<=world.house.x+1&&q.y>=world.house.y&&q.y<=world.house.y+1){ say('La maison occupe déjà cette case.'); return; }
     memoriser();
     world.objects=world.objects.filter(o=>!(o.x===q.x&&o.y===q.y));
-    world.objects.push({t:tool.kind,x:q.x,y:q.y,c:tool.color}); son('poser');
+    const neuf={t:tool.kind,x:q.x,y:q.y,c:tool.color};
+    if(PIVOT_ILE[tool.kind]) neuf.o=tool.orient;
+    world.objects.push(neuf); son('poser');
   }
+  else if(tool.mode==='tourner'){ tournerSurIle(q.x,q.y); }
+  else if(tool.mode==='maison'){ poserMaison(q.x,q.y); }
   saveMine();
 });
+
+// Tourner ce qui est déjà posé : un sens qu'on ne choisit qu'au moment de
+// poser oblige à effacer pour se corriger.
+function tournerSurIle(x,y){
+  const o=(world.objects||[]).find(k=>k.t!=='panneau'&&k.x===x&&k.y===y);
+  if(!o){ say('Rien à tourner ici.'); return; }
+  if(!PIVOT_ILE[o.t]){ say('Un<span></span> <b>'+(NOM_OBJ[o.t]||'objet')+'</b> n’a pas de sens : il est pareil des deux côtés.'); return; }
+  memoriser(); o.o = o.o==='sw' ? 'se' : 'sw'; son('poser'); saveMine(); buildAll();
+}
+// La maison se pose au clic, comme le reste. Quatre flèches qui suivent les
+// axes de l'isométrie, personne ne sait dans quel sens elles vont.
+function poserMaison(x,y){
+  const h=mine.house;
+  if(x>GRID-2||y>GRID-2){ say('La maison déborderait de la grille.'); return; }
+  const cases=[[x,y],[x+1,y],[x,y+1],[x+1,y+1]];
+  if(cases.some(c=>!dansLeRayon(c[0],c[1]))){ say('Le large ne t’appartient pas encore.'); return; }
+  if(cases.some(c=>mine.tiles[c[1]*GRID+c[0]]===2)){ say('On ne bâtit pas sur l’eau.'); return; }
+  const gene=(mine.objects||[]).find(o=>cases.some(c=>c[0]===o.x&&c[1]===o.y));
+  if(gene){ say(gene.t==='panneau'
+    ? 'Un mot du livre d’or est planté là. Choisis un autre endroit.'
+    : 'Il y a un<span></span> <b>'+(NOM_OBJ[gene.t]||'objet')+'</b> sous la maison. Efface-le d’abord.'); return; }
+  if(h.x===x&&h.y===y) return;
+  memoriser(); h.x=x; h.y=y; saveMine(); son('poser');
+  // Le bonhomme ne doit pas se retrouver enfermé dans les murs.
+  if(blocked(hero.x,hero.y)){ hero.x=x+2.5; hero.y=y+1.5; target=null;
+    if(blocked(hero.x,hero.y)){ hero.x=x+1.5; hero.y=y+2.5; } }
+  buildAll(); say('Maison déplacée.');
+}
 
 let last=0;
 function frame(t){
@@ -1168,7 +1782,7 @@ function frame(t){
   }
   if(dx||dy){
     const m=Math.hypot(dx,dy)||1; dx/=m; dy/=m;
-    const sp=0.0042*dt;
+    const sp=(dedans?0.0031:0.0042)*dt;
     const nx=hero.x+dx*sp, ny=hero.y+dy*sp;
     if(!blocked(nx,hero.y)) hero.x=nx;
     if(!blocked(hero.x,ny)) hero.y=ny;
@@ -1177,7 +1791,7 @@ function frame(t){
     hero.moving=true;
   } else hero.moving=false;
   proximity();
-  drawWorld(t);
+  if(dedans) drawInterieur(t); else drawWorld(t);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -1198,7 +1812,7 @@ function ctxAudio(){
   if(!ac){
     const AC=window.AudioContext||window.webkitAudioContext;
     if(!AC) return null;
-    ac=new AC(); maitre=ac.createGain(); maitre.gain.value=sonCoupe?0:0.55;
+    ac=new AC(); maitre=ac.createGain(); maitre.gain.value=volumeMaitre();
     maitre.connect(ac.destination);
   }
   if(ac.state==='suspended') ac.resume();
@@ -1306,10 +1920,13 @@ function jouerAmbiance(nom){
     minuteurOiseaux=setTimeout(boucle,600);
   }
 }
-function majAmbiance(){ jouerAmbiance(sonCoupe?'silence':(world.ambiance||'silence')); }
+// Dedans, on entend l'île à travers les murs : le même fond, deux fois plus bas.
+function volumeMaitre(){ return sonCoupe?0:(dedans?0.3:0.55); }
+function majAmbiance(){ jouerAmbiance(sonCoupe?'silence':(world.ambiance||'silence'));
+  if(maitre) maitre.gain.value=volumeMaitre(); }
 function couperLeSon(v){
   sonCoupe=v; localStorage.setItem('dansisland:muet',v?'1':'0');
-  if(maitre) maitre.gain.value=v?0:0.55;
+  if(maitre) maitre.gain.value=v?0:volumeMaitre();
   if(v) arreterAmbiance(); else majAmbiance();
   peindreSon();
 }
@@ -1334,7 +1951,29 @@ function say(msg,lock){
 // deux listes qui divergent, c'est un objet qui n'a pas le même nom selon l'endroit.
 const NOM_OBJ={}; OBJ_GROUPS.forEach(g=>g[1].forEach(o=>{ NOM_OBJ[o[0]]=o[1].toLowerCase(); }));
 let souvenirProche=null;
+const porteEl=document.getElementById('porte-btn');
+porteEl.onclick=()=>actionPorte();
+function porteBtn(l){
+  if(l){ if(porteEl.textContent!==l) porteEl.textContent=l; porteEl.hidden=false; }
+  else porteEl.hidden=true;
+}
+// Dedans, la seule chose à portée est une porte : le paillasson pour
+// ressortir, une embrasure pour changer de pièce.
+function proximiteDedans(){
+  souvenirProche=null;
+  const p=porteSousLesPieds();
+  if(!p){ sasArme=true; porteBtn(null);
+    if(wLock.indexOf('porte')===0){ whisper.classList.remove('on'); wLock=''; }
+    return; }
+  if(sasArme){ franchir(); return; }
+  const cle='porte'+piece+p.mur+p.i;
+  porteBtn(p.vers==='dehors' ? 'Sortir' : ('Passer au '+pieceDef(p.vers).n.toLowerCase()));
+  if(wLock!==cle) say(p.vers==='dehors'
+    ? 'Le paillasson. <b>E</b> pour ressortir.'
+    : 'Une porte vers le <b>'+pieceDef(p.vers).n.toLowerCase()+'</b>. <b>E</b> pour passer.', cle);
+}
 function proximity(){
+  if(dedans){ proximiteDedans(); return; }
   let panneau=null, objet=null;
   world.objects.forEach(o=>{
     if(Math.hypot(o.x+0.5-hero.x,o.y+0.5-hero.y)>=0.95) return;
@@ -1349,7 +1988,19 @@ function proximity(){
     '. Appuie sur <b>E</b> pour en ramener un souvenir.'); return; }
   if(objet&&objet.de){ bulle('souv'+objet.x+'-'+objet.y,
     'Souvenir rapporté de chez <b>'+esc(objet.de)+'</b>.'); return; }
-  if(wLock.indexOf('sign')===0||wLock.indexOf('souv')===0){ whisper.classList.remove('on'); wLock=''; }
+  // La porte de la maison. Elle n'ouvre que chez soi : c'est une règle de
+  // jeu, pas un secret : `interieur` voyage dans le même jsonb que le reste.
+  if(devantLaPorte()){
+    if(visiting){ porteBtn(null); sasArme=true;
+      bulle('porte','La porte de <b>'+esc(world.owner)+'</b> est fermée. Pour l’instant, on ne visite que le dehors.'); return; }
+    // Le seuil fait entrer tout seul ; la case d'à côté se contente d'inviter.
+    if(seuilSousLesPieds()){ if(sasArme){ entrer('salon'); return; } }
+    else sasArme=true;
+    porteBtn('Entrer');
+    bulle('porte','Ta porte. Monte sur le seuil, ou <b>E</b> pour rentrer chez toi.'); return;
+  }
+  sasArme=true; porteBtn(null);
+  if(wLock.indexOf('sign')===0||wLock.indexOf('souv')===0||wLock.indexOf('porte')===0){ whisper.classList.remove('on'); wLock=''; }
 }
 // On ne vole rien : on ramène une copie, signée du nom de l'hôte. L'île
 // visitée n'est pas touchée, et la tienne garde la trace de qui tu as vu.
@@ -1374,6 +2025,14 @@ function chips(label,path,opts){
   const f=field(label), box=document.createElement('div'); box.className='chips';
   opts.forEach(([v,n])=>{ const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=n;
     b.setAttribute('aria-pressed',String(get(path)===v)); b.onclick=()=>set(path,v); box.appendChild(b); });
+  f.appendChild(box); return f;
+}
+// Comme chips(), mais sur une valeur quelconque : l'intérieur n'écrit pas
+// dans `mine` par un chemin, il écrit dans la pièce en cours.
+function chipsLibre(label,opts,valeur,fn){
+  const f=field(label), box=document.createElement('div'); box.className='chips';
+  opts.forEach(o=>{ const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=o[1];
+    b.setAttribute('aria-pressed',String(valeur===o[0])); b.onclick=()=>fn(o[0]); box.appendChild(b); });
   f.appendChild(box); return f;
 }
 function swatches(label,path,list){
@@ -1442,14 +2101,15 @@ function buildMaison(){
   p.appendChild(chips('Cheminée','house.cheminee',[[false,'Sans'],[true,'Avec']]));
   p.appendChild(rule());
   const f=field('Emplacement'), row=document.createElement('div'); row.className='row';
-  [['↖',-1,-1],['↗',1,-1],['↙',-1,1],['↘',1,1]].forEach(([lbl,dx,dy])=>{
-    const b=document.createElement('button'); b.className='btn'; b.textContent=lbl;
-    b.onclick=()=>{ const h=mine.house;
-      h.x=Math.max(0,Math.min(GRID-2,h.x+dx)); h.y=Math.max(0,Math.min(GRID-2,h.y+dy)); saveMine(); };
-    row.appendChild(b);
-  });
-  f.appendChild(row); p.appendChild(f);
-  p.appendChild(hint('Les flèches suivent les axes de l\'isométrie, pas l\'écran. La maison est le point de rendez-vous : on débarque toujours devant sa porte.'));
+  const dep=document.createElement('button');
+  dep.className='btn'+(tool.mode==='maison'?' primary':'');
+  dep.textContent = tool.mode==='maison' ? '\u2715 Annuler le déplacement' : '\u2723 Déplacer la maison';
+  dep.disabled=!!visiting;
+  dep.onclick=()=>{ if(tool.mode==='maison'){ tool.mode='marche'; tool.kind=null; }
+    else { tool.mode='maison'; tool.kind=null; say('Clique la case où poser la maison. Elle occupe deux cases sur deux.'); }
+    buildAll(); };
+  row.appendChild(dep); f.appendChild(row); p.appendChild(f);
+  p.appendChild(hint('Tu cliques la case, la maison s\'y pose : le coin que tu vises est son coin nord, le plus haut \u00e0 l\'\u00e9cran. La maison est le point de rendez-vous, on d\u00e9barque toujours devant sa porte.'));
   peindreMaison();
 }
 function peindreMaison(){
@@ -1508,17 +2168,23 @@ function buildIle(){
       b.setAttribute('aria-pressed',String(tool.mode==='objet'&&tool.kind===v));
       b.title=n;
       const c=document.createElement('canvas'); c.width=120; c.height=120;
-      apercuObjet(c.getContext('2d'),v,tool.color);
+      apercuObjet(c.getContext('2d'),v,tool.color,tool.orient);
       const l=document.createElement('span'); l.textContent=n;
       b.appendChild(c); b.appendChild(l);
       b.onclick=()=>{tool.mode='objet';tool.kind=v;buildAll();}; bo.appendChild(b); });
     fo.appendChild(bo); p.appendChild(fo);
   });
-  const fe=field('Effacer'), be=document.createElement('div'); be.className='chips';
+  const fe=field('Corriger'), be=document.createElement('div'); be.className='chips';
   const e=document.createElement('button'); e.className='chip'; e.type='button'; e.textContent='⌫ Gomme';
   e.setAttribute('aria-pressed',String(tool.mode==='gomme'));
   e.onclick=()=>{tool.mode='gomme';tool.kind=null;buildAll();};
-  be.appendChild(e); fe.appendChild(be); p.appendChild(fe);
+  const tr=document.createElement('button'); tr.className='chip'; tr.type='button'; tr.textContent='\u27f3 Tourner';
+  tr.setAttribute('aria-pressed',String(tool.mode==='tourner'));
+  tr.onclick=()=>{tool.mode='tourner';tool.kind=null;buildAll();};
+  be.appendChild(e); be.appendChild(tr); fe.appendChild(be); p.appendChild(fe);
+  p.appendChild(chipsLibre('Sens',[['se','\u2198 Vers la droite'],['sw','\u2199 Vers la gauche']],tool.orient,
+    v=>{ tool.orient=v; buildAll(); }));
+  p.appendChild(hint('Le sens ne change que ce qui suit un axe : <b>banc</b>, <b>barrière</b>, <b>clôture</b>, <b>ponton</b>, <b>boutique</b>. Un arbre est pareil des deux côtés. <b>\u27f3 Tourner</b> retourne ce qui est déjà posé, sans l\'effacer.'));
 
   const fc=field('Couleur de l\'objet'), bc=document.createElement('div'); bc.className='sw';
   OBJ_COLORS.forEach(c=>{
@@ -1615,13 +2281,101 @@ function buildIle(){
 
 // L'aperçu d'un objet : le même dessin que sur l'île, à la couleur
 // choisie. Un nom seul ne dit pas ce qu'on va poser.
-function apercuObjet(g,t,col){
+function apercuObjet(g,t,col,o){
   g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,60,60);
   g.save(); g.translate(30,45); g.scale(0.60,0.60);
   shadowDiamond(g,0,0,15);
-  (DRAW[t]||DRAW.rocher)(g,col);
+  dessinDe(g,t,col,PIVOT_ILE[t]?o:null);
   g.restore();
 }
+// L'aperçu d'un meuble : le même dessin que dans la pièce, à la
+// couleur et à l'orientation choisies.
+function apercuMeuble(g,t,col,o){
+  g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,60,60);
+  const s=emprise(t,o), k=Math.min(0.5, 54/((s[0]+s[1])*HX));
+  g.save(); g.translate(30,44); g.scale(k,k);
+  (DRAWM[t]||DRAWM.malle)(g,col,s,o);
+  g.restore();
+}
+
+/* ---- l'atelier de l'intérieur ----
+   Un onglet \u00e0 part, visible m\u00eame depuis l'\u00eele : une pi\u00e8ce qu'on ne peut
+   d\u00e9corer qu'apr\u00e8s avoir trouv\u00e9 la porte est une pi\u00e8ce qu'on ne d\u00e9core pas.
+   Il \u00e9crit toujours dans `mine` : on n'entre que chez soi. */
+function buildDedans(){
+  const p=document.getElementById('p-dedans'); p.innerHTML='';
+  const it=normaliserInterieur(mine), d=it.pieces[piece], def=pieceDef(piece);
+
+  const fr=field('Pi\u00e8ce'), br=document.createElement('div'); br.className='chips';
+  PIECES.forEach(q=>{
+    const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=q.n;
+    b.setAttribute('aria-pressed',String(piece===q.k));
+    b.onclick=()=>{ if(dedans&&piece!==q.k) allerPiece(q.k,piece); else { piece=q.k; buildAll(); } };
+    br.appendChild(b); });
+  fr.appendChild(br); p.appendChild(fr);
+
+  const rp=document.createElement('div'); rp.className='row';
+  const be=document.createElement('button'); be.className='btn primary';
+  be.textContent = dedans ? 'Ressortir' : 'Entrer dans la maison';
+  be.disabled = !!visiting;
+  be.onclick=()=>{ if(dedans) sortir(); else entrer(piece); };
+  rp.appendChild(be); p.appendChild(rp);
+  if(visiting) p.appendChild(hint('Tu es invit\u00e9 chez <b>'+esc(world.owner)+'</b>. On n\u2019entre que chez soi : rentre sur ton \u00eele pour ouvrir ta porte.'));
+  p.appendChild(rule());
+
+  p.appendChild(chipsLibre('Sol', SOLS.map(x=>[x[0],x[1]]), d.sol,
+    v=>{ if(d.sol===v) return; memoriser(); d.sol=v; saveMine(); buildAll(); }));
+  p.appendChild(chipsLibre('Murs', MURS.map(x=>[x[0],x[1]]), d.mur,
+    v=>{ if(d.mur===v) return; memoriser(); d.mur=v; saveMine(); buildAll(); }));
+  p.appendChild(rule());
+
+  p.appendChild(chipsLibre('Orientation',[['se','\u2198 Vers la droite'],['sw','\u2199 Vers la gauche']],tool.orient,
+    v=>{ tool.orient=v; buildAll(); }));
+
+  const fm=field('Marcher'), bm=document.createElement('div'); bm.className='chips';
+  const mb=document.createElement('button'); mb.className='chip'; mb.type='button'; mb.textContent='\u270b Marcher';
+  mb.setAttribute('aria-pressed',String(tool.mode==='marche'));
+  mb.onclick=()=>{ tool.mode='marche'; tool.kind=null; buildAll(); };
+  const gb=document.createElement('button'); gb.className='chip'; gb.type='button'; gb.textContent='\u232b Gomme';
+  gb.setAttribute('aria-pressed',String(tool.mode==='gomme'));
+  gb.onclick=()=>{ tool.mode='gomme'; tool.kind=null; buildAll(); };
+  const tb=document.createElement('button'); tb.className='chip'; tb.type='button'; tb.textContent='\u27f3 Tourner';
+  tb.setAttribute('aria-pressed',String(tool.mode==='tourner'));
+  tb.onclick=()=>{ tool.mode='tourner'; tool.kind=null; buildAll(); };
+  bm.appendChild(mb); bm.appendChild(gb); bm.appendChild(tb); fm.appendChild(bm); p.appendChild(fm);
+
+  MEUBLE_GROUPS.forEach(g=>{
+    const fo=field(g[0]), bo=document.createElement('div'); bo.className='objs';
+    g[1].forEach(m=>{
+      const b=document.createElement('button'); b.className='obj'; b.type='button'; b.title=m[1];
+      b.setAttribute('aria-pressed',String(tool.mode==='meuble'&&tool.kind===m[0]));
+      const c=document.createElement('canvas'); c.width=120; c.height=120;
+      apercuMeuble(c.getContext('2d'),m[0],tool.color,tool.orient);
+      const l=document.createElement('span');
+      const t=TAILLE[m[0]];
+      l.textContent = t ? (m[1]+' \u00b7 '+t[0]+'x'+t[1]) : m[1];
+      b.appendChild(c); b.appendChild(l);
+      b.onclick=()=>{ tool.mode='meuble'; tool.kind=m[0]; buildAll(); };
+      bo.appendChild(b); });
+    fo.appendChild(bo); p.appendChild(fo); });
+
+  const fc=field('Couleur du meuble'), bc=document.createElement('div'); bc.className='sw';
+  OBJ_COLORS.forEach(k=>{
+    const b=document.createElement('button'); b.type='button'; b.style.background=k;
+    b.setAttribute('aria-label','Couleur '+k);
+    b.setAttribute('aria-pressed',String(tool.color.toLowerCase()===k.toLowerCase()));
+    b.onclick=()=>{ tool.color=k; buildAll(); }; bc.appendChild(b); });
+  const pk=document.createElement('input'); pk.type='color'; pk.value=tool.color;
+  pk.oninput=e=>{ tool.color=e.target.value; }; pk.onchange=()=>buildAll();
+  bc.appendChild(pk); fc.appendChild(bc); p.appendChild(fc);
+
+  const nb=(d.meubles||[]).length;
+  p.appendChild(hint('Trois pi\u00e8ces, et personne d\u2019autre que toi n\u2019y entre. Le <b>'+def.n.toLowerCase()+
+    '</b> fait '+def.w+'x'+def.h+' cases et porte <b>'+nb+' meuble'+(nb>1?'s':'')+'</b>. '+
+    '<b>Ctrl+Z</b> annule ici comme dehors.'));
+  p.appendChild(hint('Le <b>sens</b> s\'applique au moment de poser ; <b>\u27f3 Tourner</b> retourne un meuble déjà en place. Un meuble ne se pose pas sur une porte ni sur un autre meuble ; le tapis, si : il vit au sol, sous le reste.'));
+}
+
 function thumb(g,w){
   g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,52,52);
   g.fillStyle=PAPER; g.fillRect(0,0,52,52);
@@ -1839,12 +2593,12 @@ function freeTile(w){
 }
 function encode(w){
   return btoa(unescape(encodeURIComponent(JSON.stringify(
-    {n:w.name,p:w.pal.k,s:w.sky,t:w.tiles.join(''),h:w.house,o:w.objects,m:w.me}))));
+    {n:w.name,p:w.pal.k,s:w.sky,t:w.tiles.join(''),h:w.house,o:w.objects,m:w.me,i:w.interieur}))));
 }
 function decode(s){
   const o=JSON.parse(decodeURIComponent(escape(atob(s))));
   return {name:o.n, pal:GROUNDS.find(g=>g.k===o.p)||GROUNDS[0], sky:o.s,
-    tiles:String(o.t).split('').map(Number), house:o.h, objects:o.o, me:o.m};
+    tiles:String(o.t).split('').map(Number), house:o.h, objects:o.o, me:o.m, interieur:o.i};
 }
 
 // La carte postale : le cadre tel qu'il est à l'écran, plus le nom de
@@ -1870,6 +2624,7 @@ function cartePostale(){
 
 /* ================= navigation ================= */
 async function go(slug){
+  if(dedans){ dedans=false; posIle=null; majVue(); }
   if(slug==='me'||(monSlug&&slug===monSlug)){
     visiting=null; world=mine; replanter(mine);
     majURL(monSlug?('/'+monSlug):'/');
@@ -1912,19 +2667,25 @@ function routerDepuisURL(){
 function hudSync(){
   document.getElementById('hud-name').textContent = world.name || 'Sans nom';
   const m=document.getElementById('hud-mode');
-  m.textContent = visiting ? 'Invité chez '+world.owner : (tool.mode==='marche'?'Chez toi':'Chez toi · édition');
+  m.textContent = dedans ? ('Chez toi · '+pieceDef(piece).n)
+    : (visiting ? 'Invité chez '+world.owner : (tool.mode==='marche'?'Chez toi':'Chez toi · édition'));
   m.className='plate'+(visiting?' guest':'');
   cv.classList.toggle('walking', tool.mode==='marche');
 }
-document.querySelectorAll('.tabs button').forEach(b=>{
-  b.onclick=()=>{
-    document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
-    document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p-'+b.dataset.tab));
-  };
-});
+// L'onglet ouvert est un état du jeu, pas seulement un clic : franchir une
+// porte doit pouvoir amener le bon atelier sous la main.
+function ongletOuvert(){
+  const b=[...document.querySelectorAll('.tabs button')].find(x=>x.getAttribute('aria-selected')==='true');
+  return b?b.dataset.tab:'toi';
+}
+function ouvrirOnglet(nom){
+  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.tab===nom)));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p-'+nom));
+}
+document.querySelectorAll('.tabs button').forEach(b=>{ b.onclick=()=>ouvrirOnglet(b.dataset.tab); });
 document.getElementById('son-btn').onclick=()=>couperLeSon(!sonCoupe);
 peindreSon();
-function buildAll(){ buildToi(); buildMaison(); buildIle(); buildVoisins(); hudSync(); }
+function buildAll(){ buildToi(); buildMaison(); buildIle(); buildDedans(); buildVoisins(); hudSync(); }
 buildAll();
 // Annoncer des touches à quelqu'un qui n'a pas de clavier, c'est le perdre.
 say(matchMedia('(pointer:coarse)').matches

@@ -171,6 +171,96 @@ Leur slug vient de leur nom (`/la-crique`). `go()` regarde les bots avant
 la base : si un jour quelqu'un réserve un de ces slugs, c'est le bot qui
 gagnerait. À surveiller le jour où on ouvre les inscriptions.
 
+## L'intérieur de la maison
+
+Trois pièces, salon, chambre, atelier, et personne d'autre que le
+propriétaire n'y entre.
+
+**On entre en marchant.** Monter sur le seuil, la case devant la porte
+dessinée, fait entrer ; le paillasson du salon fait ressortir ; les
+embrasures font passer d'une pièce à l'autre. `E` et le bouton rose du
+cadre restent là pour qui préfère, et pour l'autre case devant la maison,
+celle qui invite sans ouvrir.
+
+Entrer ouvre l'onglet **Dedans**, ressortir rend l'onglet qu'on avait.
+L'atelier suit le bonhomme au lieu d'attendre qu'on le retrouve.
+
+Une porte franchie en marchant se **réarme** : `sasArme` empêche de
+ressortir sur le seuil et de rentrer aussitôt, en boucle. Il redevient
+vrai dès qu'on quitte la case de la porte.
+
+**Rien n'a bougé dans le schéma SQL.** Tout vit dans `monde.interieur`,
+dans le même jsonb que le reste :
+
+    interieur: { v:1, pieces: { salon:{sol,mur,meubles:[…]}, chambre:…, atelier:… } }
+
+La ligne est celle-ci : **l'architecture est du code, la décoration est de
+la donnée.** La taille des pièces, la position des portes, leur
+enchaînement vivent dans `PIECES`, en dur. Élargir le salon un jour ne
+demandera aucune migration. C'est la même règle que dehors, où la forme de
+la maison est en dur et où seules ses couleurs sont en base.
+
+Un meuble, c'est `{t,x,y,o,c}` : le type, la case, le sens, la couleur.
+L'encombrement (1x1, 2x1, 2x2) est une propriété du **type**, il vit dans
+`TAILLE` et jamais dans le jsonb. Le tapis est le seul « plat » : il se
+pose au sol, sous le reste, et ne bloque pas la marche.
+
+La porte fermée est une **règle de jeu, pas un secret** : `interieur`
+voyage dans le même jsonb que le reste, donc un visiteur qui lit l'API
+voit la décoration. Rien de sensible n'a à vivre là. Le jour où il
+faudrait que ce soit vraiment privé, il faudra une colonne à part et une
+policy RLS, donc du SQL.
+
+### Le rendu
+
+Même moteur, même projection, même tri par `x+y`. Le seul changement est
+`vue` : la caméra que lisent `iso()` et `unIso()`. Elle vaut l'île dehors,
+la pièce dedans, et tout ce qui en dépend (le curseur, le bonhomme, la
+profondeur) suit sans une ligne de plus. La case fait 72 px dedans contre
+56 dehors : une pièce est petite, les meubles ont le droit d'être lisibles.
+
+La pièce est une **boîte ouverte** : seules les deux parois du fond sont
+dessinées, celles près de la caméra sont omises. Sans ça, on ne voit rien.
+
+### La visée, corrigée le 16/09/2026
+
+`vue.probe` est ce qu'on ajoute à l'ordonnée d'un clic avant de repasser
+par `unIso()`. Le losange peint pour la case `(x,y)` est le quadrilatère
+`iso(x,y)…iso(x,y+1)` remonté de `lift` : rendre le clic exact demande
+donc d'ajouter `lift`, et rien d'autre.
+
+La valeur d'avant, `LIFT-TH/2`, sondait un demi-losange trop haut et
+renvoyait une case en haut à gauche de celle qu'on croyait viser. Mesuré
+sur neuf points répartis dans chaque losange : **43 % de clics justes
+avant, 100 % après**. Dedans le sol est plat, `probe` vaut 0.
+
+C'est corrigé partout : le pinceau, la gomme, le déplacement du bonhomme
+et le losange rose de survol passent tous par `tileFrom()`.
+
+### Le sens des meubles et des objets
+
+`o` vaut `'se'` ou `'sw'`, et se choisit avant de poser. **⟳ Tourner**
+retourne ce qui est déjà en place, dedans comme dehors : un sens qu'on ne
+choisit qu'au moment de poser oblige à effacer pour se corriger.
+
+Sur l'île, le sens ne s'applique qu'à ce qui suit un axe : banc,
+barrière, clôture, ponton, boutique (`PIVOT_ILE`). Un arbre est pareil des
+deux côtés, et on le dit plutôt que de faire semblant. Techniquement c'est
+un miroir horizontal, qui échange exactement les deux axes de
+l'isométrie : pas un dessin de plus à maintenir.
+
+Les objets posés avant n'ont pas de `o` : ils s'affichent comme avant.
+
+### Déplacer la maison
+
+Les quatre flèches ont disparu : elles suivaient les axes de l'isométrie
+et personne ne savait dans quel sens elles allaient. **✣ Déplacer la
+maison** arme un pinceau, on clique la case, la maison s'y pose. Le
+survol montre les deux cases sur deux visées. La pose refuse l'eau, le
+large hors rayon, et une case occupée par un objet ou par un mot du livre
+d'or, en le disant. Si le bonhomme se retrouve dans les murs, il est
+reposé devant la porte.
+
 ## Les souvenirs
 
 Chez un voisin, s'arrêter à côté d'un objet propose de le ramener.
@@ -181,7 +271,9 @@ Un souvenir déjà rapporté du même hôte et du même type est refusé.
 ## Modèle
 
 Une ligne par île. Tout le monde du jeu tient dans `iles.monde` (jsonb) :
-`tiles` (144 chiffres), `house`, `objects`, `me`, `pal`, `sky`.
+`tiles` (324 chiffres), `house`, `objects`, `me`, `pal`, `sky`, `interieur`.
+`mondeNu()` est la seule liste qui compte : **une clé oubliée là, et chaque
+sauvegarde l'efface en silence.**
 Les mots du livre d'or vivent à part, dans `mots`, pour être modérables un par un.
 
 La RLS est la seule protection : la clé publishable est publique par construction.
