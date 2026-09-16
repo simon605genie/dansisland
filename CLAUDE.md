@@ -135,6 +135,40 @@ les pieds ou à côté.
 Ne pas mettre d'objet de la boutique sur les îles bot : on en ramène un
 souvenir gratuitement, et la boutique ne sert plus à rien.
 
+## Sortir le chien, ajouté le 16/09/2026
+
+Le chien posé se décroche de sa case et marche seul. **Rien n'en part en
+base** : pas de clé de plus dans `mondeNu()`, l'objet garde sa case pendant
+toute la balade, c'est le dessin qui bouge. Seul `bourse.faits.promenade`
+change, plafonné à son propre gain (`PLAFOND.promenade === GAIN_BALADE`) :
+c'est ce qui dit « une fois par jour » en une ligne.
+
+`balade.o` est une **référence d'identité** dans `mine.objects`. Tout ce qui
+refait cette liste — `annuler()`, un chargement, la gomme — casse la
+référence, et `avancerLaBalade()` en profite pour finir la balade sans rien
+dire. C'est voulu : c'est le seul garde-fou nécessaire, ne pas le remplacer
+par une recherche par coordonnées.
+
+**Le chien attend, il n'échoue jamais.** Trop loin, il s'assied et le tour
+n'avance plus. Pas de minuteur, pas de perte, rien qui gronde. Ne pas
+ajouter d'échec en croyant ajouter de l'enjeu : l'enjeu, c'est qu'on ne
+peut pas faire la corvée en regardant ailleurs.
+
+Le seuil de la maison est **désarmé pendant une balade** (`sasArme=false`) :
+passer devant chez soi en promenant le chien ne doit pas remettre le tour à
+zéro. `E` rentre quand même.
+
+La bulle « il t'attend » porte le verrou `baladeloin`, que `proximity()` ne
+connaît pas et n'efface donc jamais. C'est `taireLattente()` qui s'en
+charge, appelé partout où la balade finit. Un verrou de bulle qui survit à
+son état, c'est un message qui reste à l'écran pour toujours.
+
+Le bouton rose du cadre n'est plus « la porte » : c'est `rose-btn`,
+`boutonRose()` et `agir()`, et il dit ce qui est sous la main — un souvenir,
+le chien, une porte. L'ordre dans `agir()` compte, et il est le même que
+dans `proximity()` : les deux doivent rester d'accord, sinon le bouton
+annonce un geste et la touche en fait un autre.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

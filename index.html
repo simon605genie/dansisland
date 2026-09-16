@@ -194,9 +194,13 @@ a{color:var(--link)}
 .plate.sous{background:var(--sand); color:#0B3C5D}
 .plate.bouton{pointer-events:auto; cursor:pointer; border:0; margin-left:auto}
 .plate.bouton[aria-pressed="false"]{background:#3D5A70; color:#CBD9E2}
-/* La porte : le même geste que la touche E, pour qui joue au doigt. */
-.plate.bouton.porte{background:var(--pink); color:#0B3C5D}
-.plate.bouton.porte[hidden]{display:none}
+/* Le bouton rose : le même geste que la touche E, pour qui joue au doigt.
+   Il ne dit pas toujours la même chose — une porte, un souvenir, un chien. */
+.plate.bouton.rose{background:var(--pink); color:#0B3C5D}
+.plate.bouton.rose[hidden]{display:none}
+/* Le compteur de la balade. Le murmure du bas s'efface, pas lui. */
+.plate.balade{background:var(--pink); color:#0B3C5D}
+.plate.balade[hidden]{display:none}
 .whisper{
   position:absolute; left:13px; right:13px; bottom:13px; pointer-events:none;
   font-size:13.5px; padding:10px 14px; border-radius:12px; color:#0B3C5D;
@@ -358,7 +362,8 @@ footer{padding:42px 0 58px; color:var(--ink-3); font-size:13.5px; border-top:1.5
         <span class="plate" id="hud-name">L'île de Dan</span>
         <span class="plate" id="hud-mode">Chez toi</span>
         <span class="plate sous" id="hud-sous">0 shell</span>
-        <button class="plate bouton porte" id="porte-btn" type="button" hidden>Entrer</button>
+        <span class="plate balade" id="hud-balade" hidden>🐾</span>
+        <button class="plate bouton rose" id="rose-btn" type="button" hidden>Entrer</button>
         <button class="plate bouton" id="son-btn" type="button" aria-pressed="true">🔊 Son</button>
       </div>
       <div class="whisper" id="whisper"></div>
@@ -676,7 +681,10 @@ const MEUBLE_NOMS={}; MEUBLE_GROUPS.forEach(g=>g[1].forEach(m=>{ MEUBLE_NOMS[m[0
 const SHELL0=10;                 // de quoi ouvrir la boutique le premier jour
 const POUSSE_MAX=8;              // touffes présentes au plus, d'un seul coup
 const GAIN_TONTE=1;              // par touffe
-const PLAFOND={tonte:8};         // shells par jour et par corvée
+const GAIN_BALADE=5;             // le tour de l'île avec le chien
+// Shells par jour et par corvée. `promenade` vaut exactement son gain :
+// le tour de l'île paie une fois par jour, et se refait autant qu'on veut.
+const PLAFOND={tonte:8, promenade:GAIN_BALADE};
 const CADEAU_BASE=3;             // le cadeau du jour, avant la série
 // Le catalogue. `ou` dit dans quel atelier l'objet réapparaît une fois
 // acheté : c'est la seule chose qui distingue un objet d'île d'un meuble.
@@ -1742,6 +1750,7 @@ function drawWorld(t){
   const items=[];
   items.push({d:(world.house.x+1)+(world.house.y+1), f:()=>drawHouse(ctx,world.house,t)});
   world.objects.forEach(o=>{
+    if(balade&&o===balade.o) return;      // il a quitté sa case : il est plus bas
     const c0=ctr(o.x,o.y);
     items.push({d:o.x+o.y+1, f:()=>{
       ctx.save(); ctx.translate(c0.x,c0.y-LIFT);
@@ -1752,6 +1761,17 @@ function drawWorld(t){
   if(visiting){
     const hx=world.house.x+2.1, hy=world.house.y+1.4, q=iso(hx,hy);
     items.push({d:hx+hy, f:()=>drawChar(ctx,q.x,q.y-LIFT,world.me,0.95,'bas',t)});
+  }
+  // Le chien en balade : même tri que le reste, et un petit ressaut tant
+  // qu'il marche. Assis, il ne bouge plus — c'est ce qui dit qu'il attend.
+  if(balade){
+    const q=iso(balade.x,balade.y), saut=balade.attend?0:Math.abs(Math.sin(t/105))*2.6;
+    items.push({d:balade.x+balade.y, f:()=>{
+      ctx.save(); ctx.translate(q.x,q.y-LIFT-saut);
+      shadowDiamond(ctx,0,saut,11);
+      if(balade.face==='haut'||balade.face==='gauche') ctx.scale(-1,1);
+      dessinDe(ctx,'chien',balade.o.c||'#C89A63'); ctx.restore();
+    }});
   }
   const hp=iso(hero.x,hero.y);
   items.push({d:hero.x+hero.y, f:()=>{
@@ -2150,6 +2170,7 @@ function aCoteDeLaPorte(p){ return p.mur==='nw' ? {x:1,y:p.i} : {x:p.i,y:1}; }
 
 function entrer(k){
   if(visiting){ say('La porte de <b>'+esc(world.owner)+'</b> est fermée. Pour l’instant, on ne visite que le dehors.'); return; }
+  finBalade(false);                      // on n'emmène pas le chien au salon
   posIle={x:hero.x,y:hero.y};
   ongletAvant=ongletOuvert();
   dedans=true; piece=k||'salon'; sasArme=false;
@@ -2361,10 +2382,7 @@ addEventListener('keydown',e=>{
   keys[e.key.toLowerCase()]=true;
   if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); if(!visiting) annuler(); }
-  if(e.key.toLowerCase()==='e'){
-    if(souvenirProche){ e.preventDefault(); ramasserSouvenir(); }
-    else if(dedans || devantLaPorte()){ e.preventDefault(); actionPorte(); }
-  }
+  if(e.key.toLowerCase()==='e' && agir()) e.preventDefault();
 });
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 
@@ -2511,7 +2529,7 @@ function frame(t){
     hero.moving=true;
   } else hero.moving=false;
   surveillerLeTrajet(dt);
-  if(!dedans&&!visiting){ if(herbeAcote()) tondeuseJusqua=t+1100; tondre(); }
+  if(!dedans&&!visiting){ if(herbeAcote()) tondeuseJusqua=t+1100; tondre(); avancerLaBalade(dt); }
   proximity();
   if(dedans) drawInterieur(t); else drawWorld(t);
   requestAnimationFrame(frame);
@@ -2542,6 +2560,127 @@ function tondre(){
     ? ('Tondu'+(coupe>1?(' \u00d7'+coupe):'')+'. <b>+'+n+' shell'+(n>1?'s':'')+'</b> \u00b7 '+
        (reste ? ('encore '+reste+' touffe'+(reste>1?'s':'')) : 'la pelouse est nette'))
     : 'Tondu, mais la tonte a d\u00e9j\u00e0 tout donn\u00e9 pour aujourd\u2019hui.');
+}
+
+/* ---- sortir le chien ----
+   Le chien posé sur l'île est un objet comme les autres, jusqu'à ce qu'on
+   le sorte : il se décroche alors de sa case et marche seul, d'un point de
+   passage au suivant, jusqu'à avoir fait le tour. Cinq shells, une fois par
+   jour.
+
+   Ce qui en fait un jeu et pas un bouton : **il ne repart pas sans son
+   maître.** Trop loin, il s'assied et attend. Il n'y a pas d'échec, pas de
+   compte à rebours, rien qui gronde un enfant — seulement un tour qui
+   n'avance plus tant qu'on n'est pas revenu. C'est la première corvée qui
+   demande d'être quelque part plutôt que de cliquer.
+
+   Rien de tout ça ne part en base, et il n'y a donc pas de clé de plus dans
+   `mondeNu()`. L'objet garde sa case pendant toute la balade et la retrouve
+   à la fin : c'est le dessin qui se déplace, pas la donnée. Seul
+   `bourse.faits.promenade` change, et `reveiller()` le remet à zéro chaque
+   jour comme le reste. */
+const BALADE_ETAPES=6;      // les points de passage, plus le retour à la niche
+const BALADE_PRES=2.9;      // au-delà, le chien s'assied et attend son maître
+const BALADE_VIT=0.0031;    // un cran sous la marche : on le suit sans courir
+let balade=null;
+
+// La case libre la plus proche d'un point flottant : un point de passage
+// tombé dans l'eau, sous la maison ou hors du rayon se rabat sur la terre
+// ferme au lieu de coincer le chien contre un mur.
+function caseMarchable(fx,fy){
+  const x0=Math.round(fx-0.5), y0=Math.round(fy-0.5);
+  for(let r=0;r<=7;r++)
+    for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+      if(Math.max(Math.abs(dx),Math.abs(dy))!==r) continue;
+      const x=x0+dx, y=y0+dy;
+      if(x<0||y<0||x>=GRID||y>=GRID) continue;
+      if(!dansLeRayon(x,y,mine)||blocked(x+0.5,y+0.5)) continue;
+      return {x:x+0.5,y:y+0.5};
+    }
+  return null;
+}
+// Le tour : des points répartis autour du centre de l'île, dans le rayon
+// acquis, et la niche pour finir. Ils partent de l'angle où le chien dort,
+// sinon la balade commence par un demi-tour.
+function tourDeLIle(dep){
+  const c=(GRID-1)/2, r=Math.max(2.4,(mine.rayon||RAYON0)*0.68);
+  const a0=Math.atan2(dep.y+0.5-c, dep.x+0.5-c), pts=[];
+  for(let k=1;k<=BALADE_ETAPES;k++){
+    const a=a0+k*2*Math.PI/BALADE_ETAPES;
+    const q=caseMarchable(c+Math.cos(a)*r, c+Math.sin(a)*r);
+    if(q) pts.push(q);
+  }
+  pts.push({x:dep.x+0.5, y:dep.y+0.5});
+  return pts;
+}
+// Le chien sur lequel on a la main : le sien, à portée, et pas déjà sorti.
+function chienProche(){
+  if(visiting||dedans||balade) return null;
+  return (mine.objects||[]).find(o=>o.t==='chien' &&
+    Math.hypot(o.x+0.5-hero.x, o.y+0.5-hero.y)<0.95) || null;
+}
+function sortirLeChien(o){
+  const pts=tourDeLIle(o);
+  if(pts.length<3){ say('Ton île est encore trop petite pour un vrai tour. Fais-la grandir d’abord.'); return; }
+  balade={o, x:o.x+0.5, y:o.y+0.5, face:'bas', pts, i:0,
+          attend:false, fige:0, px:o.x+0.5, py:o.y+0.5};
+  son('chien'); hudSync();
+  const du=PLAFOND.promenade-(mine.bourse.faits.promenade||0);
+  // Le verrou `chien` est celui de la bulle de proximité : sans lui, elle
+  // tombe à la frame suivante et efface ce message avant qu'on l'ait lu.
+  say(du
+    ? ('<b>Le chien part devant.</b> Reste près de lui tout le tour de l’île : <b>'+du+' shells</b> à l’arrivée.')
+    : '<b>Le chien repart.</b> Il a déjà eu sa promenade du jour : celle-ci est pour le plaisir.', 'chien');
+}
+// Trois façons de finir : le tour est bouclé, le maître renonce, ou il
+// quitte l'île (la maison, un voisin, une annulation qui refait les
+// objets). Dans les trois cas le chien retrouve sa case — elle n'a jamais
+// bougé, c'est le dessin qui revient.
+// Le « il t'attend » est une bulle verrouillée : elle ne s'efface pas toute
+// seule, et proximity() ne la connaît pas. Si la balade finit pendant qu'elle
+// est à l'écran, c'est ici qu'on la retire.
+function taireLattente(){ if(wLock==='baladeloin'){ whisper.classList.remove('on'); wLock=''; } }
+function finBalade(bouclee){
+  if(!balade) return;
+  balade=null; hudSync(); taireLattente();
+  if(!bouclee){ say('Le chien retourne à sa place. Le tour n’était pas fini.'); return; }
+  const n=gagner(GAIN_BALADE,'promenade');
+  saveMine(); son('chien'); if(n) setTimeout(()=>son('piece'),200); buildAll();
+  say(n
+    ? ('<b>Le tour est bouclé. +'+n+' shell'+(n>1?'s':'')+'.</b> Il redemandera demain.')
+    : '<b>Le tour est bouclé.</b> Il avait déjà eu sa promenade aujourd’hui : rien dans la bourse, mais il était content.');
+}
+function etapeSuivante(){
+  balade.i++; balade.fige=0;
+  if(balade.i>=balade.pts.length){ finBalade(true); return; }
+  hudSync();
+}
+function avancerLaBalade(dt){
+  if(!balade) return;
+  // Le chien gommé, ou une annulation qui refait la liste des objets : plus
+  // d'objet, plus de balade. On se tait, l'écran a déjà tout dit.
+  if((mine.objects||[]).indexOf(balade.o)<0){ balade=null; hudSync(); taireLattente(); return; }
+  if(Math.hypot(balade.x-hero.x, balade.y-hero.y)>BALADE_PRES){
+    if(!balade.attend){ balade.attend=true; son('chien'); }
+    if(wLock!=='baladeloin') say('<b>Le chien t’attend.</b> Reviens près de lui : il ne repart pas sans toi.','baladeloin');
+    return;
+  }
+  if(balade.attend){ balade.attend=false; taireLattente(); }
+  const but=balade.pts[balade.i];
+  const ax=but.x-balade.x, ay=but.y-balade.y, d=Math.hypot(ax,ay);
+  if(d<0.2){ etapeSuivante(); return; }
+  const sp=BALADE_VIT*dt, dx=ax/d, dy=ay/d;
+  const nx=balade.x+dx*sp, ny=balade.y+dy*sp;
+  if(!blocked(nx,balade.y)) balade.x=nx;
+  if(!blocked(balade.x,ny)) balade.y=ny;
+  balade.face = Math.abs(dx+dy)>Math.abs(dx-dy)
+    ? (dx+dy>0?'bas':'haut') : (dx-dy>0?'droite':'gauche');
+  // Le même garde-fou que le trajet du bonhomme : contre un angle de la
+  // maison les deux axes se bloquent, et il pousserait dans le vide sans
+  // jamais arriver. On passe au point suivant plutôt que de le laisser là.
+  if(Math.hypot(balade.x-balade.px, balade.y-balade.py)>0.02){
+    balade.px=balade.x; balade.py=balade.y; balade.fige=0;
+  } else if((balade.fige+=dt)>700) etapeSuivante();
 }
 
 /* ================= le son =================
@@ -2602,7 +2741,8 @@ const SONS={
   arrivee:()=>{ souffle(392,'triangle',0.25,0.10); setTimeout(()=>souffle(587,'triangle',0.3,0.08),110); },
   piece:  ()=>{ souffle(1046,'sine',0.16,0.11); setTimeout(()=>souffle(1568,'sine',0.20,0.08),60); },
   tonte:  ()=>{ choc(0.16,620,0.13); setTimeout(()=>choc(0.10,900,0.07),90); },
-  achat:  ()=>{ [659,880,1109,1318].forEach((f,i)=>setTimeout(()=>souffle(f,'triangle',0.4,0.10),i*95)); }
+  achat:  ()=>{ [659,880,1109,1318].forEach((f,i)=>setTimeout(()=>souffle(f,'triangle',0.4,0.10),i*95)); },
+  chien:  ()=>{ souffle(430,'triangle',0.10,0.15,250); setTimeout(()=>souffle(340,'triangle',0.12,0.11,200),135); }
 };
 function son(n){ if(!sonCoupe && SONS[n]) try{ SONS[n](); }catch(e){} }
 
@@ -2702,23 +2842,39 @@ function say(msg,lock){
 // deux listes qui divergent, c'est un objet qui n'a pas le même nom selon l'endroit.
 const NOM_OBJ={}; OBJ_GROUPS.forEach(g=>g[1].forEach(o=>{ NOM_OBJ[o[0]]=o[1].toLowerCase(); }));
 let souvenirProche=null;
-const porteEl=document.getElementById('porte-btn');
-porteEl.onclick=()=>actionPorte();
-function porteBtn(l){
-  if(l){ if(porteEl.textContent!==l) porteEl.textContent=l; porteEl.hidden=false; }
-  else porteEl.hidden=true;
+// Le bouton rose du cadre et la touche E sont le même geste. Il ne dit pas
+// toujours la même chose : ce qui est sous la main décide.
+const roseEl=document.getElementById('rose-btn');
+roseEl.onclick=()=>agir();
+function boutonRose(l){
+  if(l){ if(roseEl.textContent!==l) roseEl.textContent=l; roseEl.hidden=false; }
+  else roseEl.hidden=true;
+}
+// L'ordre compte : un souvenir sous la main passe avant le chien, et le
+// chien avant la porte — sur le seuil, on entre en marchant de toute façon.
+function agir(){
+  if(souvenirProche){ ramasserSouvenir(); return true; }
+  if(!visiting&&!dedans){
+    if(balade){
+      if(Math.hypot(balade.x-hero.x, balade.y-hero.y)<1.15){ finBalade(false); return true; }
+    } else {
+      const c=chienProche(); if(c){ sortirLeChien(c); return true; }
+    }
+  }
+  if(dedans||devantLaPorte()){ actionPorte(); return true; }
+  return false;
 }
 // Dedans, la seule chose à portée est une porte : le paillasson pour
 // ressortir, une embrasure pour changer de pièce.
 function proximiteDedans(){
   souvenirProche=null;
   const p=porteSousLesPieds();
-  if(!p){ sasArme=true; porteBtn(null);
+  if(!p){ sasArme=true; boutonRose(null);
     if(wLock.indexOf('porte')===0){ whisper.classList.remove('on'); wLock=''; }
     return; }
   if(sasArme){ franchir(); return; }
   const cle='porte'+piece+p.mur+p.i;
-  porteBtn(p.vers==='dehors' ? 'Sortir' : ('Passer au '+pieceDef(p.vers).n.toLowerCase()));
+  boutonRose(p.vers==='dehors' ? 'Sortir' : ('Passer au '+pieceDef(p.vers).n.toLowerCase()));
   if(wLock!==cle) say(p.vers==='dehors'
     ? 'Le paillasson. <b>E</b> pour ressortir.'
     : 'Une porte vers le <b>'+pieceDef(p.vers).n.toLowerCase()+'</b>. <b>E</b> pour passer.', cle);
@@ -2737,21 +2893,36 @@ function proximity(){
   if(souvenirProche){ bulle('souv'+objet.x+'-'+objet.y,
     'Un<span></span> <b>'+(NOM_OBJ[objet.t]||'objet')+'</b> de chez '+esc(world.owner)+
     '. Appuie sur <b>E</b> pour en ramener un souvenir.'); return; }
+  // Le chien : le sortir, ou le ramener quand on renonce en cours de route.
+  if(!visiting){
+    if(balade){
+      if(Math.hypot(balade.x-hero.x, balade.y-hero.y)<1.15){
+        boutonRose('Ramener');
+        bulle('chien','Tu promènes ton chien. <b>E</b> si tu veux le ramener tout de suite.'); return; }
+    } else if(objet&&objet.t==='chien'){
+      boutonRose('Sortir le chien');
+      bulle('chien','Ton chien. <b>E</b> pour le sortir : il fait le tour de l’île, et tu restes près de lui.'); return; }
+  }
   if(objet&&objet.de){ bulle('souv'+objet.x+'-'+objet.y,
     'Souvenir rapporté de chez <b>'+esc(objet.de)+'</b>.'); return; }
   // La porte de la maison. Elle n'ouvre que chez soi : c'est une règle de
   // jeu, pas un secret : `interieur` voyage dans le même jsonb que le reste.
   if(devantLaPorte()){
-    if(visiting){ porteBtn(null); sasArme=true;
+    if(visiting){ boutonRose(null); sasArme=true;
       bulle('porte','La porte de <b>'+esc(world.owner)+'</b> est fermée. Pour l’instant, on ne visite que le dehors.'); return; }
-    // Le seuil fait entrer tout seul ; la case d'à côté se contente d'inviter.
-    if(seuilSousLesPieds()){ if(sasArme){ entrer('salon'); return; } }
+    // Le seuil fait entrer tout seul ; la case d'à côté se contente
+    // d'inviter. Une balade en cours désarme le seuil : passer devant chez
+    // soi en promenant le chien ne doit pas remettre le tour à zéro sans
+    // qu'on ait rien demandé. E rentre quand même, et le dit.
+    if(seuilSousLesPieds()){ if(balade) sasArme=false; else if(sasArme){ entrer('salon'); return; } }
     else sasArme=true;
-    porteBtn('Entrer');
-    bulle('porte','Ta porte. Monte sur le seuil, ou <b>E</b> pour rentrer chez toi.'); return;
+    boutonRose('Entrer');
+    bulle('porte', balade
+      ? 'Ta porte. Ton chien n’a pas fini son tour : <b>E</b> pour rentrer quand même, il retournera à sa place.'
+      : 'Ta porte. Monte sur le seuil, ou <b>E</b> pour rentrer chez toi.'); return;
   }
-  sasArme=true; porteBtn(null);
-  if(wLock.indexOf('sign')===0||wLock.indexOf('souv')===0||wLock.indexOf('porte')===0){ whisper.classList.remove('on'); wLock=''; }
+  sasArme=true; boutonRose(null);
+  if(['sign','souv','porte','chien'].some(k=>wLock.indexOf(k)===0)){ whisper.classList.remove('on'); wLock=''; }
 }
 // On ne vole rien : on ramène une copie, signée du nom de l'hôte. L'île
 // visitée n'est pas touchée, et la tienne garde la trace de qui tu as vu.
@@ -3218,6 +3389,15 @@ function buildBoutique(){
     ? ('Des <b>hautes herbes</b> poussent sur ta pelouse chaque jour. Marche dessus pour les tondre : <b>1 shell</b> la touffe. Il en reste <b>'+
        touffes+'</b> à tondre, et <b>'+reste+' shell'+(reste>1?'s':'')+'</b> à gagner aujourd’hui.')
     : 'Tu as gagné tout ce que la tonte donne aujourd’hui. Les herbes repousseront demain.'));
+
+  // Rien ici ne regarde les objets posés : la gomme et le pinceau ne
+  // reconstruisent pas les panneaux, et un texte qui dépendrait du chien
+  // présent resterait en retard d'un geste. Celui-ci vaut dans les deux cas.
+  const marche=Math.max(0,PLAFOND.promenade-(b.faits.promenade||0));
+  p.appendChild(hint(marche
+    ? ('Un <b>chien</b> posé sur ton île demande sa promenade. Va le voir, sors-le, et reste près de lui le temps d’un tour : <b>'+
+       marche+' shells</b>, une fois par jour. Il y en a un dans ton atelier, au rayon <b>Bestioles</b>.')
+    : 'Ton chien a eu sa promenade aujourd’hui. Tu peux le ressortir autant que tu veux, il ne rapportera plus rien avant demain.'));
   p.appendChild(rule());
 
   const choisi = vitrine ? BOUTIQUE.find(a=>a.k===vitrine) : null;
@@ -3564,6 +3744,7 @@ function cartePostale(){
 
 /* ================= navigation ================= */
 async function go(slug){
+  finBalade(false);                      // le chien ne suit pas jusque chez les voisins
   if(dedans){ dedans=false; posIle=null; majVue(); }
   if(slug==='me'||(monSlug&&slug===monSlug)){
     visiting=null; world=mine; replanter(mine);
@@ -3606,6 +3787,11 @@ function routerDepuisURL(){
 }
 function hudSync(){
   document.getElementById('hud-name').textContent = world.name || 'Sans nom';
+  // Le compteur de la balade. Dans le bandeau et pas dans le murmure : le
+  // murmure s'efface au premier panneau croisé, et le tour dure.
+  const hb=document.getElementById('hud-balade');
+  if(balade){ hb.hidden=false; hb.textContent='🐾 '+balade.i+'/'+balade.pts.length; }
+  else hb.hidden=true;
   const m=document.getElementById('hud-mode');
   m.textContent = dedans ? ('Chez toi · '+pieceDef(piece).n)
     : (visiting ? 'Invité chez '+world.owner : (tool.mode==='marche'?'Chez toi':'Chez toi · édition'));

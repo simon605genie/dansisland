@@ -303,7 +303,7 @@ L'âme du jeu tient en une phrase : **l'île grandit parce que des gens sont
 passés**, jamais parce que le temps passe. Une économie faite seulement de
 corvées la contredirait : on s'enrichirait seul, en boucle, et l'archipel ne
 servirait plus à rien. C'est pourquoi la tonte est plafonnée à huit shells
-par jour. De quoi voir un compteur monter, pas de quoi vivre sans voisins.
+par jour, et la promenade du chien à cinq. De quoi voir un compteur monter, pas de quoi vivre sans voisins.
 Les visites payantes et les trouvailles, qui rebranchent la bourse sur
 l'archipel, viendront après et deviendront la meilleure source.
 
@@ -331,6 +331,38 @@ est une touffe qu'on ne tondra jamais.
 `jour` et `pousse` sont **deux marqueurs et non un** : le premier remet les
 plafonds à zéro, le second autorise la repousse. Fondus en un seul, une île
 ouverte aujourd'hui n'aurait sa première touffe que demain.
+
+### Sortir le chien
+
+Le chien est un objet d'île comme un autre, gratuit, au rayon **Bestioles**
+de l'atelier. Aller à côté de lui et appuyer sur **E** (ou toucher le bouton
+rose) le décroche de sa case : il part devant et fait le tour de l'île,
+d'un point de passage au suivant. **5 shells** à l'arrivée, une fois par
+jour, et il se ressort autant qu'on veut le reste de la journée.
+
+Ce qui en fait un jeu et pas un bouton : **il ne repart pas sans son
+maître**. À plus de trois cases, il s'assied et attend. Il n'y a pas
+d'échec, pas de compte à rebours, rien qui gronde un enfant — seulement un
+tour qui n'avance plus tant qu'on n'est pas revenu. C'est la première
+corvée qui demande d'être quelque part plutôt que de cliquer, et la
+seconde qui se joue en marchant.
+
+Le compteur du tour (🐾 3/7) vit dans le bandeau du cadre et pas dans le
+murmure du bas : le murmure s'efface au premier panneau croisé, et un tour
+dure une bonne dizaine de secondes.
+
+**Rien de tout ça ne part en base**, et il n'y a donc pas de clé de plus
+dans `mondeNu()`. L'objet garde sa case pendant toute la balade et la
+retrouve à la fin : c'est le dessin qui se déplace, pas la donnée. Seul
+`bourse.faits.promenade` change, et `reveiller()` le remet à zéro chaque
+jour comme le reste.
+
+Trois choses finissent un tour : il est bouclé, le maître ramène le chien
+(**E**, bouton **Ramener**), ou il quitte l'île — la maison, un voisin, une
+annulation qui refait la liste des objets. Marcher sur le seuil de sa
+maison pendant une balade **n'ouvre plus la porte tout seul** : passer
+devant chez soi ne doit pas remettre le tour à zéro sans qu'on ait rien
+demandé. `E` rentre quand même, et le dit.
 
 ### Le cadeau du jour
 
