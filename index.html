@@ -1,4 +1,6 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B3C5D">
 <title>Dan's Island</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -89,6 +91,44 @@ a{color:var(--link)}
 /* ---------- stage ---------- */
 .stage{display:grid; grid-template-columns:minmax(0,1fr) 358px; gap:20px; align-items:start}
 @media (max-width:980px){.stage{grid-template-columns:minmax(0,1fr)}}
+
+/* Téléphone et tablette. Le cadre du jeu fait 768x500, soit 1,536 : on
+   borne sa largeur par la hauteur disponible, sinon en paysage il déborde
+   sous l'écran et on joue sans voir la moitié de son île. */
+@media (max-width:980px){
+  .wrap{padding:0 12px}
+  .viewport{max-width:calc((100vh - 150px) * 1.536); margin-inline:auto; width:100%}
+  .viewport{max-width:calc((100svh - 150px) * 1.536)}
+}
+/* Paysage sur téléphone : assez large pour deux colonnes, trop court pour
+   empiler. L'atelier reprend sa place à droite. */
+@media (max-width:980px) and (orientation:landscape) and (max-height:560px){
+  .stage{grid-template-columns:minmax(0,1fr) 290px; gap:12px}
+  .viewport{max-width:calc((100vh - 120px) * 1.536)}
+  .viewport{max-width:calc((100svh - 120px) * 1.536)}
+  .tagline{display:none}
+  .atelier{max-height:calc(100vh - 90px); max-height:calc(100svh - 90px); overflow:auto}
+  /* En paysage la hauteur est la denrée rare : l'en-tête se fait petit,
+     sinon le jeu commence sous l'écran et il faut défiler pour jouer. */
+  .mast{padding:8px 0 6px}
+  .mark{width:34px; height:34px; border-radius:9px}
+  .word h1{font-size:19px}
+  .word svg{display:none}
+  #compte{padding:6px 10px; font-size:12.5px; gap:7px}
+  #compte input{min-width:130px}
+}
+/* Portrait étroit : le jeu d'abord, le discours ensuite. */
+@media (max-width:640px){
+  .tagline{display:none}
+  .hud{inset:9px 9px auto 9px; gap:6px}
+  .plate{font-size:12px; padding:4px 10px}
+  .objs{grid-template-columns:repeat(3,1fr)}
+  /* Le cadre est court en portrait : la bulle ne doit pas manger l'île. */
+  .whisper{left:8px; right:8px; bottom:8px; font-size:11.5px; line-height:1.3; padding:7px 10px}
+}
+@media (max-width:980px) and (orientation:landscape) and (max-height:560px){
+  .whisper{font-size:11.5px; padding:6px 10px}
+}
 
 .viewport{position:relative; background:#FDFBF0; border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden}
 #world{display:block; width:100%; height:auto; touch-action:manipulation; cursor:crosshair}
@@ -1814,7 +1854,10 @@ document.getElementById('son-btn').onclick=()=>couperLeSon(!sonCoupe);
 peindreSon();
 function buildAll(){ buildToi(); buildMaison(); buildIle(); buildVoisins(); hudSync(); }
 buildAll();
-say('Flèches ou ZQSD pour marcher. Clic pour te déplacer — ou pour poser, quand un pinceau est actif.');
+// Annoncer des touches à quelqu'un qui n'a pas de clavier, c'est le perdre.
+say(matchMedia('(pointer:coarse)').matches
+  ? 'Touche l\u2019île pour t\u2019y déplacer. Quand un pinceau est actif, la touche pose.'
+  : 'Flèches ou ZQSD pour marcher. Clic pour te déplacer, ou pour poser quand un pinceau est actif.');
 demarrer();
 })();
 </script>

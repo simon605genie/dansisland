@@ -117,6 +117,26 @@ trois cases. Les mots, eux, vivent en colonnes SQL et ne peuvent pas être
 décalés côté client : c'est le rôle de `supabase/2026-09-16_grille18.sql`,
 **à ne jouer qu'une fois**.
 
+## Portrait et paysage
+
+Il manquait le `<meta name="viewport">` : sans lui un téléphone rend la
+page à 980 px et dézoome, le jeu devient illisible. Le reste tient en
+trois règles CSS.
+
+Le cadre fait 768x500, soit un rapport de 1,536. Sa largeur est bornée
+par la hauteur disponible (`max-width: calc((100svh - Xpx) * 1.536)`),
+sinon en paysage il déborde sous l'écran et on joue sans voir son île.
+
+En paysage court (moins de 560 px de haut), l'atelier reprend sa place à
+droite et l'en-tête se fait petit : la hauteur est la denrée rare. En
+portrait étroit, l'accroche disparaît, la grille d'objets passe à trois
+colonnes et la bulle de murmure rétrécit pour ne pas manger l'île.
+
+Le jeu se joue au doigt sans rien ajouter : toucher l'île déplace le
+bonhomme, toucher avec un pinceau actif pose. Le message d'accueil teste
+`(pointer:coarse)` et cesse d'annoncer des touches à qui n'a pas de
+clavier.
+
 ## Le son
 
 Aucun fichier audio dans le dépôt, et rien à charger. Les trois ambiances
