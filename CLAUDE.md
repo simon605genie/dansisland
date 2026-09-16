@@ -208,6 +208,39 @@ tient seule dans `localStorage` sous `dansisland:bourse`. C'est ce qui garde
 l'île de démonstration jouable ; ce n'est pas une porte de sortie pour qui
 voudrait s'écrire des shells, puisque rien n'en remonte.
 
+## Le graphisme et l'ergonomie — passage du 16/09/2026 au soir
+
+Quatre pièges qui ne doivent pas se rouvrir.
+
+1. **`--card` et `--navy` sont la même couleur en thème sombre.** Tout ce
+   qui peignait le « choisi » en `--navy` devenait donc invisible : chips,
+   pinceau actif, pastille de couleur. Le jeton à utiliser est **`--sel` /
+   `--on-sel`**, jamais `--navy`. Vérifier tout nouvel état sélectionné
+   dans les deux thèmes, pas seulement dans celui qu'on a sous les yeux.
+2. **Les objets sont dessinés pour le papier clair du jeu.** Une vignette
+   d'objet posée sur un fond de carte sombre ne se devine plus. `.obj
+   canvas` et `.neighbor canvas` portent donc leur propre fond `#FDFBF0`,
+   toujours le même. Tout nouveau dessin d'objet sorti du canvas principal
+   doit faire pareil.
+3. **`buildAll()` garde la position de défilement du panneau ouvert.**
+   Chaque panneau se reconstruit entier (`innerHTML=''`) : sans ça,
+   l'atelier remontait en haut à chaque clic et il fallait redescendre
+   jusqu'au rayon Village après chaque objet posé.
+4. **Un pinceau armé au mauvais endroit doit le dire.** Un meuble choisi
+   pendant qu'on est dehors, un pinceau d'île pendant qu'on est dedans :
+   le clic ne faisait rien et rien ne l'expliquait. C'est le même défaut
+   que la boutique d'avant — le refus doit tomber là où est le doigt.
+
+En portrait étroit, le nom de l'île quitte le bandeau et le bouton Son perd
+son mot (`.plate .mot`) : à trois plaques, le bouton passait à la ligne et
+se posait sur le ciel. Ne pas rajouter de plaque sans vérifier à 360 px.
+
+**Ce qui reste petit, et qui n'est pas réparable en CSS :** en portrait, le
+cadre fait 768x500 et la largeur de l'écran le borne, donc l'île tient dans
+230 px de haut. L'agrandir demanderait une caméra qui suit le bonhomme et
+un zoom, c'est-à-dire de toucher `iso()` / `unIso()` et `vue`. À faire un
+jour, pas à l'improviste.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

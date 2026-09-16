@@ -233,7 +233,7 @@ a{color:var(--link)}
 .plate.guest{background:var(--pink); color:#0B3C5D}
 /* La bourse. Elle suit le joueur, pas l'île : on la voit aussi en visite. */
 .plate.sous{background:var(--sand); color:#0B3C5D}
-.plate.sous b{font-size:15px; font-weight:800}
+.plate.sous b{font-size:15px; font-weight:800; margin:0 1px 0 3px}
 .plate.bouton{pointer-events:auto; cursor:pointer; border:0; margin-left:auto}
 .plate.bouton[aria-pressed="false"]{background:#3D5A70; color:#CBD9E2}
 /* Le bouton rose : le même geste que la touche E, pour qui joue au doigt.
@@ -2375,6 +2375,12 @@ function actionPorte(){
 function clicDedans(q){
   const def=pieceDef(piece);
   if(q.x<0||q.y<0||q.x>=def.w||q.y>=def.h) return;
+  // Le symétrique de dehors : un pinceau d'île armé dedans ne posait rien
+  // et ne disait rien.
+  if(tool.mode==='terrain'||tool.mode==='objet'||tool.mode==='maison'){
+    say('Ça se pose <b>dehors</b>. Ressors par le paillasson, ou prends le bouton <b>Ressortir</b>.');
+    return;
+  }
   if(tool.mode==='marche'){ target={x:q.fx,y:q.fy}; return; }
   if(tool.mode==='meuble'){ poserMeuble(q.x,q.y); return; }
   if(tool.mode==='gomme'){ effacerMeuble(q.x,q.y); return; }
@@ -2559,6 +2565,13 @@ cv.addEventListener('click',e=>{
   const q=tileFrom(e);
   if(dedans){ clicDedans(q); return; }
   if(q.x<0||q.y<0||q.x>=GRID||q.y>=GRID) return;
+  // Un pinceau de meuble armé dehors : le clic ne faisait rien, et « je
+  // clique et rien ne se passe » est le pire des retours. C'est le même
+  // défaut que la boutique d'avant, au même endroit : là où est le doigt.
+  if(tool.mode==='meuble'){
+    say('Un meuble se pose <b>dedans</b>. Monte sur le seuil de ta porte, ou prends le bouton <b>Entrer</b> de l’onglet Dedans.');
+    return;
+  }
   if(tool.mode==='marche'){ target={x:q.fx,y:q.fy}; return; }
   if(visiting){ say('Tu es invité chez '+esc(world.owner)+" — on ne touche pas à l'île des autres."); return; }
   // On ne memorise que si le clic change vraiment quelque chose : sinon la
@@ -4087,7 +4100,16 @@ function ouvrirOnglet(nom){
 document.querySelectorAll('.tabs button').forEach(b=>{ b.onclick=()=>ouvrirOnglet(b.dataset.tab); });
 document.getElementById('son-btn').onclick=()=>couperLeSon(!sonCoupe);
 peindreSon();
-function buildAll(){ buildToi(); buildMaison(); buildIle(); buildDedans(); buildVoisins(); buildBoutique(); hudSync(); }
+// Chaque panneau se reconstruit entier (`innerHTML=''`), et le défilement
+// repartait donc du haut à chaque clic : on descendait jusqu'au rayon
+// Village, on prenait un banc, et l'atelier remontait. On garde la place
+// où on était — c'est le même panneau, seul son contenu a changé.
+function buildAll(){
+  const ouvert=document.querySelector('.panel.on');
+  const y=ouvert?ouvert.scrollTop:0;
+  buildToi(); buildMaison(); buildIle(); buildDedans(); buildVoisins(); buildBoutique(); hudSync();
+  if(ouvert&&y) ouvert.scrollTop=y;
+}
 buildAll();
 // Annoncer des touches à quelqu'un qui n'a pas de clavier, c'est le perdre.
 // Le cadre est court en portrait : trois lignes de bulle couvraient
