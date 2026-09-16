@@ -136,6 +136,17 @@ a{color:var(--link)}
 }
 .chip:hover{border-color:var(--teal); color:var(--ink)}
 .chip[aria-pressed="true"]{background:var(--navy); border-color:var(--navy); color:#FAF6EA}
+.objs{display:grid; grid-template-columns:repeat(4,1fr); gap:6px}
+.obj{
+  appearance:none; cursor:pointer; padding:3px 2px 5px;
+  border:1.5px solid var(--line); border-radius:13px; background:var(--paper);
+  display:flex; flex-direction:column; align-items:center; gap:1px;
+  font-family:"Nunito",sans-serif; font-size:10.5px; font-weight:700;
+  line-height:1.15; color:var(--ink-2); text-align:center;
+}
+.obj canvas{width:60px; height:60px; display:block}
+.obj:hover{border-color:var(--teal); color:var(--ink)}
+.obj[aria-pressed="true"]{background:var(--navy); border-color:var(--navy); color:#FAF6EA}
 .sw{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
 .sw button{
   width:27px;height:27px;border-radius:9px;cursor:pointer;border:2.5px solid transparent;
@@ -446,13 +457,17 @@ function recentrer(w){
   if((w.tiles||[]).length!==GRID*GRID) w.tiles=baseTiles(RAYON0,0.80);
   if(typeof w.rayon!=='number') w.rayon=RAYON0;
   if(!w.ambiance) w.ambiance='vagues';
+  // Volets et cheminée sont arrivés après : une maison d'avant les reçoit.
+  if(w.house && w.house.volets===undefined)   w.house.volets='creme';
+  if(w.house && w.house.cheminee===undefined) w.house.cheminee=true;
   return w;
 }
 function defaultWorld(){
   return depuis12({
     id:'me', name:"L'île de Dan", owner:'Dan',
     pal:GROUNDS[0], sky:'jour', ambiance:'vagues',
-    house:{x:5,y:4,wall:'#FDFBF2',roof:'#1E3A6E',door:'#F48CA8',roofShape:'pointu',sign:'Chez Dan'},
+    house:{x:5,y:4,wall:'#FDFBF2',roof:'#1E3A6E',door:'#F48CA8',roofShape:'pointu',
+           volets:'creme',cheminee:true,sign:'Chez Dan'},
     objects:[
       {t:'arbre',x:3,y:3,c:'#2E7D5B'},{t:'palmier',x:2,y:6,c:'#2E7D5B'},
       {t:'palmier',x:9,y:7,c:'#2E7D5B'},{t:'buisson',x:4,y:2,c:'#2E7D5B'},
@@ -782,7 +797,10 @@ const OBJ_GROUPS=[
 ];
 
 function drawHouse(c,h,t){
-  const p=iso(h.x+1,h.y+1), cx=p.x, cy=p.y-LIFT;
+  const p=iso(h.x+1,h.y+1); maisonAu(c,h,t,p.x,p.y-LIFT);
+}
+// Séparée de sa place sur l'île : le panneau Maison la dessine ailleurs.
+function maisonAu(c,h,t,cx,cy){
   const A=56, WALL=36;
   shadowDiamond(c,cx,cy+3,A*0.92);
   isoBox(c,cx,cy,A,WALL,h.wall);
@@ -795,10 +813,33 @@ function drawHouse(c,h,t){
   facePoly(c,cx,cy,A,'sw',0.22,0.42,14,28,win);
   facePoly(c,cx,cy,A,'sw',0.58,0.78,14,28,win);
   facePoly(c,cx,cy,A,'se',0.72,0.88,14,28,shade(win,-14));
+  // Les volets prennent une couleur déjà présente sur la maison : une
+  // palette de plus, c'est une occasion de plus de la rendre laide.
+  const vc={creme:'#FAF6EA',bois:'#8B5E3C',toit:h.roof,porte:h.door}[h.volets];
+  if(vc){
+    [[0.22,0.42,'sw'],[0.58,0.78,'sw'],[0.72,0.88,'se']].forEach(([a,b,f])=>{
+      const l=(b-a)*0.38;
+      facePoly(c,cx,cy,A,f,a-l,a,12,32,vc);
+      facePoly(c,cx,cy,A,f,b,b+l,12,32,shade(vc,-16));
+    });
+  }
   const ry=cy-WALL, RA=A+8;
   if(h.roofShape==='plat'){ isoBox(c,cx,ry,RA,9,h.roof); }
   else if(h.roofShape==='dome'){ isoDome(c,cx,ry,RA,40,h.roof); }
   else { isoPyr(c,cx,ry,RA,44,h.roof); }
+  if(h.cheminee){
+    const hy = ry - (h.roofShape==='plat'?4:(h.roofShape==='dome'?20:16));
+    isoBox(c,cx+A*0.30,hy,11,23,shade(h.wall,-34));
+    isoTop(c,cx+A*0.30,hy-23,11,shade(h.wall,-52));
+    const s=t||0;                              // la fumée ne monte que si le temps passe
+    if(s) for(let i=0;i<3;i++){
+      const k=((s/1400)+i*0.34)%1;
+      c.globalAlpha=(1-k)*0.34;
+      c.fillStyle='#FDFBF2'; c.beginPath();
+      c.arc(cx+A*0.30+Math.sin(k*5+i)*7, hy-28-k*34, 4+k*7, 0, Math.PI*2); c.fill();
+    }
+    c.globalAlpha=1;
+  }
   if(h.sign){
     const sy = ry - (h.roofShape==='plat'?18:(h.roofShape==='dome'?46:52));
     c.font='700 13px "Baloo 2", sans-serif'; c.textAlign='center'; c.textBaseline='alphabetic';
@@ -1247,7 +1288,8 @@ function swatches(label,path,list){
 }
 function textField(label,path,ph){
   const f=field(label), i=document.createElement('input'); i.type='text'; i.value=get(path); i.placeholder=ph||''; i.maxLength=22;
-  i.oninput=e=>{const k=path.split('.'),l=k.pop(); k.reduce((o,x)=>o[x],mine)[l]=e.target.value; saveMine(); hudSync(); paintPreview();};
+  i.oninput=e=>{const k=path.split('.'),l=k.pop(); k.reduce((o,x)=>o[x],mine)[l]=e.target.value;
+    saveMine(); hudSync(); paintPreview(); peindreMaison();};
   f.appendChild(i); return f;
 }
 function hint(t){const p=document.createElement('p'); p.className='hint'; p.innerHTML=t; return p;}
@@ -1287,11 +1329,16 @@ setInterval(()=>{ if(document.getElementById('p-toi').classList.contains('on')) 
 
 function buildMaison(){
   const p=document.getElementById('p-maison'); p.innerHTML='';
+  const c=document.createElement('canvas'); c.id='apercu-maison'; c.width=660; c.height=304;
+  p.appendChild(c);
   p.appendChild(textField('Enseigne','house.sign','Chez Dan'));
   p.appendChild(chips('Toiture','house.roofShape',[['pointu','Pointu'],['dome','Dôme'],['plat','Plat']]));
   p.appendChild(swatches('Couleur du toit','house.roof',ROOFS));
   p.appendChild(swatches('Murs','house.wall',WALLS));
   p.appendChild(swatches('Porte','house.door',DOORS));
+  p.appendChild(chips('Volets','house.volets',
+    [['aucun','Sans'],['creme','Crème'],['bois','Bois'],['toit','Comme le toit'],['porte','Comme la porte']]));
+  p.appendChild(chips('Cheminée','house.cheminee',[[false,'Sans'],[true,'Avec']]));
   p.appendChild(rule());
   const f=field('Emplacement'), row=document.createElement('div'); row.className='row';
   [['↖',-1,-1],['↗',1,-1],['↙',-1,1],['↘',1,1]].forEach(([lbl,dx,dy])=>{
@@ -1302,7 +1349,22 @@ function buildMaison(){
   });
   f.appendChild(row); p.appendChild(f);
   p.appendChild(hint('Les flèches suivent les axes de l\'isométrie, pas l\'écran. La maison est le point de rendez-vous : on débarque toujours devant sa porte.'));
+  peindreMaison();
 }
+function peindreMaison(){
+  const c=document.getElementById('apercu-maison'); if(!c) return;
+  const g=c.getContext('2d'); g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,660,304);
+  const cs=getComputedStyle(document.body);
+  g.fillStyle=(cs.getPropertyValue('--sunk')||'#F1EBDA').trim(); g.fillRect(0,0,660,304);
+  g.fillStyle='rgba(20,138,156,.10)';
+  for(let i=0;i<660;i+=34) g.fillRect(i,0,1.5,304);
+  const sol=mine.pal||GROUNDS[0];
+  g.save(); g.translate(330,214); g.scale(1.25,1.25);
+  isoTop(g,0,0,72,sol.grass); isoTop(g,0,0,58,shade(sol.grass,6));
+  maisonAu(g,mine.house,performance.now(),0,-6);
+  g.restore();
+}
+setInterval(()=>{ if(document.getElementById('p-maison').classList.contains('on')) peindreMaison(); },90);
 
 function buildIle(){
   const p=document.getElementById('p-ile'); p.innerHTML='';
@@ -1338,19 +1400,24 @@ function buildIle(){
     b.onclick=()=>{tool.mode=m;tool.kind=k;buildAll();}; bt.appendChild(b); });
   ft.appendChild(bt); p.appendChild(ft);
 
-  OBJ_GROUPS.forEach(([title,items],gi)=>{
-    const fo=field(title), bo=document.createElement('div'); bo.className='chips';
+  OBJ_GROUPS.forEach(([title,items])=>{
+    const fo=field(title), bo=document.createElement('div'); bo.className='objs';
     items.forEach(([v,n])=>{
-      const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=n;
+      const b=document.createElement('button'); b.className='obj'; b.type='button';
       b.setAttribute('aria-pressed',String(tool.mode==='objet'&&tool.kind===v));
+      b.title=n;
+      const c=document.createElement('canvas'); c.width=120; c.height=120;
+      apercuObjet(c.getContext('2d'),v,tool.color);
+      const l=document.createElement('span'); l.textContent=n;
+      b.appendChild(c); b.appendChild(l);
       b.onclick=()=>{tool.mode='objet';tool.kind=v;buildAll();}; bo.appendChild(b); });
-    if(gi===OBJ_GROUPS.length-1){
-      const e=document.createElement('button'); e.className='chip'; e.type='button'; e.textContent='⌫ Gomme';
-      e.setAttribute('aria-pressed',String(tool.mode==='gomme'));
-      e.onclick=()=>{tool.mode='gomme';tool.kind=null;buildAll();}; bo.appendChild(e);
-    }
     fo.appendChild(bo); p.appendChild(fo);
   });
+  const fe=field('Effacer'), be=document.createElement('div'); be.className='chips';
+  const e=document.createElement('button'); e.className='chip'; e.type='button'; e.textContent='⌫ Gomme';
+  e.setAttribute('aria-pressed',String(tool.mode==='gomme'));
+  e.onclick=()=>{tool.mode='gomme';tool.kind=null;buildAll();};
+  be.appendChild(e); fe.appendChild(be); p.appendChild(fe);
 
   const fc=field('Couleur de l\'objet'), bc=document.createElement('div'); bc.className='sw';
   OBJ_COLORS.forEach(c=>{
@@ -1445,6 +1512,15 @@ function buildIle(){
   gf.appendChild(i); gf.appendChild(r2); p.appendChild(gf);
 }
 
+// L'aperçu d'un objet : le même dessin que sur l'île, à la couleur
+// choisie. Un nom seul ne dit pas ce qu'on va poser.
+function apercuObjet(g,t,col){
+  g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,60,60);
+  g.save(); g.translate(30,45); g.scale(0.60,0.60);
+  shadowDiamond(g,0,0,15);
+  (DRAW[t]||DRAW.rocher)(g,col);
+  g.restore();
+}
 function thumb(g,w){
   g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,52,52);
   g.fillStyle=PAPER; g.fillRect(0,0,52,52);
