@@ -237,6 +237,19 @@ avant, 100 % après**. Dedans le sol est plat, `probe` vaut 0.
 C'est corrigé partout : le pinceau, la gomme, le déplacement du bonhomme
 et le losange rose de survol passent tous par `tileFrom()`.
 
+### Les fenêtres, et le pas de la porte
+
+Une pièce sans fenêtre est une boîte, et de nuit une boîte noire. Chaque
+pièce en a deux ou trois, déclarées dans `PIECES.fen` : le carreau reprend
+exactement la teinte que `skyTone()` donne au ciel de l'île, avec un nuage
+le jour et la lune la nuit. C'est le seul lien entre le dedans et le
+dehors, et il ne coûte rien puisque la couleur existait déjà.
+
+Sur l'île, la case devant la porte porte un **pas de porte**. Sans lui,
+rien ne dit qu'on peut entrer : une maison où l'on entre et une maison qui
+est un décor se ressemblent trop. Il n'est dessiné que chez soi, la porte
+des autres étant fermée.
+
 ### Le sens des meubles et des objets
 
 `o` vaut `'se'` ou `'sw'`, et se choisit avant de poser. **⟳ Tourner**
@@ -250,6 +263,12 @@ un miroir horizontal, qui échange exactement les deux axes de
 l'isométrie : pas un dessin de plus à maintenir.
 
 Les objets posés avant n'ont pas de `o` : ils s'affichent comme avant.
+
+Les vingt îles bot tirent le sens de leurs bancs et de leurs pontons de la
+**même graine** que le reste : tout le monde voit le même archipel, et il
+n'a plus l'air peigné. Attention à l'ordre de déclaration, `PIVOT_ILE` est
+lu par `mkBot()` au chargement du module : il vit avec les données, pas
+près des dessins.
 
 ### Déplacer la maison
 

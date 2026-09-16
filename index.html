@@ -511,15 +511,28 @@ function shadowDiamond(c,cx,cy,a){
    j'élargis le salon un jour, aucune île n'a à être migrée. C'est la même
    règle que dehors, où la forme de la maison est en dur et où seules ses
    couleurs sont de la donnée. */
+// Un banc, une barrière, un ponton suivent un axe de la grille : sans
+// orientation ils regardent tous du même côté et l'île a l'air peignée.
+// Le miroir horizontal échange exactement les deux axes de l'isométrie,
+// c'est tout ce que « tourner » veut dire ici : pas un dessin de plus.
+// Déclaré ici et pas près des dessins : mkBot() le lit au chargement.
+const PIVOT_ILE={banc:1,barriere:1,cloture:1,ponton:1,boutique:1};
+
 const TWI=72, THI=36, HX=TWI/2, HY=THI/2, MURH=86;
 // `mur:'nw'` = la paroi du fond à gauche (x=0), l'index porte sur y.
 // `mur:'ne'` = la paroi du fond à droite (y=0), l'index porte sur x.
 // Les deux parois près de la caméra ne sont pas dessinées : on regarde
 // dans une boîte ouverte, sinon la pièce est un mur.
 const PIECES=[
-  {k:'salon',   n:'Salon',   w:8, h:6, portes:[{mur:'nw',i:4,vers:'dehors'},{mur:'ne',i:6,vers:'chambre'}]},
-  {k:'chambre', n:'Chambre', w:6, h:5, portes:[{mur:'nw',i:1,vers:'salon'},{mur:'ne',i:4,vers:'atelier'}]},
-  {k:'atelier', n:'Atelier', w:6, h:5, portes:[{mur:'nw',i:1,vers:'chambre'}]}
+  {k:'salon',   n:'Salon',   w:8, h:6,
+   portes:[{mur:'nw',i:4,vers:'dehors'},{mur:'ne',i:6,vers:'chambre'}],
+   fen:[{mur:'ne',i:2},{mur:'nw',i:1}]},
+  {k:'chambre', n:'Chambre', w:6, h:5,
+   portes:[{mur:'nw',i:1,vers:'salon'},{mur:'ne',i:4,vers:'atelier'}],
+   fen:[{mur:'ne',i:1},{mur:'nw',i:3}]},
+  {k:'atelier', n:'Atelier', w:6, h:5,
+   portes:[{mur:'nw',i:1,vers:'chambre'}],
+   fen:[{mur:'ne',i:2},{mur:'ne',i:4},{mur:'nw',i:3}]}
 ];
 function pieceDef(k){ return PIECES.find(p=>p.k===k) || PIECES[0]; }
 // La case devant une porte, celle sur laquelle on se met pour passer.
@@ -648,8 +661,8 @@ const DEMO=[
   mkN('recif','Le Récif','Lila',GROUNDS[2],'jour',
     [{t:'palmier',x:3,y:3,c:'#2E7D5B'},{t:'arbre',x:8,y:4,c:'#2E7D5B'},{t:'fleur',x:5,y:8,c:'#F48CA8'},
      {t:'fleur',x:6,y:8,c:'#B44C6C'},{t:'fleur',x:4,y:7,c:'#F48CA8'},{t:'rocher',x:9,y:8,c:'#7E8CA0'},
-     {t:'banc',x:6,y:3,c:'#FDFBF2'},{t:'lampe',x:4,y:5,c:'#FDFBF2'},{t:'buisson',x:2,y:5,c:'#2E7D5B'},
-     {t:'tortue',x:7,y:9,c:'#5EA36B'},{t:'ponton',x:3,y:9,c:'#A9764A'},{t:'barriere',x:8,y:7,c:'#FDFBF2'},
+     {t:'banc',x:6,y:3,c:'#FDFBF2',o:'sw'},{t:'lampe',x:4,y:5,c:'#FDFBF2'},{t:'buisson',x:2,y:5,c:'#2E7D5B'},
+     {t:'tortue',x:7,y:9,c:'#5EA36B'},{t:'ponton',x:3,y:9,c:'#A9764A',o:'sw'},{t:'barriere',x:8,y:7,c:'#FDFBF2',o:'sw'},
      {t:'mouette',x:9,y:3,c:'#FDFBF2'}],
     {name:'Lila',body:'élancé',skin:'#B97C4E',hair:'chignon',hairC:'#1F1A18',eyes:'calme',outfit:'#F48CA8',acc:'lunettes'},
     {x:6,y:5,wall:'#F6F1E2',roof:'#148A9C',door:'#8B5E3C',roofShape:'dome',sign:'Atelier'}),
@@ -663,8 +676,8 @@ const DEMO=[
   mkN('pins','Pins-Noirs','Yann',GROUNDS[5],'nuit',
     [{t:'sapin',x:2,y:4,c:'#2E7D6B'},{t:'sapin',x:3,y:7,c:'#2E7D6B'},{t:'sapin',x:9,y:5,c:'#2E7D6B'},
      {t:'sapin',x:8,y:8,c:'#2E7D6B'},{t:'lampe',x:6,y:7,c:'#F4D6A0'},{t:'lampe',x:4,y:5,c:'#F4D6A0'},
-     {t:'rocher',x:7,y:3,c:'#4B6B84'},{t:'banc',x:5,y:8,c:'#0B3C5D'},{t:'phare',x:9,y:2,c:'#FDFBF2'},
-     {t:'buisson',x:2,y:8,c:'#245C4E'},{t:'ponton',x:6,y:10,c:'#7A5636'},{t:'mouette',x:10,y:6,c:'#FDFBF2'}],
+     {t:'rocher',x:7,y:3,c:'#4B6B84'},{t:'banc',x:5,y:8,c:'#0B3C5D',o:'sw'},{t:'phare',x:9,y:2,c:'#FDFBF2'},
+     {t:'buisson',x:2,y:8,c:'#245C4E'},{t:'ponton',x:6,y:10,c:'#7A5636',o:'sw'},{t:'mouette',x:10,y:6,c:'#FDFBF2'}],
     {name:'Yann',body:'élancé',skin:'#F7DCC0',hair:'longs',hairC:'#F6F1E2',eyes:'endormi',outfit:'#148A9C',acc:'cape'},
     {x:5,y:5,wall:'#0B3C5D',roof:'#051D2A',door:'#8B5E3C',roofShape:'pointu',sign:'Refuge'})
 ];
@@ -725,7 +738,11 @@ function mkBot(i){
     if(x>=w.house.x-1&&x<=w.house.x+2&&y>=w.house.y-1&&y<=w.house.y+2) continue;
     if(w.objects.some(o=>o.x===x&&o.y===y)) continue;
     const t=theme.v[Math.floor(d(40+essais)*theme.v.length)%theme.v.length];
-    w.objects.push({t,x,y,c:COUL_OBJ[t]||'#8AA3B2'}); k++;
+    const o={t,x,y,c:COUL_OBJ[t]||'#8AA3B2'};
+    // Bancs, barrières et pontons tirent leur sens de la même graine : vingt
+    // îles où tout regarde du même côté, ça se voit tout de suite.
+    if(PIVOT_ILE[t]) o.o = d(70+essais)>0.5 ? 'sw' : 'se';
+    w.objects.push(o); k++;
   }
   return w;
 }
@@ -1014,11 +1031,6 @@ const DRAW={
     c.fillStyle=NAVY; c.beginPath(); c.arc(7.8,-16.2,0.95,0,Math.PI*2); c.fill();
   }
 };
-// Un banc, une barrière, un ponton suivent un axe de la grille : sans
-// orientation ils regardent tous du même côté et l'île a l'air peignée.
-// Le miroir horizontal échange exactement les deux axes de l'isométrie,
-// c'est tout ce que « tourner » veut dire ici : pas un dessin de plus.
-const PIVOT_ILE={banc:1,barriere:1,cloture:1,ponton:1,boutique:1};
 function dessinDe(g,t,col,o){
   g.save(); if(o==='sw') g.scale(-1,1);
   (DRAW[t]||DRAW.rocher)(g,col); g.restore();
@@ -1192,9 +1204,25 @@ function drawTiles(t){
       ctx.beginPath(); ctx.ellipse(q.x+(n-0.5)*18,cy+(n*13%8)-4,5.5,2.4,0,0,Math.PI*2); ctx.fill(); }
   }
 }
+// Le pas de la porte, posé sur l'île. Sans lui, rien ne dit qu'on peut
+// entrer : une maison où l'on entre et une maison qui est un décor se
+// ressemblent trop. Il n'est dessiné que chez soi, la porte des autres
+// étant fermée.
+function seuilDeLaMaison(){
+  if(visiting||!world.house) return;
+  const c=porteIle(world.house)[0];
+  if(c.x>=GRID||c.y>=GRID||tileAt(c.x,c.y)===2) return;
+  const q=iso(c.x,c.y), cy=q.y+TH/2-LIFT;
+  ctx.save(); ctx.translate(q.x,cy);
+  isoTop(ctx,0,0,TW/2-2,'#6E4F2E');
+  isoTop(ctx,0,0,TW/2-6,'#C9A06A');
+  isoTop(ctx,0,0,TW/2-12,'#E4B36A');
+  isoTop(ctx,0,0,TW/2-21,'#F2CE93');
+  ctx.restore();
+}
 function drawWorld(t){
   ctx.clearRect(0,0,CW,CH);
-  ocean(t); drawTiles(t);
+  ocean(t); drawTiles(t); seuilDeLaMaison();
 
   if(tool.mode!=='marche'&&hover.x>=0&&!visiting){
     // Deux cases sur deux quand on déplace la maison : viser une seule case
@@ -1588,10 +1616,39 @@ function paroi(def,murC,cote){
     } else {
       quadMur(A,B,0,MURH,face);
       quadMur(A,B,0,7,shade(face,-16));                       // plinthe
+      if((def.fen||[]).some(f=>f.mur===cote && f.i===i)) fenetre(A,B,murC,face);
     }
     quadMur(A,B,MURH,MURH+5,shade(murC,26));                  // épaisseur, vue du dessus
   }
 }
+// Une fenêtre montre le ciel de l'île : c'est le seul lien entre le dedans
+// et le dehors, et c'est ce qui empêche une pièce de nuit d'être une boîte
+// noire. Le carreau reprend exactement la teinte que peint ocean().
+function fenetre(A,B,murC,face){
+  const l=(t)=>({x:A.x+(B.x-A.x)*t, y:A.y+(B.y-A.y)*t});
+  const g=l(0.18), d=l(0.82), tone=skyTone(), nuit=world.sky==='nuit';
+  const BAS=34, HAUT=72;
+  quadMur(g,d,BAS,HAUT,tone.paper);
+  // un nuage le jour, la lune la nuit : un carreau uni ne dit pas « dehors »
+  const m=l(nuit?0.66:0.38), c2=l(nuit?0.66:0.58);
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(g.x,g.y-BAS); ctx.lineTo(d.x,d.y-BAS); ctx.lineTo(d.x,d.y-HAUT); ctx.lineTo(g.x,g.y-HAUT);
+  ctx.closePath(); ctx.clip();
+  ctx.fillStyle=nuit?'#FAF6EA':tone.cloud;
+  if(nuit){ ctx.beginPath(); ctx.arc(m.x,m.y-58,7,0,Math.PI*2); ctx.fill(); }
+  else { [[0,0,9],[8,2,7],[-8,2,6]].forEach(k=>{ ctx.beginPath();
+    ctx.arc(c2.x+k[0],c2.y-52+k[1],k[2],0,Math.PI*2); ctx.fill(); }); }
+  ctx.restore();
+  // le dormant, puis le petit bois, puis l'appui
+  const cadre=shade(murC,-40);
+  quadMur(g,d,HAUT-3,HAUT,cadre);
+  quadMur(g,l(0.22),BAS,HAUT,cadre); quadMur(l(0.78),d,BAS,HAUT,cadre);
+  quadMur(l(0.48),l(0.52),BAS,HAUT,cadre);
+  quadMur(g,d,BAS+19,BAS+22,cadre);
+  quadMur(l(0.13),l(0.87),BAS-5,BAS,shade(face,24));
+}
+
 function solPiece(def,d){
   const base=couleurSol(d.sol), demi=vue.tw/2;
   for(let y=0;y<def.h;y++) for(let x=0;x<def.w;x++){
