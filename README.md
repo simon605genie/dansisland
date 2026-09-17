@@ -2,7 +2,13 @@
 
 Chacun fabrique son île, la publie à son adresse, et va marcher sur celle des autres.
 
-**En ligne : https://dansisland.pages.dev**
+**En ligne : https://dansisland.app**
+
+`dansisland.pages.dev` reste servi par Cloudflare Pages et continue de
+marcher : c'est l'adresse de build du projet Pages, elle ne se retire pas.
+L'adresse du jeu, celle qu'on donne et celle qu'écrivent les cinq balises
+d'en-tête (`canonical`, `og:url`, les images d'aperçu), est `dansisland.app`
+depuis le 17/09/2026.
 
 ## Ce qu'il y a dans le dossier
 
@@ -128,8 +134,15 @@ Déploiement à la main, si besoin :
 ```
 
 Après le déploiement, dans **Auth → URL Configuration** : Site URL sur
-`https://dansisland.pages.dev`, et `https://dansisland.pages.dev/**` dans les
-Redirect URLs — le `/**` est nécessaire pour revenir sur une adresse d'île.
+`https://dansisland.app`, et `https://dansisland.app/**` dans les Redirect
+URLs. Le `/**` est nécessaire pour revenir sur une adresse d'île.
+
+Garder `https://dansisland.pages.dev/**` dans la liste tant que cette
+adresse répond : le lien magique part avec `emailRedirectTo:
+location.origin`, donc quelqu'un qui se connecte depuis l'ancienne adresse
+demande un retour vers elle, et Supabase refuse toute adresse absente de la
+liste. Deux entrées ne coûtent rien ; une de moins casse la connexion sans
+rien dire.
 
 ## La grille, et pourquoi elle fait 18
 
