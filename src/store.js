@@ -162,6 +162,20 @@ export async function catalogue() {
   return data || [];
 }
 
+// L'état de la mer, maintenant. C'est le serveur qui le tient, pour la
+// même raison que le jour : une marée lue sur l'horloge du téléphone se
+// remonte d'un doigt, et surtout elle ne serait pas la même pour deux
+// enfants au même moment. Or on va chez les autres.
+//
+// La réponse porte `bascule`, le nombre de secondes avant que la mer ne
+// change d'avis : le client avance la phase tout seul entre deux appels
+// plutôt que d'en faire un par image.
+export async function maree() {
+  const { data, error } = await sb.rpc('maree');
+  if (error) throw error;
+  return data;
+}
+
 // Plafonds du jour et gains des visites, en un seul aller-retour.
 export async function economie() {
   const { data, error } = await sb.rpc('economie');

@@ -260,18 +260,21 @@ Cinq règles qui tiennent ensemble :
    `camRect()` rend le rectangle du monde qu'on voit ; c'est par lui que
    passent les deux voiles de nuit, dehors et dedans.
 3. **Le ciel se peint hors caméra, la mer dedans.** `ocean()` a été coupé
-   en `ciel()` et `mer()` : le soleil, les nuages et les oiseaux sont un
-   fond et ne glissent pas quand la caméra suit ; la mer appartient au
-   monde. Un nouveau décor de fond va dans `ciel()`, jamais dans `mer()`.
-4. **`ZMIN` vaut 1, et dézoomer à fond rend exactement le cadrage
-   d'avant.** C'est la garantie que le zoom n'a rien enlevé à personne.
-   Le corollaire tient aussi : **à zoom 1 la caméra ne bouge pas** (`prise`
-   dans `cibleCam()`), donc sur un écran large où `zoomAuto()` vaut 1,
-   rien n'a changé du tout.
+   en `ciel()` et `mer()` : le fond ne glisse pas quand la caméra suit, la
+   mer appartient au monde. Depuis la marée, le ciel est en **deux**
+   morceaux : `ciel()` (papier, soleil ou lune, étoiles) passe avant la
+   mer, `cielDevant()` (nuages, mouettes) passe après. La mer agrandie
+   remplit presque le cadre et aurait avalé tout ce qui traverse. Les deux
+   restent en repère écran ; un nouveau décor de fond va dans l'un des
+   deux, jamais dans `mer()`.
+4. **`ZMIN` a valu 1 jusqu'au 17/09 au soir**, et c'était la garantie que
+   le zoom n'avait rien enlevé à personne. La marée a changé ça : voir la
+   section suivante. Il vaut 0,78, et c'est `zPlancher()` qu'on lit — pas
+   `ZMIN` — parce que **dedans, le plancher reste 1**.
 5. **`boiteIle()` borne le cadrage sur la tache de mer de `seaPath()`.**
-   Les deux portent les mêmes rayons, écrits deux fois : si `seaPath()`
-   change de taille, `boiteIle()` doit suivre, sinon la caméra emmène le
-   joueur sur le papier.
+   Les rayons ne sont plus écrits deux fois : `boiteIle()` lit `MER_RX`,
+   `MER_RY` et `merCentre()`. La consigne « si l'une change, l'autre doit
+   suivre » était une consigne de trop, et la marée l'a fait changer.
 
 Le zoom se déduit de `echelleEcran`, la largeur réelle du cadre divisée
 par `CW` — jamais de la taille du canvas, qui ne bouge pas. Elle se mesure
@@ -387,11 +390,12 @@ Trois pièges, et ils se tiennent :
    encore de `TW/2` au-delà de son centre. Ce demi-losange oublié a fait
    nager le requin **sous la plage, invisible, pendant tout son passage**,
    et rien ne le signalait : ni erreur, ni trace, juste rien à l'écran.
-2. **La bande d'eau est mince, et elle se referme quand l'île grandit.**
-   D'où le passage sur les flancs **est et ouest** seulement : au nord et au
-   sud, l'île touche presque l'écume. À `RAYON_MAX`, il ne reste presque
-   plus rien : c'est voulu, pas un bug, et il ne faut pas élargir la mer
-   pour le corriger, `boiteIle()` porte les mêmes rayons.
+2. **La bande d'eau était mince, et elle se refermait quand l'île
+   grandissait.** Ça a été corrigé le 17/09 au soir avec la marée : la mer
+   fait maintenant 438x240, et il reste 50 px d'eau au-delà de la terre
+   même à `RAYON_MAX`. Le passage du requin sur les flancs **est et ouest**
+   reste le bon choix, mais pour une autre raison : c'est là que la bande
+   est la plus large, donc là qu'on le voit le mieux.
 3. **`wMer()` est partagé avec `seaPath()`.** Nager « à 98 % du bord » n'a
    de sens que si c'est le même bord : deux contours qui divergent, et un
    aileron sort sur le papier une fois sur trois, là où la tache rentre.
@@ -447,6 +451,116 @@ c'est la façon classique de briquer un site.
 sont le SVG du logo de `index.html` relu en repère 64 et rasterisé. Si le
 logo change, elles changent avec lui, et `build.sh` doit les copier toutes :
 une icône manquante fait échouer l'installation en silence.
+
+## La marée, et la place qu'il a fallu lui faire — 17/09/2026 au soir
+
+`supabase/2026-09-17_maree.sql`, **rejouable** : il n'y a que des
+`create or replace`. Il ajoute `maree()`, met `maree` dans `plafond()`,
+`gain()`, `economie()` et dans la liste blanche de `bourse_gagner()`.
+
+Deux fois par jour la mer se retire et l'anneau de cases juste au-delà du
+bord de l'île devient du sable mouillé praticable, où elle laisse trois
+choses à ramasser. À marée haute c'est de l'eau.
+
+### Ce que la mesure a dit, et qui a changé le plan
+
+Le plan de départ était « agrandir la tache de mer, et remonter `OY` ».
+La mesure a dit autre chose, et elle est dans `geo.js` de la session :
+
+- il ne restait que **10 px** d'eau au point le plus serré sur une île
+  neuve, pas 47 : les 47 px oublient le gonflement de `wMer()` ;
+- au rayon maximal, l'île **sortait déjà** de sa propre mer de 38 px ;
+- pour tenir l'anneau de marée du rayon maximal avec 20 px d'eau autour,
+  il faut `MER_RX ≈ 438`, donc une tache de 944 px de large dans un cadre
+  de 768. **La contrainte qui bloque est horizontale, pas verticale**, et
+  `OY` n'y peut rien.
+
+Les deux sorties de secours ont été mesurées et écartées : baisser
+`RAYON_MAX` demanderait de descendre à ~6,5, sous `RAYON0` ; et une mer
+qui suivrait le rayon de l'île déborde du cadre dès le rayon 7,0.
+
+### Ce qui a été fait à la place
+
+**Le zoom de base recule : `ZMIN` passe de 1 à 0,78.** Le cadre montre
+985x641 de monde au lieu de 768x500. Aucun CSS n'est touché, donc le mode
+paysage et le portrait ne bougent pas — et c'est le point : le rapport
+1,536 n'est pas un chiffre au hasard, c'est exactement
+`(100vw - 236px) / 100vh` sur un téléphone en paysage, et c'est ce qui
+fait que le cadre y remplit pile la hauteur. Agrandir le canvas l'aurait
+cassé.
+
+Sur un écran large, une case passe de 56 à 44 px réels, soit exactement le
+`CASE_MIN` déjà retenu comme confortable au doigt. Sur téléphone **rien ne
+change** : `zoomAuto()` y est déjà entre 1,7 et 2,1, et `ZMIN` ne mord pas.
+
+Trois conséquences à tenir :
+
+1. **`zPlancher()`, pas `ZMIN`.** Dedans, le plancher reste 1 : la pièce
+   n'a pas grandi, et à 0,78 elle serait un timbre-poste au milieu d'un
+   cadre vide. `fitDedans()` plafonne toujours à partir de 1.
+2. **`MER_RX`/`MER_RY` valent 438x240**, et les coefficients de `wMer()`
+   ont été réduits d'autant (x0,7). Le gonflement est multiplicatif : sans
+   ça, une mer plus grande aurait ondulé plus fort. Le contour garde les
+   mêmes ±34 px qu'avant.
+3. **`OY` passe de 84 à 12**, pour que le centre de l'île tombe au milieu
+   du cadre. La mer y tient avec 16 px de papier sur les côtés et 60 en
+   haut et en bas — mesuré sur les pixels du canvas, pas déduit.
+
+Et `ciel()` a été coupé en deux. `cielDevant()` (nuages, mouettes) passe
+**après** la mer : le fond d'avant les aurait tous avalés, puisque la mer
+remplit maintenant presque le cadre. Ils restent en repère écran et passent
+sous l'île, comme le requin et le poisson.
+
+### Les règles de la marée
+
+1. **La phase vient du serveur** (`maree()`), comme `jour_du_jeu()`. Entre
+   deux appels le client avance la phase avec `performance.now()` et
+   **jamais** `Date.now()` : avancer sa montre ne doit pas faire descendre
+   la mer. Sans compte ou hors ligne, il retombe sur le même cycle calculé
+   en local, comme `dansisland:bourse` sert de bourse de secours.
+2. **Le cycle est semi-diurne : 12 h 25 min, comme la vraie marée.** Ce
+   n'est pas de la coquetterie. Une marée calée sur l'horloge civile
+   tomberait à la même heure tous les jours, et l'enfant qui joue toujours
+   après l'école ne verrait jamais que la même moitié du jeu. Les
+   cinquante minutes de décalage par jour sont la règle. Mesuré : deux
+   basses mers par jour, environ 3 h 45 chacune.
+3. **Rien n'en part en base.** Pas une clé de plus dans `mondeNu()`, rien
+   pour `Ctrl+Z`. Le sable se déduit du rayon, ce que la mer laisse se
+   déduit du numéro de la marée. Seul `bourse.faits.maree` change.
+4. **Le sable se découvre depuis le large, de proche en proche**
+   (`majMouillees()`), pas case par case. Le premier essai prenait toute
+   l'eau entre le rayon et le rayon plus un : le bord dentelé de l'île
+   laissait alors des trous d'eau isolés au milieu du sable. La
+   propagation règle les deux cas d'un coup, et elle donne une règle de
+   jeu en cadeau : **une mare creusée au milieu de l'île reste une mare**,
+   puisque la mer ne l'atteint pas.
+5. **`terre()` remplace `tileAt()!==EAU` partout** où il s'agissait de
+   savoir sur quoi on marche et où court l'écume. `tileAt()` reste la
+   donnée, `terre()` est l'état du moment. C'est ce qui fait que l'écume
+   recule à marée basse sans une ligne de plus — et c'est ce recul de la
+   ligne blanche qui dit, sans un mot, que la mer s'est retirée.
+6. **`avancerMaree()` passe en tête de `frame()`**, avant le déplacement :
+   c'est le masque que lit `blocked()`, et un pas fait sur un masque
+   périmé serait un pas dans l'eau.
+7. **On ne bâtit pas sur le sable mouillé**, et il n'y a rien à écrire
+   pour ça : il est hors du rayon acquis, donc `dansLeRayon()` refuse déjà
+   d'y peindre, d'y poser et d'y faire pousser des herbes. Seul le message
+   de refus a changé, parce que « le large » est faux quand on a les pieds
+   dessus.
+8. **La mer qui remonte repose le bonhomme à terre** (`laMerMonte()`),
+   elle ne le noie pas. Pas de perte, pas de gronderie : c'est la même
+   règle que le chien qui s'assied.
+
+Pas de plaque dans le bandeau pour la marée, et c'est délibéré : à quatre
+plaques et 360 px, le bouton Son passe à la ligne et se pose sur les
+boutons de zoom. Elle se dit dans le murmure quand elle tourne, et dans le
+panneau **Île** le reste du temps — d'où le `buildAll()` sur la bascule.
+
+Six shells par jour, deux par chose ramassée. Du même ordre que la tonte
+et la promenade, très en dessous des trente-cinq des visites : **l'île
+grandit parce que des gens sont passés**, jamais parce que le temps passe.
+Une marée généreuse serait exactement le contraire, un gain qui tombe tout
+seul deux fois par jour.
 
 ## Reste du contexte
 

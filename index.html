@@ -594,7 +594,11 @@ import * as store from './src/store.js';
 "use strict";
 
 /* ================= géométrie isométrique ================= */
-const GRID=18, TW=56, TH=28, OX=384, OY=84, LIFT=7;
+const GRID=18, TW=56, TH=28, OX=384, OY=12, LIFT=7;
+// OY est remonté de 84 à 12 le 17/09/2026 au soir : le centre de l'île
+// (OY + (GRID-1)*TH/2) tombe ainsi sur 250, le milieu du cadre. Il était
+// à 322, et la mer agrandie pour la marée ne descendait plus dans le
+// cadre. Voir la section « la marée » de CLAUDE.md.
 // La grille d'origine, et le décalage qui repose une île d'avant au centre
 // de la nouvelle. Toutes les coordonnées écrites en dur dans ce fichier
 // datent du 12x12 : depuis12() les décale, recentrer() décale les îles
@@ -644,9 +648,24 @@ function ctr(x,y){ return iso(x+0.5,y+0.5); }
    CSS le rend sur 360 px de large et une case n'y mesure plus que 26 px.
    On vise CASE_MIN pixels réels par case, et on borne.
 
-   ZMIN vaut 1, et pas moins : dézoomer davantage ne montrerait rien de
-   plus que le cadrage d'hier, qui tenait déjà l'île entière. */
-const CASE_MIN=44, ZMIN=1, ZMAX=2.6;
+   ZMIN a valu 1 tant que le monde tenait dans le cadre. La marée l'en a
+   sorti : une île au rayon maximal plus son anneau de sable mouillé
+   demande une tache de mer de 944 px de large, pour un cadre de 768.
+   Mesuré, et sans échappatoire : même l'anneau posé au ras du contour
+   déborde de 65 px, et une mer qui suivrait le rayon de l'île déborde
+   déjà de 32 px sur une île neuve. Agrandir le canvas aurait coûté le
+   rapport 1,536, qui n'est pas un chiffre au hasard — c'est exactement
+   (100vw - 236px) / 100vh sur un téléphone en paysage, et c'est ce qui
+   fait que le cadre y remplit pile la hauteur.
+
+   Donc ZMIN vaut 0,78 : le cadre montre 985x641 de monde au lieu de
+   768x500, et la mer entière y tient avec du papier tout autour. Sur un
+   écran large une case passe de 56 à 44 px réels, soit exactement le
+   CASE_MIN déjà retenu comme confortable au doigt. Sur téléphone rien ne
+   change : zoomAuto() y est déjà entre 1,7 et 2,1, et ZMIN ne mord pas.
+   L'invariant d'hier (« dézoomer à fond rend le cadrage d'avant ») est
+   devenu « dézoomer à fond montre l'île entière et sa mer ». */
+const CASE_MIN=44, ZMIN=0.78, ZMAX=2.6;
 const cam={x:CW/2, y:CH/2, z:1, main:1};
 // Le rapport entre un pixel de canvas et un pixel d'écran. Mesuré à la
 // main plutôt qu'à chaque image : un getBoundingClientRect() par frame
@@ -664,30 +683,40 @@ function mesurerEcran(){
 // toujours le cadre. L'île tient dans cette tache, donc tout est
 // atteignable : c'est le bonhomme qui s'approche du bord de l'écran quand
 // il longe la plage, pas la caméra qui le suit dans le large.
+// Les rayons ne sont plus recopiés ici : ce sont ceux de seaPath(), lus
+// à la source. Ils étaient écrits deux fois, et la consigne « si l'une
+// change, l'autre doit suivre » était une consigne de trop — la marée l'a
+// fait changer, justement.
 function boiteIle(){
-  const cx=OX, cy=OY+(GRID-1)*TH/2, rx=352, ry=174;
+  const c=merCentre();
   // Sur les côtés on déborde un peu de la mer : le papier y a la couleur
   // du ciel, il ne se remarque pas, et sans ce jeu le bonhomme se colle au
   // bord du cadre quand il marche jusqu'à la pointe est de l'île. En bas
   // on reste sur l'eau, et une marge courte suffit : un bonhomme est
   // dessiné au-dessus de ses pieds, jamais en dessous.
-  return {x0:cx-rx-24, x1:cx+rx+24, y0:cy-ry-100, y1:cy+ry-8};
+  return {x0:c.x-MER_RX-24, x1:c.x+MER_RX+24, y0:c.y-MER_RY-70, y1:c.y+MER_RY-8};
 }
 // Dedans, la pièce est petite et tient tout entière : la caméra ne suit
 // personne, elle grossit jusqu'à ce que les murs touchent les bords.
 function fitDedans(){
   const p=pieceDef(piece);
   const w=(p.w+p.h)*TWI/2+28, h=(p.w+p.h)*THI/2+MURH+44;
-  return Math.max(ZMIN, Math.min(CW/w, CH/h));
+  return Math.max(1, Math.min(CW/w, CH/h));
 }
+// Le plancher du zoom n'est pas le même dedans et dehors, et c'est la mer
+// agrandie qui l'impose. Dehors, il faut reculer jusqu'à 0,78 pour tenir
+// l'île et sa mer. Dedans, rien n'a grandi : une pièce montrée à 78 %
+// serait un timbre-poste au milieu d'un cadre vide, alors qu'elle tenait
+// déjà pile à 1.
+function zPlancher(){ return dedans ? 1 : ZMIN; }
 function zPlafond(){ return dedans ? Math.min(ZMAX, fitDedans()) : ZMAX; }
-function zoomAuto(){ return Math.max(ZMIN, CASE_MIN/(TW*(echelleEcran||1))); }
-function zoomVoulu(){ return Math.max(ZMIN, Math.min(zPlafond(), zoomAuto()*cam.main)); }
+function zoomAuto(){ return Math.max(zPlancher(), CASE_MIN/(TW*(echelleEcran||1))); }
+function zoomVoulu(){ return Math.max(zPlancher(), Math.min(zPlafond(), zoomAuto()*cam.main)); }
 // Le zoom demandé à la main se garde en facteur de l'automatique : la
 // même pincée donne le même effet sur un téléphone et sur un écran large,
 // et une rotation ne renvoie pas le joueur au fond de la mer.
 function poserZoom(z){
-  cam.main = Math.max(ZMIN, Math.min(zPlafond(), z)) / zoomAuto();
+  cam.main = Math.max(zPlancher(), Math.min(zPlafond(), z)) / zoomAuto();
   majZoomBtn();
 }
 function zoomer(f){ poserZoom(zoomVoulu()*f); }
@@ -937,7 +966,7 @@ const GAIN_BALADE=5;             // le tour de l'île avec le chien
 // **Les vrais plafonds sont en SQL** (`plafond()`), et `chargerCatalogue()`
 // vient les recopier ici au chargement. Ceux-ci ne servent qu'à écrire
 // « il te reste 3 shells à gagner » avant la réponse, et hors ligne.
-const PLAFOND={tonte:8, promenade:GAIN_BALADE, mot_pose:10, mot_recu:25};
+const PLAFOND={tonte:8, promenade:GAIN_BALADE, maree:6, mot_pose:10, mot_recu:25};
 const CADEAU_BASE=3;             // le cadeau du jour, avant la série
 // Les visites payantes. Laisser un mot chez quelqu'un rapporte 2 shells,
 // en recevoir un en rapporte 5 — et c'est le trigger `mots_credite` qui
@@ -1945,7 +1974,9 @@ function blocked(tx,ty){
   if(dedans) return blockedDedans(tx,ty);
   const x=Math.floor(tx), y=Math.floor(ty);
   if(x<0||y<0||x>=GRID||y>=GRID) return true;
-  if(tileAt(x,y)===2) return true;
+  // `terre()` et non `tileAt()` : à marée basse, l'anneau de sable mouillé
+  // se marche, et il redevient de l'eau quatre heures plus tard.
+  if(!terre(x,y)) return true;
   const h=world.house;
   if(x>=h.x&&x<=h.x+1&&y>=h.y&&y<=h.y+1) return true;
   return false;
@@ -1988,10 +2019,20 @@ function boucle(v,large){ return ((v%large)+large)%large; }
    boucle parce que le requin et les poissons s'en servent : nager « à 94 %
    du bord » n'a de sens que si c'est le même bord, sinon un aileron sort sur
    le papier une fois sur trois, là où le contour rentre. */
-const MER_RX=352, MER_RY=174;
+// 352x174 jusqu'au 17/09 au soir. Mesuré alors : il ne restait que 10 px
+// d'eau au point le plus serré sur une île neuve, et au rayon maximal
+// l'île sortait de sa propre mer de 38 px. Il n'y avait donc de place ni
+// pour la marée ni, à vrai dire, pour une île adulte. 438x240 tient
+// l'anneau de marée du rayon maximal (9,3) avec 12 px d'eau au-delà, et
+// 50 px au-delà de la terre elle-même.
+const MER_RX=438, MER_RY=240;
 function merCentre(){ return {x:OX, y:OY+(GRID-1)*TH/2}; }
+// Le gonflement est multiplicatif, donc agrandir la mer agrandirait aussi
+// ses bosses. Les coefficients sont réduits d'autant (x0,7) : le contour
+// ondule des mêmes ±34 px qu'avant, sur une tache plus grande. Une côte
+// qui ondulerait proportionnellement se serait mise à baver.
 function wMer(a,t){
-  return 1+0.055*Math.sin(a*3+1.1)+0.038*Math.sin(a*5+2.3)+0.018*Math.sin(t/2600+a*2);
+  return 1+0.039*Math.sin(a*3+1.1)+0.027*Math.sin(a*5+2.3)+0.013*Math.sin(t/2600+a*2);
 }
 function pointMer(a,k,t){ const c=merCentre(), w=wMer(a,t)*k;
   return {x:c.x+Math.cos(a)*MER_RX*w, y:c.y+Math.sin(a)*MER_RY*w}; }
@@ -2027,6 +2068,19 @@ function ciel(t){
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,sy,74,0,Math.PI*2); ctx.fill();
     ctx.fillStyle=sunC; ctx.beginPath(); ctx.arc(sx,sy,26,0,Math.PI*2); ctx.fill();
   }
+}
+/* Les nuages et les mouettes se peignent **après la mer**, et c'est la
+   marée qui l'a imposé. Ils vivaient dans le fond, derrière l'eau : tant
+   que la mer était une petite tache au milieu du papier, ils passaient
+   surtout à côté d'elle et ça ne se voyait pas. La mer agrandie remplit
+   presque le cadre, et le fond les aurait tous avalés — un ciel où rien
+   ne traverse plus.
+
+   Ils restent en repère écran, donc ils ne glissent pas avec la caméra,
+   et ils passent **sous l'île**, comme le requin et le poisson : quand
+   leur route croise la terre, ça se lit comme « derrière ». */
+function cielDevant(t){
+  const tone=skyTone();
   NUAGES.forEach((n,i)=>{
     cloud(boucle(n[0]+t*0.0050*(0.6+i*0.17), CW+200)-100, n[1], n[2], tone.cloud);
   });
@@ -2046,7 +2100,8 @@ function mer(t){
   ctx.save(); seaPath(t); ctx.clip();
   ctx.strokeStyle='rgba(255,255,255,.4)'; ctx.lineWidth=2.6; ctx.lineCap='round';
   for(let i=0;i<11;i++){
-    const wx=OX+Math.sin(i*2.1)*300, wy=OY+(GRID-1)*TH/2+Math.cos(i*1.7)*150+Math.sin(t/1500+i)*2.5;
+    const c=merCentre();
+    const wx=c.x+Math.sin(i*2.1)*MER_RX*0.85, wy=c.y+Math.cos(i*1.7)*MER_RY*0.85+Math.sin(t/1500+i)*2.5;
     ctx.beginPath(); ctx.moveTo(wx-11,wy); ctx.quadraticCurveTo(wx-5,wy-4,wx,wy);
     ctx.quadraticCurveTo(wx+5,wy+4,wx+11,wy); ctx.stroke();
   }
@@ -2172,20 +2227,43 @@ function dessinerPoisson(t){
 
 function drawTiles(t){
   const p=world.pal;
+  // L'écume longe `terre()` et non `tileAt()` : à marée basse elle suit le
+  // bord extérieur du sable mouillé, et c'est ce recul de la ligne blanche
+  // qui dit, sans un mot, que la mer s'est retirée.
   for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++){
-    if(tileAt(x,y)!==2) continue;
+    if(terre(x,y)) continue;
     const q=iso(x,y), cy=q.y+TH/2+3;
     const N={x:q.x,y:cy-TH/2}, E={x:q.x+TW/2,y:cy}, S={x:q.x,y:cy+TH/2}, W={x:q.x-TW/2,y:cy};
     ctx.strokeStyle='#FFFFFF'; ctx.lineWidth=7.5; ctx.lineCap='round';
     const foam=(a,b)=>{ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();};
-    if(tileAt(x-1,y)!==2) foam(W,N);
-    if(tileAt(x,y-1)!==2) foam(N,E);
-    if(tileAt(x+1,y)!==2) foam(E,S);
-    if(tileAt(x,y+1)!==2) foam(S,W);
+    if(terre(x-1,y)) foam(W,N);
+    if(terre(x,y-1)) foam(N,E);
+    if(terre(x+1,y)) foam(E,S);
+    if(terre(x,y+1)) foam(S,W);
   }
   for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++){
-    const k=tileAt(x,y); if(k===2) continue;
+    const k=tileAt(x,y);
+    // Le sable mouillé se pose au niveau de l'eau (lift -3) et non au
+    // niveau de l'île : c'est une case que la mer vient de quitter, pas un
+    // morceau d'île de plus. La plage garde donc son talus au-dessus.
+    const mouille = k===EAU && decouverte(x,y);
+    if(k===2 && !mouille) continue;
     const q=iso(x,y), n=h2(x,y);
+    if(mouille){
+      const cyw=q.y+TH/2+3;
+      isoTop(ctx,q.x,cyw,TW/2,shade(p.sand,-42+(n-0.5)*8));
+      // Le voile d'eau, pris dans la palette de l'île : « mouillé » sans
+      // une couleur de plus à tenir pour chacun des six thèmes. À peine
+      // posé — au quart, le sable virait au vert d'écume et ne se lisait
+      // plus comme du sable.
+      ctx.globalAlpha=0.10; isoTop(ctx,q.x,cyw,TW/2,p.water); ctx.globalAlpha=1;
+      if(n>0.62){ ctx.globalAlpha=0.34; ctx.fillStyle=p.water;
+        ctx.beginPath(); ctx.ellipse(q.x+(n-0.5)*20,cyw+(n*17%9)-4,6,2.6,0,0,Math.PI*2); ctx.fill();
+        ctx.globalAlpha=1; }
+      ctx.fillStyle='rgba(255,255,255,.22)';
+      ctx.beginPath(); ctx.ellipse(q.x-(n-0.5)*16,cyw+2,5,2,0,0,Math.PI*2); ctx.fill();
+      continue;
+    }
     const base = k===1?p.sand : k===3?p.path : k===HAUTE?shade(p.grass,-12) : p.grass;
     const col = shade(base,(n-0.5)*7);
     const cy=q.y+TH/2-LIFT;
@@ -2221,6 +2299,62 @@ function touffe(c,g,n){
     c.quadraticCurveTo(bx+sg*3, by-ht*0.6, bx+sg*7, by-ht); c.stroke();
   }
 }
+/* Ce que la mer laisse sur le sable. Quatre dessins minuscules, du même
+   trait plat que le reste. Ils ne sont dans aucune table d'objets : on
+   ne les pose pas, on ne les achète pas, on ne les garde pas — on les
+   ramasse, et il n'en reste que des shells. Le petit éclat qui bat est
+   là pour qu'un enfant les voie de l'autre bout de l'île : une chose à
+   ramasser qu'on ne remarque pas n'existe pas. */
+const NOM_TROUVAILLE={coquillage:'un coquillage', etoile:'une \u00e9toile de mer',
+                      boisflotte:'un bout de bois flott\u00e9', bouteille:'une bouteille \u00e0 la mer'};
+const DESSIN_TROUVAILLE={
+  coquillage(c){
+    c.fillStyle='#F6E2D2'; c.beginPath();
+    c.moveTo(0,4); c.quadraticCurveTo(-11,-1,-7,-9);
+    c.quadraticCurveTo(0,-14,7,-9); c.quadraticCurveTo(11,-1,0,4); c.closePath(); c.fill();
+    c.strokeStyle='#D9A98F'; c.lineWidth=1.3; c.lineCap='round';
+    [-4.6,-2.3,0,2.3,4.6].forEach(function(u){
+      c.beginPath(); c.moveTo(0,3.2); c.lineTo(u*1.5,-8.6); c.stroke(); });
+    c.fillStyle='#D9A98F'; c.beginPath(); c.ellipse(0,4,3,1.6,0,0,Math.PI*2); c.fill();
+  },
+  etoile(c){
+    c.fillStyle='#EF8E62';
+    c.beginPath();
+    for(let i=0;i<10;i++){ const a=-Math.PI/2+i*Math.PI/5, r=(i%2?3.4:10);
+      const px=Math.cos(a)*r, py=Math.sin(a)*r*0.72-2;
+      i?c.lineTo(px,py):c.moveTo(px,py); }
+    c.closePath(); c.fill();
+    c.fillStyle='rgba(255,255,255,.45)';
+    c.beginPath(); c.ellipse(0,-2,2.6,1.8,0,0,Math.PI*2); c.fill();
+  },
+  boisflotte(c){
+    c.strokeStyle='#A98A6A'; c.lineWidth=5; c.lineCap='round';
+    c.beginPath(); c.moveTo(-11,0); c.quadraticCurveTo(0,-5,11,-1); c.stroke();
+    c.strokeStyle='#C4A585'; c.lineWidth=2;
+    c.beginPath(); c.moveTo(-9,-1); c.quadraticCurveTo(0,-5.5,9,-2); c.stroke();
+    c.strokeStyle='#A98A6A'; c.lineWidth=3;
+    c.beginPath(); c.moveTo(2,-3); c.lineTo(7,-9); c.stroke();
+  },
+  bouteille(c){
+    // `rr()` ne fait que le chemin : chaque forme se remplit derrière.
+    c.fillStyle='#6FB79A'; rr(c,-10,-7,18,9,4); c.fill();
+    c.fillStyle='#6FB79A'; rr(c,7,-5.5,6,6,2); c.fill();
+    c.fillStyle='#C99A63'; rr(c,12,-4.5,3,4,1.5); c.fill();
+    c.fillStyle='#FDFBF2'; rr(c,-6,-3.5,8,4,1); c.fill();
+    c.fillStyle='rgba(255,255,255,.55)'; rr(c,-7,-5.5,8,2.2,1.1); c.fill();
+  }
+};
+function dessinTrouvaille(c,k,t){
+  shadowDiamond(c,0,0,11);
+  (DESSIN_TROUVAILLE[k]||DESSIN_TROUVAILLE.coquillage)(c);
+  const b=0.5+0.5*Math.sin(t/430);
+  c.globalAlpha=0.22+0.42*b;
+  c.strokeStyle='#FFFFFF'; c.lineWidth=1.6; c.lineCap='round';
+  const r=4+b*2.6;
+  [[0,-1],[1,0]].forEach(function(d){
+    c.beginPath(); c.moveTo(9-d[0]*r,-12-d[1]*r); c.lineTo(9+d[0]*r,-12+d[1]*r); c.stroke(); });
+  c.globalAlpha=1;
+}
 // Le pas de la porte, posé sur l'île. Sans lui, rien ne dit qu'on peut
 // entrer : une maison où l'on entre et une maison qui est un décor se
 // ressemblent trop. Il n'est dessiné que chez soi, la porte des autres
@@ -2241,7 +2375,11 @@ function drawWorld(t){
   ctx.clearRect(0,0,CW,CH);
   ciel(t);
   camPoser();
-  mer(t); dessinerRequin(t); dessinerPoisson(t); drawTiles(t); seuilDeLaMaison();
+  mer(t);
+  // Le ciel de devant sort de la caméra le temps de se peindre : nuages et
+  // mouettes sont un décor d'écran, pas des objets de l'île.
+  camLever(); cielDevant(t); camPoser();
+  dessinerRequin(t); dessinerPoisson(t); drawTiles(t); seuilDeLaMaison();
 
   if(tool.mode!=='marche'&&hover.x>=0&&!visiting){
     // Deux cases sur deux quand on déplace la maison : viser une seule case
@@ -2258,6 +2396,13 @@ function drawWorld(t){
   }
 
   const items=[];
+  // Ce que la mer a laissé : trié avec le reste, donc caché derrière un
+  // arbre si un arbre est devant. Rien ici n'est un objet de l'île.
+  laisse.forEach(c=>{
+    const q=ctr(c.x,c.y);
+    items.push({d:c.x+c.y+1, f:()=>{
+      ctx.save(); ctx.translate(q.x,q.y+3); dessinTrouvaille(ctx,c.t,t); ctx.restore(); }});
+  });
   items.push({d:(world.house.x+1)+(world.house.y+1), f:()=>drawHouse(ctx,world.house,t)});
   world.objects.forEach(o=>{
     if(balade&&o===balade.o) return;      // il a quitté sa case : il est plus bas
@@ -2938,7 +3083,12 @@ cv.addEventListener('click',e=>{
   // On ne memorise que si le clic change vraiment quelque chose : sinon la
   // pile se remplit de pas qui n'annulent rien.
   if((tool.mode==='terrain'||tool.mode==='objet') && !dansLeRayon(q.x,q.y)){
-    say('Le large ne t\u2019appartient pas encore. La mer recule d\u2019un cran \u00e0 chaque mot qu\u2019on te laisse.'); return;
+    // Sur le sable découvert, « le large » serait faux : on a les pieds
+    // dessus. Le refus doit dire la bonne raison, là où est le doigt.
+    say(decouverte(q.x,q.y)
+      ? 'Le sable mouill\u00e9 n\u2019est \u00e0 personne : la mer le reprend \u00e0 la prochaine mar\u00e9e. On y ramasse, on n\u2019y b\u00e2tit pas.'
+      : 'Le large ne t\u2019appartient pas encore. La mer recule d\u2019un cran \u00e0 chaque mot qu\u2019on te laisse.');
+    return;
   }
   if(tool.mode==='terrain'){
     if(world.tiles[q.y*GRID+q.x]===tool.kind) return;
@@ -3033,7 +3183,7 @@ function majZoomBtn(){
   if(!p||!m) return;
   const z=zoomVoulu();
   p.disabled = z >= zPlafond()-0.005;
-  m.disabled = z <= ZMIN+0.005;
+  m.disabled = z <= zPlancher()+0.005;
 }
 document.getElementById('zoom-plus').addEventListener('click',()=>zoomer(1.22));
 document.getElementById('zoom-moins').addEventListener('click',()=>zoomer(1/1.22));
@@ -3084,6 +3234,10 @@ function surveillerLeTrajet(dt){
 let last=0;
 function frame(t){
   const dt=Math.min(34,t-last); last=t;
+  // Avant le déplacement, pas après : c'est le masque du sable découvert
+  // que lit `blocked()`, et un pas fait sur un masque périmé serait un pas
+  // dans l'eau.
+  avancerMaree();
   let dx=0,dy=0;
   if(keys.arrowup||keys.z||keys.w){ dx-=1; dy-=1; }
   if(keys.arrowdown||keys.s){ dx+=1; dy+=1; }
@@ -3110,7 +3264,8 @@ function frame(t){
   hero.immobile = hero.moving ? 0 : hero.immobile+dt;
   surveillerLeTrajet(dt);
   if(!dedans){ avancerRequin(dt); avancerPoisson(dt); }
-  if(!dedans&&!visiting){ if(herbeAcote()) tondeuseJusqua=t+1100; tondre(); avancerLaBalade(dt); }
+  if(!dedans&&!visiting){ if(herbeAcote()) tondeuseJusqua=t+1100; tondre(); avancerLaBalade(dt);
+    ramasserLaMaree(); }
   proximity();
   majCam(dt);
   if(dedans) drawInterieur(t); else drawWorld(t);
@@ -3146,6 +3301,219 @@ function tondre(){
     ? ('Tondu'+(coupe>1?(' \u00d7'+coupe):'')+'. <b>+'+n+' shell'+(n>1?'s':'')+'</b> \u00b7 '+
        (reste ? ('encore '+reste+' touffe'+(reste>1?'s':'')) : 'la pelouse est nette'))
     : 'Tondu, mais la tonte a d\u00e9j\u00e0 tout donn\u00e9 pour aujourd\u2019hui.');
+}
+
+/* ================= la marée =================
+   Deux fois par jour la mer se retire, et l'anneau de cases juste au-delà
+   du bord de l'île devient du sable mouillé praticable, où la mer laisse
+   des choses à ramasser. À marée haute c'est de l'eau, et on ne peut plus
+   y aller.
+
+   Quatre choses à ne pas défaire.
+
+   1. **La phase vient du serveur** (`public.maree()`), comme le jour. Une
+      marée lue sur l'horloge du téléphone se remonte d'un doigt, et
+      surtout elle ne serait pas la même pour deux enfants au même moment.
+      Or on va chez les autres : il faut que la mer soit basse chez le
+      voisin quand elle est basse chez soi. Entre deux appels, la phase
+      avance avec `performance.now()` et **jamais** avec `Date.now()` :
+      avancer sa montre ne doit pas faire descendre la mer.
+
+   2. **Le cycle est semi-diurne, 12 h 25 min, comme la vraie marée.** Ce
+      n'est pas de la coquetterie : une marée calée sur l'horloge civile
+      tomberait à la même heure tous les jours, et l'enfant qui joue
+      toujours après l'école ne verrait jamais que la même moitié du jeu.
+      Le décalage de cinquante minutes par jour est la règle, pas le
+      détail.
+
+   3. **Rien n'en part en base.** Pas une clé de plus dans `mondeNu()`,
+      rien à mémoriser pour `Ctrl+Z`. Le sable mouillé se déduit du rayon
+      acquis, et ce que la mer laisse se déduit du numéro de la marée :
+      tout le monde voit la même chose au même endroit, et rien ne se
+      sauvegarde. Seul `bourse.faits.maree` change.
+
+   4. **On ne bâtit pas sur le sable mouillé.** Il est hors du rayon
+      acquis, donc `dansLeRayon()` refuse déjà d'y peindre, d'y poser et
+      d'y faire pousser des herbes : il n'y a rien à ajouter pour ça, et
+      rien à y ajouter tout court. Un objet posé là serait sous l'eau
+      quatre heures plus tard.
+
+   Ce que ça ne fait pas, et il ne faut pas prétendre le contraire : le
+   serveur ne voit pas l'île. « J'ai ramassé un coquillage » n'est pas
+   plus vérifiable que « j'ai tondu une touffe ». Ce qui borne la triche,
+   c'est le plafond du jour. */
+const MAREE_CYCLE=44700;            // 12 h 25 min, en secondes
+const MAREE_SEUIL=0.25;             // en deçà, le sable est découvert : un tiers du cycle
+const MAREE_CHOSES=3;               // ce que la mer laisse, par marée
+const GAIN_MAREE=2;                 // par chose ramassée ; PLAFOND.maree borne la journée
+// L'origine du cycle, recopiée du SQL : la basse mer du 17/09/2026 à 7 h
+// à Bruxelles. Elle ne sert qu'au repli hors ligne ou sans compte, comme
+// `dansisland:bourse` sert de bourse de secours. Dès que le serveur a
+// répondu une fois, c'est lui qui tient la mer.
+const MAREE_T0=Date.UTC(2026,8,17,5,0,0)/1000;
+let mareeServeur=false;
+// La phase connue, et l'instant où on l'a apprise.
+let mareeBase=0, mareeNumero=0, mareeRecu=0;
+let mareeBasse=null, mareeNiveau=0, mareeNo=0;
+function poserMaree(phase,numero){
+  mareeBase=((phase%1)+1)%1; mareeNumero=numero; mareeRecu=performance.now();
+}
+poserMaree((((Date.now()/1000-MAREE_T0)%MAREE_CYCLE)+MAREE_CYCLE)%MAREE_CYCLE/MAREE_CYCLE,
+           Math.floor((Date.now()/1000-MAREE_T0)/MAREE_CYCLE));
+// L'état de la mer maintenant, la phase avancée depuis le dernier accord
+// avec le serveur. Deux cosinus par image : ça ne se mesure pas.
+function etatMaree(){
+  const d=mareeBase+(performance.now()-mareeRecu)/1000/MAREE_CYCLE;
+  const phase=d%1, niveau=(1-Math.cos(2*Math.PI*phase))/2;
+  return {phase, niveau, basse:niveau<MAREE_SEUIL, numero:mareeNumero+Math.floor(d)};
+}
+async function accorderMaree(){
+  if(!store.configure) return;
+  try{
+    const m=await store.maree();
+    if(!m||typeof m.phase!=='number') return;
+    mareeServeur=true; poserMaree(m.phase, m.numero|0);
+  }catch(e){ /* migration pas encore passée, ou hors ligne : cycle local */ }
+}
+// Le tour de mer, une fois par image. Il ne fait rien tant que la mer ne
+// change pas d'avis, et tout d'un coup quand elle en change.
+function avancerMaree(){
+  const e=etatMaree();
+  mareeNiveau=e.niveau; mareeNo=e.numero;
+  const change=(e.basse!==mareeBasse), premier=(mareeBasse===null);
+  mareeBasse=e.basse;
+  majMouillees();
+  // Sans condition : c'est aussi ce qui refait la laisse quand on rentre
+  // chez soi, quand on part chez un voisin ou quand l'île s'agrandit.
+  majLaisse();
+  if(!change) return;
+  // Le panneau Île dit où en est la mer : il doit se refaire quand elle
+  // tourne, sinon il annonce la marée d'il y a quatre heures.
+  buildAll();
+  if(premier){ if(e.basse) direLaMaree(); return; }
+  if(e.basse){
+    son('grandir');
+    say('<b>La mer se retire.</b> Du sable mouillé est apparu au bord de l’île, '+
+        'et elle y a laissé des choses.');
+  } else {
+    laMerMonte();
+    say('<b>La mer remonte.</b> Le sable du bord repasse sous l’eau jusqu’à la prochaine marée.');
+  }
+}
+function direLaMaree(){
+  if(dedans) return;
+  say(visiting
+    ? '<b>Marée basse.</b> Le sable du bord est praticable, ici aussi.'
+    : '<b>Marée basse.</b> Va voir le sable mouillé au bord de l’île : la mer y laisse des choses.');
+}
+
+/* L'anneau de sable mouillé. « Juste au-delà du bord » se mesure sur le
+   **rayon acquis**, pas sur la peinture : c'est le bord de l'île, celui
+   que la mer longe, et il ne dépend pas de ce qu'on a eu le temps de
+   peindre.
+
+   Et il se découvre **depuis le large, de proche en proche**, pas case
+   par case. Le premier essai prenait toute l'eau comprise entre le rayon
+   et le rayon plus un, et le bord dentelé de l'île laissait alors des
+   trous d'eau isolés au milieu du sable : l'échancrure d'une côte est un
+   peu plus près du centre que l'anneau, donc elle restait mouillée.
+   Une propagation depuis le bord de la grille règle les deux cas d'un
+   coup : une échancrure ouverte sur la mer se découvre avec le reste, et
+   **une mare creusée exprès au milieu de l'île reste une mare**, puisque
+   la mer ne l'atteint pas. */
+const mouillees=new Uint8Array(GRID*GRID);
+const VOISINES=[[1,0],[-1,0],[0,1],[0,-1]];
+// Recalculé à chaque image : c'est un parcours de 324 cases, et une tuile
+// peinte pendant qu'on regarde doit se voir tout de suite. Un cache aurait
+// demandé une empreinte des tuiles, donc un piège de plus.
+function majMouillees(){
+  mouillees.fill(0);
+  if(mareeBasse!==true) return;
+  const t=world.tiles||[], r=world.rayon||RAYON0, c=(GRID-1)/2;
+  const vu=new Uint8Array(GRID*GRID), file=[];
+  const semer=(x,y)=>{ const j=y*GRID+x; if(!vu[j]&&t[j]===EAU){ vu[j]=1; file.push(j); } };
+  for(let i=0;i<GRID;i++){ semer(i,0); semer(i,GRID-1); semer(0,i); semer(GRID-1,i); }
+  for(let k=0;k<file.length;k++){
+    const j=file[k], x=j%GRID, y=(j-x)/GRID;
+    if(Math.hypot(x-c,y-c)<=r+1) mouillees[j]=1;
+    for(let d=0;d<4;d++){
+      const nx=x+VOISINES[d][0], ny=y+VOISINES[d][1];
+      if(nx<0||ny<0||nx>=GRID||ny>=GRID) continue;
+      semer(nx,ny);
+    }
+  }
+}
+function decouverte(x,y){ return mouillees[y*GRID+x]===1; }
+// Ce sur quoi on marche et ce que l'écume longe. `tileAt()` reste la
+// donnée, `terre()` est l'état du moment : tout ce qui demandait
+// « pas de l'eau » passe par ici, et la marée le suit sans rien d'autre.
+function terre(x,y){
+  if(x<0||y<0||x>=GRID||y>=GRID) return false;
+  return tileAt(x,y)!==EAU || decouverte(x,y);
+}
+
+/* Ce que la mer laisse. La graine est le numéro de la marée : la même
+   liste pour tout le monde, immobile tant que la mer est basse, et
+   différente à la suivante. Chez les voisins, il n'y a rien à ramasser :
+   la visite paie déjà, et un archipel où l'on ferait la tournée des
+   plages pour glaner ne serait plus une visite. */
+const TROUVAILLES=['coquillage','etoile','boisflotte','bouteille'];
+let laisse=[], laisseCle=null;
+function majLaisse(){
+  const cle = (!visiting && mareeBasse===true)
+    ? (mareeNo+':'+(mine.rayon||RAYON0)+':'+(mine.id||'')) : null;
+  if(cle===laisseCle) return;
+  laisseCle=cle; laisse=[];
+  if(cle===null) return;
+  const cases=[];
+  for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++)
+    if(mouillees[y*GRID+x]) cases.push({x,y});
+  for(let i=0;i<MAREE_CHOSES && cases.length;i++){
+    const c=cases.splice(Math.floor(h2(mareeNo*7.3+i*13.1, i*3.7+1.9)*cases.length),1)[0];
+    c.t=TROUVAILLES[Math.floor(h2(i*5.1+1.3, mareeNo*2.9)*TROUVAILLES.length)];
+    laisse.push(c);
+  }
+}
+// On ramasse en marchant, comme on tond. Le plafond du jour est le seul
+// frein : ramassé au-delà, l'objet disparaît quand même et le dit.
+function ramasserLaMaree(){
+  if(!laisse.length) return;
+  const x=Math.floor(hero.x), y=Math.floor(hero.y);
+  const i=laisse.findIndex(c=>c.x===x&&c.y===y);
+  if(i<0) return;
+  const c=laisse.splice(i,1)[0];
+  const n=gagner(GAIN_MAREE,'maree'), reste=laisse.length;
+  son('piece');
+  say(n
+    ? ('Tu ramasses '+NOM_TROUVAILLE[c.t]+'. <b>+'+n+' shell'+(n>1?'s':'')+'</b> · '+
+       (reste ? ('encore '+reste+' chose'+(reste>1?'s':'')+' sur le sable') : 'tu as tout ramassé'))
+    : ('Tu ramasses '+NOM_TROUVAILLE[c.t]+', mais la marée a déjà tout donné pour aujourd’hui.'));
+  buildAll();
+}
+// La mer remonte sur quelqu'un qui marchait sur le sable : on le repose à
+// terre au lieu de le laisser dans l'eau. Pas de perte, pas de gronderie,
+// juste un pas en arrière — c'est la même règle que le chien qui s'assied.
+function laMerMonte(){
+  if(dedans) return;
+  if(!blocked(hero.x,hero.y)) return;
+  target=null;
+  const p=terreFermeProche(hero.x,hero.y);
+  if(p){ hero.x=p.x; hero.y=p.y; }
+}
+// La terre ferme la plus proche. Pas `caseMarchable()`, qui borne au rayon
+// de **son** île : ici on peut être chez un voisin. Et on cherche sur la
+// donnée (`tileAt`) et non sur `terre()`, puisque c'est justement le sable
+// mouillé qui vient de repasser sous l'eau.
+function terreFermeProche(fx,fy){
+  const x0=Math.round(fx-0.5), y0=Math.round(fy-0.5);
+  for(let r=1;r<=8;r++)
+    for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+      if(Math.max(Math.abs(dx),Math.abs(dy))!==r) continue;
+      const x=x0+dx, y=y0+dy;
+      if(tileAt(x,y)===EAU||blocked(x+0.5,y+0.5)) continue;
+      return {x:x+0.5,y:y+0.5};
+    }
+  return null;
 }
 
 /* ---- sortir le chien ----
@@ -3758,6 +4126,15 @@ function buildIle(){
   p.appendChild(hint(reste
     ? 'Ton \u00eele s\u2019agrandit d\u2019un cran \u00e0 chaque mot qu\u2019on te laisse. Encore <b>'+reste+' mot'+(reste>1?'s':'')+'</b> avant qu\u2019elle atteigne sa taille maximale.'
     : 'Ton \u00eele a atteint sa taille maximale. Il ne reste plus qu\u2019\u00e0 la remplir.'));
+  // La marée n'a pas de plaque dans le bandeau : à quatre plaques et
+  // 360 px, le bouton Son passe à la ligne et se pose sur les boutons de
+  // zoom. Elle se dit donc ici, et dans le murmure quand elle tourne.
+  p.appendChild(hint(mareeBasse
+    ? '<b>La mer est basse.</b> L\u2019anneau de sable mouill\u00e9 au bord de l\u2019\u00eele se marche, '+
+      'et la mer y laisse des choses \u00e0 ramasser. On n\u2019y b\u00e2tit pas : elle le reprend \u00e0 la prochaine mar\u00e9e.'
+    : '<b>La mer est haute.</b> Deux fois par jour elle se retire et d\u00e9couvre un anneau de sable '+
+      'mouill\u00e9 au bord de l\u2019\u00eele, o\u00f9 elle laisse des choses \u00e0 ramasser. '+
+      'Comme la vraie, elle passe environ cinquante minutes plus tard chaque jour.'));
   p.appendChild(rule());
 
   // ---- livre d'or ----
@@ -4015,6 +4392,9 @@ function buildBoutique(){
       : 'La pelouse est nette. Les herbes repousseront demain.'],
     ['Sortir le chien', 'promenade',
       'Va voir ton chien, sors-le, et reste près de lui le temps d’un tour de l’île. Il y en a un dans ton atelier, au rayon <b>Bestioles</b>.'],
+    ['Ramasser ce que la mer laisse', 'maree',
+      'Deux fois par jour la mer se retire et découvre un anneau de sable mouillé au bord de l’île. '+
+      'Va y marcher : elle y laisse des choses, <b>'+GAIN_MAREE+' shells</b> chacune.'],
     ['Laisser un mot chez quelqu’un', 'mot_pose',
       '<b>'+GAIN_MOT_POSE+' shells</b> par personne, une fois par jour. Va dans l’onglet <b>Voisins</b>.'],
     ['Recevoir un mot chez toi', 'mot_recu',
@@ -4350,8 +4730,13 @@ async function demarrer(){
   replanter(mine);
   routerDepuisURL();
   reveiller();
-  // Une session laissée ouverte la nuit doit voir le jour passer.
+  accorderMaree();
+  // Une session laissée ouverte la nuit doit voir le jour passer, et une
+  // session laissée ouverte l'après-midi doit voir la mer descendre. La
+  // phase avance toute seule entre deux accords : la minute ne sert qu'à
+  // rattraper la dérive et à reprendre la main après un onglet endormi.
   setInterval(reveiller, 60000);
+  setInterval(accorderMaree, 60000);
 }
 
 async function chargerMonCompte(){

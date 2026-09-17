@@ -14,6 +14,8 @@ Chacun fabrique son île, la publie à son adresse, et va marcher sur celle des 
     src/store.js        seule couche qui parle à Supabase
     supabase/schema.sql tables, RLS, vue archipel — idempotent
     supabase/2026-09-16_grille18.sql  migration à jouer une seule fois
+    supabase/2026-09-16_bourse_serveur.sql  la bourse quitte le jsonb — rejouable
+    supabase/2026-09-17_maree.sql     la marée — rejouable
     _redirects          Cloudflare Pages : catch-all, toute adresse sert index.html
     build.sh            copie dans dist/ les seuls fichiers à publier
 
@@ -42,6 +44,15 @@ vue `archipel`, et les pages d'île (`/simon`) en mode visiteur.
 
 Pas encore éprouvé :
 
+- **La marée côté serveur.** `supabase/2026-09-17_maree.sql` n'a pas été
+  joué : il n'y avait pas de Postgres sous la main pour le relire autrement
+  qu'à l'œil, comme pour la bourse. Tant qu'il n'est pas passé, le client
+  calcule le même cycle en local et la marée marche — mais les shells
+  ramassés sur le sable ne remontent pas, et la lecture suivante de la
+  bourse les efface. À jouer dans
+  [l'éditeur SQL](https://supabase.com/dashboard/project/cgputbitzfgokpwbbind/sql/new),
+  d'un bloc, en vérifiant que l'en-tête dit bien « dansisland ». Il se
+  rejoue sans casse.
 - **La bourse côté serveur.** `supabase/2026-09-16_bourse_serveur.sql` n'a
   pas été joué au moment où il a été écrit : il n'y avait pas de Postgres
   sous la main pour le relire autrement qu'à l'œil. Tant qu'il n'est pas
@@ -205,17 +216,22 @@ case de 26 px au doigt. La caméra suit maintenant le bonhomme, et elle
 grossit jusqu'à ce qu'une case fasse 44 pixels réels.
 
 **Le zoom se déduit de la taille du cadre à l'écran, pas de celle du
-canvas.** Sur un écran large, il vaut 1 et **rien n'a changé** : même
-cadrage, même caméra immobile, l'île entière dans le cadre. Sur un
-téléphone en portrait il monte à 1,7, et le cadre montre une dizaine de
-cases autour du bonhomme au lieu de l'île entière en timbre-poste.
+canvas.** Sur un téléphone en portrait il monte à 1,7, et le cadre montre
+une dizaine de cases autour du bonhomme au lieu de l'île entière en
+timbre-poste.
+
+Le plancher a valu 1 jusqu'à la marée. Il vaut **0,78** depuis : le cadre
+montre 985x641 de monde au lieu de 768x500, parce que l'île et son anneau
+de marée n'y tenaient plus. Sur un écran large une case passe donc de 56 à
+44 px réels, soit exactement le minimum déjà retenu comme confortable au
+doigt ; sur téléphone rien ne change, le zoom automatique y est déjà bien
+au-dessus. **Dedans, le plancher reste 1** : la pièce n'a pas grandi.
 
 Trois gestes pour le régler à la main : les deux boutons ronds du bord
 droit du cadre, la molette, et le pincement à deux doigts. Les boutons
 sont là parce qu'ils sont les seuls à marcher partout — un zoom qui ne se
-découvre qu'en pinçant n'existe pas pour l'enfant qui ne pince pas.
-**Dézoomer à fond rend exactement le cadrage d'avant** : le zoom n'a rien
-retiré à personne, et le bouton se grise quand on y est.
+découvre qu'en pinçant n'existe pas pour l'enfant qui ne pince pas. Le
+bouton se grise quand on est au bout.
 
 Dedans, la caméra ne suit personne : la pièce tient en huit cases sur six,
 elle est centrée, et le zoom est plafonné pour que les murs restent dans
@@ -607,6 +623,64 @@ miroir local, jamais l'inverse.
 Conséquence assumée : `tondre()` ne passe pas par `memoriser()`, donc
 `Ctrl+Z` peut faire repousser une touffe déjà tondue. Ce n'est pas un oubli,
 c'est le plafond du jour qui borne la corvée, jamais la tuile.
+
+## La marée
+
+Deux fois par jour la mer se retire, et l'anneau de cases juste au-delà du
+bord de l'île devient du **sable mouillé praticable**, où elle laisse trois
+choses à ramasser : un coquillage, une étoile de mer, un bout de bois
+flotté, une bouteille. Deux shells chacune, six par jour au plus. À marée
+haute c'est de l'eau, et on ne peut plus y aller.
+
+Le cycle est **semi-diurne, 12 h 25 min, comme la vraie marée** : deux
+basses mers par jour, d'environ 3 h 45 chacune, et cinquante minutes de
+décalage d'un jour sur l'autre. Ce décalage n'est pas un détail
+d'exactitude, c'est la règle de jeu : une marée calée sur l'horloge civile
+tomberait à la même heure tous les jours, et l'enfant qui se connecte
+toujours après l'école ne verrait jamais que la même moitié du jeu.
+
+**La phase vient du serveur** (`maree()`, dans
+`supabase/2026-09-17_maree.sql`), pour la même raison que le jour : une
+marée lue sur l'horloge du téléphone se remonte d'un doigt, et surtout elle
+ne serait pas la même pour deux enfants au même moment. Or on va chez les
+autres — il faut que la mer soit basse chez le voisin quand elle est basse
+chez soi. Entre deux appels, le client avance la phase tout seul.
+
+**Rien n'en part en base.** Pas une clé de plus dans `mondeNu()`, rien à
+mémoriser pour `Ctrl+Z`. Le sable se déduit du rayon acquis, ce que la mer
+laisse se déduit du numéro de la marée : tout le monde voit la même chose
+au même endroit, et rien ne se sauvegarde.
+
+On ne bâtit pas sur le sable mouillé : il est hors du rayon acquis, donc
+tout ce qui posait et peignait le refusait déjà. Et si la mer remonte
+pendant qu'on y marche, le bonhomme est **reposé à terre**, pas noyé : pas
+de perte, pas de gronderie, c'est la même règle que le chien qui s'assied.
+
+Le sable se découvre **depuis le large, de proche en proche**. Le premier
+essai prenait toute l'eau comprise entre le rayon et le rayon plus un, et
+le bord dentelé de l'île laissait alors des trous d'eau isolés au milieu du
+sable. La propagation règle ça, et elle donne une règle de jeu en cadeau :
+**une mare creusée au milieu de l'île reste une mare**, puisque la mer ne
+l'atteint pas.
+
+### La place qu'il a fallu lui faire
+
+La mer faisait 352x174 et l'île 357x178 à son rayon maximal : elle en
+sortait. Il ne restait que dix pixels d'eau au point le plus serré sur une
+île neuve. Il n'y avait donc de place ni pour la marée ni, à vrai dire,
+pour une île adulte.
+
+La mer fait maintenant **438x240**, et l'origine du dessin a remonté pour
+que l'île retombe au milieu du cadre. Mais une tache de 944 px de large
+n'entre pas dans un cadre de 768 : c'est la contrainte **horizontale** qui
+bloquait, et aucun réglage vertical n'y pouvait rien. Agrandir le canvas
+aurait cassé le rapport 1,536, qui est exactement
+`(100vw - 236px) / 100vh` sur un téléphone en paysage — c'est lui qui fait
+que le cadre y remplit pile la hauteur.
+
+C'est donc **le zoom de base qui a reculé**, de 1 à 0,78. Le cadre montre
+985x641 de monde, la mer y tient avec du papier tout autour, et pas une
+ligne de CSS n'a bougé.
 
 ## Les souvenirs
 
