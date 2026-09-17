@@ -834,6 +834,43 @@ Les quatre autres éléments à attribut `hidden` du cadre (`rose-btn`,
 indemnes : vérifié sur les cinq. Toute nouvelle règle qui donne un `display`
 à un élément qu'on cache par `hidden` doit prévoir son `[hidden]`.
 
+## Le compagnon, 17/09/2026 au soir
+
+Une bestiole qui suit le bonhomme partout, y compris chez les voisins et
+dans la maison. Elle ne rapporte rien et ne se perd pas : c'est la ligne
+déjà écrite pour les mouettes et le requin.
+
+Six choses à ne pas défaire.
+
+1. **Aucune clé de plus dans `mondeNu()`.** Le choix vit dans
+   `me.compagnon`, et `me` y est déjà : l'avatar voyage avec l'île, le
+   compagnon voyage avec l'avatar. Sa position ne se sauvegarde pas du
+   tout, comme celle du chien en balade.
+2. **La Boutique ouvre le rayon, elle ne vend pas la bestiole.** On
+   choisit parmi celles qu'on a déjà (`compagnonChoisi()` vérifie
+   `achete('compagnon')` **et** `achete(k)`). Sans ça, un renard coûterait
+   20 shells par cette porte et 32 par l'autre, et la boutique cesserait
+   de vouloir dire quelque chose. Effet voulu : un chat acheté sert deux
+   fois. La double vérification protège aussi d'une île importée par un
+   code de sauvegarde qui porterait un renard non payé.
+3. **Il ne sort pas pendant la balade du chien.** Un animal à la fois,
+   même règle que le panier qui se range quand la tondeuse sort. Et si le
+   compagnon *est* le chien, ce serait le même deux fois à l'écran.
+4. **Il ne consulte pas `blocked()`.** Il reste à moins d'une case du
+   bonhomme, donc sur du sol praticable de toute façon, et un compagnon
+   coincé derrière la maison est bien pire qu'un compagnon qui frôle un
+   buisson. Il n'a pas de but à atteindre : rien à rater, donc rien à
+   gronder.
+5. **L'hôte a le sien**, assis à côté de lui quand on visite. On lit
+   `world.me.compagnon` sans pouvoir vérifier ses achats : la RLS ne montre
+   pas la bourse du voisin, et ce n'est pas grave, c'est du dessin. C'est
+   la même ligne que « l'hôte vit pareil » écrite pour la respiration.
+6. **Il est semé de côté, jamais sur le bonhomme.** À la même case, la
+   profondeur est la même, il s'empile avant lui et le sprite le recouvre
+   entièrement : tant qu'on n'a pas encore marché, on croirait qu'il
+   n'existe pas. « Au nord » ne suffit pas non plus, ça se projette droit
+   au-dessus, derrière la tête.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

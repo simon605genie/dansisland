@@ -1051,11 +1051,12 @@ const BOUTIQUE=[
   {ou:'toi',   k:'bottes',      n:'Bottes',            prix:25, c:'#B44C6C', d:'Tu marches un tiers plus vite, dehors comme dedans.'},
   {ou:'toi',   k:'moteur',      n:'Tondeuse à moteur', prix:45, c:'#2E7D5B', d:'Elle tond les quatre cases voisines en passant.'},
   {ou:'toi',   k:'appareil',    n:'Appareil photo',    prix:28, c:'#3F4A52', d:'Un viseur, un déclencheur, et l’album qui va avec.'},
+  {ou:'toi',   k:'compagnon',   n:'Compagnon',         prix:20, c:'#E4A95C', d:'Une bestiole que tu as déjà te suit partout. Elle se choisit dans l’onglet Toi.'}
 ];
 // Le rayon « Pour toi » ne vend pas des objets à poser mais ce que le
 // bonhomme sait faire. Rien n'entre dans `objects` ni dans les meubles :
 // `achats` suffit, et le moteur lit la liste au moment d'agir.
-const EQUIPEMENT={bottes:1, moteur:1, appareil:1};
+const EQUIPEMENT={bottes:1, moteur:1, appareil:1, compagnon:1};
 const VERROU={}; BOUTIQUE.forEach(a=>{ VERROU[a.k]=a.prix; });
 // La date du joueur, pas celle d'un serveur : voir l'avertissement plus haut.
 function aujourdhui(){ const d=new Date();
@@ -2565,6 +2566,19 @@ function drawWorld(t){
   if(visiting){
     const hx=world.house.x+2.1, hy=world.house.y+1.4, q=iso(hx,hy);
     items.push({d:hx+hy, f:()=>drawChar(ctx,q.x,q.y-LIFT,world.me,0.95,'bas',t,vieDuBonhomme(t,t))});
+    // Le compagnon de l'hôte, assis à côté de lui. On lit `world.me` sans
+    // pouvoir vérifier ses achats : la RLS ne montre pas la bourse du
+    // voisin, et ce n'est pas grave : c'est du dessin, il n'y a rien à
+    // gagner à mentir là-dessus. Il ne marche pas : c'est chez lui, il est
+    // posé, comme l'hôte lui-même.
+    const kc=world.me&&world.me.compagnon;
+    if(kc&&COMPAGNONS.some(c=>c[0]===kc)){
+      const cx=hx-0.8, cy=hy+0.05, qc=iso(cx,cy);
+      items.push({d:cx+cy, f:()=>{
+        ctx.save(); ctx.translate(qc.x,qc.y-LIFT); ctx.scale(0.95,0.95);
+        shadowDiamond(ctx,0,0,11);
+        dessinDe(ctx,kc,COULEUR_COMPAGNON[kc]||'#C89A63'); ctx.restore(); }});
+    }
   }
   // Le chien en balade : même tri que le reste, et un petit ressaut tant
   // qu'il marche. Assis, il ne bouge plus — c'est ce qui dit qu'il attend.
@@ -2577,6 +2591,7 @@ function drawWorld(t){
       dessinDe(ctx,'chien',balade.o.c||'#C89A63'); ctx.restore();
     }});
   }
+  poserCompagnon(items,t,false);
   const hp=iso(hero.x,hero.y);
   items.push({d:hero.x+hero.y, f:()=>{
     const m=tondeuseVisible(t), pa=!m&&!dedans&&panierEnMain();
@@ -3278,6 +3293,7 @@ function drawInterieur(t){
     const h   = por ? SURFACE[por.t] : 0;
     items.push({d: por ? prof(por)+0.01 : prof(m), f:()=>dessinerMeuble(m,h)});
   });
+  poserCompagnon(items,t,true);
   const hp=iso(hero.x,hero.y);
   items.push({d:hero.x+hero.y, f:()=>drawChar(ctx,hp.x,hp.y,mine.me,1.25,hero.face,hero.moving?t:0,vieDuBonhomme(t,hero.immobile))});
   items.sort((a,b)=>a.d-b.d).forEach(i=>i.f());
@@ -3521,6 +3537,7 @@ function frame(t){
   } else hero.moving=false;
   // Le temps passé sans bouger : c'est lui qui déclenche le saut de repos.
   hero.immobile = hero.moving ? 0 : hero.immobile+dt;
+  avancerCompagnon(dt);
   surveillerLeTrajet(dt);
   if(!dedans){ avancerRequin(dt); avancerPoisson(dt); }
   if(!dedans&&!visiting){ if(herbeAcote()) tondeuseJusqua=t+1100; tondre(); avancerLaBalade(dt);
@@ -3936,6 +3953,93 @@ async function porterLaCommande(){
     say('Le panier n’a pas pu être déposé : '+esc(e.message||e));
   }finally{ livraisonEnCours=false; buildAll(); }
 }
+
+/* ================= le compagnon =================
+   Une bestiole qui suit le bonhomme partout, y compris chez les voisins
+   et dans la maison. Elle ne rapporte rien, ne se perd pas, ne bloque
+   rien : c'est la ligne déjà écrite pour les mouettes et le requin, « ce
+   jeu n'a pas besoin qu'on y perde quelque chose, il a besoin qu'il s'y
+   passe des choses ».
+
+   Cinq choses à ne pas défaire.
+
+   1. **Aucune clé de plus dans `mondeNu()`.** Le choix vit dans
+      `me.compagnon`, et `me` y est déjà : l'avatar voyage avec l'île, le
+      compagnon voyage avec l'avatar. Sa position, elle, ne se sauvegarde
+      pas du tout, comme celle du chien en balade.
+   2. **La Boutique ouvre le rayon, elle ne vend pas la bestiole.** Le
+      compagnon se choisit parmi celles qu'on possède déjà. Sans ça on
+      obtiendrait un renard à 20 shells par cette porte alors qu'il en
+      vaut 32 par l'autre, et la boutique cesserait de vouloir dire
+      quelque chose. Effet voulu : un chat acheté sert deux fois.
+   3. **Il ne sort pas pendant la balade du chien.** Une bestiole qui
+      suit et une bestiole qu'on promène, c'est deux animaux à l'écran
+      pour un seul geste, et si le compagnon *est* le chien, c'est le même
+      deux fois. Même règle que le panier qui se range quand la tondeuse
+      sort : un animal à la fois.
+   4. **Il ne consulte pas `blocked()`.** Il reste à moins d'une case du
+      bonhomme, donc il est sur le sol praticable de toute façon, et un
+      compagnon coincé derrière la maison est bien pire qu'un compagnon
+      qui frôle un buisson. Il n'a pas non plus de but à atteindre : rien
+      à rater, donc rien à gronder.
+   5. **Il rattrape, il ne se téléporte pas.** Au-delà de deux cases et
+      demie il accélère ; c'est ce qui le ramène après un clic à l'autre
+      bout de l'île sans qu'il apparaisse d'un coup aux pieds du joueur.
+*/
+const COMPAGNONS=[['chien','Chien'],['crabe','Crabe'],['mouette','Mouette'],
+                  ['chat','Chat'],['herisson','Hérisson'],['renard','Renard']];
+// Le choix n'est valable que si la bestiole est connue **et** acquise :
+// une île importée par un code de sauvegarde pourrait porter un renard
+// qu'on n'a pas payé.
+function compagnonChoisi(){
+  const k=mine.me&&mine.me.compagnon;
+  if(!k||!COMPAGNONS.some(c=>c[0]===k)) return '';
+  return (achete('compagnon')&&achete(k)) ? k : '';
+}
+let compa=null;
+function majCompagnon(){ compa=null; }
+function avancerCompagnon(dt){
+  const k=compagnonChoisi();
+  if(!k||balade){ compa=null; return; }
+  // Seed **en retrait**, jamais sur le bonhomme : à la même case, la
+  // profondeur est la même, le compagnon est empilé avant lui et le
+  // sprite du bonhomme le recouvre entièrement. Tant qu'on n'a pas encore
+  // marché, on croirait que le compagnon n'existe pas.
+  // De côté, pas au nord : en isométrie, « au nord » se projette droit
+  // au-dessus, donc derrière la tête du bonhomme, et on ne voit rien.
+  if(!compa) compa={x:hero.x-0.75,y:hero.y+0.05,face:'bas',pas:false};
+  const dx=hero.x-compa.x, dy=hero.y-compa.y, d=Math.hypot(dx,dy);
+  if(d>0.85){
+    const v=(dedans?0.0034:0.0046)*dt*(d>2.5?2.4:1);
+    const pas=Math.min(d-0.78, v);
+    compa.x+=dx/d*pas; compa.y+=dy/d*pas;
+    compa.face = Math.abs(dx+dy)>Math.abs(dx-dy)
+      ? (dx+dy>0?'bas':'haut') : (dx-dy>0?'droite':'gauche');
+    compa.pas=true;
+  } else compa.pas=false;
+}
+// Le dessin, à sa profondeur, exactement comme le chien en balade. Le
+// petit saut ne s'accumule pas : il se déduit de `t`, donc une image
+// sautée ne décale rien.
+function poserCompagnon(items,t,dansLaMaison){
+  const k=compagnonChoisi();
+  if(!k||!compa) return;
+  const q=iso(compa.x,compa.y), saut=compa.pas?Math.abs(Math.sin(t/105))*2.4:0;
+  const e=dansLaMaison?1.1:1;
+  items.push({d:compa.x+compa.y, f:()=>{
+    ctx.save(); ctx.translate(q.x, q.y-(dansLaMaison?0:LIFT)-saut);
+    ctx.scale(e,e);
+    shadowDiamond(ctx,0,saut,11);
+    if(compa.face==='haut'||compa.face==='gauche') ctx.scale(-1,1);
+    dessinDe(ctx,k,COULEUR_COMPAGNON[k]||'#C89A63');
+    ctx.restore();
+  }});
+}
+// La teinte par défaut de chaque bestiole, la même que dans l'atelier :
+// deux listes qui divergent, et le chat du compagnon n'a pas la couleur
+// du chat qu'on pose.
+const COULEUR_COMPAGNON={chien:'#C89A63', crabe:'#F0736E', mouette:'#FDFBF2',
+                         chat:'#E4A95C', herisson:'#8B6F4E', renard:'#E08A4B'};
 
 /* ---- sortir le chien ----
    Le chien posé sur l'île est un objet comme les autres, jusqu'à ce qu'on
@@ -4472,6 +4576,28 @@ function buildToi(){
     ? 'Le sac te suit d’un appareil à l’autre et chez les voisins : il est à <b>toi</b>, pas à ton île. Il se remplit sur le sable mouillé, à marée basse, tant que la marée paie encore aujourd’hui.'
     : 'Ton sac est vide. À marée basse, va marcher sur le sable mouillé au bord de ton île : ce que la mer y laisse y tombe. C’est avec ça qu’on remplit la <b>commande du jour</b>, dans l’onglet Voisins.'));
 
+  // Le compagnon. Il ne s'achète pas à l'unité : la Boutique ouvre le
+  // rayon, et on choisit ensuite **parmi les bestioles qu'on a déjà**.
+  // C'est ce qui empêche d'obtenir un renard gratuitement par cette porte,
+  // et ce qui donne un second usage au chat qu'on a payé.
+  p.appendChild(rule());
+  if(achete('compagnon')){
+    const dispo=COMPAGNONS.filter(c=>achete(c[0]));
+    p.appendChild(chipsLibre('Ton compagnon',
+      [['','Aucun']].concat(dispo.map(c=>[c[0],c[1]])),
+      compagnonChoisi(), k=>{ mine.me.compagnon=k; saveMine(); majCompagnon(); buildAll();
+        say(k ? ('Ton <b>'+esc(NOM_OBJ[k]||k)+'</b> te suit maintenant partout, même chez les voisins.')
+              : 'Tu marches seul.'); }));
+    const manque=COMPAGNONS.filter(c=>!achete(c[0]));
+    p.appendChild(hint(manque.length
+      ? ('Une bestiole que tu as déjà. Il t’en manque '+manque.length+' : '+
+         manque.map(c=>'<b>'+esc(c[1])+'</b>').join(', ')+'. Elles s’achètent à la Boutique, et elles deviennent alors des compagnons possibles.')
+      : 'Tu as toutes les bestioles. Change de compagnon quand tu veux, ça ne coûte rien.'));
+  }else{
+    p.appendChild(field('Ton compagnon'));
+    p.appendChild(hint('Tu marches seul. Le <b>Compagnon</b> est à la Boutique, au rayon <b>Pour toi</b> : il ne donne pas de bestiole, il fait suivre partout une de celles que tu as déjà.'));
+  }
+
   // L'album. Il vit dans ce navigateur et pas en base, et il le dit :
   // une photo, ce sont des pixels, et des pixels n'ont rien à faire dans
   // un jsonb que chaque sauvegarde réécrit.
@@ -4764,6 +4890,23 @@ const DRAWT={
       c.restore(); });
   },
   moteur(c){ tondeuse(c,0,true); },
+  appareil(c,C){
+    const b=C||'#3F4A52';
+    c.fillStyle='#8B6F4E'; c.lineWidth=0; rr(c,-2,-44,4,22,2); c.fill();   // la lanière
+    c.fillStyle=shade(b,14); rr(c,-19,-30,38,24,5); c.fill();
+    c.fillStyle=shade(b,-24); rr(c,-19,-30,38,7,4); c.fill();
+    c.fillStyle='#F2CE93'; rr(c,-16,-28,9,4,1.6); c.fill();                // la fenêtre
+    c.fillStyle='#8AA3B2'; c.beginPath(); c.arc(2,-18,9.5,0,Math.PI*2); c.fill();
+    c.fillStyle=shade(b,-34); c.beginPath(); c.arc(2,-18,7,0,Math.PI*2); c.fill();
+    c.fillStyle='#45CFE8'; c.beginPath(); c.arc(2,-18,4.2,0,Math.PI*2); c.fill();
+    c.fillStyle='rgba(255,255,255,.7)'; c.beginPath(); c.arc(-0.4,-20.2,1.7,0,Math.PI*2); c.fill();
+    c.fillStyle='#D8443F'; c.beginPath(); c.arc(-13,-32,3.2,0,Math.PI*2); c.fill();   // le déclencheur
+  },
+  compagnon(c,C){
+    // Pas une bestiole en particulier : c'est le rayon qui s'ouvre, et on
+    // choisit ensuite. Le chat est celui qui se lit le mieux en vignette.
+    c.save(); c.scale(0.92,0.92); dessinDe(c,'chat',C||'#E4A95C'); c.restore();
+  }
 };
 // Ce que la mer laisse, en vignette. Le sac et la commande du jour
 // montrent les mêmes dessins que le sable : un enfant reconnaît un

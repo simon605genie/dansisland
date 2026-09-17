@@ -81,6 +81,9 @@ Pas encore éprouvé :
   `requestAnimationFrame`, et un navigateur piloté garde l'onglet en
   arrière-plan : la boucle y est en pause. C'est exactement ce qui empêche
   déjà d'éprouver le requin et la marche. À faire une fois à la main.
+- **Le compagnon qui rattrape.** Même raison : il est dessiné au bon
+  endroit et se choisit bien parmi les bestioles acquises (vérifié), mais
+  sa course derrière le bonhomme demande que la boucle tourne.
 - **La bourse côté serveur.** `supabase/2026-09-16_bourse_serveur.sql` n'a
   pas été joué au moment où il a été écrit : il n'y avait pas de Postgres
   sous la main pour le relire autrement qu'à l'œil. Tant qu'il n'est pas
@@ -883,6 +886,32 @@ porte que ce qu'on a cadré.
 
 Elle ne rapporte rien. Pas de gain, pas de plafond : une photo qui paierait
 deviendrait une corvée, et il y en a déjà trois.
+
+## Le compagnon
+
+20 shells au rayon **Pour toi**, et ça n'achète **pas** une bestiole : ça
+ouvre le rayon. On choisit ensuite, dans l'onglet **Toi**, parmi celles
+qu'on a déjà : chien, crabe et mouette sont gratuits, chat, hérisson et
+renard s'achètent à la Boutique comme objets d'île. Sans cette règle, un
+renard coûterait 20 shells par cette porte et 32 par l'autre. Effet voulu :
+un chat acheté sert deux fois.
+
+Il suit partout : chez les voisins, et dans la maison. Il ne rapporte rien,
+ne se perd pas, ne bloque rien, et il n'a aucun but à atteindre, donc rien
+à rater. Au-delà de deux cases et demie il accélère pour rattraper, ce qui
+le ramène après un clic à l'autre bout de l'île sans qu'il apparaisse d'un
+coup aux pieds du joueur.
+
+Il ne sort pas pendant la balade du chien : un animal à la fois, la même
+règle que le panier qui se range quand la tondeuse sort.
+
+Quand tu visites quelqu'un, **son** compagnon est assis à côté de lui,
+devant sa porte. C'est la même ligne que l'hôte qui respire et qui saute :
+une île habitée doit avoir l'air habitée.
+
+Rien n'en part en base sinon le choix lui-même, qui tient dans
+`me.compagnon` : l'avatar voyage avec l'île, le compagnon voyage avec
+l'avatar. Sa position ne se sauvegarde pas du tout.
 
 ## Les souvenirs
 
