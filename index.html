@@ -251,6 +251,17 @@ a{color:var(--link)}
   box-shadow:0 2px 0 rgba(11,60,93,.18);
 }
 .plate.guest{background:var(--pink); color:#0B3C5D}
+/* Dedans, le nom de l'île devient le chemin du retour. On essaie de le
+   cliquer, donc il clique. Sans lui, la seule sortie était de retrouver
+   le paillasson dans huit cases sur six : une maison dont on ne sait plus
+   sortir n'est pas une maison, c'est un piège.
+   `#hud-name.retour` l'emporte sur le `display:none` du portrait, et c'est
+   voulu : dedans, le retour compte plus que le nom de l'île. */
+#hud-name{border:0}
+#hud-name.retour{
+  display:inline-block; pointer-events:auto; cursor:pointer;
+  background:var(--pink); color:#0B3C5D;
+}
 /* La bourse. Elle suit le joueur, pas l'île : on la voit aussi en visite. */
 .plate.sous{background:var(--sand); color:#0B3C5D}
 .plate.sous b{font-size:15px; font-weight:800; margin:0 1px 0 3px}
@@ -267,13 +278,22 @@ a{color:var(--link)}
    le mouvement, si. Neutralisé par prefers-reduced-motion, plus haut. */
 @keyframes sousmonte{0%{transform:none}32%{transform:scale(1.16)}100%{transform:none}}
 .plate.sous.gagne{animation:sousmonte .42s ease}
+/* Le murmure. Il tenait toute la bande du bas en carte opaque, et depuis
+   que la caméra ramène le bonhomme au centre, cette carte lui passait
+   devant : on marchait derrière un panneau. Il garde sa place (un refus
+   doit tomber là où est le doigt, c'est toute la leçon de la boutique)
+   mais il ne pèse plus : une ligne posée sur l'image, un fond à peine
+   là, ni cadre ni ombre, et il s'efface plus vite.
+   Le halo de texte remplace le cadre : c'est lui qui tient la lisibilité
+   quand la ligne tombe sur un toit sombre ou sur la mer. */
 .whisper{
-  position:absolute; left:13px; right:13px; bottom:13px; pointer-events:none;
-  font-size:13.5px; padding:10px 14px; border-radius:12px; color:#0B3C5D;
-  background:rgba(253,251,240,.96); border:1.5px solid rgba(11,60,93,.15);
-  box-shadow:0 2px 0 rgba(11,60,93,.14);
-  opacity:0; transform:translateY(6px); transition:.25s ease;
+  position:absolute; left:13px; right:13px; bottom:8px; pointer-events:none;
+  font-size:12.5px; line-height:1.35; padding:3px 9px; border-radius:8px; color:#0B3C5D;
+  background:rgba(253,251,240,.58);
+  text-shadow:0 1px 0 rgba(253,251,240,.95), 0 0 6px rgba(253,251,240,.85);
+  opacity:0; transform:translateY(4px); transition:.2s ease;
 }
+@media (max-width:640px){ .whisper{font-size:11.5px; padding:2px 8px; bottom:6px} }
 .whisper.on{opacity:1; transform:none}
 .whisper b{color:#B44C6C}
 
@@ -355,11 +375,25 @@ a{color:var(--link)}
   padding:12px; display:flex; flex-direction:column; gap:9px;
 }
 .comptoir .hint{color:var(--ink-2)}
-/* La pastille du cadeau du jour, sur l'onglet Boutique. */
+/* La pastille du cadeau du jour, sur l'onglet Boutique. Elle bat : une
+   pastille immobile dans une barre d'onglets se lit comme une décoration,
+   et le cadeau restait fermé des journées entières. L'anneau qui s'ouvre
+   autour est ce qui attrape l'œil de loin ; le point, lui, reste net.
+   Le `prefers-reduced-motion` global, tout en haut, la fige. */
+@keyframes cadeaubat{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.35)}
+}
+@keyframes cadeauonde{
+  0%{box-shadow:0 0 0 2px var(--sunk), 0 0 0 0 rgba(244,140,168,.65)}
+  70%{box-shadow:0 0 0 2px var(--sunk), 0 0 0 9px rgba(244,140,168,0)}
+  100%{box-shadow:0 0 0 2px var(--sunk), 0 0 0 0 rgba(244,140,168,0)}
+}
 .tabs button.cadeau{position:relative}
 .tabs button.cadeau::after{
   content:''; position:absolute; top:7px; right:7px; width:8px; height:8px;
   border-radius:50%; background:var(--pink); box-shadow:0 0 0 2px var(--sunk);
+  animation:cadeaubat 1.4s ease-in-out infinite, cadeauonde 1.4s ease-out infinite;
 }
 .sw{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
 .sw button{
@@ -407,33 +441,6 @@ textarea{
 .gb li{list-style:none; font-size:13px; padding:8px 10px; border-radius:10px; background:var(--sunk); color:var(--ink-2)}
 .gb li b{color:var(--ink); font-weight:700}
 
-/* ---------- pitch ---------- */
-.pitch{padding:66px 0 0}
-.eyebrow{font-family:"Baloo 2",sans-serif; font-size:13px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--teal); margin:0 0 10px}
-.pitch h2{font-size:clamp(26px,3.6vw,38px); font-weight:800; margin-bottom:14px}
-.lede{font-size:17.5px; color:var(--ink-2); max-width:64ch; margin:0 0 30px}
-.lede b{color:var(--ink); font-weight:700}
-.layers{display:grid; grid-template-columns:repeat(auto-fit,minmax(248px,1fr)); gap:14px; margin-bottom:36px}
-.layer{background:var(--card); border:1.5px solid var(--line); border-radius:var(--r); padding:19px; box-shadow:var(--shadow)}
-.layer .n{font-family:"DM Mono",monospace; font-size:11.5px; color:var(--pink); margin-bottom:9px}
-.layer h3{font-size:20px; font-weight:700; margin-bottom:7px}
-.layer p{margin:0; font-size:14.5px; color:var(--ink-2)}
-
-.ident{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0; border-radius:var(--r); overflow:hidden; border:1.5px solid var(--line); margin-bottom:18px}
-.ident div{padding:60px 12px 12px; font-family:"DM Mono",monospace; font-size:12px; color:#0B3C5D}
-.ident div.dk{color:#FAF6EA}
-.identnote{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; margin-bottom:36px}
-.identnote p{margin:0; font-size:14.5px; color:var(--ink-2)}
-.identnote b{color:var(--ink)}
-
-.scrollx{overflow-x:auto}
-.tbl{width:100%; border-collapse:collapse; font-size:14.5px; margin-bottom:36px; min-width:520px}
-.tbl th{text-align:left; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); font-weight:800; padding:0 12px 9px; border-bottom:1.5px solid var(--line)}
-.tbl td{padding:12px; border-bottom:1.5px solid var(--line); vertical-align:top; color:var(--ink-2)}
-.tbl td:first-child{color:var(--ink); font-weight:700; white-space:nowrap}
-.tag{font-family:"Baloo 2",sans-serif; font-size:12.5px; font-weight:700; padding:2px 10px; border-radius:999px; background:var(--sunk); color:var(--ink-2); white-space:nowrap}
-.tag.now{background:var(--pink); color:#0B3C5D}
-footer{padding:42px 0 58px; color:var(--ink-3); font-size:13.5px; border-top:1.5px solid var(--line); margin-top:44px}
 </style>
 
 <div class="wrap">
@@ -463,7 +470,7 @@ footer{padding:42px 0 58px; color:var(--ink-3); font-size:13.5px; border-top:1.5
     <div class="viewport">
       <canvas id="world" width="768" height="500"></canvas>
       <div class="hud">
-        <span class="plate" id="hud-name">L'île de Dan</span>
+        <button class="plate" id="hud-name" type="button">L'île de Dan</button>
         <span class="plate" id="hud-mode">Chez toi</span>
         <span class="plate sous" id="hud-sous">0 shell</span>
         <span class="plate balade" id="hud-balade" hidden>🐾</span>
@@ -496,60 +503,6 @@ footer{padding:42px 0 58px; color:var(--ink-3); font-size:13.5px; border-top:1.5
       <div class="panel" id="p-boutique"></div>
     </aside>
   </section>
-
-  <section class="pitch">
-    <p class="eyebrow">L'identité, appliquée</p>
-    <h2>Le châssis porte la marque, le contenu reste libre</h2>
-    <p class="lede">La contrainte était celle-là : la marque doit tenir devant des îles peintes n'importe comment par leurs propriétaires. La réponse est une <b>répartition stricte</b> — le navy, la craie et le rose n'habillent que le cadre (barres, panneaux, boutons, typo). Le contenu, lui, prend les couleurs que tu lui donnes. Les deux ne se disputent jamais le même pixel.</p>
-    <div class="ident">
-      <div class="dk" style="background:#0B3C5D">#0B3C5D<br>encre</div>
-      <div class="dk" style="background:#148A9C">#148A9C<br>liens</div>
-      <div style="background:#5EC6B3">#5EC6B3<br>terrain</div>
-      <div style="background:#F4D6A0">#F4D6A0<br>sable</div>
-      <div style="background:#F48CA8">#F48CA8<br>accent</div>
-      <div class="dk" style="background:#8B5E3C">#8B5E3C<br>bois</div>
-    </div>
-    <div class="identnote">
-      <p><b>Baloo 2</b> — la display. C'est le plus proche sur Google Fonts du lettrage de la planche : même graisse molle, mêmes terminaisons rondes. Titres, boutons, plaques du jeu.</p>
-      <p><b>Nunito</b> — la lecture. Rondeur cohérente sans crier, tient à 13 px dans les panneaux d'édition.</p>
-      <p><b>DM Mono</b> — l'utilitaire. Codes d'île, valeurs hexa, tout ce qui se copie.</p>
-    </div>
-
-    <p class="lede">La planche d'univers ajoute ce que la palette seule ne disait pas : des <b>contours organiques</b> plutôt qu'une grille visible, une mer turquoise cernée d'écume, des <b>toits marine sur murs crème</b>, une végétation dense fleurie de rose — et des points de repère, phare, boutique, ponton, pour qu'une île se reconnaisse de loin. Tout ça entre dans le moteur comme des objets à poser, jamais comme un décor figé.</p>
-
-    <p class="eyebrow">Ce que l'isométrique change</p>
-    <h2>Le volume, sans toucher au modèle</h2>
-    <p class="lede">La grille passe en projection 2:1, chaque objet est reconstruit en volume — faces éclairées à droite, à l'ombre à gauche — et le tri d'affichage passe en <span class="mono">x+y</span>. <b>Le modèle de données n'a pas bougé d'une ligne.</b> C'était tout l'intérêt de la règle « tout est donnée » : les mêmes 144 chiffres se réaffichent dans le nouveau moteur sans conversion. Les îles fabriquées hier s'ouvrent aujourd'hui en relief.</p>
-
-    <div class="layers">
-      <div class="layer"><div class="n">couche 1</div><h3>Toi</h3><p>Silhouette, teint, cheveux, regard, tenue, accessoire. Les pastilles sont des raccourcis, la pipette ouvre tout le spectre.</p></div>
-      <div class="layer"><div class="n">couche 2</div><h3>Chez toi</h3><p>Murs, toit, porte, enseigne. C'est le point de rendez-vous : quand on débarque chez toi, on arrive devant ta porte.</p></div>
-      <div class="layer"><div class="n">couche 3</div><h3>Ton île</h3><p>Terrain au pinceau, objets au tampon, heure du jour. Douze sur douze : assez pour composer, assez petit pour finir.</p></div>
-      <div class="layer"><div class="n">couche 4</div><h3>Les autres</h3><p>On visite en invité : on marche, on lit, on plante un mot dans le sol. Pas de chat, pas de fil. Une trace, et elle reste.</p></div>
-    </div>
-
-    <p class="eyebrow">Le découpage</p>
-    <h2>Ce qu'on sort d'abord</h2>
-    <div class="scrollx">
-      <table class="tbl">
-        <thead><tr><th>Brique</th><th>Quoi</th><th>Quand</th></tr></thead>
-        <tbody>
-          <tr><td>Moteur isométrique</td><td>Grille 2:1, volumes, tri de profondeur, clic→tuile.</td><td><span class="tag now">fait ici</span></td></tr>
-          <tr><td>Éditeur 3 couches</td><td>Perso, maison, île. Sauvegarde locale, code d'île partageable.</td><td><span class="tag now">fait ici</span></td></tr>
-          <tr><td>Identité</td><td>Palette, Baloo 2 / Nunito / DM Mono, logo en SVG à 6 formes.</td><td><span class="tag now">fait ici</span></td></tr>
-          <tr><td>Comptes + stockage</td><td>Supabase : une ligne JSON par île. URL publique <span class="mono">/dan</span>, <span class="mono">/simon</span>.</td><td><span class="tag">V1</span></td></tr>
-          <tr><td>Visites &amp; livre d'or</td><td>Les mots laissés sont persistés et modérables par le propriétaire.</td><td><span class="tag">V1</span></td></tr>
-          <tr><td>Annuaire</td><td>Une carte d'archipel : toutes les îles, filtrables. C'est ça qui fait revenir.</td><td><span class="tag">V1.1</span></td></tr>
-          <tr><td>Temps réel</td><td>Avatars des visiteurs visibles en direct — positions seulement.</td><td><span class="tag">V2</span></td></tr>
-          <tr><td>Objets communautaires</td><td>Chacun publie ses objets paramétriques ; les autres les posent chez eux.</td><td><span class="tag">V2</span></td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <footer class="wrap" style="padding-left:0;padding-right:0">
-    Flèches ou ZQSD pour marcher, clic pour te déplacer ou pour poser. Tout est stocké dans ton navigateur.
-  </footer>
 </div>
 
 <script type="module">
@@ -1270,7 +1223,27 @@ let voisins=DEMO;               // l'archipel public, ou les îles de démo
 let etatSauvegarde='', motsNouveaux=0, compteCharge=false;
 let world=mine, visiting=null;
 let tool={mode:'marche',kind:null,color:OBJ_COLORS[0],orient:'se'};
-const hero={x:9.5,y:11.5,face:'bas',moving:false};
+const hero={x:9.5,y:11.5,face:'bas',moving:false,immobile:0};
+
+/* ---- le bonhomme qui vit ----
+   Un personnage parfaitement arrêté se lit comme une image figée : l'enfant
+   qui pose son doigt croit que le jeu a planté. Il respire tout le temps,
+   et quand on le laisse tranquille un moment, il saute.
+   Rien n'en part en base, rien ne se joue là-dessus, `memoriser()` n'a rien
+   à en savoir : c'est du dessin, et seulement du dessin. La hauteur se
+   calcule à partir du temps immobile, elle ne s'accumule pas : une image
+   sautée ne décale rien. */
+const SAUT_REPOS=4600, SAUT_DUREE=540, SAUT_H=9, SAUT_APRES=2200;
+function vieDuBonhomme(t,immobile){
+  const souffle=Math.sin(t/900)*0.8;
+  if(immobile<SAUT_APRES) return souffle;
+  const ph=(immobile-SAUT_APRES)%SAUT_REPOS;
+  if(ph>SAUT_DUREE) return souffle;
+  // Deux rebonds dans le saut, pas un : un bond seul se lit comme un
+  // sursaut, deux se lisent comme de la joie.
+  const u=ph/SAUT_DUREE;
+  return souffle + Math.abs(Math.sin(u*Math.PI*2))*(1-u*0.45)*SAUT_H;
+}
 let target=null;
 
 // Le monde part en base ; `mots` et les clés locales restent hors du jsonb.
@@ -1322,10 +1295,14 @@ function replanter(w){
 }
 
 /* ================= personnage (sprite face caméra) ================= */
-function drawChar(c,px,py,a,s,face,t){
+// `saut` soulève le bonhomme sans emporter son ombre : elle reste au sol et
+// rétrécit, c'est elle qui dit qu'il a décollé. Le paramètre est optionnel,
+// les vignettes des panneaux appellent drawChar sans lui.
+function drawChar(c,px,py,a,s,face,t,saut){
+  const h=saut||0;
   c.save(); c.translate(px,py); c.scale(s,s);
-  shadowDiamond(c,0,0,13);
-  c.translate(0,Math.sin(t/220)*1.1);
+  shadowDiamond(c,0,0,Math.max(7,13-h*0.55));
+  c.translate(0,-h+Math.sin(t/220)*1.1);
   const W = a.body==='costaud'?13.5 : a.body==='élancé'?8.5 : 11;
   const H = a.body==='élancé'?25 : a.body==='costaud'?19 : 21;
   const hy=-H-9.5;
@@ -1901,19 +1878,46 @@ function cloud(x,y,sc,col){
   [[0,0,17],[16,3,13],[-16,3,12],[6,-8,12]].forEach(function(d){
     ctx.beginPath(); ctx.arc(x+d[0]*sc,y+d[1]*sc,d[2]*sc,0,Math.PI*2); ctx.fill(); });
 }
-function bird(x,y,sc,col){
+// `flap` va de -1 (ailes basses) à +1 (ailes hautes). Une mouette qui glisse
+// sans battre n'est pas un oiseau, c'est un accent circonflexe posé sur le ciel.
+function bird(x,y,sc,col,flap){
+  const f=flap||0, cy=(6+f*4.2)*sc, ty=f*2.4*sc;
   ctx.strokeStyle=col; ctx.lineWidth=2.4*sc; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(x-9*sc,y); ctx.quadraticCurveTo(x-4*sc,y-6*sc,x,y-sc);
-  ctx.quadraticCurveTo(x+4*sc,y-6*sc,x+9*sc,y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-9*sc,y-ty); ctx.quadraticCurveTo(x-4*sc,y-cy,x,y-sc);
+  ctx.quadraticCurveTo(x+4*sc,y-cy,x+9*sc,y-ty); ctx.stroke();
 }
+/* Les mouettes et les nuages traversent. Tout se déduit de `t` : aucun état
+   à tenir, rien à remettre à zéro quand on entre dans la maison, qu'on
+   change d'île ou qu'on annule. Ils vivent dans le ciel, donc en repère
+   écran : ils ne glissent pas quand la caméra suit le bonhomme. */
+const MOUETTES=[
+  {y:62,  sc:1,   v:0.0118, ph:0.00, bat:330},
+  {y:46,  sc:.72, v:0.0166, ph:0.42, bat:280},
+  {y:206, sc:.70, v:0.0092, ph:0.71, bat:390},
+  {y:112, sc:.55, v:0.0142, ph:0.23, bat:245},
+  {y:158, sc:.62, v:0.0072, ph:0.86, bat:355},
+];
+const NUAGES=[[206,50,1],[618,40,.82],[706,126,.6],[60,196,.55]];
+function boucle(v,large){ return ((v%large)+large)%large; }
+/* La tache de mer. Ses rayons sont ceux que reprend `boiteIle()` : si elle
+   change de taille, la caméra doit suivre (voir CLAUDE.md).
+   `wMer()` est le gonflement du contour à un angle donné. Il est sorti de la
+   boucle parce que le requin et les poissons s'en servent : nager « à 94 %
+   du bord » n'a de sens que si c'est le même bord, sinon un aileron sort sur
+   le papier une fois sur trois, là où le contour rentre. */
+const MER_RX=352, MER_RY=174;
+function merCentre(){ return {x:OX, y:OY+(GRID-1)*TH/2}; }
+function wMer(a,t){
+  return 1+0.055*Math.sin(a*3+1.1)+0.038*Math.sin(a*5+2.3)+0.018*Math.sin(t/2600+a*2);
+}
+function pointMer(a,k,t){ const c=merCentre(), w=wMer(a,t)*k;
+  return {x:c.x+Math.cos(a)*MER_RX*w, y:c.y+Math.sin(a)*MER_RY*w}; }
 function seaPath(t){
-  const cx=OX, cy=OY+(GRID-1)*TH/2, N=30;
+  const N=30;
   ctx.beginPath();
   for(let i=0;i<=N;i++){
-    const a=i/N*Math.PI*2;
-    const w=1+0.055*Math.sin(a*3+1.1)+0.038*Math.sin(a*5+2.3)+0.018*Math.sin(t/2600+a*2);
-    const px=cx+Math.cos(a)*352*w, py=cy+Math.sin(a)*174*w;
-    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    const p=pointMer(i/N*Math.PI*2, 1, t);
+    if(i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
   }
   ctx.closePath();
 }
@@ -1940,9 +1944,14 @@ function ciel(t){
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,sy,74,0,Math.PI*2); ctx.fill();
     ctx.fillStyle=sunC; ctx.beginPath(); ctx.arc(sx,sy,26,0,Math.PI*2); ctx.fill();
   }
-  cloud(206,50,1,tone.cloud); cloud(618,40,.82,tone.cloud);
-  cloud(706,126,.6,tone.cloud); cloud(60,196,.55,tone.cloud);
-  bird(470,62,1,tone.bird); bird(512,46,.72,tone.bird); bird(688,206,.7,tone.bird);
+  NUAGES.forEach((n,i)=>{
+    cloud(boucle(n[0]+t*0.0050*(0.6+i*0.17), CW+200)-100, n[1], n[2], tone.cloud);
+  });
+  MOUETTES.forEach(m=>{
+    // Un léger roulis : un vol parfaitement horizontal est un trait, pas un vol.
+    const y=m.y+Math.sin(t/1400+m.ph*9)*6;
+    bird(boucle(t*m.v+m.ph*(CW+140), CW+140)-70, y, m.sc, tone.bird, Math.sin(t/m.bat+m.ph*11));
+  });
 }
 // La mer, elle, appartient au monde : elle passe sous la caméra comme le
 // reste, sinon l'île flotterait sur une tache qui ne la suit pas.
@@ -1960,6 +1969,124 @@ function mer(t){
   }
   ctx.restore();
 }
+/* ================= ce qui vit dans l'eau =================
+   Un requin qui passe, un poisson qui saute. Ni l'un ni l'autre ne touche
+   à quoi que ce soit : pas de case, pas de bourse, rien en base, aucune
+   clé de plus dans `mondeNu()`, rien à mémoriser pour Ctrl+Z. Le requin ne
+   peut pas attraper le bonhomme et il n'y aura pas de moyen de perdre son
+   île : ce jeu n'a pas besoin qu'on y perde quelque chose, il a besoin
+   qu'il s'y passe des choses.
+
+   Les deux sont dessinés **après la mer et avant les cases** : quand leur
+   route croise l'île, ils passent dessous, et ça se lit comme « derrière ».
+   Repère monde, donc : ils glissent avec la caméra, comme la mer.
+
+   `kPlage()` dit où finit l'île, en fraction du rayon de la mer. Le calcul
+   n'est pas celui qu'on croit : l'image d'un cercle de rayon r par iso() a
+   pour demi-largeur r*TW/racine(2), mais une case déborde encore de TW/2
+   au-delà de son centre, et c'est ce demi-losange oublié qui faisait nager
+   le requin sous la plage, invisible, pendant tout son passage.
+
+   La bande d'eau est mince, et elle se referme à mesure que l'île grandit.
+   C'est pour ça que le passage suit les flancs **est et ouest** : au nord
+   et au sud, l'île touche presque l'écume, et il n'y a rien à y voir. */
+function kPlage(){
+  return Math.min(0.985, (0.70711*TW*(world.rayon||RAYON0)+TW/2)/MER_RX);
+}
+
+let requin=null, requinDans=16000;
+function avancerRequin(dt){
+  if(requin){ requin.u+=dt/requin.duree; if(requin.u>=1) requin=null; return; }
+  requinDans-=dt; if(requinDans>0) return;
+  requinDans=46000+Math.random()*46000;
+  // Est ou ouest, et dans un sens ou dans l'autre : quatre passages
+  // possibles, jamais le même deux fois de suite à l'œil.
+  const est=Math.random()<0.5, mont=Math.random()<0.5;
+  // Un quart de tour de part et d'autre du flanc, pas plus : au-delà on
+  // remonte vers le nord ou on descend vers le sud, et l'aileron finit sur
+  // le sable.
+  const centre=est?0:Math.PI, demi=0.25*Math.PI;
+  requin={u:0, duree:9500+Math.random()*3200,
+          a0: centre+(mont?-demi:demi), da: (mont?2:-2)*demi};
+}
+function dessinerRequin(t){
+  if(!requin) return;
+  const u=requin.u, a=requin.a0+requin.da*u;
+  // Il approche, puis il repart. Le creux de la courbe le pose juste au
+  // large de la plage, jamais dessus.
+  const kmin=Math.min(0.985, kPlage()+0.045), kmax=0.985;
+  const k=kmax-(kmax-kmin)*Math.sin(u*Math.PI);
+  const p=pointMer(a,k,t), q=pointMer(a+requin.da*0.004, k, t);
+  const dir=Math.atan2(q.y-p.y, q.x-p.x);
+  const al=Math.min(1, Math.min(u,1-u)/0.07);
+  ctx.save(); ctx.globalAlpha=al; ctx.translate(p.x,p.y);
+  // Le corps reste une ombre sous l'eau. On ne voit jamais le requin :
+  // c'est ce qui le rend inquiétant, et c'est ce qui le garde gentil.
+  ctx.save(); ctx.rotate(dir);
+  ctx.fillStyle='rgba(11,60,93,.20)';
+  ctx.beginPath(); ctx.ellipse(-11,2,23,7.5,0,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  // Le sillage : trois rides qui s'ouvrent derrière lui.
+  ctx.strokeStyle='#FFFFFF'; ctx.lineWidth=2; ctx.lineCap='round';
+  for(let i=1;i<=3;i++){
+    const d=i*9.5, o=Math.sin(t/150+i)*1.3;
+    ctx.globalAlpha=al*(0.5-i*0.11);
+    ctx.beginPath();
+    ctx.arc(-Math.cos(dir)*d, -Math.sin(dir)*d+o, 3.5+i*2.4, dir+2.05, dir+4.23);
+    ctx.stroke();
+  }
+  ctx.globalAlpha=al;
+  // L'aileron reste droit : la mer est le plan de l'écran, un aileron sort
+  // vers le haut quelle que soit la route. Seul le sens se retourne.
+  if(Math.cos(dir)<0) ctx.scale(-1,1);
+  ctx.fillStyle='#41586B';
+  ctx.beginPath(); ctx.moveTo(-7,0); ctx.lineTo(6,0);
+  ctx.quadraticCurveTo(0.5,-4,-2.5,-14); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.22)';
+  ctx.beginPath(); ctx.moveTo(-2.5,-14); ctx.quadraticCurveTo(0.5,-4,6,0);
+  ctx.lineTo(1.5,0); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+let poisson=null, poissonDans=7000;
+function avancerPoisson(dt){
+  if(poisson){ poisson.u+=dt/700; if(poisson.u>=1) poisson=null; return; }
+  poissonDans-=dt; if(poissonDans>0) return;
+  poissonDans=6500+Math.random()*12000;
+  // Le poisson saute où la mer est large, comme le requin : les flancs.
+  const est=Math.random()<0.5;
+  const a=(est?0:Math.PI)+(Math.random()-0.5)*0.5*Math.PI;
+  const kmin=Math.min(0.96,kPlage()+0.03), k=kmin+Math.random()*Math.max(0.015,0.985-kmin);
+  const p=pointMer(a,k,performance.now());
+  poisson={u:0, x:p.x, y:p.y, sens:Math.random()<0.5?1:-1, c:Math.random()<0.3?'#EFA95E':'#4E8CA8'};
+}
+function dessinerPoisson(t){
+  if(!poisson) return;
+  const u=poisson.u, h=Math.sin(u*Math.PI)*27, pente=Math.cos(u*Math.PI);
+  ctx.save(); ctx.translate(poisson.x, poisson.y);
+  // L'éclaboussure, au départ et à l'arrivée : un poisson qui sort de
+  // l'eau sans la troubler flotte, il ne saute pas.
+  const ecl=(u<0.16)?(1-u/0.16):(u>0.84?(u-0.84)/0.16:0);
+  if(ecl>0){
+    ctx.strokeStyle='rgba(255,255,255,.7)'; ctx.lineWidth=2; ctx.globalAlpha=ecl;
+    ctx.beginPath(); ctx.ellipse(0,0,7+(1-ecl)*9,2.6+(1-ecl)*3,0,0,Math.PI*2); ctx.stroke();
+    ctx.globalAlpha=1;
+  }
+  ctx.translate(poisson.sens*(u-0.5)*26, -h);
+  ctx.rotate(-pente*0.5*poisson.sens); ctx.scale(poisson.sens,1);
+  // Le trait sombre n'est pas un détail : sans lui, un poisson clair sur
+  // une mer claire est une tache, et le saut ne se lit pas.
+  ctx.strokeStyle='rgba(11,60,93,.55)'; ctx.lineWidth=1.2; ctx.lineJoin='round';
+  ctx.fillStyle=poisson.c;
+  ctx.beginPath(); ctx.moveTo(-7,0); ctx.lineTo(-13,-4.5); ctx.lineTo(-13,4.5); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0,0,8,4,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,.6)';
+  ctx.beginPath(); ctx.ellipse(-0.5,1.4,5.2,1.7,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#1B1714'; ctx.beginPath(); ctx.arc(4.4,-0.9,1.1,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
 function drawTiles(t){
   const p=world.pal;
   for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++){
@@ -2031,7 +2158,7 @@ function drawWorld(t){
   ctx.clearRect(0,0,CW,CH);
   ciel(t);
   camPoser();
-  mer(t); drawTiles(t); seuilDeLaMaison();
+  mer(t); dessinerRequin(t); dessinerPoisson(t); drawTiles(t); seuilDeLaMaison();
 
   if(tool.mode!=='marche'&&hover.x>=0&&!visiting){
     // Deux cases sur deux quand on déplace la maison : viser une seule case
@@ -2060,7 +2187,7 @@ function drawWorld(t){
   });
   if(visiting){
     const hx=world.house.x+2.1, hy=world.house.y+1.4, q=iso(hx,hy);
-    items.push({d:hx+hy, f:()=>drawChar(ctx,q.x,q.y-LIFT,world.me,0.95,'bas',t)});
+    items.push({d:hx+hy, f:()=>drawChar(ctx,q.x,q.y-LIFT,world.me,0.95,'bas',t,vieDuBonhomme(t,t))});
   }
   // Le chien en balade : même tri que le reste, et un petit ressaut tant
   // qu'il marche. Assis, il ne bouge plus — c'est ce qui dit qu'il attend.
@@ -2081,7 +2208,7 @@ function drawWorld(t){
       if(derriere) ctx.scale(-1,1);
       shadowDiamond(ctx,0,0,11); tondeuse(ctx,t,achete('moteur')); ctx.restore(); };
     if(m&&derriere) poser();
-    drawChar(ctx,hp.x,hp.y-LIFT,mine.me,1,hero.face,hero.moving?t:0);
+    drawChar(ctx,hp.x,hp.y-LIFT,mine.me,1,hero.face,hero.moving?t:0,vieDuBonhomme(t,hero.immobile));
     if(m&&!derriere) poser();
   }});
   items.sort((a,b)=>a.d-b.d).forEach(i=>i.f());
@@ -2481,7 +2608,7 @@ function entrer(k){
   hero.x=c.x+0.5; hero.y=c.y+0.5; hero.face='bas'; target=null;
   majVue(); degager(); tool.mode='marche'; tool.kind=null;
   son('arrivee'); majAmbiance(); hudSync(); buildAll(); ouvrirOnglet('dedans');
-  say('Tu rentres chez toi. Marche jusqu’à une porte pour changer de pièce ou ressortir.');
+  say('Tu rentres chez toi. Une porte pour changer de pièce, et <b>← Ton île</b> en haut du cadre pour ressortir.');
 }
 function sortir(){
   dedans=false; sasArme=false; majVue();
@@ -2511,7 +2638,8 @@ function franchir(){
 // Un seul geste pour entrer, passer, sortir : la touche E, et le bouton du
 // cadre pour qui n'a pas de clavier.
 function actionPorte(){
-  if(dedans){ if(!franchir()) say('Il n’y a pas de porte ici.'); return; }
+  if(dedans){ if(!franchir())
+    say('Pas de porte ici. La plaque <b>← Ton île</b>, en haut du cadre, te ramène dehors.'); return; }
   if(devantLaPorte()) entrer('salon');
 }
 
@@ -2521,7 +2649,7 @@ function clicDedans(q){
   // Le symétrique de dehors : un pinceau d'île armé dedans ne posait rien
   // et ne disait rien.
   if(tool.mode==='terrain'||tool.mode==='objet'||tool.mode==='maison'){
-    say('Ça se pose <b>dehors</b>. Ressors par le paillasson, ou prends le bouton <b>Ressortir</b>.');
+    say('Ça se pose <b>dehors</b>. Prends <b>← Ton île</b>, en haut du cadre.');
     return;
   }
   if(tool.mode==='marche'){ target={x:q.fx,y:q.fy}; return; }
@@ -2667,7 +2795,7 @@ function drawInterieur(t){
     items.push({d:(m.x+s[0]/2)+(m.y+s[1]/2), f:()=>dessinerMeuble(m)});
   });
   const hp=iso(hero.x,hero.y);
-  items.push({d:hero.x+hero.y, f:()=>drawChar(ctx,hp.x,hp.y,mine.me,1.25,hero.face,hero.moving?t:0)});
+  items.push({d:hero.x+hero.y, f:()=>drawChar(ctx,hp.x,hp.y,mine.me,1.25,hero.face,hero.moving?t:0,vieDuBonhomme(t,hero.immobile))});
   items.sort((a,b)=>a.d-b.d).forEach(i=>i.f());
 
   if(world.sky!=='jour'){
@@ -2895,7 +3023,10 @@ function frame(t){
       ? (dx+dy>0?'bas':'haut') : (dx-dy>0?'droite':'gauche');
     hero.moving=true;
   } else hero.moving=false;
+  // Le temps passé sans bouger : c'est lui qui déclenche le saut de repos.
+  hero.immobile = hero.moving ? 0 : hero.immobile+dt;
   surveillerLeTrajet(dt);
+  if(!dedans){ avancerRequin(dt); avancerPoisson(dt); }
   if(!dedans&&!visiting){ if(herbeAcote()) tondeuseJusqua=t+1100; tondre(); avancerLaBalade(dt); }
   proximity();
   majCam(dt);
@@ -3213,7 +3344,9 @@ let wTimer=null, wLock='';
 function say(msg,lock){
   whisper.innerHTML=msg; whisper.classList.add('on'); wLock=lock||'';
   clearTimeout(wTimer);
-  if(!lock) wTimer=setTimeout(()=>{whisper.classList.remove('on');},3400);
+  // Assez pour lire une ligne, pas assez pour rester devant le bonhomme.
+  // Les messages qui doivent tenir portent un verrou et ne passent pas ici.
+  if(!lock) wTimer=setTimeout(()=>{whisper.classList.remove('on');},2200);
 }
 // Le nom lisible de chaque objet, pris dans les mêmes listes que les boutons :
 // deux listes qui divergent, c'est un objet qui n'a pas le même nom selon l'endroit.
@@ -3223,6 +3356,8 @@ let souvenirProche=null;
 // toujours la même chose : ce qui est sous la main décide.
 const roseEl=document.getElementById('rose-btn');
 roseEl.onclick=()=>agir();
+// La plaque du nom, dedans : un clic et on est dehors, sans chercher la porte.
+document.getElementById('hud-name').onclick=()=>{ if(dedans) sortir(); };
 function boutonRose(l){
   if(l){ if(roseEl.textContent!==l) roseEl.textContent=l; roseEl.hidden=false; }
   else roseEl.hidden=true;
@@ -4257,14 +4392,24 @@ function routerDepuisURL(){
 }
 let sousAffiches=null;              // le dernier chiffre montré, pour voir la hausse
 function hudSync(){
-  document.getElementById('hud-name').textContent = world.name || 'Sans nom';
+  // Dedans, la plaque du nom devient la porte de sortie. Elle ne remplace
+  // pas le paillasson, elle évite de le chercher.
+  const hn=document.getElementById('hud-name');
+  hn.classList.toggle('retour', dedans);
+  hn.textContent = dedans ? '← Ton île' : (world.name || 'Sans nom');
+  hn.disabled = !dedans;
+  hn.setAttribute('aria-label', dedans ? 'Ressortir sur ton île' : 'Nom de l’île');
   // Le compteur de la balade. Dans le bandeau et pas dans le murmure : le
   // murmure s'efface au premier panneau croisé, et le tour dure.
   const hb=document.getElementById('hud-balade');
   if(balade){ hb.hidden=false; hb.textContent='🐾 '+balade.i+'/'+balade.pts.length; }
   else hb.hidden=true;
   const m=document.getElementById('hud-mode');
-  m.textContent = dedans ? ('Chez toi · '+pieceDef(piece).n)
+  // Dedans, la plaque ne dit plus que la pièce : « ← Ton île » à sa gauche
+  // dit déjà chez qui on est, et à 360 px la quatrième plaque poussait le
+  // bouton Son à la ligne, sur le ciel. On n'entre que chez soi, de toute
+  // façon : « Chez toi » n'y apprend rien.
+  m.textContent = dedans ? pieceDef(piece).n
     : (visiting ? 'Invité chez '+world.owner : (tool.mode==='marche'?'Chez toi':'Chez toi · édition'));
   m.className='plate'+(visiting?' guest':'');
   // Un gain qui se contente de changer un chiffre ne se voit pas. La

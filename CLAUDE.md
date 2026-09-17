@@ -302,6 +302,109 @@ dedans — environ six mille clics, **zéro faux**. Et sur les 221 cases que
 le rayon maximal peut rendre praticables, le bonhomme reste à au moins
 68 px des bords latéraux du cadre.
 
+## La page allégée autour du jeu, 17/09/2026
+
+Deux choses ont quitté l'écran, pour la même raison : elles parlaient
+par-dessus le jeu.
+
+**Le murmure ne couvre plus le bas du cadre.** Il était une carte opaque
+sur toute la largeur, et depuis que la caméra ramène le bonhomme au
+centre, c'est exactement là qu'on marche. Il garde sa place, et ça n'est
+pas négociable : un refus doit tomber là où est le doigt, c'est la leçon
+de la boutique et elle vaut toujours. Ce qui a changé, c'est le poids :
+plus de cadre, plus d'ombre, un fond à `.58`, un halo de texte à la
+place de la bordure pour tenir la lisibilité sur un toit sombre, et
+`2200 ms` au lieu de `3400`. Les messages verrouillés (`say(msg, lock)`)
+ne passent pas par ce minuteur et restent tant que l'état dure : c'est
+`proximity()` et `taireLattente()` qui les lèvent, pas l'horloge.
+
+**La section de présentation sous le jeu est supprimée.** La palette
+commentée, les notes de typo, les quatre couches, la feuille de route :
+c'était la planche de vente d'un prototype, elle n'a plus rien à faire
+sous une île jouable. Le CSS qui n'allait qu'avec (`.pitch`, `.eyebrow`,
+`.lede`, `.layers`, `.layer`, `.ident`, `.identnote`, `.scrollx`,
+`.tbl`, `.tag`) est parti avec. `.mono` reste : il sert aux codes d'île
+et au message de mode démo.
+
+Le pied de page, lui, reste : c'est le seul endroit qui dit comment
+marcher. Sa dernière phrase (« tout est stocké dans ton navigateur »)
+n'est plus vraie depuis les comptes, et n'a pas été touchée ici.
+
+## La sortie de la maison, 17/09/2026
+
+Dedans, la plaque du nom de l'île devient **`← Ton île`**, rose et cliquable
+(`#hud-name.retour`), et elle ressort. Avant, la seule porte était le
+paillasson : il fallait le retrouver dans huit cases sur six, et on cliquait
+le nom de l'île en espérant que ça marche. Ça marche, maintenant.
+
+Trois choses à ne pas défaire :
+
+1. **`#hud-name.retour` l'emporte volontairement sur le `display:none` du
+   portrait.** Le nom de l'île part à 640 px parce qu'il n'apprend rien ;
+   le retour, lui, est ce qui compte le plus dedans.
+2. **Dedans, `hud-mode` ne dit plus que la pièce**, sans « Chez toi ». Ce
+   n'est pas cosmétique : à quatre plaques et 360 px, le bouton Son passait
+   à la ligne et se posait sur les boutons de zoom. C'est exactement
+   l'avertissement déjà écrit plus haut, et il a été vérifié à 360 px après
+   coup. On n'entre que chez soi, donc « Chez toi » n'y apprenait rien.
+3. **Le bouton rose et la touche `E` n'ont pas changé** : ils restent les
+   portes, et l'ordre de `agir()` reste celui de `proximity()`. La sortie
+   est une plaque à part, et c'est ce qui permet de ne pas toucher à cet
+   accord-là. `E` sur une case sans porte dit maintenant où est la plaque
+   plutôt que « il n'y a pas de porte ici ».
+
+## Ce qui bouge tout seul, 17/09/2026
+
+Quatre choses, et pas une ne touche à l'état du jeu : rien en base, aucune
+clé de plus dans `mondeNu()`, rien à mémoriser pour `Ctrl+Z`, aucun gain,
+aucune perte possible. C'est du dessin. Un requin ne peut pas attraper le
+bonhomme et il n'y aura pas de moyen de perdre son île : ce jeu n'a pas
+besoin qu'on y perde quelque chose, il a besoin qu'il s'y passe des choses.
+
+**La pastille du cadeau bat** (`cadeaubat` + `cadeauonde`, sur
+`.tabs button.cadeau::after`). Une pastille immobile dans une barre
+d'onglets se lit comme une décoration, et le cadeau restait fermé des
+journées. Le `prefers-reduced-motion` global la fige.
+
+**Le bonhomme respire et saute** (`vieDuBonhomme()`). Un personnage
+parfaitement arrêté se lit comme une image figée. Le saut est **calculé à
+partir du temps immobile, jamais accumulé** : une image sautée ne décale
+rien. `drawChar()` a gagné un dernier paramètre `saut`, optionnel, et
+l'ombre reste au sol en rétrécissant : c'est elle qui dit qu'il a décollé.
+L'hôte, quand on visite son île, vit pareil.
+
+**Les mouettes et les nuages traversent le ciel** (`MOUETTES`, `NUAGES`).
+Tout se déduit de `t` : aucun état à tenir, rien à remettre à zéro en
+entrant dans la maison ou en changeant d'île. Ils vivent dans `ciel()`,
+donc en repère écran : ils ne glissent pas avec la caméra. Un nouveau décor
+de fond va là, jamais dans `mer()`.
+
+**Un requin passe, un poisson saute** (`avancerRequin()`, `avancerPoisson()`).
+Trois pièges, et ils se tiennent :
+
+1. **`kPlage()` n'est pas le calcul évident.** L'image d'un cercle de rayon
+   r par `iso()` a pour demi-largeur `r*TW/racine(2)`, mais une case déborde
+   encore de `TW/2` au-delà de son centre. Ce demi-losange oublié a fait
+   nager le requin **sous la plage, invisible, pendant tout son passage**,
+   et rien ne le signalait : ni erreur, ni trace, juste rien à l'écran.
+2. **La bande d'eau est mince, et elle se referme quand l'île grandit.**
+   D'où le passage sur les flancs **est et ouest** seulement : au nord et au
+   sud, l'île touche presque l'écume. À `RAYON_MAX`, il ne reste presque
+   plus rien : c'est voulu, pas un bug, et il ne faut pas élargir la mer
+   pour le corriger, `boiteIle()` porte les mêmes rayons.
+3. **`wMer()` est partagé avec `seaPath()`.** Nager « à 98 % du bord » n'a
+   de sens que si c'est le même bord : deux contours qui divergent, et un
+   aileron sort sur le papier une fois sur trois, là où la tache rentre.
+
+Les deux sont dessinés **après `mer()` et avant `drawTiles()`** : quand leur
+route croise l'île, ils passent dessous, et ça se lit comme « derrière ».
+
+Leur minuterie est en `dt` accumulé, pas en `t` : un onglet en arrière-plan
+met `requestAnimationFrame` en pause, donc le requin attend au lieu de
+traverser sans témoin. C'est aussi ce qui rend ces deux-là pénibles à
+éprouver dans un navigateur piloté, où le `rAF` est bridé : pour les
+regarder, il faut baisser le délai d'apparition, pas attendre.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
