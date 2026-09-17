@@ -64,6 +64,12 @@ Pas encore éprouvé :
   bonhomme ne marche pas. À essayer à la main chez un voisin qui a des
   objets.
 
+- **Le pincement à deux doigts, sur un vrai téléphone.** Les boutons de
+  zoom et la molette ont été éprouvés ; le pincement, lui, dépend de la
+  façon dont le navigateur arbitre `touch-action:pan-y`, et un émulateur
+  n'en dit rien de fiable. Si un jour il n'attrape pas le geste, les
+  boutons restent le chemin qui marche.
+
 ### Pas de renommage de slug dans l'app
 
 Une fois l'île créée, le panneau bascule sur « copier le lien » : l'adresse
@@ -148,6 +154,57 @@ Le jeu se joue au doigt sans rien ajouter : toucher l'île déplace le
 bonhomme, toucher avec un pinceau actif pose. Le message d'accueil teste
 `(pointer:coarse)` et cesse d'annoncer des touches à qui n'a pas de
 clavier.
+
+## La caméra et le zoom
+
+Le cadre fait 768x500 quoi qu'il arrive, mais en portrait le CSS le rend
+sur 360 px de large : une case y mesurait 26 px, et personne ne vise une
+case de 26 px au doigt. La caméra suit maintenant le bonhomme, et elle
+grossit jusqu'à ce qu'une case fasse 44 pixels réels.
+
+**Le zoom se déduit de la taille du cadre à l'écran, pas de celle du
+canvas.** Sur un écran large, il vaut 1 et **rien n'a changé** : même
+cadrage, même caméra immobile, l'île entière dans le cadre. Sur un
+téléphone en portrait il monte à 1,7, et le cadre montre une dizaine de
+cases autour du bonhomme au lieu de l'île entière en timbre-poste.
+
+Trois gestes pour le régler à la main : les deux boutons ronds du bord
+droit du cadre, la molette, et le pincement à deux doigts. Les boutons
+sont là parce qu'ils sont les seuls à marcher partout — un zoom qui ne se
+découvre qu'en pinçant n'existe pas pour l'enfant qui ne pince pas.
+**Dézoomer à fond rend exactement le cadrage d'avant** : le zoom n'a rien
+retiré à personne, et le bouton se grise quand on y est.
+
+Dedans, la caméra ne suit personne : la pièce tient en huit cases sur six,
+elle est centrée, et le zoom est plafonné pour que les murs restent dans
+le cadre.
+
+### Comment c'est fait, et pourquoi c'est tenable
+
+`iso()`, `unIso()` et `vue` n'ont pas bougé d'une ligne. La caméra n'est
+pas une seconde projection : c'est une transformation posée sur le
+contexte juste avant de peindre le monde, et retirée après. Tout ce qui
+dessine continue de travailler dans le repère d'avant et ignore le zoom.
+C'est ce qui a permis de ne pas relire les deux mille lignes de dessin.
+
+Ce que ça demande en échange, et qu'il ne faut pas oublier :
+
+- `pt()` défait exactement la transformation que pose la caméra. C'est le
+  seul endroit des entrées qui ait eu à changer.
+- un `fillRect(0,0,CW,CH)` ne couvre plus le cadre une fois la caméra
+  posée : `camRect()` rend le rectangle du monde qu'on voit, et c'est par
+  lui que passent les voiles de nuit.
+- le ciel se peint **hors** caméra et la mer **dedans** : `ocean()` a été
+  coupé en `ciel()` et `mer()`. Le soleil, les nuages et les oiseaux sont
+  un fond, ils ne glissent pas quand la caméra suit le bonhomme.
+- `#world` porte `touch-action:pan-y` : la page défile toujours d'un
+  doigt, mais le navigateur ne confisque plus le pincement.
+
+**La visée a été remesurée**, comme au moment de la corriger : neuf points
+répartis dans chaque losange, sur toute la grille, à zoom 1, 1,8 et 2,6,
+dehors et dedans. Environ six mille clics, **zéro faux**. Et sur les 221
+cases qu'un rayon maximal rend praticables, le bonhomme reste à au moins
+68 px des bords latéraux du cadre.
 
 ## Le son
 

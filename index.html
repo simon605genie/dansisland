@@ -197,7 +197,11 @@ a{color:var(--link)}
 }
 
 .viewport{position:relative; background:#FDFBF0; border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden}
-#world{display:block; width:100%; height:auto; touch-action:manipulation; cursor:crosshair}
+/* `pan-y` et pas `manipulation` : la page continue de défiler d'un doigt,
+   mais le navigateur ne confisque plus le pincement pour zoomer la page,
+   et les deux pointeurs nous arrivent. Sans ça, pincer l'île zoome le
+   site et le jeu ne voit jamais le geste. */
+#world{display:block; width:100%; height:auto; touch-action:pan-y; cursor:crosshair}
 #world.walking{cursor:pointer}
 /* Le pad. Il n'apparaît que sur un écran tactile : au clavier les flèches
    font déjà le travail, et un joystick qu'on ne peut pas prendre en main
@@ -223,6 +227,22 @@ a{color:var(--link)}
 }
 @media (max-width:640px){ .pad{left:10px; bottom:10px; width:86px; height:86px; background:rgba(11,60,93,.14)} .pad .knob{width:40px;height:40px} }
 @media (orientation:landscape) and (max-height:560px){ .pad{width:76px;height:76px; background:rgba(11,60,93,.14)} .pad .knob{width:36px;height:36px} }
+
+/* Le zoom. Au milieu du bord droit, et pas ailleurs : le pad tient le coin
+   bas-gauche, le murmure toute la bande du bas, les plaques celle du haut.
+   C'est le seul endroit du cadre où deux boutons ne recouvrent rien. */
+.zoom{position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  display:grid; gap:7px; z-index:3}
+.zoom button{
+  width:36px; height:36px; padding:0; border-radius:50%;
+  border:1.5px solid rgba(11,60,93,.18); background:rgba(253,251,240,.94);
+  color:#0B3C5D; font:700 19px/1 "Baloo 2",sans-serif; cursor:pointer;
+  box-shadow:0 2px 0 rgba(11,60,93,.14); display:grid; place-items:center;
+  -webkit-user-select:none; user-select:none; touch-action:manipulation;
+}
+.zoom button:disabled{opacity:.4; cursor:default}
+@media (max-width:640px){ .zoom{right:9px; gap:6px} .zoom button{width:32px; height:32px; font-size:17px} }
+@media (orientation:landscape) and (max-height:560px){ .zoom button{width:30px; height:30px; font-size:16px} }
 
 .hud{position:absolute; inset:13px 13px auto 13px; display:flex; gap:8px; align-items:center; pointer-events:none; flex-wrap:wrap}
 .plate{
@@ -452,6 +472,10 @@ footer{padding:42px 0 58px; color:var(--ink-3); font-size:13.5px; border-top:1.5
       </div>
       <div class="whisper" id="whisper"></div>
       <div class="pad" id="pad" hidden aria-hidden="true"><span class="knob" id="knob"></span></div>
+      <div class="zoom" id="zoom">
+        <button type="button" id="zoom-plus" aria-label="Voir de plus près">+</button>
+        <button type="button" id="zoom-moins" aria-label="Voir toute l’île">−</button>
+      </div>
 
     </div>
 
@@ -570,6 +594,104 @@ const vue={ox:OX, oy:OY, tw:TW, th:TH, lift:LIFT, probe:LIFT};
 function iso(x,y){ return {x: vue.ox+(x-y)*vue.tw/2, y: vue.oy+(x+y)*vue.th/2}; }
 function unIso(sx,sy){ const dx=sx-vue.ox, dy=sy-vue.oy; return {x: dy/vue.th+dx/vue.tw, y: dy/vue.th-dx/vue.tw}; }
 function ctr(x,y){ return iso(x+0.5,y+0.5); }
+
+/* ---- la caméra -----------------------------------------------------
+   iso() et unIso() ne changent pas, et c'est voulu : la caméra n'est pas
+   une seconde projection, c'est une transformation posée sur le contexte
+   juste avant de peindre le monde. Tout ce qui dessine continue de
+   travailler dans le repère d'avant, et pt() défait la transformation
+   pour le clic. C'est ce qui permet de zoomer sans relire les deux mille
+   lignes de dessin.
+
+   Le zoom se déduit de la taille réelle du cadre à l'écran, jamais de
+   celle du canvas : le canvas fait toujours 768x500, mais en portrait le
+   CSS le rend sur 360 px de large et une case n'y mesure plus que 26 px.
+   On vise CASE_MIN pixels réels par case, et on borne.
+
+   ZMIN vaut 1, et pas moins : dézoomer davantage ne montrerait rien de
+   plus que le cadrage d'hier, qui tenait déjà l'île entière. */
+const CASE_MIN=44, ZMIN=1, ZMAX=2.6;
+const cam={x:CW/2, y:CH/2, z:1, main:1};
+// Le rapport entre un pixel de canvas et un pixel d'écran. Mesuré à la
+// main plutôt qu'à chaque image : un getBoundingClientRect() par frame
+// force le navigateur à recalculer la mise en page soixante fois par
+// seconde pour une valeur qui ne change qu'à la rotation du téléphone.
+let echelleEcran=1;
+function mesurerEcran(){
+  const r=cv.getBoundingClientRect();
+  if(r.width>0) echelleEcran=r.width/CW;
+}
+// Où la caméra a le droit d'aller. Les bornes sont celles de la tache de
+// mer, celle que dessine seaPath() : au-delà c'est le papier, et un bord
+// de mer qui s'arrête net au milieu du cadre se lit comme un trou. En
+// haut on s'autorise du ciel, lui est peint sans caméra et couvre
+// toujours le cadre. L'île tient dans cette tache, donc tout est
+// atteignable : c'est le bonhomme qui s'approche du bord de l'écran quand
+// il longe la plage, pas la caméra qui le suit dans le large.
+function boiteIle(){
+  const cx=OX, cy=OY+(GRID-1)*TH/2, rx=352, ry=174;
+  // Sur les côtés on déborde un peu de la mer : le papier y a la couleur
+  // du ciel, il ne se remarque pas, et sans ce jeu le bonhomme se colle au
+  // bord du cadre quand il marche jusqu'à la pointe est de l'île. En bas
+  // on reste sur l'eau, et une marge courte suffit : un bonhomme est
+  // dessiné au-dessus de ses pieds, jamais en dessous.
+  return {x0:cx-rx-24, x1:cx+rx+24, y0:cy-ry-100, y1:cy+ry-8};
+}
+// Dedans, la pièce est petite et tient tout entière : la caméra ne suit
+// personne, elle grossit jusqu'à ce que les murs touchent les bords.
+function fitDedans(){
+  const p=pieceDef(piece);
+  const w=(p.w+p.h)*TWI/2+28, h=(p.w+p.h)*THI/2+MURH+44;
+  return Math.max(ZMIN, Math.min(CW/w, CH/h));
+}
+function zPlafond(){ return dedans ? Math.min(ZMAX, fitDedans()) : ZMAX; }
+function zoomAuto(){ return Math.max(ZMIN, CASE_MIN/(TW*(echelleEcran||1))); }
+function zoomVoulu(){ return Math.max(ZMIN, Math.min(zPlafond(), zoomAuto()*cam.main)); }
+// Le zoom demandé à la main se garde en facteur de l'automatique : la
+// même pincée donne le même effet sur un téléphone et sur un écran large,
+// et une rotation ne renvoie pas le joueur au fond de la mer.
+function poserZoom(z){
+  cam.main = Math.max(ZMIN, Math.min(zPlafond(), z)) / zoomAuto();
+  majZoomBtn();
+}
+function zoomer(f){ poserZoom(zoomVoulu()*f); }
+// À zoom 1 le cadre montre exactement ce qu'il montrait hier : une caméra
+// qui bougerait là ne découvrirait rien et donnerait le mal de mer. Le
+// suivi ne prend la main qu'au-dessus, et progressivement.
+function cibleCam(){
+  if(dedans) return {x:CW/2, y:CH/2};
+  const prise=Math.max(0, Math.min(1, (cam.z-ZMIN)/0.25));
+  if(prise<=0) return {x:CW/2, y:CH/2};
+  const h=iso(hero.x,hero.y), b=boiteIle();
+  const hw=CW/(2*cam.z), hh=CH/(2*cam.z);
+  const cx=(b.x1-b.x0<=hw*2) ? (b.x0+b.x1)/2 : Math.max(b.x0+hw, Math.min(b.x1-hw, h.x));
+  const cy=(b.y1-b.y0<=hh*2) ? (b.y0+b.y1)/2 : Math.max(b.y0+hh, Math.min(b.y1-hh, h.y-vue.lift));
+  return {x:CW/2+(cx-CW/2)*prise, y:CH/2+(cy-CH/2)*prise};
+}
+// Un rattrapage exponentiel, indépendant de la cadence d'images : la
+// caméra suit le bonhomme sans le coller, et un écran à 120 Hz ne la rend
+// pas deux fois plus nerveuse qu'un écran à 60.
+function majCam(dt){
+  const zv=zoomVoulu();
+  cam.z += (zv-cam.z)*(1-Math.exp(-dt/90));
+  if(Math.abs(zv-cam.z)<0.002) cam.z=zv;
+  const c=cibleCam(), k=1-Math.exp(-dt/140);
+  cam.x += (c.x-cam.x)*k; cam.y += (c.y-cam.y)*k;
+}
+// Un changement de lieu ne se suit pas, il se coupe : entrer, sortir,
+// arriver chez un voisin. Sans ça la caméra traverse l'île en glissant.
+function camSauter(){
+  cam.z=zoomVoulu(); const c=cibleCam(); cam.x=c.x; cam.y=c.y; majZoomBtn();
+}
+function camPoser(){
+  ctx.save(); ctx.translate(CW/2,CH/2); ctx.scale(cam.z,cam.z); ctx.translate(-cam.x,-cam.y);
+}
+function camLever(){ ctx.restore(); }
+// Le rectangle du monde qu'on voit. Un fillRect(0,0,CW,CH) sous la caméra
+// ne couvre plus le cadre : c'est par là qu'on peint la nuit.
+function camRect(){
+  return {x:cam.x-CW/(2*cam.z), y:cam.y-CH/(2*cam.z), w:CW/cam.z, h:CH/cam.z};
+}
 
 /* ================= palettes (charte DAN'S ISLAND) ================= */
 const NAVY='#0B3C5D', ROOF='#1E3A6E', TEAL='#148A9C', MINT='#5EC6B3', SAND='#F4D6A0';
@@ -1747,8 +1869,16 @@ const cv=document.getElementById('world'), ctx=cv.getContext('2d');
 function fitDPR(){
   const dpr=Math.min(2,window.devicePixelRatio||1);
   cv.width=CW*dpr; cv.height=CH*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  mesurerEcran();
 }
-fitDPR(); addEventListener('resize',fitDPR);
+// Une rotation de téléphone change la largeur réelle du cadre, donc le
+// zoom : on recadre d'un coup plutôt qu'en glissant, un cadrage qui
+// rattrape une rotation se lit comme un bug.
+function rendreLaVue(){ fitDPR(); camSauter(); }
+fitDPR(); addEventListener('resize',rendreLaVue);
+// Le cadre peut aussi changer de largeur sans que la fenêtre bouge : une
+// barre d'adresse qui se replie, un panneau qui s'ouvre.
+if(window.ResizeObserver) new ResizeObserver(()=>{ mesurerEcran(); }).observe(cv);
 
 function tileAt(x,y){ if(x<0||y<0||x>=GRID||y>=GRID) return 2; return world.tiles[y*GRID+x]; }
 function blocked(tx,ty){
@@ -1787,7 +1917,11 @@ function seaPath(t){
   }
   ctx.closePath();
 }
-function ocean(t){
+// Le ciel se peint en repère écran, avant que la caméra ne soit posée :
+// le soleil, les nuages et les oiseaux sont un fond, pas des objets de
+// l'île. Ils ne glissent donc pas quand la caméra suit le bonhomme, et le
+// papier couvre le cadre quel que soit le zoom.
+function ciel(t){
   const tone=skyTone(), night=world.sky==='nuit';
   ctx.fillStyle=tone.paper; ctx.fillRect(0,0,CW,CH);
   const sx=76, sy=66;
@@ -1809,6 +1943,11 @@ function ocean(t){
   cloud(206,50,1,tone.cloud); cloud(618,40,.82,tone.cloud);
   cloud(706,126,.6,tone.cloud); cloud(60,196,.55,tone.cloud);
   bird(470,62,1,tone.bird); bird(512,46,.72,tone.bird); bird(688,206,.7,tone.bird);
+}
+// La mer, elle, appartient au monde : elle passe sous la caméra comme le
+// reste, sinon l'île flotterait sur une tache qui ne la suit pas.
+function mer(t){
+  const tone=skyTone();
   seaPath(t);
   ctx.fillStyle=world.pal.water; ctx.fill();
   ctx.strokeStyle=tone.paper; ctx.lineWidth=7; ctx.stroke();
@@ -1890,7 +2029,9 @@ function seuilDeLaMaison(){
 }
 function drawWorld(t){
   ctx.clearRect(0,0,CW,CH);
-  ocean(t); drawTiles(t); seuilDeLaMaison();
+  ciel(t);
+  camPoser();
+  mer(t); drawTiles(t); seuilDeLaMaison();
 
   if(tool.mode!=='marche'&&hover.x>=0&&!visiting){
     // Deux cases sur deux quand on déplace la maison : viser une seule case
@@ -1948,7 +2089,7 @@ function drawWorld(t){
   if(world.sky!=='jour'){
     ctx.save(); seaPath(t); ctx.clip();
     ctx.fillStyle = world.sky==='nuit' ? 'rgba(10,28,58,.54)' : 'rgba(128,56,76,.26)';
-    ctx.fillRect(0,0,CW,CH);
+    const R=camRect(); ctx.fillRect(R.x,R.y,R.w,R.h);
     ctx.globalCompositeOperation='lighter';
     const glow=(gx,gy,r,a)=>{ const g=ctx.createRadialGradient(gx,gy,0,gx,gy,r);
       g.addColorStop(0,'rgba(255,224,160,'+a+')'); g.addColorStop(1,'rgba(255,224,160,0)');
@@ -1959,6 +2100,7 @@ function drawWorld(t){
     glow(hq.x,hq.y-LIFT-22,86,world.sky==='nuit'?0.34:0.2);
     ctx.restore();
   }
+  camLever();
 }
 
 /* ================= l'intérieur : le rendu =================
@@ -1981,6 +2123,7 @@ function majVue(){
     vue.ox=CW/2 + (p.h-p.w)*TWI/4;
     vue.oy=(CH + MURH - (p.w+p.h)*THI/2)/2;
   } else { vue.ox=OX; vue.oy=OY; vue.tw=TW; vue.th=TH; vue.lift=LIFT; vue.probe=LIFT; }
+  camSauter();   // dedans et dehors n'ont ni la même échelle ni le même cadre
 }
 
 /* ---- volumes sur la grille de la pièce ---- */
@@ -2503,6 +2646,7 @@ function drawInterieur(t){
   ctx.clearRect(0,0,CW,CH);
   const tone=skyTone();
   ctx.fillStyle=tone.paper; ctx.fillRect(0,0,CW,CH);
+  camPoser();
 
   const murC=couleurMur(d.mur);
   paroi(def,murC,'nw'); paroi(def,murC,'ne');
@@ -2529,7 +2673,7 @@ function drawInterieur(t){
   if(world.sky!=='jour'){
     ctx.save();
     ctx.fillStyle = world.sky==='nuit' ? 'rgba(12,30,58,.44)' : 'rgba(128,56,76,.2)';
-    ctx.fillRect(0,0,CW,CH);
+    const R=camRect(); ctx.fillRect(R.x,R.y,R.w,R.h);
     ctx.globalCompositeOperation='lighter';
     (d.meubles||[]).forEach(m=>{ if(m.t!=='lampadaire') return;
       const s=emprise(m.t,m.o), q=iso(m.x+s[0]/2,m.y+s[1]/2);
@@ -2538,6 +2682,7 @@ function drawInterieur(t){
       ctx.fillStyle=g; ctx.beginPath(); ctx.arc(q.x,q.y-50,118,0,Math.PI*2); ctx.fill(); });
     ctx.restore();
   }
+  camLever();
 }
 
 /* ================= boucle & entrées ================= */
@@ -2551,8 +2696,12 @@ addEventListener('keydown',e=>{
 });
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 
+// Du doigt au monde. On repasse d'abord dans le repère du canvas, puis on
+// défait la caméra : c'est l'exacte inverse de camPoser(), et c'est la
+// seule chose que le zoom demandait de réécrire côté entrées.
 function pt(e){ const r=cv.getBoundingClientRect(), s=CW/r.width;
-  return {x:(e.clientX-r.left)*s, y:(e.clientY-r.top)*s}; }
+  const sx=(e.clientX-r.left)*s, sy=(e.clientY-r.top)*s;
+  return {x: cam.x+(sx-CW/2)/cam.z, y: cam.y+(sy-CH/2)/cam.z}; }
 function tileFrom(e){
   const p=pt(e), u=unIso(p.x,p.y+vue.probe);
   return {x:Math.floor(u.x), y:Math.floor(u.y), fx:u.x, fy:u.y};
@@ -2562,6 +2711,7 @@ cv.addEventListener('mousemove',e=>{ const q=tileFrom(e);
   hover.x=(q.x>=0&&q.y>=0&&q.x<lx&&q.y<ly)?q.x:-1; hover.y=q.y; });
 cv.addEventListener('mouseleave',()=>{hover.x=-1;});
 cv.addEventListener('click',e=>{
+  if(pince) return;                       // le clic qui termine un pincement
   const q=tileFrom(e);
   if(dedans){ clicDedans(q); return; }
   if(q.x<0||q.y<0||q.x>=GRID||q.y>=GRID) return;
@@ -2662,6 +2812,51 @@ if(matchMedia('(pointer:coarse)').matches){
   document.querySelector('.viewport').classList.add('avecpad');
 }
 
+/* ---- le zoom ----
+   Trois gestes pour la même chose : les deux boutons du cadre, la molette,
+   et le pincement à deux doigts. Les boutons sont les seuls qui marchent à
+   coup sûr partout, et c'est pour ça qu'ils sont visibles : un zoom qui ne
+   se découvre qu'en pinçant n'existe pas pour l'enfant qui ne pince pas. */
+function majZoomBtn(){
+  const p=document.getElementById('zoom-plus'), m=document.getElementById('zoom-moins');
+  if(!p||!m) return;
+  const z=zoomVoulu();
+  p.disabled = z >= zPlafond()-0.005;
+  m.disabled = z <= ZMIN+0.005;
+}
+document.getElementById('zoom-plus').addEventListener('click',()=>zoomer(1.22));
+document.getElementById('zoom-moins').addEventListener('click',()=>zoomer(1/1.22));
+cv.addEventListener('wheel',e=>{ e.preventDefault(); zoomer(e.deltaY<0?1.11:1/1.11); },{passive:false});
+
+// Le pincement. On ne suit que les doigts, jamais la souris : deux
+// pointeurs de souris n'existent pas, et un bouton enfoncé pendant qu'on
+// dessine ne doit pas se retrouver ici.
+const doigts=new Map();
+let ecart0=0, zoom0=1, pince=false;
+function ecartDoigts(){
+  const d=[...doigts.values()];
+  return d.length<2 ? 0 : Math.hypot(d[0].x-d[1].x, d[0].y-d[1].y);
+}
+cv.addEventListener('pointerdown',e=>{
+  if(e.pointerType!=='touch') return;
+  doigts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(doigts.size===2){ ecart0=ecartDoigts(); zoom0=zoomVoulu(); }
+});
+cv.addEventListener('pointermove',e=>{
+  if(!doigts.has(e.pointerId)) return;
+  doigts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(doigts.size===2 && ecart0>14){
+    const d=ecartDoigts();
+    if(d>14){ poserZoom(zoom0*d/ecart0); pince=true; }
+  }
+});
+// Le clic qui suit un pincement viserait une case au hasard : on l'avale.
+['pointerup','pointercancel','pointerleave'].forEach(k=>cv.addEventListener(k,e=>{
+  doigts.delete(e.pointerId);
+  if(doigts.size<2) ecart0=0;
+  if(doigts.size===0 && pince) setTimeout(()=>{ pince=false; },90);
+}));
+
 /* ---- le trajet qui n'avance plus ----
    Le clic pose une cible et le bonhomme y va en ligne droite, un axe à la
    fois. Contre un angle de la maison, les deux axes se bloquent et il
@@ -2703,6 +2898,7 @@ function frame(t){
   surveillerLeTrajet(dt);
   if(!dedans&&!visiting){ if(herbeAcote()) tondeuseJusqua=t+1100; tondre(); avancerLaBalade(dt); }
   proximity();
+  majCam(dt);
   if(dedans) drawInterieur(t); else drawWorld(t);
   requestAnimationFrame(frame);
 }
@@ -4047,6 +4243,7 @@ async function go(slug){
   // ses favoris et dans l'historique, et « Dan's Island » partout ne
   // distingue rien.
   document.title = visiting ? ((world.name||'Une île')+' · Dan’s Island') : 'Dan’s Island';
+  camSauter();                            // on débarque, on ne glisse pas
   hudSync(); buildAll();
   if(visiting) say('Tu d\u00e9barques chez <b>'+esc(world.owner)+'</b>. Marche, lis, laisse un mot — mais tu ne peux rien changer.');
 }
@@ -4111,6 +4308,7 @@ function buildAll(){
   if(ouvert&&y) ouvert.scrollTop=y;
 }
 buildAll();
+mesurerEcran(); camSauter();
 // Annoncer des touches à quelqu'un qui n'a pas de clavier, c'est le perdre.
 // Le cadre est court en portrait : trois lignes de bulle couvraient
 // l'île qu'on vient d'ouvrir. Deux suffisent à dire la même chose.

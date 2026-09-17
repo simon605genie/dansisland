@@ -235,11 +235,72 @@ En portrait étroit, le nom de l'île quitte le bandeau et le bouton Son perd
 son mot (`.plate .mot`) : à trois plaques, le bouton passait à la ligne et
 se posait sur le ciel. Ne pas rajouter de plaque sans vérifier à 360 px.
 
-**Ce qui reste petit, et qui n'est pas réparable en CSS :** en portrait, le
-cadre fait 768x500 et la largeur de l'écran le borne, donc l'île tient dans
-230 px de haut. L'agrandir demanderait une caméra qui suit le bonhomme et
-un zoom, c'est-à-dire de toucher `iso()` / `unIso()` et `vue`. À faire un
-jour, pas à l'improviste.
+Ce qui restait petit en portrait est traité : voir la section suivante.
+
+## La caméra et le zoom — 17/09/2026
+
+C'est la réponse au « ce qui reste petit » d'hier : en portrait, le cadre
+fait 768x500 et la largeur de l'écran le borne, donc une case mesurait
+26 px au doigt. La caméra suit le bonhomme et grossit jusqu'à ce qu'une
+case fasse `CASE_MIN` pixels réels.
+
+**`iso()`, `unIso()` et `vue` n'ont pas changé.** La caméra n'est pas une
+seconde projection : c'est une transformation posée sur le contexte juste
+avant de peindre (`camPoser()` / `camLever()`). Tout ce qui dessine
+continue de travailler dans le repère d'avant et n'a rien à savoir du
+zoom. C'est la seule raison pour laquelle deux mille lignes de dessin
+n'ont pas eu à être relues, et c'est ce qu'il ne faut pas défaire.
+
+Cinq règles qui tiennent ensemble :
+
+1. **`pt()` est le seul endroit qui défait la transformation.** Il défait
+   exactement ce que pose `camPoser()`. Une entrée qui lirait les
+   coordonnées écran autrement viserait à côté dès qu'on zoome.
+2. **Un `fillRect(0,0,CW,CH)` ne couvre plus le cadre sous la caméra.**
+   `camRect()` rend le rectangle du monde qu'on voit ; c'est par lui que
+   passent les deux voiles de nuit, dehors et dedans.
+3. **Le ciel se peint hors caméra, la mer dedans.** `ocean()` a été coupé
+   en `ciel()` et `mer()` : le soleil, les nuages et les oiseaux sont un
+   fond et ne glissent pas quand la caméra suit ; la mer appartient au
+   monde. Un nouveau décor de fond va dans `ciel()`, jamais dans `mer()`.
+4. **`ZMIN` vaut 1, et dézoomer à fond rend exactement le cadrage
+   d'avant.** C'est la garantie que le zoom n'a rien enlevé à personne.
+   Le corollaire tient aussi : **à zoom 1 la caméra ne bouge pas** (`prise`
+   dans `cibleCam()`), donc sur un écran large où `zoomAuto()` vaut 1,
+   rien n'a changé du tout.
+5. **`boiteIle()` borne le cadrage sur la tache de mer de `seaPath()`.**
+   Les deux portent les mêmes rayons, écrits deux fois : si `seaPath()`
+   change de taille, `boiteIle()` doit suivre, sinon la caméra emmène le
+   joueur sur le papier.
+
+Le zoom se déduit de `echelleEcran`, la largeur réelle du cadre divisée
+par `CW` — jamais de la taille du canvas, qui ne bouge pas. Elle se mesure
+à la rotation et sur `ResizeObserver`, pas à chaque image : un
+`getBoundingClientRect()` par frame fait recalculer la mise en page
+soixante fois par seconde.
+
+Dedans, **la caméra ne suit personne** : la pièce est petite, elle est
+centrée, et `fitDedans()` plafonne le zoom pour que les murs restent dans
+le cadre. Suivre le bonhomme dans huit cases sur six ne ferait que secouer
+l'image.
+
+`#world` porte **`touch-action:pan-y`** et non plus `manipulation` : la
+page continue de défiler d'un doigt, mais le navigateur ne confisque plus
+le pincement pour zoomer le site, et les deux pointeurs arrivent au jeu.
+Y revenir, c'est perdre le pincement sans prévenir.
+
+Les deux boutons ronds du bord droit ne sont pas un doublon du pincement :
+ce sont les seuls qui marchent à coup sûr partout, et un zoom qui ne se
+découvre qu'en pinçant n'existe pas pour l'enfant qui ne pince pas. Ils
+sont au milieu du bord droit parce que c'est le seul endroit libre du
+cadre : le pad tient le coin bas-gauche, le murmure la bande du bas, les
+plaques celle du haut.
+
+**Éprouvé, pas supposé :** la visée a été remesurée comme le 16/09, neuf
+points par losange sur toute la grille, à zoom 1, 1,8 et 2,6, dehors et
+dedans — environ six mille clics, **zéro faux**. Et sur les 221 cases que
+le rayon maximal peut rendre praticables, le bonhomme reste à au moins
+68 px des bords latéraux du cadre.
 
 ## Reste du contexte
 
