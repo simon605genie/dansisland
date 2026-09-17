@@ -1002,13 +1002,20 @@ const GAIN_BALADE=5;             // le tour de l'île avec le chien
 // **Les vrais plafonds sont en SQL** (`plafond()`), et `chargerCatalogue()`
 // vient les recopier ici au chargement. Ceux-ci ne servent qu'à écrire
 // « il te reste 3 shells à gagner » avant la réponse, et hors ligne.
-const PLAFOND={tonte:8, promenade:GAIN_BALADE, maree:6, mot_pose:10, mot_recu:25};
+const PLAFOND={tonte:8, promenade:GAIN_BALADE, maree:6, mot_pose:10, mot_recu:25,
+               commande:6, commande_recue:24};
 const CADEAU_BASE=3;             // le cadeau du jour, avant la série
 // Les visites payantes. Laisser un mot chez quelqu'un rapporte 2 shells,
 // en recevoir un en rapporte 5 — et c'est le trigger `mots_credite` qui
 // crédite, jamais un appel du client. Ces deux nombres ne sont ici que
 // pour l'affichage, et `chargerCatalogue()` va chercher les vrais.
 let GAIN_MOT_POSE=2, GAIN_MOT_RECU=5;
+// La commande du jour, portée chez un voisin. Elle est dans la **famille
+// des visites**, pas dans celle des corvées : c'est tout le propos, et
+// c'est ce qui l'empêche d'être un revenu solitaire de plus. Ces deux
+// nombres ne sont ici que pour l'affichage ; `chargerCatalogue()` va
+// chercher les vrais, comme pour les mots.
+let GAIN_COMMANDE=6, GAIN_COMMANDE_RECUE=8;
 // Le catalogue. `ou` dit dans quel atelier l'objet réapparaît une fois
 // acheté : c'est la seule chose qui distingue un objet d'île d'un meuble.
 const BOUTIQUE=[
@@ -1053,6 +1060,26 @@ function shellsDe(b){
   const v = Number.isFinite(b.shells) ? b.shells : b.pieces;
   return Number.isFinite(v) ? Math.max(0,Math.floor(v)) : SHELL0;
 }
+// Les quatre sortes que la mer laisse. La liste est ici, et pas à côté de
+// leurs dessins, parce que le sac et la commande du jour la lisent bien
+// avant qu'on peigne quoi que ce soit, et parce que **l'ordre est celui
+// du SQL** : `commande()` désigne une sorte par son rang, et deux listes
+// qui divergent, c'est une commande qui demande autre chose que ce qu'on
+// livre.
+const TROUVAILLES=['coquillage','etoile','boisflotte','bouteille'];
+// Le sac, et il appartient au **joueur**, pas à l'île. C'est pour ça
+// qu'il vit dans `bourses` avec la bourse et pas dans `monde` : c'est la
+// personne qui visite, et c'est elle qui porte le panier chez le voisin.
+// `mondeNu()` ne gagne donc pas une clé, et rien n'est à mémoriser pour
+// Ctrl+Z. On ne garde que les sortes connues et les nombres positifs : un
+// sac relu d'un vieux navigateur ne doit pas inventer d'objet.
+function sacDe(b){
+  const s={}; if(!b||typeof b.sac!=='object'||!b.sac) return s;
+  TROUVAILLES.forEach(k=>{ const n=Math.max(0,Math.floor(Number(b.sac[k])||0)); if(n) s[k]=n; });
+  return s;
+}
+function sacCompte(k){ return (mine.bourse&&mine.bourse.sac&&mine.bourse.sac[k])|0; }
+function sacPlein(){ return TROUVAILLES.reduce((n,k)=>n+sacCompte(k),0); }
 // Vrai dès que la base a répondu une fois : à partir de là, c'est elle qui
 // tient la bourse, et le miroir local n'est plus qu'un affichage.
 let bourseServeur=false;
@@ -1074,7 +1101,8 @@ function normaliserEconomie(w){
     faits:  (b&&b.faits&&typeof b.faits==='object') ? b.faits : {},
     pousse: (b&&b.pousse) ? String(b.pousse) : '',
     cadeau: (b&&b.cadeau) ? String(b.cadeau) : '',
-    serie:  (b&&Number.isFinite(b.serie)) ? Math.max(0,Math.floor(b.serie)) : 0
+    serie:  (b&&Number.isFinite(b.serie)) ? Math.max(0,Math.floor(b.serie)) : 0,
+    sac:    sacDe(b)
   };
   // Un achat dont l'objet n'existe plus au catalogue n'a plus de sens.
   w.achats = Array.isArray(w.achats) ? w.achats.filter(k=>VERROU[k]) : [];
@@ -1093,7 +1121,8 @@ function relireBourseLocale(){
   const l=bourseLocale(); if(!l) return;
   mine.bourse={ shells:shellsDe(l), jour:l.jour||aujourdhui(),
                 faits:(l.faits&&typeof l.faits==='object')?l.faits:{},
-                pousse:l.pousse||'', cadeau:l.cadeau||'', serie:Math.max(0,l.serie|0) };
+                pousse:l.pousse||'', cadeau:l.cadeau||'', serie:Math.max(0,l.serie|0),
+                sac:sacDe(l) };
   mine.achats=Array.isArray(l.achats)?l.achats.filter(k=>VERROU[k]):[];
 }
 function garderBourseLocale(){
@@ -1107,7 +1136,8 @@ function appliquerBourse(r){
   bourseServeur=true; bourseJourVu=r.jour||'';
   mine.bourse={ shells:Math.max(0,r.shells|0), jour:r.jour||aujourdhui(),
                 faits:(r.faits&&typeof r.faits==='object')?r.faits:{},
-                pousse:r.pousse||'', cadeau:r.cadeau||'', serie:r.serie|0 };
+                pousse:r.pousse||'', cadeau:r.cadeau||'', serie:r.serie|0,
+                sac:sacDe(r) };
   mine.achats=Array.isArray(r.achats)?r.achats.filter(k=>VERROU[k]):[];
   buildAll();
 }
@@ -1183,6 +1213,10 @@ async function reveiller(){
       }
       // Le tout premier chargement se tait : le message d'accueil vient de
       // s'afficher, et le rayer aussitôt n'apprend rien à personne.
+      // Le jour a tourné : la commande d'hier n'existe plus et les paniers
+      // reçus hier non plus. Les relire est ce qui évite d'annoncer une
+      // commande périmée à qui vient de se lever.
+      if(veille){ commandeServeur=null; accorderCommande(); chargerLivraisons().then(buildAll); }
       if(veille) say('<b>Un jour nouveau.</b> Ton cadeau t’attend dans la <b>Boutique</b>'+
         (n ? (', et '+n+' touffe'+(n>1?'s':'')+' ont repoussé.') : '.'));
       return;
@@ -1526,6 +1560,40 @@ function tondeuse(c,t,gros){
 // caméra, derrière quand il s'en va.
 const POS_TONDEUSE={bas:[0,14], haut:[0,-10], droite:[20,6], gauche:[-20,6]};
 function tondeuseVisible(t){ return t<tondeuseJusqua; }
+
+/* ---- le panier de la commande ----
+   Le sac est une donnée ; le panier est ce qu'on en voit. Un inventaire
+   qui ne vit que dans un panneau se lit comme une liste de courses, et
+   l'enfant qui traverse l'archipel ne porte alors rien du tout. Celui-ci
+   sort dès que le sac peut remplir la commande du jour et se range quand
+   elle est portée, **chez soi comme chez les voisins**, puisque c'est
+   justement là qu'on l'emmène.
+
+   Rien n'en part en base : il se déduit du sac et du jour, exactement
+   comme la tondeuse se déduit de l'herbe d'à côté. Et il occupe la même
+   place à l'écran, donc la même règle qu'un seul objet en main à la fois :
+   on ne pousse pas la tondeuse un panier au bras. */
+function panier(c,t,veut){
+  c.save(); c.translate(0,Math.sin(t/520)*0.9);
+  c.strokeStyle='#8B6F4E'; c.lineWidth=2.2; c.lineCap='round';
+  c.beginPath(); c.arc(0,-11,8.5,Math.PI,0); c.stroke();   // l'anse, derrière
+  c.save(); c.translate(0,-10); c.scale(0.46,0.46);
+  (veut||[]).forEach((k,i)=>{ c.save(); c.translate(i?11:-11,0);
+    (DESSIN_TROUVAILLE[k]||DESSIN_TROUVAILLE.coquillage)(c); c.restore(); });
+  c.restore();
+  c.fillStyle='#C08E52'; c.beginPath();
+  c.moveTo(-10.5,-10); c.lineTo(10.5,-10); c.lineTo(7,1); c.lineTo(-7,1); c.closePath(); c.fill();
+  c.fillStyle='rgba(90,58,26,.20)';
+  [-6.5,-2.2,2.2,6.5].forEach(u=>{ c.save(); c.beginPath();
+    c.moveTo(u-0.7,-10); c.lineTo(u+0.7,-10); c.lineTo(u*0.67+0.7,1); c.lineTo(u*0.67-0.7,1);
+    c.closePath(); c.fill(); c.restore(); });
+  c.fillStyle='#A9764A'; rr(c,-11.5,-12,23,3.4,1.7); c.fill();
+  c.restore();
+}
+// Il est en main tant que le sac peut remplir la commande et qu'elle n'est
+// pas portée. Pas de `bourseServeur` ici : hors ligne le sac se remplit
+// quand même, et un panier qu'on porte n'est pas une promesse de livraison.
+function panierEnMain(){ return !commandePortee() && commandePrete(); }
 // Une touffe sous les pieds ou sur une des quatre cases voisines.
 function herbeAcote(){
   const x=Math.floor(hero.x), y=Math.floor(hero.y);
@@ -2505,14 +2573,17 @@ function drawWorld(t){
   }
   const hp=iso(hero.x,hero.y);
   items.push({d:hero.x+hero.y, f:()=>{
-    const m=tondeuseVisible(t), derriere=(hero.face==='haut'||hero.face==='gauche');
+    const m=tondeuseVisible(t), pa=!m&&!dedans&&panierEnMain();
+    const derriere=(hero.face==='haut'||hero.face==='gauche');
     const poser=()=>{ const d=POS_TONDEUSE[hero.face]||POS_TONDEUSE.bas;
       ctx.save(); ctx.translate(hp.x+d[0],hp.y-LIFT+d[1]);
       if(derriere) ctx.scale(-1,1);
-      shadowDiamond(ctx,0,0,11); tondeuse(ctx,t,achete('moteur')); ctx.restore(); };
-    if(m&&derriere) poser();
+      shadowDiamond(ctx,0,0,11);
+      if(m) tondeuse(ctx,t,achete('moteur')); else panier(ctx,t,commandeDuJour());
+      ctx.restore(); };
+    if((m||pa)&&derriere) poser();
     drawChar(ctx,hp.x,hp.y-LIFT,mine.me,1,hero.face,hero.moving?t:0,vieDuBonhomme(t,hero.immobile));
-    if(m&&!derriere) poser();
+    if((m||pa)&&!derriere) poser();
   }});
   items.sort((a,b)=>a.d-b.d).forEach(i=>i.f());
 
@@ -3633,38 +3704,73 @@ function terre(x,y){
    liste pour tout le monde, immobile tant que la mer est basse, et
    différente à la suivante. Chez les voisins, il n'y a rien à ramasser :
    la visite paie déjà, et un archipel où l'on ferait la tournée des
-   plages pour glaner ne serait plus une visite. */
-const TROUVAILLES=['coquillage','etoile','boisflotte','bouteille'];
+   plages pour glaner ne serait plus une visite.
+
+   **La mer dépose les deux sortes que la commande du jour demande**, plus
+   une au hasard. Ce n'est pas de la complaisance : le jeu de la commande
+   n'est pas de deviner ce que la marée va bien vouloir donner, c'est de
+   porter le panier chez quelqu'un. Une commande qu'on ne peut pas remplir
+   certains jours n'est pas plus intéressante, elle est seulement plus
+   rare, et l'enfant qui vient de traverser l'île n'apprend rien d'un
+   sable vide. Le plafond du jour (trois objets) reste le frein, et le
+   troisième objet au hasard est ce qui remplit le sac pour les jours
+   suivants.
+
+   La clé porte le jour : la commande tourne à minuit, et le sable doit
+   tourner avec elle même si la mer, elle, n'a pas bougé. */
 let laisse=[], laisseCle=null;
 function majLaisse(){
   const cle = (!visiting && mareeBasse===true)
-    ? (mareeNo+':'+(mine.rayon||RAYON0)+':'+(mine.id||'')) : null;
+    ? (mareeNo+':'+jourDuJeu()+':'+(mine.rayon||RAYON0)+':'+(mine.id||'')) : null;
   if(cle===laisseCle) return;
   laisseCle=cle; laisse=[];
   if(cle===null) return;
   const cases=[];
   for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++)
     if(mouillees[y*GRID+x]) cases.push({x,y});
+  const veut=commandeDuJour();
+  const sortes=veut.concat([TROUVAILLES[Math.floor(h2(3.1, mareeNo*2.9)*TROUVAILLES.length)]]);
   for(let i=0;i<MAREE_CHOSES && cases.length;i++){
     const c=cases.splice(Math.floor(h2(mareeNo*7.3+i*13.1, i*3.7+1.9)*cases.length),1)[0];
-    c.t=TROUVAILLES[Math.floor(h2(i*5.1+1.3, mareeNo*2.9)*TROUVAILLES.length)];
+    c.t=sortes[i]||TROUVAILLES[0];
     laisse.push(c);
   }
 }
 // On ramasse en marchant, comme on tond. Le plafond du jour est le seul
 // frein : ramassé au-delà, l'objet disparaît quand même et le dit.
+//
+// Ce n'est plus `gagner()` : le sac a besoin de savoir **quoi**, et c'est
+// `bourse_ramasser()` qui tient les deux d'un coup côté serveur. Le sac ne
+// se remplit que si la marée a payé : sans ça il faudrait un second
+// compteur, et un sac sans plafond est une monnaie que le client s'écrit.
+function ramasser(k){
+  const b=mine.bourse, p=PLAFOND.maree||0, f=b.faits.maree||0;
+  if(f>=p) return 0;
+  const n=Math.min(GAIN_MAREE,p-f);
+  b.faits.maree=f+n; b.shells+=n;
+  b.sac[k]=(b.sac[k]|0)+1;
+  // Tant que la migration de la commande n'est pas passée, `bourse_ramasser`
+  // n'existe pas : on retombe sur l'ancien appel, qui sait au moins créditer
+  // la marée. Le sac, lui, ne remonte pas, mais les shells ne se perdent
+  // pas entre le déploiement du client et le passage du SQL.
+  if(bourseServeur) store.bourseRamasser(k).then(appliquerBourse)
+    .catch(()=>store.bourseGagner('maree',n).then(appliquerBourse).catch(()=>{}));
+  else garderBourseLocale();
+  return n;
+}
 function ramasserLaMaree(){
   if(!laisse.length) return;
   const x=Math.floor(hero.x), y=Math.floor(hero.y);
   const i=laisse.findIndex(c=>c.x===x&&c.y===y);
   if(i<0) return;
   const c=laisse.splice(i,1)[0];
-  const n=gagner(GAIN_MAREE,'maree'), reste=laisse.length;
+  const n=ramasser(c.t), reste=laisse.length;
   son('piece');
   say(n
-    ? ('Tu ramasses '+NOM_TROUVAILLE[c.t]+'. <b>+'+n+' shell'+(n>1?'s':'')+'</b> · '+
+    ? ('Tu ramasses '+NOM_TROUVAILLE[c.t]+' et tu le mets dans ton sac. <b>+'+n+' shell'+(n>1?'s':'')+'</b> · '+
        (reste ? ('encore '+reste+' chose'+(reste>1?'s':'')+' sur le sable') : 'tu as tout ramassé'))
-    : ('Tu ramasses '+NOM_TROUVAILLE[c.t]+', mais la marée a déjà tout donné pour aujourd’hui.'));
+    : ('Tu ramasses '+NOM_TROUVAILLE[c.t]+', mais la marée a déjà tout donné pour aujourd’hui : '+
+       'il ne rentre pas dans le sac non plus.'));
   buildAll();
 }
 // La mer remonte sur quelqu'un qui marchait sur le sable : on le repose à
@@ -3691,6 +3797,128 @@ function terreFermeProche(fx,fy){
       return {x:x+0.5,y:y+0.5};
     }
   return null;
+}
+
+/* ================= la commande du jour, et le sac =================
+   La question posée avant d'écrire une ligne : la commande se paie-t-elle
+   en shells (un revenu solitaire de plus, contre la règle « l'île grandit
+   parce que des gens sont passés »), ou demande-t-elle d'aller chez les
+   autres, ce qui rouvrirait le choix écrit dans `majLaisse()` : « chez les
+   voisins, il n'y a rien à ramasser » ?
+
+   Ni l'un ni l'autre. **La commande se remplit chez soi et se livre chez
+   un voisin.** La règle de `majLaisse()` parle de *ramasser* ; livrer est
+   le verbe inverse. On arrive les mains pleines au lieu de repartir les
+   mains pleines, et cette ligne-là n'a pas bougé d'un mot.
+
+   Et la commande paie dans la **famille des visites**, pas dans celle des
+   corvées : `commande` / `commande_recue` ont exactement la forme de
+   `mot_pose` / `mot_recu`, jusqu'à la vérifiabilité : une ligne signée
+   d'un compte, sur l'île d'un autre, et le bénéficiaire n'est pas
+   l'appelant. Le revenu solitaire reste à 19 shells par jour ; le revenu
+   « quelqu'un est passé » monte de 35 à 65.
+
+   Cinq choses à ne pas défaire.
+
+   1. **Le sac est au joueur, pas à l'île.** Il vit dans `bourses.sac`
+      avec la bourse, pour la même raison : c'est la personne qui visite,
+      et c'est elle qui porte le panier. Donc pas une clé de plus dans
+      `mondeNu()`, rien à mémoriser pour Ctrl+Z, et il te suit d'un
+      appareil à l'autre.
+   2. **Le sac ne se remplit que tant que la marée paie.** Pas de second
+      compteur : le plafond du jour borne déjà à trois objets. Un sac sans
+      plafond serait une monnaie que le client s'écrit, et cette monnaie-là
+      achète des shells chez le voisin.
+   3. **La commande se déduit du jour, elle n'est stockée nulle part.** La
+      même pour tout le monde, comme la marée se déduit de l'heure : deux
+      enfants qui jouent le même jour peuvent en parler. Le calcul est en
+      arithmétique entière pure des deux côtés : `hashtext()` ne se rejoue
+      pas en JavaScript, et deux calculs qui divergent, c'est une commande
+      qui demande autre chose que ce que la livraison accepte.
+   4. **Le geste est le pas de la porte du voisin.** Cette case ne savait
+      dire que « c'est fermé » ; elle devient la seule chose qu'on vient y
+      faire. Pas de nouvel objet à poser, pas de quatrième plaque dans le
+      bandeau : l'avertissement des 360 px vaut toujours.
+   5. **Un panier incomplet n'est pas une gronderie.** La bulle dit ce qui
+      manque, là où est le doigt, et c'est tout. Même règle que le chien
+      qui s'assied et que le coffre vide.
+
+   Ce que ça ne fait pas : le serveur ne voit toujours pas l'île, donc
+   « j'ai ramassé un coquillage » n'est pas vérifiable. La **livraison**,
+   elle, l'est de bout en bout. C'est la même honnêteté que pour les mots.
+*/
+// L'origine du calcul, recopiée du SQL. La déplacer décalerait la commande
+// de tout le monde d'un coup.
+const COMMANDE_T0=Date.UTC(2026,8,17)/86400000;
+// Le jour du serveur, en nombre de jours depuis l'origine. On part de la
+// chaîne `AAAA-MM-JJ` et non d'un `Date` local : deux fuseaux, et le
+// numéro change alors que le jour du jeu, lui, n'a pas changé.
+function numeroDeJour(j){
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(j||'');
+  if(!m) return 0;
+  return Math.round(Date.UTC(+m[1],+m[2]-1,+m[3])/86400000-COMMANDE_T0);
+}
+// Ce que le serveur a répondu, s'il a répondu. Sinon on recalcule, et on
+// tombe sur le même résultat : c'est le but.
+let commandeServeur=null;
+function commandeDuJour(){
+  const j=jourDuJeu();
+  if(commandeServeur&&commandeServeur.jour===j&&Array.isArray(commandeServeur.veut)
+     &&commandeServeur.veut.length===2) return commandeServeur.veut.slice();
+  const n=numeroDeJour(j);
+  const a=((n%4)+4)%4, r=((Math.floor(n/4)%3)+3)%3;
+  return [TROUVAILLES[a], TROUVAILLES[(a+1+r)%4]];
+}
+async function accorderCommande(){
+  if(!store.configure) return;
+  try{ const c=await store.commande(); if(c&&Array.isArray(c.veut)) commandeServeur=c; }
+  catch(e){ /* migration pas encore passée, ou hors ligne : calcul local */ }
+}
+// Portée aujourd'hui ? Le plafond vaut exactement le gain : une commande
+// par jour, c'est ce que veut dire « la commande du jour ».
+function commandePortee(){
+  const b=mine.bourse; if(!b) return false;
+  return ((b.faits&&b.faits.commande)|0) >= (PLAFOND.commande||0);
+}
+// Le sac porte-t-il le panier ? Une de chaque sorte demandée.
+function commandePrete(){ return commandeDuJour().every(k=>sacCompte(k)>=1); }
+// Ce qui manque, en toutes lettres, pour l'écrire là où est le doigt.
+function commandeManque(){
+  return commandeDuJour().filter(k=>sacCompte(k)<1).map(k=>NOM_TROUVAILLE[k]);
+}
+// Vrai quand il y a quelque chose à faire de la commande, ici et
+// maintenant : c'est ce que porte la pastille de l'onglet Voisins.
+function commandeAPorter(){
+  return !!(store.configure&&moi&&bourseServeur&&!commandePortee()&&commandePrete());
+}
+// On la dépose chez quelqu'un, sur son pas de porte. Le panier n'est pas
+// dans l'appel : le serveur le déduit de `commande()`, pour la même raison
+// que le prix vient du catalogue et jamais de l'appel.
+let livraisonEnCours=false;
+async function porterLaCommande(){
+  if(!visiting||dedans||livraisonEnCours) return;
+  if(!store.configure||!moi){ say('Connecte-toi pour porter la commande chez quelqu’un.'); return; }
+  if(!world.id||world.id==='me'){
+    say('Cette île est une île de démonstration : il n’y a personne pour recevoir le panier.'); return; }
+  if(commandePortee()){ say('Tu as déjà porté la commande aujourd’hui. Elle revient demain.'); return; }
+  const manque=commandeManque();
+  if(manque.length){
+    say('Ton sac n’est pas prêt : il te manque <b>'+manque.join('</b> et <b>')+
+        '</b>. Rentre chez toi à marée basse, la mer les laisse sur le sable.'); return; }
+  livraisonEnCours=true;
+  try{
+    const r=await store.livrer(world.id, mine.me.name||monPseudo||'Quelqu’un');
+    appliquerBourse(r);
+    son('achat');
+    // Verrouillée sous la clé de l'état « déjà porté » : sans ça,
+    // `proximity()` recouvre le message au battement suivant, et le seul
+    // moment où l'enfant regarde le compteur dure une image.
+    say('Tu déposes le panier devant la porte de <b>'+esc(world.owner)+'</b>. '+
+        '<b>+'+GAIN_COMMANDE+' shells</b> · et <b>'+GAIN_COMMANDE_RECUE+'</b> pour '+esc(world.owner)+
+        ', qui les trouvera en rentrant.', 'porte:livre');
+  }catch(e){
+    say('Le panier n’a pas pu être déposé : '+esc(e.message||e));
+  }finally{ livraisonEnCours=false; buildAll(); }
 }
 
 /* ---- sortir le chien ----
@@ -3876,7 +4104,6 @@ const SONS={
   chien:  ()=>{ souffle(430,'triangle',0.10,0.15,250); setTimeout(()=>souffle(340,'triangle',0.12,0.11,200),135); },
   // Le couvercle qui grince, avant l'arpège du cadeau : deux sons courts
   // valent mieux qu'un son long, et celui-ci dit « ça s'ouvre ».
-  coffre: ()=>{ choc(0.10,700,0.14); setTimeout(()=>souffle(230,'sawtooth',0.16,0.07,410),40); }
 };
 function son(n){ if(!sonCoupe && SONS[n]) try{ SONS[n](); }catch(e){} }
 
@@ -4006,6 +4233,10 @@ function boutonRose(l){
 // avant le coffre, et le coffre avant la porte : sur le seuil, on entre en
 // marchant de toute façon. Le même ordre est tenu dans `proximity()` :
 // sinon le bouton rose annonce un geste et la touche en fait un autre.
+//
+// La commande se dépose sur le pas de la porte du voisin, donc au rang de
+// la porte et pas avant : chez soi ce rang fait entrer, chez l'autre il ne
+// faisait rien du tout.
 function agir(){
   if(souvenirProche){ ramasserSouvenir(); return true; }
   if(!visiting&&!dedans){
@@ -4018,6 +4249,7 @@ function agir(){
     // aujourd'hui, et la bulle le dit déjà. Le bouton rose ne s'affiche pas.
     if(coffreProche()&&cadeauDispo()){ son('coffre'); ouvrirCadeau(); return true; }
   }
+  if(visiting&&!dedans&&devantLaPorte()&&commandeAPorter()){ porterLaCommande(); return true; }
   if(dedans||devantLaPorte()){ actionPorte(); return true; }
   return false;
 }
@@ -4078,8 +4310,29 @@ function proximity(){
   // La porte de la maison. Elle n'ouvre que chez soi : c'est une règle de
   // jeu, pas un secret : `interieur` voyage dans le même jsonb que le reste.
   if(devantLaPorte()){
-    if(visiting){ boutonRose(null); sasArme=true;
-      bulle('porte','La porte de <b>'+esc(world.owner)+'</b> est fermée. Pour l’instant, on ne visite que le dehors.'); return; }
+    if(visiting){ sasArme=true;
+      // Cette case ne savait dire que « c'est fermé ». C'est maintenant
+      // l'endroit où l'on dépose le panier : le refus, comme l'invitation,
+      // tombe là où est le doigt.
+      // Chaque état de cette case a **sa** clé de bulle, et toutes
+      // commencent par « porte » pour que le ménage du bas les lève. Une
+      // clé unique pour quatre messages, et le panier déposé serait
+      // recouvert au battement suivant par « tu as déjà porté » : c'est le
+      // même défaut qu'un verrou de bulle qui survit à son état, à
+      // l'envers. `porterLaCommande()` pose `porte:livre` lui-même.
+      if(commandeAPorter()){
+        boutonRose('Déposer la commande');
+        bulle('porte:pret','La porte de <b>'+esc(world.owner)+'</b> est fermée, mais ton sac est prêt. '+
+          '<b>E</b> pour déposer la commande du jour sur le pas de la porte.'); return; }
+      boutonRose(null);
+      if(store.configure&&moi&&bourseServeur&&commandePortee())
+        bulle('porte:livre','La porte de <b>'+esc(world.owner)+'</b> est fermée. Tu as déjà porté la commande aujourd’hui ; elle revient demain.');
+      else if(store.configure&&moi&&bourseServeur)
+        bulle('porte:manque','La porte de <b>'+esc(world.owner)+'</b> est fermée. C’est ici qu’on dépose la commande du jour, et il te manque <b>'+
+          esc(commandeManque().join('</b> et <b>'))+'</b> dans ton sac.');
+      else
+        bulle('porte:ferme','La porte de <b>'+esc(world.owner)+'</b> est fermée. Pour l’instant, on ne visite que le dehors.');
+      return; }
     // Le seuil fait entrer tout seul ; la case d'à côté se contente
     // d'inviter. Une balade en cours désarme le seuil : passer devant chez
     // soi en promenant le chien ne doit pas remettre le tour à zéro sans
@@ -4171,6 +4424,33 @@ function buildToi(){
       : ('<span style="opacity:.65"><b>'+esc(a.n)+'</b> — '+esc(a.d)+' <i>('+a.prix+' shells à la Boutique)</i></span>');
     le.appendChild(li); });
   fe.appendChild(le); p.appendChild(fe);
+
+  // Le sac. Il est ici et pas dans un septième onglet : c'est ce que le
+  // bonhomme porte, comme les bottes, et la barre d'onglets est déjà à six
+  // On a vérifié à 360 px qu'une plaque de plus passe à la ligne, et la
+  // même leçon vaut pour un onglet de plus.
+  p.appendChild(rule());
+  const veut=commandeDuJour();
+  const fs=field('Ton sac');
+  const gs=document.createElement('div'); gs.className='objs';
+  TROUVAILLES.forEach(k=>{
+    const n=sacCompte(k), pris=veut.indexOf(k)>=0;
+    const d=document.createElement('div');
+    d.className='obj'+(n?' acquis':'');
+    d.style.cursor='default';
+    const c=document.createElement('canvas'); c.width=120; c.height=120;
+    apercuTrouvaille(c.getContext('2d'),k,!n);
+    const nom=document.createElement('span');
+    nom.textContent=NOM_TROUVAILLE[k].replace(/^(un|une) /,'');
+    const q=document.createElement('span'); q.className='prix';
+    q.textContent = n ? ('\u00d7 '+n) : (pris ? 'demandé' : '\u2014');
+    d.appendChild(c); d.appendChild(nom); d.appendChild(q);
+    gs.appendChild(d); });
+  fs.appendChild(gs); p.appendChild(fs);
+  p.appendChild(hint(sacPlein()
+    ? 'Le sac te suit d’un appareil à l’autre et chez les voisins : il est à <b>toi</b>, pas à ton île. Il se remplit sur le sable mouillé, à marée basse, tant que la marée paie encore aujourd’hui.'
+    : 'Ton sac est vide. À marée basse, va marcher sur le sable mouillé au bord de ton île : ce que la mer y laisse y tombe. C’est avec ça qu’on remplit la <b>commande du jour</b>, dans l’onglet Voisins.'));
+
   paintPreview();
 }
 function paintPreview(){
@@ -4435,6 +4715,20 @@ const DRAWT={
   },
   moteur(c){ tondeuse(c,0,true); }
 };
+// Ce que la mer laisse, en vignette. Le sac et la commande du jour
+// montrent les mêmes dessins que le sable : un enfant reconnaît un
+// coquillage bien avant de lire le mot « coquillage ».
+// `pale` grise le dessin **dans** le canvas et non sur l'élément : un
+// `style.opacity` sur le canvas ferait aussi passer son fond crème, et la
+// vignette se perdrait sur la carte sombre. C'est le même piège que celui
+// déjà écrit pour `.obj canvas`.
+function apercuTrouvaille(g,k,pale){
+  g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,60,60);
+  g.save(); g.translate(30,36); g.scale(1.25,1.25);
+  if(pale) g.globalAlpha=0.22;
+  (DESSIN_TROUVAILLE[k]||DESSIN_TROUVAILLE.coquillage)(g);
+  g.restore();
+}
 function apercuToi(g,t,col){
   g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,60,60);
   g.save(); g.translate(30,44);
@@ -4632,7 +4926,11 @@ function buildBoutique(){
     ['Laisser un mot chez quelqu’un', 'mot_pose',
       '<b>'+GAIN_MOT_POSE+' shells</b> par personne, une fois par jour. Va dans l’onglet <b>Voisins</b>.'],
     ['Recevoir un mot chez toi', 'mot_recu',
-      '<b>'+GAIN_MOT_RECU+' shells</b> par personne qui passe. Rien à faire : partage l’adresse de ton île.']
+      '<b>'+GAIN_MOT_RECU+' shells</b> par personne qui passe. Rien à faire : partage l’adresse de ton île.'],
+    ['Porter la commande du jour', 'commande',
+      'Remplis ton sac sur le sable à marée basse, puis va déposer le panier sur le pas de la porte de quelqu’un. Une fois par jour. Va dans l’onglet <b>Voisins</b>.'],
+    ['Recevoir la commande chez toi', 'commande_recue',
+      '<b>'+GAIN_COMMANDE_RECUE+' shells</b> par personne qui t’en apporte une. Rien à faire : partage l’adresse de ton île.']
   ];
   const fg=field('Ce qui rapporte aujourd’hui');
   const box=document.createElement('div'); box.className='gains';
@@ -4829,8 +5127,51 @@ function thumb(g,w){
   }
   g.save(); g.translate(26,40); g.scale(0.58,0.58); drawChar(g,0,0,w.me,1,'bas',0); g.restore();
 }
+/* La commande du jour, en tête de l'onglet Voisins, et pas dans la
+   Boutique, où elle aurait ressemblé à un achat. Elle est ici parce que
+   c'est la raison d'aller chez quelqu'un, et que c'est ici qu'on choisit
+   chez qui. */
+function carteCommande(){
+  const f=field('La commande du jour');
+  const veut=commandeDuJour();
+  const g=document.createElement('div'); g.className='objs';
+  veut.forEach(k=>{
+    const n=sacCompte(k), ok=n>=1;
+    const d=document.createElement('div'); d.className='obj'+(ok?' acquis':' cher');
+    d.style.cursor='default';
+    const c=document.createElement('canvas'); c.width=120; c.height=120;
+    apercuTrouvaille(c.getContext('2d'),k,!ok);
+    const nom=document.createElement('span');
+    nom.textContent=NOM_TROUVAILLE[k].replace(/^(un|une) /,'');
+    const q=document.createElement('span'); q.className='prix';
+    q.textContent = ok ? '\u2713 dans ton sac' : 'il en faut un';
+    d.appendChild(c); d.appendChild(nom); d.appendChild(q);
+    g.appendChild(d); });
+  f.appendChild(g);
+
+  if(!store.configure||!moi){
+    f.appendChild(hint('La commande est la même pour tout l’archipel : la mer la dépose sur le sable de chaque île à marée basse, et on va la porter chez quelqu’un. <b>Connecte-toi et crée ton île</b> pour pouvoir la livrer.'));
+    return f;
+  }
+  if(commandePortee()){
+    f.appendChild(hint('✓ <b>Tu as porté la commande aujourd’hui.</b> Elle revient demain, et ce sera autre chose.'));
+  }else if(commandePrete()){
+    f.appendChild(hint('🧺 <b>Ton sac est prêt.</b> Va chez quelqu’un, marche jusqu’au pas de sa porte, et appuie sur <b>E</b> ou touche le bouton rose : tu gagnes <b>'+GAIN_COMMANDE+' shells</b>, et lui <b>'+GAIN_COMMANDE_RECUE+'</b>, qu’il trouvera en rentrant.'));
+  }else{
+    const m=commandeManque();
+    f.appendChild(hint('Il te manque <b>'+esc(m.join('</b> et <b>'))+'</b>. À marée basse, la mer les laisse sur le sable mouillé au bord de <b>ton</b> île : c’est là qu’on remplit le sac. Chez les voisins, il n’y a rien à ramasser : on y va les mains pleines, pas l’inverse.'));
+  }
+  if(livraisonsRecues.length){
+    const noms=livraisonsRecues.map(l=>esc(l.auteur_nom||'Quelqu’un'));
+    f.appendChild(hint('📦 Aujourd’hui, <b>'+noms.join('</b>, <b>')+'</b> t’'+(noms.length>1?'ont':'a')+
+      ' déposé un panier devant ta porte. Les shells sont déjà dans ta bourse.'));
+  }
+  return f;
+}
 function buildVoisins(){
   const p=document.getElementById('p-voisins'); p.innerHTML='';
+  p.appendChild(carteCommande());
+  p.appendChild(rule());
 
   const f=field('L\u2019archipel'+(store.configure?'':' \u00b7 d\u00e9mo'));
   const list=document.createElement('div');
@@ -4985,6 +5326,8 @@ async function chargerCatalogue(){
     Object.keys(pl).forEach(k=>{ if(Number.isFinite(pl[k])) PLAFOND[k]=pl[k]; });
     if(Number.isFinite(g.mot_pose)) GAIN_MOT_POSE=g.mot_pose;
     if(Number.isFinite(g.mot_recu)) GAIN_MOT_RECU=g.mot_recu;
+    if(Number.isFinite(g.commande)) GAIN_COMMANDE=g.commande;
+    if(Number.isFinite(g.commande_recue)) GAIN_COMMANDE_RECUE=g.commande_recue;
   }catch(e){}
 }
 
@@ -5012,6 +5355,7 @@ async function demarrer(){
   routerDepuisURL();
   reveiller();
   accorderMaree();
+  accorderCommande();
   // Une session laissée ouverte la nuit doit voir le jour passer, et une
   // session laissée ouverte l'après-midi doit voir la mer descendre. La
   // phase avance toute seule entre deux accords : la minute ne sert qu'à
@@ -5020,6 +5364,15 @@ async function demarrer(){
   setInterval(accorderMaree, 60000);
 }
 
+// Les paniers déposés chez toi aujourd'hui. La RLS ne les montre qu'à
+// l'hôte et au porteur : c'est un reçu, pas un mur public.
+let livraisonsRecues=[];
+async function chargerLivraisons(){
+  livraisonsRecues=[];
+  if(!store.configure||!ileId) return;
+  try{ livraisonsRecues = await store.livraisonsDe(ileId, jourDuJeu()); }
+  catch(e){ /* migration pas encore passée : rien à montrer, et c'est tout */ }
+}
 async function chargerMonCompte(){
   try{
     monPseudo = await store.pseudo(moi.id);
@@ -5041,6 +5394,10 @@ async function chargerMonCompte(){
       mine.house.roofShape=ROOFMAP[mine.house.roofShape]||'pointu';
       if(!GROUNDS.find(g=>g.k===(mine.pal&&mine.pal.k))) mine.pal=GROUNDS[0];
       mine.mots = await store.motsDe(ile.id);
+      // Qui t'a porté la commande aujourd'hui. Le trigger a déjà crédité :
+      // ceci ne sert qu'à mettre un nom dessus. Un gain anonyme se lit
+      // comme une bizarrerie du compteur, pas comme une visite.
+      await chargerLivraisons();
       // Ce qui s'est passé pendant ton absence, avant de remettre le compteur à zéro.
       const vu = ile.vu_le ? new Date(ile.vu_le).getTime() : 0;
       motsNouveaux = mine.mots.filter(m=>m.auteur!==moi.id && new Date(m.cree_le).getTime()>vu).length;
@@ -5185,6 +5542,12 @@ function hudSync(){
   // Un cadeau qu'on ne voit pas n'est pas un cadeau : l'onglet le porte.
   const ob=[...document.querySelectorAll('.tabs button')].find(x=>x.dataset.tab==='boutique');
   if(ob) ob.classList.toggle('cadeau', cadeauDispo());
+  // Même raison pour la commande : un sac prêt qu'on ne voit pas reste au
+  // fond du sac. La pastille ne s'allume que quand il y a vraiment quelque
+  // chose à faire : sinon elle devient une décoration, et on ne la regarde
+  // plus le jour où elle compte.
+  const ov=[...document.querySelectorAll('.tabs button')].find(x=>x.dataset.tab==='voisins');
+  if(ov) ov.classList.toggle('cadeau', commandeAPorter());
   cv.classList.toggle('walking', tool.mode==='marche');
 }
 // L'onglet ouvert est un état du jeu, pas seulement un clic : franchir une

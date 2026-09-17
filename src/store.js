@@ -176,6 +176,43 @@ export async function maree() {
   return data;
 }
 
+// Ce que la mer laisse, ramassé. C'était `bourseGagner('maree', 2)` ; ça
+// dit maintenant **quoi**, parce que le sac a besoin de la sorte. Le sac ne
+// se remplit que si la marée a payé : c'est le plafond du jour qui le
+// borne, et il n'y a donc pas un second compteur à tenir.
+export async function bourseRamasser(quoi) {
+  const { data, error } = await sb.rpc('bourse_ramasser', { quoi });
+  if (error) throw error;
+  return data;
+}
+
+// La commande du jour. Elle se déduit du jour et n'est stockée nulle part :
+// la même pour tout le monde, comme la marée se déduit de l'heure.
+export async function commande() {
+  const { data, error } = await sb.rpc('commande');
+  if (error) throw error;
+  return data;
+}
+
+// Porter la commande chez quelqu'un. Le panier n'est pas dans l'appel : il
+// est déduit de `commande()` côté serveur, pour la même raison que le prix
+// vient du catalogue. Sinon autant laisser le client se servir.
+export async function livrer(ileId, nom) {
+  const { data, error } = await sb.rpc('livrer', { p_ile: ileId, p_nom: nom || null });
+  if (error) throw error;
+  return data;
+}
+
+// Le reçu : qui a porté la commande ici, aujourd'hui. La RLS ne le montre
+// qu'à l'hôte et au porteur : ce n'est pas un mur public.
+export async function livraisonsDe(ileId, jour) {
+  let q = sb.from('livraisons').select('id, auteur_nom, jour, panier, cree_le').eq('ile', ileId);
+  if (jour) q = q.eq('jour', jour);
+  const { data, error } = await q.order('cree_le', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
 // Plafonds du jour et gains des visites, en un seul aller-retour.
 export async function economie() {
   const { data, error } = await sb.rpc('economie');

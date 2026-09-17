@@ -670,6 +670,110 @@ non « Orientation », et `⌫ Gomme` + `⟳ Tourner` sous **Corriger** et non
 sous « Marcher ». L'étiquette du groupe était le nom de son premier bouton,
 et c'est pour ça qu'on ne trouvait pas Tourner.
 
+## La commande du jour, et le sac, 17/09/2026 au soir
+
+`supabase/2026-09-17_commande.sql`, **joué le 17/09/2026 au soir** et
+**rejouable** : `create or replace`, `add column if not exists`,
+`create table if not exists`.
+
+Vérifié contre le vrai projet, sans compte : `commande()` rend la même
+paire que `commandeDuJour()` calcule en local, `bourse_ramasser()` et
+`livrer()` répondent « connecte-toi » et non « function does not exist »,
+et l'insert direct dans `livraisons` est refusé en `42501`. Le vide de
+policy fait ce qu'on attend de lui, mesuré.
+
+La question tranchée avant d'écrire une ligne : la commande se paie-t-elle
+en shells, un revenu solitaire de plus contre la règle « l'île grandit
+parce que des gens sont passés », ou demande-t-elle d'aller chez les
+autres, ce qui rouvrirait le choix écrit dans `majLaisse()` : « chez les
+voisins, il n'y a rien à ramasser » ?
+
+**Ni l'un ni l'autre. La commande se remplit chez soi et se livre chez un
+voisin.** La règle de `majLaisse()` parle de *ramasser* ; livrer est le
+verbe inverse. On arrive les mains pleines au lieu de repartir les mains
+pleines, et cette ligne-là n'a pas bougé d'un mot.
+
+Et la commande paie dans la **famille des visites**, pas dans celle des
+corvées : `commande` / `commande_recue` ont la forme de `mot_pose` /
+`mot_recu` jusqu'à la vérifiabilité : une ligne signée d'un compte, sur
+l'île d'un autre, et le bénéficiaire n'est pas l'appelant. Le revenu
+solitaire reste à **19** shells par jour ; le revenu « quelqu'un est
+passé » monte de 35 à **65**. Le rapport passe de 1,8x à 3,4x : ça
+renforce la règle au lieu de l'éroder. Ne jamais refaire de la commande
+une corvée qui se boucle chez soi.
+
+Sept choses à ne pas défaire.
+
+1. **Le sac est au joueur, pas à l'île.** Il vit dans `bourses.sac` avec
+   la bourse, et pour la même raison : c'est la personne qui visite, et
+   c'est elle qui porte le panier. Donc **aucune clé de plus dans
+   `mondeNu()`**, rien pour Ctrl+Z, aucune migration du jsonb. Et il
+   suit d'un appareil à l'autre. Le remettre dans `monde` serait rendre
+   le sac au navigateur, exactement comme la bourse d'avant le 16/09.
+2. **Le sac ne se remplit que tant que la marée paie.** Pas de second
+   compteur : `plafond('maree')` borne déjà à trois objets par jour.
+   `bourse_ramasser()` compare `faits.maree` avant et après, et n'ajoute
+   au sac que si le crédit a eu lieu. Un sac sans plafond serait une
+   monnaie que le client s'écrit, et cette monnaie-là achète des shells
+   chez le voisin.
+3. **La commande se déduit du jour, elle n'est stockée nulle part.** La
+   même pour tout l'archipel, comme la marée se déduit de l'heure : deux
+   enfants qui jouent le même jour peuvent en parler. Le calcul est en
+   **arithmétique entière pure des deux côtés** (`commande()` en SQL,
+   `commandeDuJour()` en JS) : `hashtext()` ne se rejoue pas en
+   JavaScript, et deux calculs qui divergent, c'est une commande qui
+   demande autre chose que ce que la livraison accepte. L'ordre de
+   `TROUVAILLES` **est** celui du tableau SQL : `commande()` désigne une
+   sorte par son rang. C'est pour ça que la liste est déclarée en haut du
+   fichier, loin de ses dessins.
+4. **La mer dépose les deux sortes demandées, plus une au hasard**
+   (`majLaisse()`). Le jeu de la commande n'est pas de deviner ce que la
+   marée voudra bien donner, c'est de porter le panier chez quelqu'un.
+   La clé de la laisse porte donc le **jour** en plus du numéro de marée :
+   la commande tourne à minuit et le sable doit tourner avec elle.
+5. **Le geste est le pas de la porte du voisin.** Cette case ne savait
+   dire que « c'est fermé » ; elle devient la seule chose qu'on vient y
+   faire. Pas de nouvel objet à poser, pas de quatrième plaque dans le
+   bandeau : l'avertissement des 360 px vaut toujours. `agir()` la met au
+   **rang de la porte**, et `proximity()` au même : chez soi ce rang fait
+   entrer, chez l'autre il ne faisait rien.
+6. **Chaque état de cette case a sa clé de bulle** (`porte:pret`,
+   `porte:livre`, `porte:manque`, `porte:ferme`), toutes préfixées
+   `porte` pour que le ménage du bas de `proximity()` les lève.
+   `porterLaCommande()` pose lui-même `porte:livre` : avec une clé unique,
+   le « +6 shells » serait recouvert au battement suivant par « tu as déjà
+   porté ». (Le coffre a encore ce défaut-là, lui.)
+7. **Le panier se voit** (`panier()`, `panierEnMain()`). Un inventaire qui
+   ne vit que dans un panneau se lit comme une liste de courses, et
+   l'enfant qui traverse l'archipel ne porte alors rien. Il sort dès que
+   le sac peut remplir la commande, se range quand elle est portée, et se
+   montre **chez les voisins aussi**, puisque c'est là qu'on l'emmène. Il occupe
+   la place de la tondeuse, donc un seul objet en main à la fois : on ne
+   pousse pas la tondeuse un panier au bras.
+
+Le sac est dans l'onglet **Toi**, pas dans un septième onglet : c'est ce
+que le bonhomme porte, comme les bottes, et la barre est déjà à six. La
+commande est en tête de **Voisins**, parce que c'est la raison d'y aller
+et que c'est là qu'on choisit chez qui. La pastille de l'onglet Voisins
+(`commandeAPorter()`) ne s'allume que quand il y a vraiment quelque chose
+à faire : une pastille allumée en permanence devient une décoration.
+
+`livraisons` n'a **aucune policy d'écriture**, comme `bourses` : l'insert
+passe par `livrer()`, qui vérifie le sac. Un insert direct, c'est un reçu
+écrit sans avoir rien porté, donc le voisin crédité depuis la console.
+Elle se **lit** en revanche, par l'hôte et par le porteur : c'est un reçu,
+pas un mur public, et c'est ce qui permet de mettre un nom sur le gain.
+Un gain anonyme se lit comme une bizarrerie du compteur.
+
+Ce que ça ne fait pas : le serveur ne voit toujours pas l'île, donc « j'ai
+ramassé un coquillage » n'est pas vérifiable. La **livraison**, elle, l'est
+de bout en bout. Même honnêteté que pour les mots.
+
+Tant que la migration n'est pas passée, `bourse_ramasser` n'existe pas :
+`ramasser()` retombe sur `bourse_gagner('maree', n)`, qui sait au moins
+créditer. Le sac ne remonte pas, mais les shells ne se perdent pas entre
+le déploiement du client et le passage du SQL.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

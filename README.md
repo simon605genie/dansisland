@@ -22,6 +22,7 @@ depuis le 17/09/2026.
     supabase/2026-09-16_grille18.sql  migration à jouer une seule fois
     supabase/2026-09-16_bourse_serveur.sql  la bourse quitte le jsonb — rejouable
     supabase/2026-09-17_maree.sql     la marée — rejouable
+    supabase/2026-09-17_commande.sql  la commande du jour et le sac, rejouable
     _redirects          Cloudflare Pages : catch-all, toute adresse sert index.html
     build.sh            copie dans dist/ les seuls fichiers à publier
 
@@ -48,17 +49,31 @@ Le schéma est appliqué, le site est déployé, les URLs d'auth pointent sur le
 domaine public. Vérifié en production : création de compte, création d'île,
 vue `archipel`, et les pages d'île (`/simon`) en mode visiteur.
 
+`supabase/2026-09-17_maree.sql` **est joué** (17/09/2026 au soir) : la mer
+est tenue par le serveur, et les shells ramassés sur le sable remontent.
+
+`supabase/2026-09-17_commande.sql` **est joué** aussi, et vérifié en vrai
+contre le projet, sans compte, par les fonctions ouvertes à `anon` :
+
+- `commande()` rend `coquillage + etoile` pour le 17/09, **exactement ce que
+  `commandeDuJour()` calcule en local** : les deux arithmétiques sont
+  d'accord contre le vrai serveur, pas seulement entre elles ;
+- `economie()` porte les sept plafonds et les cinq gains, `commande` 6/6 et
+  `commande_recue` 8/24 ;
+- `catalogue` compte 28 lignes, dont `appareil` à 28 et `compagnon` à 20 ;
+- `bourse_ramasser()` et `livrer()` existent et répondent « connecte-toi »
+  (`P0001`), pas « function does not exist » ;
+- `bourses.sac` se lit sans `42703` ;
+- **l'insert direct dans `livraisons` est refusé** (`42501`,
+  « new row violates row-level security policy »). Le vide de policy fait
+  bien ce qu'on attend de lui, mesuré et pas supposé.
+
 Pas encore éprouvé :
 
-- **La marée côté serveur.** `supabase/2026-09-17_maree.sql` n'a pas été
-  joué : il n'y avait pas de Postgres sous la main pour le relire autrement
-  qu'à l'œil, comme pour la bourse. Tant qu'il n'est pas passé, le client
-  calcule le même cycle en local et la marée marche — mais les shells
-  ramassés sur le sable ne remontent pas, et la lecture suivante de la
-  bourse les efface. À jouer dans
-  [l'éditeur SQL](https://supabase.com/dashboard/project/cgputbitzfgokpwbbind/sql/new),
-  d'un bloc, en vérifiant que l'en-tête dit bien « dansisland ». Il se
-  rejoue sans casse.
+- **La livraison en vrai.** Comme les visites payantes, elle demande deux
+  comptes : un qui porte, un qui reçoit. Le crédit du porteur se voit tout
+  de suite dans le murmure ; celui de l'hôte ne se vérifie qu'en se
+  reconnectant avec l'autre compte.
 - **La bourse côté serveur.** `supabase/2026-09-16_bourse_serveur.sql` n'a
   pas été joué au moment où il a été écrit : il n'y avait pas de Postgres
   sous la main pour le relire autrement qu'à l'œil. Tant qu'il n'est pas
@@ -757,6 +772,85 @@ C'est donc **le zoom de base qui a reculé**, de 1 à 0,78. Le cadre montre
 985x641 de monde, la mer y tient avec du papier tout autour, et pas une
 ligne de CSS n'a bougé.
 
+## La commande du jour, et le sac
+
+Chaque matin, l'archipel demande deux choses : un coquillage et une étoile
+de mer, un bout de bois flotté et une bouteille à la mer. **La même
+commande pour tout le monde**, comme la marée est la même pour tout le
+monde : deux enfants qui jouent le même jour peuvent en parler. Elle se
+déduit du jour et n'est stockée nulle part.
+
+On la remplit **chez soi**, sur le sable mouillé, à marée basse : la mer y
+dépose les deux sortes demandées et une troisième au hasard. Ce qu'on
+ramasse tombe dans le **sac**, et on la porte **chez quelqu'un**, jusqu'au
+pas de sa porte : `E` ou le bouton rose. **6 shells** pour le porteur, une
+fois par jour ; **8** pour l'hôte, qui les trouve en rentrant, jusqu'à
+trois paniers.
+
+### Pourquoi elle se livre, et pourquoi elle ne se ramasse pas
+
+La question posée avant d'écrire une ligne : la commande se paie-t-elle en
+shells (un revenu solitaire de plus, contre la règle « l'île grandit parce
+que des gens sont passés »), ou demande-t-elle d'aller glaner chez les
+autres, ce qui rouvrirait le choix déjà écrit pour la marée : « chez les
+voisins, il n'y a rien à ramasser » ?
+
+Ni l'un ni l'autre. **Elle se remplit chez soi et se livre chez un
+voisin.** La règle de la marée parle de *ramasser* ; livrer est le verbe
+inverse. On arrive les mains pleines au lieu de repartir les mains
+pleines, et cette règle-là n'a pas bougé d'un mot.
+
+Et elle paie dans la famille des **visites**, pas dans celle des corvées.
+Le revenu solitaire reste à 19 shells par jour ; le revenu « quelqu'un est
+passé » monte de 35 à 65. Le rapport passe de 1,8x à 3,4x. C'est le seul
+ajout d'économie depuis les visites qui *renforce* la règle au lieu de
+l'éroder, et c'est à ça qu'il faut mesurer le suivant.
+
+C'est aussi, avec le mot planté, le seul gain que le serveur peut vérifier
+de bout en bout : il y a une ligne dans `livraisons`, signée d'un compte,
+sur l'île d'un autre. « J'ai ramassé un coquillage » ne l'est pas : c'est
+le plafond du jour qui borne ça, comme pour la tonte.
+
+### Le sac
+
+Il appartient au **joueur**, pas à l'île : il vit dans `bourses.sac`, avec
+la bourse, et pour la même raison : c'est la personne qui visite, et c'est
+elle qui porte le panier. Rien n'entre dans `iles.monde`, aucune clé de
+plus dans `mondeNu()`, aucune migration du jsonb. Il suit d'un appareil à
+l'autre, et chez les voisins.
+
+Il ne se remplit **que tant que la marée paie** : trois objets par jour,
+bornés par le plafond de six shells, sans second compteur à tenir. Ramassé
+au-delà, l'objet disparaît quand même et le dit. Même règle que la tonte.
+
+Et **il se voit**. Dès que le sac peut remplir la commande, le bonhomme
+porte un panier, chez lui comme chez les autres, et il le pose quand elle
+est livrée. Un inventaire qui ne vit que dans un panneau se lit comme une
+liste de courses ; là, on voit quelqu'un traverser l'archipel avec quelque
+chose dans les mains. Il occupe la place de la tondeuse : un seul objet en
+main à la fois.
+
+Le sac est dans l'onglet **Toi**, à côté de l'équipement : c'est ce qu'on
+porte. La commande est en tête de **Voisins**, parce que c'est la raison
+d'y aller. La pastille de l'onglet ne s'allume que quand le sac est prêt
+et que la commande n'est pas portée : une pastille allumée en permanence
+n'est plus une pastille.
+
+### Ce qu'on ne peut pas faire
+
+- Porter deux commandes dans la journée. Le plafond vaut exactement le
+  gain, comme pour la promenade du chien : c'est ce qui dit « une fois par
+  jour » en une ligne.
+- La porter chez soi, ni sur une île de démonstration : il n'y a personne
+  pour recevoir le panier.
+- Demander le gain. Le client appelle `livrer()`, qui déduit le panier de
+  la commande du jour, vérifie le sac, écrit le reçu et crédite les deux
+  comptes. Le panier n'est pas dans l'appel, pour la même raison que le
+  prix vient du catalogue et jamais de l'appel.
+- Écrire une ligne de `livraisons` à la main : la table n'a aucune policy
+  d'écriture, comme `bourses`. Elle se lit, par l'hôte et par le porteur :
+  c'est un reçu, pas un mur public.
+
 ## Les souvenirs
 
 Chez un voisin, s'arrêter à côté d'un objet propose de le ramener.
@@ -773,7 +867,13 @@ sauvegarde l'efface en silence.**
 
 `bourse` et `achats` en sont **sortis le 16/09 au soir** et n'ont plus rien
 à y faire : ils vivent dans `bourses`, une table que le client ne peut pas
-écrire. Les y remettre serait rendre la caisse au navigateur.
+écrire. Les y remettre serait rendre la caisse au navigateur. Le **sac**
+(`bourses.sac`) n'y est jamais entré, pour la même raison et parce qu'il
+appartient au joueur et non à l'île.
+
+Les paniers portés vivent dans `livraisons`, une ligne par (île, porteur,
+jour), écrite par `livrer()` seule : la table n'a aucune policy
+d'écriture.
 
 Les mots du livre d'or vivent à part, dans `mots`, pour être modérables un
 par un — et c'est un trigger sur cette table qui paie les visites.
