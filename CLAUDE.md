@@ -562,6 +562,114 @@ grandit parce que des gens sont passés**, jamais parce que le temps passe.
 Une marée généreuse serait exactement le contraire, un gain qui tombe tout
 seul deux fois par jour.
 
+## Le coffre du jour, 17/09/2026 au soir
+
+Le cadeau du jour existait ; ce qui manquait, c'était le geste. Il s'ouvrait
+par un bouton dans un panneau, et c'est exactement ce que le jeu se refuse
+partout ailleurs : « un bouton qui donne des shells ne serait pas un jeu ».
+Le coffre est le même cadeau, mais posé quelque part : on y va en marchant,
+on appuie sur `E` ou sur le bouton rose, comme pour la porte et le chien.
+
+**Aucune migration, aucune clé de plus.** `bourse.cadeau` tenait déjà le
+jour du dernier cadeau ouvert et `bourse_cadeau()` le débite déjà côté
+serveur. Rien n'entre dans `mondeNu()`, rien pour `Ctrl+Z` : le coffre
+est un objet d'île gratuit qui existait, et son état se déduit de la bourse.
+
+Cinq choses à ne pas défaire :
+
+1. **Tous les coffres de l'île portent le même cadeau**, et il n'y en a
+   qu'un par jour. On n'en élit pas un : dix coffres ne donnent pas dix
+   cadeaux, puisque c'est `bourse.cadeau` qui compte et que le serveur
+   refuse le second. Élire « le vrai » coffre coûterait une donnée de plus
+   et ne rendrait rien.
+2. **Chez un voisin, le coffre reste fermé.** `cadeauDispo()` lit *ta*
+   bourse : un coffre ouvert chez l'hôte parlerait de toi, pas de lui.
+   C'est la même règle que sa porte. `coffrePlein()` et `coffreOuvert()`
+   sont tous les deux faux quand `visiting`.
+3. **Le bouton du panneau ne disparaît que s'il y a un coffre.** Une gomme
+   passée sur le dernier coffre ne doit pas rendre le cadeau injoignable :
+   sans coffre, la Boutique garde son bouton et propose d'en poser un
+   (`poserUnCoffre()`).
+4. **L'ordre de `agir()` a gagné un rang**, et `proximity()` l'a gagné au
+   même endroit : souvenir, chien, **coffre**, porte. Les deux doivent
+   rester d'accord, c'est la règle déjà écrite pour le chien. Les deux
+   passent par `coffreProche()`, et pas par une recherche recopiée.
+5. **Un coffre vide n'est pas un refus.** Il n'a rien à donner aujourd'hui,
+   la bulle le dit, et le bouton rose ne s'affiche pas. Pas de gronderie,
+   même règle que le chien qui s'assied.
+
+`DRAW.coffre` a gagné un troisième paramètre, `ouvert`, et `dessinDe()` le
+laisse passer sous le nom `etat`. C'est le même choix que le dernier
+paramètre `saut` de `drawChar()` : un argument optionnel coûte moins
+qu'une seconde fonction de dessin. Un seul dessin le lit.
+
+Le scintillement (`etincelle()`) est le geste de `dessinTrouvaille()`,
+en or plutôt qu'en blanc. C'est voulu : **dans ce jeu, une chose qui brille
+est une chose à prendre.** Il est peint dans `drawWorld()` et non dans
+`DRAW.coffre`, sinon la vignette de l'atelier scintillerait aussi.
+
+## Les niveaux dans la maison, 17/09/2026 au soir
+
+Trois défauts qui n'en faisaient qu'un : il manquait la notion de **sur quoi
+un meuble se pose**. Un tableau occupait une case de plancher où l'on ne
+passait plus, poser un vase sur la table effaçait la table sans un mot, et
+`⟳ Tourner` existait mais personne ne le trouvait.
+
+`NIVEAU` vit à côté de `TAILLE`, et pour la même raison : c'est une
+propriété du **type**, dans le catalogue, jamais dans le jsonb. **Aucune
+migration**, et un meuble reste `{t,x,y,o,c}`.
+
+    'plat'    au sol, sous tout le reste, ne bloque pas    tapis, tapis rond
+    'dessus'  sur un meuble à plateau, ou par terre        vase, plante, télé
+    'mur'     accroché au fond, ne bloque pas              tableau, guirlande
+    absent    par terre, et il bloque                      tout le reste
+
+`PLAT` a disparu : il se déduisait de `NIVEAU`, donc il n'avait plus de
+raison d'être. Une seule notion, pas deux listes à tenir d'accord.
+
+Six choses à ne pas défaire :
+
+1. **Poser sur une case prise ne l'efface plus, ça le dit.** L'ancienne
+   version filtrait en silence tout meuble dont on prenait la case. Le
+   refus nomme ce qui est là et dit quoi faire, là où est le doigt : c'est
+   la leçon de la boutique, et elle vaut ici aussi.
+2. **`SURFACE` porte la hauteur du plateau**, et c'est elle qui dit à quelle
+   hauteur dessiner ce qu'on pose. Les dessins ne savent rien du niveau :
+   ils partent de leur propre zéro, et `dessinerMeuble(m,h)` les monte. Ni
+   l'étagère ni la bibliothèque n'y sont : leur haut est hors de vue dans
+   cette isométrie, et un vase posé là ne se lirait pas.
+3. **Ce qui est posé se trie juste après son porteur** (`prof(por)+0.01`),
+   jamais à sa propre profondeur. Un vase 1x1 au coin d'une commode 2x1
+   passe avant elle dans le tri par `x+y`, et la commode lui repasserait
+   devant.
+4. **C'est le `Sens` qui choisit le mur**, pour un cadre : `sw` vise la
+   colonne 0, `se` la rangée 0, les deux seules parois dessinées. Un cadre
+   ailleurs est refusé, en disant les deux façons de s'en sortir.
+5. **Une rotation qui ne change pas l'encombrement ne vérifie rien.** Les
+   cases sont identiques, donc tout a déjà été vérifié à la pose. Sans ça,
+   tourner un vase posé sur une commode butait sur la commode elle-même.
+   Pour un vrai demi-tour, ce qui est posé **sur** le meuble ne compte pas
+   comme obstacle : il suit, et s'il se retrouve à côté du plateau il
+   redescend au sol tout seul. Rien n'est perdu, jamais.
+6. **`attraper()` est l'ordre unique de la gomme et de ⟳ Tourner** : ce qui
+   est posé, le meuble, le cadre, le tapis. Deux ordres différents, et on
+   efface le tapis sous la table en croyant prendre la table.
+
+**Une pièce décorée avant ce changement ne perd rien.** Les cadres se
+posaient au sol, donc une pièce d'hier peut en avoir un au milieu, où il
+serait maintenant accroché dans le vide. `accrocherAuMur()`, appelé depuis
+`normaliserInterieur()`, le **glisse contre la paroi dont il est le plus
+près**. On ne l'efface jamais : on ne reprend pas ce qui a été posé, c'est
+la même règle que le phare offert à qui en avait déjà un. Conséquence
+assumée : deux cadres qui glissent au même endroit se recouvrent, et c'est
+au joueur d'en déplacer un. Un recouvrement se voit et se corrige ; une
+disparition, non.
+
+L'atelier du dedans a les mêmes étiquettes que celui du dehors : `Sens` et
+non « Orientation », et `⌫ Gomme` + `⟳ Tourner` sous **Corriger** et non
+sous « Marcher ». L'étiquette du groupe était le nom de son premier bouton,
+et c'est pour ça qu'on ne trouvait pas Tourner.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

@@ -892,8 +892,30 @@ const MEUBLE_GROUPS=[
 // les deux dimensions, rien d'autre.
 const TAILLE={canape:[2,1], lit:[2,2], bureau:[2,1], commode:[2,1], etagere:[2,1], tapis:[2,2],
               tapisrond:[2,2], aquarium:[2,1], bibliotheque:[2,1], piano:[2,1]};
-// Les « plats » se posent au sol, sous les autres, et ne bloquent pas la marche.
-const PLAT={tapis:true, tapisrond:true};
+/* Ce qu'un meuble sait faire, en plus de son encombrement. C'est une
+   propriété du **type**, comme `TAILLE` : elle vit dans le catalogue et
+   jamais dans le jsonb, donc aucune migration, et un meuble reste
+   `{t,x,y,o,c}`. C'est la ligne tenue partout ici : l'architecture est du
+   code, la décoration est de la donnée.
+
+     'plat'    au sol, sous tout le reste, ne bloque pas la marche
+     'dessus'  se pose sur un meuble à plateau, ou par terre
+     'mur'     s'accroche à une paroi du fond, ne bloque pas la marche
+     absent    par terre, et il bloque
+
+   Avant le 17/09 au soir il n'y avait que `plat` et le reste, et ça se
+   payait deux fois : un tableau occupait une case de plancher où l'on ne
+   passait plus, et poser un vase sur la table effaçait la table sans un
+   mot. Les deux viennent de la même absence, pas de deux bugs. */
+const NIVEAU={ tapis:'plat', tapisrond:'plat',
+               tableau:'mur', guirlande:'mur',
+               vase:'dessus', plante:'dessus', tele:'dessus' };
+function niveau(t){ return NIVEAU[t]||'sol'; }
+// Les meubles sur lesquels on pose quelque chose, et la hauteur de leur
+// plateau : c'est elle, et rien d'autre, qui dit où dessiner ce qu'on y met.
+// Une étagère et une bibliothèque n'y sont pas : leur haut est hors de vue
+// dans cette isométrie, et un vase posé là ne se lirait pas.
+const SURFACE={tablebasse:22, chevet:32, commode:46, bureau:37, malle:31, piano:50};
 function emprise(t,o){ const s=TAILLE[t]||[1,1]; return o==='sw' ? [s[1],s[0]] : [s[0],s[1]]; }
 function casesDe(m){
   const s=emprise(m.t,m.o), out=[];
@@ -921,11 +943,25 @@ function normaliserInterieur(w){
       if(!m||typeof m!=='object'||!MEUBLE_NOMS[m.t]) return false;
       m.x=Math.round(m.x); m.y=Math.round(m.y);
       if(m.o!=='sw') m.o='se';
+      // Les cadres et les guirlandes se posaient au sol avant le 17/09 au
+      // soir : une pièce décorée la veille peut donc en avoir un au milieu,
+      // et il s'y retrouverait accroché dans le vide. On le **glisse contre
+      // le mur le plus proche** plutôt que de le laisser flotter, et jamais
+      // on ne l'efface : on ne reprend pas ce qui a été posé. C'est la même
+      // règle que le phare offert à qui en avait déjà un.
+      if(niveau(m.t)==='mur') accrocherAuMur(m);
       const s=emprise(m.t,m.o);
       return m.x>=0 && m.y>=0 && m.x+s[0]<=q.w && m.y+s[1]<=q.h;
     });
   });
   w.interieur=it; return it;
+}
+// Un cadre doit être contre une paroi du fond : `sw` sur la colonne 0, `se`
+// sur la rangée 0. On choisit le mur dont il est déjà le plus près, et on
+// n'y touche pas s'il y est déjà.
+function accrocherAuMur(m){
+  if(m.o==='sw' ? m.x===0 : m.y===0) return;
+  if(m.x<=m.y){ m.o='sw'; m.x=0; } else { m.o='se'; m.y=0; }
 }
 function couleurSolConnu(k){ return SOLS.some(s=>s[0]===k); }
 const MEUBLE_NOMS={}; MEUBLE_GROUPS.forEach(g=>g[1].forEach(m=>{ MEUBLE_NOMS[m[0]]=m[1]; }));
@@ -1547,8 +1583,25 @@ const DRAW={
     c.save(); c.translate(0,-13);
     isoBox(c,0,0,17,2.5,shade(C,6)); c.restore();
   },
-  coffre(c,C){
+  // Le seul objet qui a deux états, parce qu'il est le seul à contenir
+  // quelque chose. Fermé, le cadeau du jour attend dedans ; ouvert et vide,
+  // on l'a déjà pris. C'est `coffreOuvert()` qui tranche, et jamais une
+  // donnée : rien de tout ça ne part en base.
+  coffre(c,C,ouvert){
     isoBox(c,0,0,14,10,C);
+    if(ouvert){
+      // Le couvercle est rabattu en arrière. « En arrière » est ici le haut
+      // de l'écran : `iso()` fait descendre ce qui s'éloigne, donc un
+      // couvercle qui s'ouvre remonte, sans décalage latéral.
+      isoTop(c,0,-10,14,shade(C,-46));
+      isoTop(c,0,-11.5,9,shade(C,-30));
+      // La charnière est le coin nord du coffre, à -17 : le couvercle est
+      // posé juste au-dessus, et son coin sud le recouvre de deux pixels.
+      // Plus haut, il flotte ; plus bas, il rebouche l'ouverture.
+      c.save(); c.translate(0,-20);
+      isoBox(c,0,0,10,2.5,shade(C,16)); c.restore();
+      return;
+    }
     isoBox(c,0,-10,14,5,shade(C,16));
     c.fillStyle=SAND; c.fillRect(-2.5,-13,5,7);
   },
@@ -1888,9 +1941,12 @@ const DRAW={
     c.fillStyle=shade(p,28); c.beginPath(); c.ellipse(0,-44,7,3,0,0,Math.PI*2); c.fill();
   }
 };
-function dessinDe(g,t,col,o){
+// `etat` est optionnel et un seul dessin le lit : le coffre, qui s'ouvre.
+// C'est le même choix que le dernier paramètre `saut` de `drawChar()` :
+// un argument de plus coûte moins qu'une seconde fonction de dessin.
+function dessinDe(g,t,col,o,etat){
   g.save(); if(o==='sw') g.scale(-1,1);
-  (DRAW[t]||DRAW.rocher)(g,col); g.restore();
+  (DRAW[t]||DRAW.rocher)(g,col,etat); g.restore();
 }
 const OBJ_GROUPS=[
   ['Nature',[['arbre','Arbre à fleurs'],['palmier','Palmier'],['sapin','Sapin'],['buisson','Buisson'],['cactus','Cactus'],['fleur','Fleur'],['rocher','Rocher'],['mare','Mare aux canards'],['puits','Puits']]],
@@ -2371,6 +2427,19 @@ function seuilDeLaMaison(){
   isoTop(ctx,0,0,TW/2-21,'#F2CE93');
   ctx.restore();
 }
+// Le scintillement du coffre plein. C'est exactement le geste de
+// `dessinTrouvaille()` (ce que la mer laisse scintille pareil), et c'est
+// voulu : dans ce jeu, une chose qui brille est une chose à prendre. En or
+// plutôt qu'en blanc, parce qu'un coffre n'est pas un coquillage.
+function etincelle(c,t){
+  const b=0.5+0.5*Math.sin(t/380);
+  c.globalAlpha=0.30+0.50*b;
+  c.strokeStyle='#FFD98A'; c.lineWidth=1.8; c.lineCap='round';
+  const r=4.5+b*3.2;
+  [[0,-1],[1,0]].forEach(function(d){
+    c.beginPath(); c.moveTo(-d[0]*r,-20-d[1]*r); c.lineTo(d[0]*r,-20+d[1]*r); c.stroke(); });
+  c.globalAlpha=1;
+}
 function drawWorld(t){
   ctx.clearRect(0,0,CW,CH);
   ciel(t);
@@ -2407,10 +2476,16 @@ function drawWorld(t){
   world.objects.forEach(o=>{
     if(balade&&o===balade.o) return;      // il a quitté sa case : il est plus bas
     const c0=ctr(o.x,o.y);
+    // Le coffre est le seul objet dont le dessin dépend de l'état du jeu.
+    // Fermé et scintillant, il dit qu'il a quelque chose ; ouvert et vide,
+    // qu'on est déjà passé. Chez un voisin, il reste fermé : ce serait ta
+    // bourse qu'il lirait, pas la sienne.
+    const plein = coffrePlein(o);
     items.push({d:o.x+o.y+1, f:()=>{
       ctx.save(); ctx.translate(c0.x,c0.y-LIFT);
       shadowDiamond(ctx,0,0,12);
-      dessinDe(ctx,o.t,o.c||'#8AA3B2',o.o); ctx.restore();
+      dessinDe(ctx,o.t,o.c||'#8AA3B2',o.o,coffreOuvert(o));
+      if(plein) etincelle(ctx,t); ctx.restore();
     }});
   });
   if(visiting){
@@ -2615,11 +2690,15 @@ const DRAWM={
       c.fillStyle=shade(C,i%2?12:-10); c.beginPath();
       c.ellipse(Math.cos(a)*20,-36+Math.sin(a)*8,8,5.4,a+Math.PI/2,0,Math.PI*2); c.fill(); }
   },
+  // Accroché, pas posé. Son panneau descendait jusqu'au plancher, et il
+  // occupait donc une case où l'on ne passait plus : un cadre au mur qui
+  // barre le passage n'est pas un cadre au mur. Il part maintenant à 34 du
+  // sol et s'arrête à 68, sous le haut de la paroi (`MURH` vaut 86).
   tableau(c,C,s,o){
-    adosse(c,[0.9,0.9],o,0.1,52,BROWN);
+    adosse(c,[0.9,0.9],o,0.1,34,BROWN,34);
     c.save();
-    if(o==='sw'){ dec(c,-0.34,0); pave(c,0.05,0.5,36,C,8); }
-    else        { dec(c,0,-0.34); pave(c,0.5,0.05,36,C,8); }
+    if(o==='sw'){ dec(c,-0.34,0); pave(c,0.05,0.5,26,C,38); }
+    else        { dec(c,0,-0.34); pave(c,0.5,0.05,26,C,38); }
     c.restore();
   },
   vase(c,C){
@@ -2739,10 +2818,34 @@ const DRAWM={
 };
 
 /* ---- ce qui occupe une case ---- */
+// Ce qui occupe le plancher d'une case, donc ce qui bloque la marche : les
+// meubles posés par terre et ce qu'on a mis dessus. Un tapis et un cadre au
+// mur n'en sont pas : on passe dessus, et devant.
 function meubleA(x,y,d){
   d=d||pieceData();
-  return (d.meubles||[]).find(m=>!PLAT[m.t] && casesDe(m).some(c=>c.x===x&&c.y===y)) || null;
+  return (d.meubles||[]).find(m=>{ const n=niveau(m.t);
+    return (n==='sol'||n==='dessus') && casesDe(m).some(c=>c.x===x&&c.y===y); }) || null;
 }
+function meubleSur(x,y,d,niv){
+  return ((d||pieceData()).meubles||[]).find(m=>niveau(m.t)===niv
+    && casesDe(m).some(c=>c.x===x&&c.y===y)) || null;
+}
+// Ce que la gomme et ⟳ Tourner attrapent, du plus haut au plus bas : ce qui
+// est posé sur un meuble d'abord, le meuble ensuite, le cadre au mur, le
+// tapis en dernier. Un seul ordre pour les deux outils, sinon on efface le
+// tapis sous la table en croyant prendre la table.
+function attraper(x,y,d){
+  d=d||pieceData();
+  return meubleSur(x,y,d,'dessus') || meubleSur(x,y,d,'sol')
+      || meubleSur(x,y,d,'mur')    || meubleSur(x,y,d,'plat');
+}
+// Le meuble à plateau qui occupe cette case. C'est lui qui porte, et sa
+// hauteur dit à quelle hauteur dessiner ce qu'on a posé.
+function porteurSous(d,x,y){
+  return ((d||pieceData()).meubles||[]).find(m=>SURFACE[m.t]
+    && casesDe(m).some(c=>c.x===x&&c.y===y)) || null;
+}
+function nomMeuble(t){ return esc(MEUBLE_NOMS[t]||t); }
 function blockedDedans(tx,ty){
   const p=pieceDef(piece), x=Math.floor(tx), y=Math.floor(ty);
   if(x<0||y<0||x>=p.w||y>=p.h) return true;
@@ -2757,43 +2860,104 @@ function degager(){
 }
 
 /* ---- poser, effacer ---- */
+/* Poser un meuble. Ce qui est déjà là **ne s'efface plus tout seul** : la
+   version d'avant retirait en silence tout ce dont on prenait la case, donc
+   poser un vase sur la table faisait disparaître la table. C'est le même
+   défaut que la boutique d'avant, au même endroit : le refus doit tomber là
+   où est le doigt, et il doit dire quoi faire. */
 function poserMeuble(x,y){
-  const p=pieceDef(piece), d=pieceData(), s=emprise(tool.kind,tool.orient), plat=!!PLAT[tool.kind];
+  const p=pieceDef(piece), d=pieceData(), s=emprise(tool.kind,tool.orient);
+  const niv=niveau(tool.kind);
   if(x+s[0]>p.w || y+s[1]>p.h){ say('Il n’y a pas la place ici : ce meuble occupe '+s[0]+'x'+s[1]+' cases.'); return; }
   const cases=[]; for(let j=0;j<s[1];j++) for(let i=0;i<s[0];i++) cases.push({x:x+i,y:y+j});
-  if(!plat){
+
+  // Un cadre s'accroche à une paroi du fond, et c'est le **Sens** qui dit
+  // laquelle : 'sw' vise le mur de gauche (colonne 0), 'se' celui de droite
+  // (rangée 0). Les deux seules parois dessinées sont celles-là.
+  if(niv==='mur'){
+    const bon = tool.orient==='sw' ? (x===0) : (y===0);
+    if(!bon){ say('Ça s’accroche à un <b>mur du fond</b>. Prends une case contre le mur, ou change le <b>Sens</b> pour viser l’autre.'); return; }
+    const deja=meubleSur(x,y,d,'mur');
+    if(deja){ say('Il y a déjà <b>'+nomMeuble(deja.t)+'</b> à cet endroit du mur. Prends la <b>⌫ Gomme</b> pour le décrocher.'); return; }
+  }
+
+  if(niv==='sol'||niv==='dessus'){
     if(cases.some(c=>estPorte(p,c.x,c.y))){ say('Ne bouche pas le passage.'); return; }
     if(cases.some(c=>c.x===Math.floor(hero.x)&&c.y===Math.floor(hero.y))){ say('Tu es debout dessus.'); return; }
+    const pris=(d.meubles||[]).find(m=>{ const n=niveau(m.t);
+      return (n==='sol'||n==='dessus') && casesDe(m).some(c=>cases.some(k=>k.x===c.x&&k.y===c.y)); });
+    if(pris){
+      const surLui = niv==='dessus' && s[0]===1 && s[1]===1
+                  && niveau(pris.t)==='sol' && SURFACE[pris.t];
+      if(!surLui){
+        say(niv==='dessus' && niveau(pris.t)==='sol'
+          ? ('On ne pose rien sur <b>'+nomMeuble(pris.t)+'</b>. Essaie une table basse, une table de nuit, une commode, un bureau, une malle ou le piano.')
+          : ('Il y a déjà <b>'+nomMeuble(pris.t)+'</b> ici. Prends la <b>⌫ Gomme</b>, ou choisis une case libre.'));
+        return;
+      }
+      const dessus=meubleSur(x,y,d,'dessus');
+      if(dessus){ say('Il y a déjà <b>'+nomMeuble(dessus.t)+'</b> sur ce meuble.'); return; }
+    }
   }
+
+  // Deux tapis ne se superposent pas, mais un tapis passe sous tout le reste.
+  if(niv==='plat'){
+    const pris=meublePlatSous(d,cases);
+    if(pris){ say('Il y a déjà <b>'+nomMeuble(pris.t)+'</b> au sol ici. Prends la <b>⌫ Gomme</b>.'); return; }
+  }
+
   memoriser();
-  d.meubles=(d.meubles||[]).filter(m=>{
-    if(!!PLAT[m.t]!==plat) return true;                       // les tapis vivent sous le reste
-    return !casesDe(m).some(c=>cases.some(k=>k.x===c.x&&k.y===c.y));
-  });
+  d.meubles=(d.meubles||[]);
   d.meubles.push({t:tool.kind,x:x,y:y,o:tool.orient,c:tool.color});
   son('poser'); saveMine();
+}
+function meublePlatSous(d,cases){
+  return ((d||pieceData()).meubles||[]).find(m=>niveau(m.t)==='plat'
+    && casesDe(m).some(c=>cases.some(k=>k.x===c.x&&k.y===c.y))) || null;
 }
 // Tourner un meuble en place. Le nouvel encombrement doit tenir : un lit
 // deux cases sur une, retourné au ras du mur, sort de la pièce.
 function tournerMeuble(x,y){
   const p=pieceDef(piece), d=pieceData();
-  const m=(d.meubles||[]).find(k=>casesDe(k).some(c=>c.x===x&&c.y===y));
+  const m=attraper(x,y,d);
   if(!m){ say('Rien à tourner ici.'); return; }
   // Un meuble carré garde son encombrement : tourner ne déplace que son dos.
-  const o = m.o==='sw' ? 'se' : 'sw', s=emprise(m.t,o);
+  const o = m.o==='sw' ? 'se' : 'sw';
+  const s0=emprise(m.t,m.o), s=emprise(m.t,o), niv=niveau(m.t);
+  // Tourner un cadre, c'est le faire passer à l'autre paroi du fond. Il faut
+  // donc que sa case soit contre celle-là, sinon il resterait accroché dans
+  // le vide au milieu de la pièce.
+  if(niv==='mur'){
+    const bon = o==='sw' ? (m.x===0) : (m.y===0);
+    if(!bon){ say('Cette case n’est pas contre l’autre mur. Décroche-le et repose-le là-bas.'); return; }
+    memoriser(); m.o=o; son('poser'); saveMine(); buildAll(); return;
+  }
+  // Un meuble carré, ou n'importe quoi en 1x1, garde exactement ses cases :
+  // il n'y a alors rien à vérifier, puisque rien ne bouge. Sans ça, tourner
+  // un vase posé sur une commode butait sur la commode elle-même.
+  if(s[0]===s0[0] && s[1]===s0[1]){
+    memoriser(); m.o=o; son('poser'); saveMine(); buildAll(); return;
+  }
   if(m.x+s[0]>p.w || m.y+s[1]>p.h){ say('Pas la place de le tourner ici.'); return; }
   const cases=[]; for(let j=0;j<s[1];j++) for(let i=0;i<s[0];i++) cases.push({x:m.x+i,y:m.y+j});
-  if(!PLAT[m.t]){
+  if(niv!=='plat'){
+    // Ce qui est posé **sur** m le suit : il ne se compte pas comme un
+    // obstacle. S'il se retrouve à côté du plateau après le demi-tour, il
+    // redescend au sol tout seul, et rien n'est perdu.
+    const porte=(d.meubles||[]).filter(k=>niveau(k.t)==='dessus'
+      && casesDe(m).some(c=>c.x===k.x&&c.y===k.y));
     if(cases.some(c=>estPorte(p,c.x,c.y))){ say('Tourné, il bloquerait le passage.'); return; }
     if(cases.some(c=>c.x===Math.floor(hero.x)&&c.y===Math.floor(hero.y))){ say('Tu es debout dessus.'); return; }
-    if((d.meubles||[]).some(k=>k!==m&&!PLAT[k.t]&&casesDe(k).some(c=>cases.some(q=>q.x===c.x&&q.y===c.y)))){
+    if((d.meubles||[]).some(k=>k!==m && porte.indexOf(k)<0
+        && (niveau(k.t)==='sol'||niveau(k.t)==='dessus')
+        && casesDe(k).some(c=>cases.some(q=>q.x===c.x&&q.y===c.y)))){
       say('Un autre meuble est dans le passage.'); return; }
   }
   memoriser(); m.o=o; son('poser'); saveMine(); buildAll();
 }
 function effacerMeuble(x,y){
   const d=pieceData();
-  const cible = meubleA(x,y,d) || (d.meubles||[]).find(m=>PLAT[m.t]&&casesDe(m).some(c=>c.x===x&&c.y===y));
+  const cible=attraper(x,y,d);
   if(!cible) return;
   memoriser();
   d.meubles=d.meubles.filter(m=>m!==cible);
@@ -2989,10 +3153,15 @@ function solPiece(def,d){
     pave(ctx,0.34,0.34,0,shade(col,20),2.4);
     ctx.restore(); });
 }
-function dessinerMeuble(m){
-  const s=emprise(m.t,m.o), q=iso(m.x+s[0]/2, m.y+s[1]/2);
-  ctx.save(); ctx.translate(q.x,q.y);
-  if(!PLAT[m.t]){ ctx.globalAlpha=0.2; ctx.fillStyle='#0B3C5D';
+// `h` est la hauteur du plateau qui porte ce meuble, zéro quand il est par
+// terre. Les dessins ne savent rien de tout ça : ils partent toujours de
+// leur propre zéro, et c'est la translation qui les monte.
+function dessinerMeuble(m,h){
+  const s=emprise(m.t,m.o), q=iso(m.x+s[0]/2, m.y+s[1]/2), niv=niveau(m.t);
+  ctx.save(); ctx.translate(q.x,q.y-(h||0));
+  // L'ombre au sol dit qu'on est posé par terre. Ce qui est sur un meuble ou
+  // accroché au mur n'en a pas : elle mentirait sur la hauteur.
+  if(niv!=='plat' && niv!=='mur' && !h){ ctx.globalAlpha=0.2; ctx.fillStyle='#0B3C5D';
     ctx.beginPath(); ctx.ellipse(0,0,s[0]*HX*0.5,s[1]*HY*0.62,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
   (DRAWM[m.t]||DRAWM.malle)(ctx,m.c||'#8B5E3C',s,m.o||'se');
   ctx.restore();
@@ -3015,12 +3184,20 @@ function drawInterieur(t){
     ctx.lineTo(q.x,cy+vue.th/2); ctx.lineTo(q.x-vue.tw/2,cy); ctx.closePath(); ctx.stroke();
   }
 
-  (d.meubles||[]).filter(m=>PLAT[m.t]).forEach(dessinerMeuble);
+  // Les cadres et les guirlandes sont sur la paroi du fond : ils passent
+  // avant tout ce qui est au sol, puisque tout le reste est devant eux.
+  (d.meubles||[]).filter(m=>niveau(m.t)==='mur').forEach(m=>dessinerMeuble(m));
+  (d.meubles||[]).filter(m=>niveau(m.t)==='plat').forEach(m=>dessinerMeuble(m));
 
   const items=[];
-  (d.meubles||[]).filter(m=>!PLAT[m.t]).forEach(m=>{
-    const s=emprise(m.t,m.o);
-    items.push({d:(m.x+s[0]/2)+(m.y+s[1]/2), f:()=>dessinerMeuble(m)});
+  const prof=m=>{ const s=emprise(m.t,m.o); return (m.x+s[0]/2)+(m.y+s[1]/2); };
+  (d.meubles||[]).filter(m=>{ const n=niveau(m.t); return n==='sol'||n==='dessus'; }).forEach(m=>{
+    // Ce qu'on a posé sur un meuble se trie **juste après lui**, jamais à sa
+    // propre profondeur : un vase 1x1 au coin d'une commode 2x1 passe avant
+    // elle dans le tri par x+y, et la commode lui repasserait devant.
+    const por = niveau(m.t)==='dessus' ? porteurSous(d,m.x,m.y) : null;
+    const h   = por ? SURFACE[por.t] : 0;
+    items.push({d: por ? prof(por)+0.01 : prof(m), f:()=>dessinerMeuble(m,h)});
   });
   const hp=iso(hero.x,hero.y);
   items.push({d:hero.x+hero.y, f:()=>drawChar(ctx,hp.x,hp.y,mine.me,1.25,hero.face,hero.moving?t:0,vieDuBonhomme(t,hero.immobile))});
@@ -3696,7 +3873,10 @@ const SONS={
   piece:  ()=>{ souffle(1046,'sine',0.16,0.11); setTimeout(()=>souffle(1568,'sine',0.20,0.08),60); },
   tonte:  ()=>{ choc(0.16,620,0.13); setTimeout(()=>choc(0.10,900,0.07),90); },
   achat:  ()=>{ [659,880,1109,1318].forEach((f,i)=>setTimeout(()=>souffle(f,'triangle',0.4,0.10),i*95)); },
-  chien:  ()=>{ souffle(430,'triangle',0.10,0.15,250); setTimeout(()=>souffle(340,'triangle',0.12,0.11,200),135); }
+  chien:  ()=>{ souffle(430,'triangle',0.10,0.15,250); setTimeout(()=>souffle(340,'triangle',0.12,0.11,200),135); },
+  // Le couvercle qui grince, avant l'arpège du cadeau : deux sons courts
+  // valent mieux qu'un son long, et celui-ci dit « ça s'ouvre ».
+  coffre: ()=>{ choc(0.10,700,0.14); setTimeout(()=>souffle(230,'sawtooth',0.16,0.07,410),40); }
 };
 function son(n){ if(!sonCoupe && SONS[n]) try{ SONS[n](); }catch(e){} }
 
@@ -3822,8 +4002,10 @@ function boutonRose(l){
   if(l){ if(roseEl.textContent!==l) roseEl.textContent=l; roseEl.hidden=false; }
   else roseEl.hidden=true;
 }
-// L'ordre compte : un souvenir sous la main passe avant le chien, et le
-// chien avant la porte — sur le seuil, on entre en marchant de toute façon.
+// L'ordre compte : un souvenir sous la main passe avant le chien, le chien
+// avant le coffre, et le coffre avant la porte : sur le seuil, on entre en
+// marchant de toute façon. Le même ordre est tenu dans `proximity()` :
+// sinon le bouton rose annonce un geste et la touche en fait un autre.
 function agir(){
   if(souvenirProche){ ramasserSouvenir(); return true; }
   if(!visiting&&!dedans){
@@ -3832,6 +4014,9 @@ function agir(){
     } else {
       const c=chienProche(); if(c){ sortirLeChien(c); return true; }
     }
+    // Un coffre vide n'est pas un refus : il n'a simplement rien à donner
+    // aujourd'hui, et la bulle le dit déjà. Le bouton rose ne s'affiche pas.
+    if(coffreProche()&&cadeauDispo()){ son('coffre'); ouvrirCadeau(); return true; }
   }
   if(dedans||devantLaPorte()){ actionPorte(); return true; }
   return false;
@@ -3875,6 +4060,19 @@ function proximity(){
       boutonRose('Sortir le chien');
       bulle('chien','Ton chien. <b>E</b> pour le sortir : il fait le tour de l’île, et tu restes près de lui.'); return; }
   }
+  // Le coffre du jour. Il passe avant « souvenir rapporté » : un coffre
+  // ramené de chez un voisin est un coffre comme un autre, et ce qu'il a
+  // dedans intéresse plus que d'où il vient.
+  if(!visiting&&coffreProche()){
+    if(cadeauDispo()){
+      boutonRose('Ouvrir le coffre');
+      bulle('coffre','<b>Ton coffre.</b> Il y a quelque chose dedans aujourd’hui. <b>E</b> pour l’ouvrir.');
+    }else{
+      boutonRose(null);
+      bulle('coffre','Ton coffre est vide : tu l’as déjà ouvert aujourd’hui. Il se remplit demain.');
+    }
+    return;
+  }
   if(objet&&objet.de){ bulle('souv'+objet.x+'-'+objet.y,
     'Souvenir rapporté de chez <b>'+esc(objet.de)+'</b>.'); return; }
   // La porte de la maison. Elle n'ouvre que chez soi : c'est une règle de
@@ -3894,7 +4092,7 @@ function proximity(){
       : 'Ta porte. Monte sur le seuil, ou <b>E</b> pour rentrer chez toi.'); return;
   }
   sasArme=true; boutonRose(null);
-  if(['sign','souv','porte','chien'].some(k=>wLock.indexOf(k)===0)){ whisper.classList.remove('on'); wLock=''; }
+  if(['sign','souv','porte','chien','coffre'].some(k=>wLock.indexOf(k)===0)){ whisper.classList.remove('on'); wLock=''; }
 }
 // On ne vole rien : on ramène une copie, signée du nom de l'hôte. L'île
 // visitée n'est pas touchée, et la tienne garde la trace de qui tu as vu.
@@ -4296,20 +4494,31 @@ function buildDedans(){
     v=>{ if(d.mur===v) return; memoriser(); d.mur=v; saveMine(); buildAll(); }));
   p.appendChild(rule());
 
-  p.appendChild(chipsLibre('Orientation',[['se','\u2198 Vers la droite'],['sw','\u2199 Vers la gauche']],tool.orient,
+  // « Sens » et non « Orientation » : dehors, le même réglage s'appelle
+  // Sens, et deux noms pour une même chose se paient en hésitation.
+  p.appendChild(chipsLibre('Sens',[['se','\u2198 Vers la droite'],['sw','\u2199 Vers la gauche']],tool.orient,
     v=>{ tool.orient=v; buildAll(); }));
+  p.appendChild(hint('Le <b>Sens</b> sert deux fois : il retourne le meuble qu’on va poser, et pour un <b>tableau</b> ou une <b>guirlande</b> il dit à quel mur du fond ça s’accroche.'));
 
+  // ⟳ Tourner était rangé sous un champ intitulé « Marcher », entre Marcher
+  // et Gomme : l'étiquette du groupe était le nom de son premier bouton, et
+  // on ne trouvait pas Tourner. Dehors, ces deux-là sont sous « Corriger ».
+  // Mêmes outils, mêmes étiquettes, des deux côtés de la porte.
   const fm=field('Marcher'), bm=document.createElement('div'); bm.className='chips';
   const mb=document.createElement('button'); mb.className='chip'; mb.type='button'; mb.textContent='\u270b Marcher';
   mb.setAttribute('aria-pressed',String(tool.mode==='marche'));
   mb.onclick=()=>{ tool.mode='marche'; tool.kind=null; buildAll(); };
+  bm.appendChild(mb); fm.appendChild(bm); p.appendChild(fm);
+
+  const fx=field('Corriger'), bx=document.createElement('div'); bx.className='chips';
   const gb=document.createElement('button'); gb.className='chip'; gb.type='button'; gb.textContent='\u232b Gomme';
   gb.setAttribute('aria-pressed',String(tool.mode==='gomme'));
   gb.onclick=()=>{ tool.mode='gomme'; tool.kind=null; buildAll(); };
   const tb=document.createElement('button'); tb.className='chip'; tb.type='button'; tb.textContent='\u27f3 Tourner';
   tb.setAttribute('aria-pressed',String(tool.mode==='tourner'));
   tb.onclick=()=>{ tool.mode='tourner'; tool.kind=null; buildAll(); };
-  bm.appendChild(mb); bm.appendChild(gb); bm.appendChild(tb); fm.appendChild(bm); p.appendChild(fm);
+  bx.appendChild(gb); bx.appendChild(tb); fx.appendChild(bx); p.appendChild(fx);
+  p.appendChild(hint('<b>⟳ Tourner</b> retourne ce qui est <b>déjà posé</b>, sans l’effacer. La <b>⌫ Gomme</b> prend ce qu’il y a de plus haut sur la case : ce qui est posé sur un meuble avant le meuble, et le tapis en dernier.'));
 
   MEUBLE_GROUPS.forEach(g=>{
     const meubles=g[1].filter(m=>achete(m[0]));
@@ -4345,7 +4554,15 @@ function buildDedans(){
   p.appendChild(hint('Trois pi\u00e8ces, et personne d\u2019autre que toi n\u2019y entre. Le <b>'+def.n.toLowerCase()+
     '</b> fait '+def.w+'x'+def.h+' cases et porte <b>'+nb+' meuble'+(nb>1?'s':'')+'</b>. '+
     '<b>Ctrl+Z</b> annule ici comme dehors.'));
-  p.appendChild(hint('Le <b>sens</b> s\'applique au moment de poser ; <b>\u27f3 Tourner</b> retourne un meuble déjà en place. Un meuble ne se pose pas sur une porte ni sur un autre meuble ; le tapis, si : il vit au sol, sous le reste.'));
+  // Le bas du panneau disait « un meuble ne se pose pas sur un autre ; le
+  // tapis, si ». Ce n'est plus vrai depuis les niveaux, et le reste de la
+  // phrase répétait les deux repères donnés plus haut. Il dit maintenant la
+  // seule chose que le panneau ne dise nulle part ailleurs : sur quoi ça se
+  // pose.
+  p.appendChild(hint('Tout ne se pose pas au m\u00eame endroit. Un <b>tapis</b> va au sol, sous le reste. '+
+    'Un <b>vase</b>, une <b>plante</b> ou la <b>t\u00e9l\u00e9vision</b> se posent par terre, ou sur une table basse, '+
+    'une table de nuit, une commode, un bureau, une malle ou le piano. Un <b>tableau</b> et une <b>guirlande</b> '+
+    's\u2019accrochent \u00e0 un mur du fond. Tout le reste tient sa case, et on ne passe pas au travers.'));
 }
 
 
@@ -4366,12 +4583,29 @@ function buildBoutique(){
   const p=document.getElementById('p-boutique'); p.innerHTML='';
   const b=mine.bourse;
 
+  // Le cadeau du jour ne s'ouvre plus ici quand il y a un coffre sur l'île :
+  // il s'ouvre là-bas, en marchant. Le panneau ne garde que ce qu'un coffre
+  // ne sait pas dire : la série, et où aller. Sans coffre, en revanche, le
+  // bouton reste : une gomme passée sur le dernier coffre ne doit pas rendre
+  // le cadeau injoignable.
   if(cadeauDispo()){
-    const fc=field('Le cadeau du jour'), r=document.createElement('div'); r.className='row';
-    const bt=document.createElement('button'); bt.className='btn primary';
-    bt.textContent='🎁 Ouvrir mon cadeau';
-    bt.onclick=()=>ouvrirCadeau();
-    r.appendChild(bt); fc.appendChild(r); p.appendChild(fc);
+    const coffres=(mine.objects||[]).filter(o=>o.t==='coffre').length;
+    const fc=field('Le cadeau du jour');
+    if(coffres){
+      fc.appendChild(hint('🎁 <b>Ton cadeau t’attend dans ton coffre</b>, sur ton île, il scintille. '+
+        'Va marcher jusqu’à lui, puis appuie sur <b>E</b> ou touche le bouton rose du cadre.'));
+    }else{
+      const r=document.createElement('div'); r.className='row';
+      const bt=document.createElement('button'); bt.className='btn primary';
+      bt.textContent='🎁 Ouvrir mon cadeau';
+      bt.onclick=()=>ouvrirCadeau();
+      const po=document.createElement('button'); po.className='btn';
+      po.textContent='Poser un coffre';
+      po.onclick=()=>poserUnCoffre();
+      r.appendChild(bt); r.appendChild(po); fc.appendChild(r);
+      fc.appendChild(hint('Tu n’as pas de coffre sur ton île. Pose-en un (il est gratuit, au rayon <b>Village</b> de ton atelier), et c’est lui qui portera le cadeau, chaque jour.'));
+    }
+    p.appendChild(fc);
     p.appendChild(hint(b.serie
       ? ('Tu es venu <b>'+b.serie+' jour'+(b.serie>1?'s':'')+'</b> d’affilée. Chaque jour de plus grossit le cadeau, et le septième, la boutique t’offre un objet.')
       : 'Reviens demain, et le cadeau sera plus gros. Sept jours d’affilée, et la boutique t’offre un objet.'));
@@ -4531,6 +4765,53 @@ async function ouvrirCadeau(){
     garderBourseLocale();
   }
   vitrine=null; son('achat'); buildAll(); say(msg);
+}
+
+/* ---- le coffre du jour ----
+   Le cadeau existait déjà ; ce qui manquait, c'était le geste. Il
+   s'ouvrait par un bouton dans un panneau, et c'est exactement ce que le
+   jeu se refuse partout ailleurs : « un bouton qui donne des shells ne
+   serait pas un jeu ». Le coffre est le même cadeau, mais posé quelque
+   part : on y va en marchant, on appuie sur E, comme pour la porte et
+   comme pour le chien.
+
+   Quatre choses à ne pas défaire.
+
+   1. **Rien n'en part en base.** Pas une clé de plus dans `mondeNu()`,
+      rien pour `Ctrl+Z`, aucune migration. `bourse.cadeau` tenait déjà le
+      jour du dernier cadeau ouvert, et `bourse_cadeau()` le débite déjà
+      côté serveur : le coffre ne fait que situer le geste.
+
+   2. **Tous les coffres de l'île portent le même cadeau**, et il n'y en a
+      qu'un par jour. On n'en élit pas un : dix coffres posés ne donnent
+      pas dix cadeaux, puisque c'est `bourse.cadeau` qui compte et que le
+      serveur refuse le second. Élire « le vrai » coffre coûterait une
+      donnée de plus et ne rendrait rien.
+
+   3. **Chez un voisin, le coffre reste fermé.** `cadeauDispo()` lit *ta*
+      bourse : un coffre ouvert chez l'hôte parlerait de toi, pas de lui.
+      C'est la même règle que sa porte, qui ne s'ouvre pas non plus.
+
+   4. **Le bouton du panneau ne disparaît que s'il y a un coffre.** Une
+      gomme passée sur le dernier coffre ne doit pas rendre le cadeau
+      injoignable : sans coffre, la Boutique garde son bouton et propose
+      d'en poser un. */
+// Le coffre sous les pieds, chez soi : c'est lui qu'ouvrent `E` et le
+// bouton rose. Même portée que `chienProche()`, et pour la même raison :
+// un objet ne bloque pas la marche, on monte donc sur sa case.
+function coffreProche(){
+  if(visiting||dedans) return null;
+  return (mine.objects||[]).find(o=>o.t==='coffre' &&
+    Math.hypot(o.x+0.5-hero.x, o.y+0.5-hero.y)<0.95) || null;
+}
+// Ce que le dessin lit. Les deux sont l'inverse l'un de l'autre chez soi,
+// et tous les deux faux chez un voisin : là-bas le coffre est un meuble.
+function coffrePlein(o){ return o.t==='coffre' && !visiting && cadeauDispo(); }
+function coffreOuvert(o){ return o.t==='coffre' && !visiting && !cadeauDispo(); }
+// Le pinceau du coffre, armé depuis la Boutique quand il n'y en a aucun.
+function poserUnCoffre(){
+  tool.mode='objet'; tool.kind='coffre'; ouvrirOnglet('ile'); buildAll();
+  say('Choisis une case de ton île pour ton coffre. C’est là que le cadeau du jour t’attendra.');
 }
 
 function thumb(g,w){

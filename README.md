@@ -390,6 +390,46 @@ rien ne dit qu'on peut entrer : une maison où l'on entre et une maison qui
 est un décor se ressemblent trop. Il n'est dessiné que chez soi, la porte
 des autres étant fermée.
 
+### Les niveaux : au sol, sur un meuble, au mur
+
+Jusqu'au 17/09 au soir, un meuble était au sol ou « plat » (les tapis), et
+rien d'autre. Ça se payait trois fois. Le **tableau** était dessiné adossé
+au mur mais occupait une case de plancher où l'on ne passait plus. Poser un
+vase sur la table **effaçait la table**, en silence. Et `⟳ Tourner` existait
+sans que personne le trouve, rangé sous un champ intitulé « Marcher ».
+
+Les trois viennent de la même absence : il manquait **sur quoi un meuble se
+pose**. C'est maintenant une propriété du type, à côté de son encombrement,
+donc du code et pas de la donnée : **aucune migration**, et un meuble reste
+`{t,x,y,o,c}`.
+
+| Niveau | Ce que ça veut dire | Qui |
+|---|---|---|
+| `plat` | au sol, sous tout, ne bloque pas | tapis, tapis rond |
+| `dessus` | sur un meuble à plateau, ou par terre | vase, plante, télévision |
+| `mur` | accroché au fond, ne bloque pas | tableau, guirlande |
+| (rien) | par terre, et il bloque | tout le reste |
+
+On pose sur une table basse, une table de nuit, une commode, un bureau, une
+malle et le piano. Pas sur une étagère ni une bibliothèque : dans cette
+isométrie leur haut est hors de vue, et un vase posé là ne se lirait pas.
+
+Un cadre s'accroche à l'une des deux parois du fond, et c'est le **Sens**
+qui dit laquelle. Posé ailleurs, il est refusé, et le refus donne les deux
+façons de s'en sortir.
+
+**Rien ne s'efface plus tout seul.** Poser sur une case prise nomme ce qui
+s'y trouve et dit quoi faire. C'est la leçon de la boutique, au même
+endroit : le refus doit tomber là où est le doigt.
+
+Une pièce décorée avant ce changement ne perd rien : un cadre resté au
+milieu de la pièce est **glissé contre le mur le plus proche** au
+chargement, jamais effacé. On ne reprend pas ce qui a été posé.
+
+Et l'atelier du dedans porte enfin les mêmes étiquettes que celui du
+dehors : **Sens** et non « Orientation », **Corriger** pour la gomme et
+`⟳ Tourner`. L'étiquette d'un groupe était le nom de son premier bouton.
+
 ### Le sens des meubles et des objets
 
 `o` vaut `'se'` ou `'sw'`, et se choisit avant de poser. **⟳ Tourner**
@@ -508,16 +548,38 @@ maison pendant une balade **n'ouvre plus la porte tout seul** : passer
 devant chez soi ne doit pas remettre le tour à zéro sans qu'on ait rien
 demandé. `E` rentre quand même, et le dit.
 
-### Le cadeau du jour
+### Le cadeau du jour, et le coffre qui le porte
 
 Revenir doit valoir quelque chose, et se voir. Une pastille rose s'allume sur
-l'onglet Boutique, et un bouton ouvre le cadeau : `3 + série` shells, jusqu'à
-dix. La **série** compte les jours d'affilée et repart à un dès qu'un jour est
-sauté. Tous les sept jours d'affilée, la boutique offre un objet — le moins
-cher de ceux qui manquent — plutôt que des shells.
+l'onglet Boutique : `3 + série` shells, jusqu'à dix. La **série** compte les
+jours d'affilée et repart à un dès qu'un jour est sauté. Tous les sept jours
+d'affilée, la boutique offre un objet, le moins cher de ceux qui manquent,
+plutôt que des shells.
 
 Le cadeau ne tombe pas tout seul dans la bourse : on l'ouvre. Sans le geste,
-il n'y a pas de moment.
+il n'y a pas de moment. Et depuis le 17/09 au soir, **ce geste a un lieu**.
+
+Il s'ouvrait par un bouton dans un panneau, ce qui est exactement ce que le
+jeu se refuse partout ailleurs : un bouton qui donne des shells n'est pas un
+jeu. Le **coffre** est le même cadeau, mais posé quelque part. Il scintille
+tant qu'il a quelque chose dedans ; on marche jusqu'à lui, `E` ou le bouton
+rose l'ouvre, et il reste ouvert et vide jusqu'au lendemain. L'île elle-même
+dit, sans un mot, si on est déjà passé aujourd'hui.
+
+Le coffre était déjà là : un objet gratuit du rayon **Village**, sur toute
+île neuve. Rien n'a été ajouté en base : pas une clé de plus dans
+`mondeNu()`, aucune migration. `bourse.cadeau` tenait déjà le jour du
+dernier cadeau ouvert, et c'est toujours `bourse_cadeau()` qui débite côté
+serveur : le coffre ne fait que situer le geste.
+
+Tous les coffres d'une île portent le même cadeau, et il n'y en a qu'un par
+jour : dix coffres posés ne donnent pas dix cadeaux. Chez un voisin, le
+coffre reste fermé. `cadeauDispo()` lit *ta* bourse, et un coffre ouvert
+chez l'hôte parlerait de toi, pas de lui. C'est la même règle que sa porte.
+
+Sans coffre sur l'île, la Boutique garde son bouton et propose d'en poser
+un : une gomme passée sur le dernier coffre ne doit pas rendre le cadeau
+injoignable.
 
 ### Ce qu'on achète
 
