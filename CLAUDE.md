@@ -774,6 +774,66 @@ Tant que la migration n'est pas passée, `bourse_ramasser` n'existe pas :
 créditer. Le sac ne remonte pas, mais les shells ne se perdent pas entre
 le déploiement du client et le passage du SQL.
 
+## L'appareil photo, 17/09/2026 au soir
+
+Aucune migration côté monde : seules **deux lignes de catalogue** partent en
+base (`appareil`, 28 shells, et `compagnon`, 20), dans
+`supabase/2026-09-17_commande.sql`. Un article absent de `catalogue` est
+refusé à l'achat quoi qu'en dise la vitrine.
+
+La carte postale existait, et c'était un bouton dans un panneau qui
+enregistrait tout le cadre. C'est ce que le jeu se refuse partout ailleurs,
+et c'est la leçon déjà écrite pour le coffre. L'appareil fait pareil pour
+l'image : on vise, puis on déclenche. **La carte postale reste** et garde
+son travail à elle : elle porte l'adresse de l'île, c'est une invitation.
+La photo ne porte que ce qu'on a cadré.
+
+Six choses à ne pas défaire.
+
+1. **Rien n'en part en base.** Pas une clé de plus dans `mondeNu()` : une
+   photo, ce sont des pixels, et des pixels n'ont rien à faire dans un
+   jsonb que chaque sauvegarde réécrit. L'album vit dans `localStorage`
+   sous `dansisland:album`, comme la bourse de secours. Il ne suit donc
+   pas d'un appareil à l'autre, **et il le dit lui-même** plutôt que de
+   le laisser découvrir : c'est la dernière phrase du pied de page
+   (« tout est stocké dans ton navigateur ») qui, elle, est devenue
+   fausse sans être corrigée.
+2. **Deux temps, pas un.** Le premier appui ouvre le viseur, le second
+   déclenche. Un déclencheur immédiat ne laisse pas cadrer, et cadrer est
+   tout ce qu'il y a à faire ici. Même forme que le comptoir de la
+   boutique, et pour la même raison.
+3. **La photo se prend entre le dessin du monde et celui du viseur.**
+   `declencher` est lu là, dans `frame()`. Peinte avant, la photo
+   porterait ses propres bandes noires et sa croix de visée, ce qui se
+   voit tout de suite et ne se rattrape pas.
+4. **Le découpage est à l'échelle réelle des pixels** (`cv.width/CW`), pas
+   en unités de dessin : sinon la photo est floue sur un écran à deux
+   pixels par point.
+5. **Le viseur se ferme tout seul** quand on entre, quand on sort et quand
+   on change d'île (`fermerLeViseur()`), et sur Échap. Un viseur oublié,
+   c'est une île qu'on ne voit plus qu'à travers deux bandes noires sans
+   savoir pourquoi.
+6. **Elle ne rapporte rien.** Pas de gain, pas de plafond, rien dans
+   `faits`. Une photo qui paierait deviendrait une corvée, et le jeu en a
+   déjà trois.
+
+Le troisième bouton rond du bord droit n'apparaît qu'une fois l'appareil
+acheté : un bouton mort n'apprend rien, c'est la règle déjà tenue pour les
+objets verrouillés de l'atelier. Mesuré : une vignette d'album pèse ~11 ko,
+donc ~140 ko pour les douze, là où douze tirages PNG en feraient plus de
+deux mégaoctets.
+
+**`pb.hidden = true` ne suffisait pas, et il a fallu une ligne de CSS.**
+`.zoom button` porte `display:grid`, et une règle d'auteur l'emporte sur le
+`[hidden]{display:none}` de la feuille du navigateur : le bouton restait
+visible et cliquable avant tout achat. `basculerViseur()` refusait bien, donc
+rien ne fuyait, mais c'est exactement le bouton mort que la règle ci-dessus
+interdit, et rien ne le signalait. D'où `.zoom button[hidden]{display:none}`.
+Les quatre autres éléments à attribut `hidden` du cadre (`rose-btn`,
+`hud-balade`, `pad`, `tourne`) n'ont pas de `display` d'auteur et sont
+indemnes : vérifié sur les cinq. Toute nouvelle règle qui donne un `display`
+à un élément qu'on cache par `hidden` doit prévoir son `[hidden]`.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

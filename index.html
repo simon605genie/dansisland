@@ -232,6 +232,10 @@ a{color:var(--link)}
   -webkit-user-select:none; user-select:none; touch-action:manipulation;
 }
 .zoom button:disabled{opacity:.4; cursor:default}
+/* `display:grid` ci-dessus l'emporte sur le `[hidden]` de la feuille du
+   navigateur : sans cette ligne, le bouton de l'appareil photo reste
+   visible et cliquable avant d'avoir été acheté. */
+.zoom button[hidden]{display:none}
 @media (max-width:640px){ .zoom{right:9px; gap:6px} .zoom button{width:32px; height:32px; font-size:17px} }
 @media (orientation:landscape) and (max-height:560px){ .zoom button{width:30px; height:30px; font-size:16px} }
 
@@ -563,6 +567,7 @@ textarea{
       <div class="zoom" id="zoom">
         <button type="button" id="zoom-plus" aria-label="Voir de plus près">+</button>
         <button type="button" id="zoom-moins" aria-label="Voir toute l’île">−</button>
+        <button type="button" id="photo-btn" aria-label="Appareil photo" hidden>📷</button>
       </div>
       <button class="tourne" id="tourne" type="button" hidden><span>⟳</span> Tourne ton téléphone</button>
 
@@ -1044,12 +1049,13 @@ const BOUTIQUE=[
   {ou:'dedans',k:'aquarium',    n:'Aquarium',          prix:35, c:'#8B5E3C', d:'Deux poissons qui ne s’arrêtent jamais.'},
   {ou:'dedans',k:'piano',       n:'Piano',             prix:45, c:'#2A3238', d:'Douze touches noires, et le couvercle fermé.'},
   {ou:'toi',   k:'bottes',      n:'Bottes',            prix:25, c:'#B44C6C', d:'Tu marches un tiers plus vite, dehors comme dedans.'},
-  {ou:'toi',   k:'moteur',      n:'Tondeuse à moteur', prix:45, c:'#2E7D5B', d:'Elle tond les quatre cases voisines en passant.'}
+  {ou:'toi',   k:'moteur',      n:'Tondeuse à moteur', prix:45, c:'#2E7D5B', d:'Elle tond les quatre cases voisines en passant.'},
+  {ou:'toi',   k:'appareil',    n:'Appareil photo',    prix:28, c:'#3F4A52', d:'Un viseur, un déclencheur, et l’album qui va avec.'},
 ];
 // Le rayon « Pour toi » ne vend pas des objets à poser mais ce que le
 // bonhomme sait faire. Rien n'entre dans `objects` ni dans les meubles :
 // `achats` suffit, et le moteur lit la liste au moment d'agir.
-const EQUIPEMENT={bottes:1, moteur:1};
+const EQUIPEMENT={bottes:1, moteur:1, appareil:1};
 const VERROU={}; BOUTIQUE.forEach(a=>{ VERROU[a.k]=a.prix; });
 // La date du joueur, pas celle d'un serveur : voir l'avertissement plus haut.
 function aujourdhui(){ const d=new Date();
@@ -3063,6 +3069,7 @@ function aCoteDeLaPorte(p){ return p.mur==='nw' ? {x:1,y:p.i} : {x:p.i,y:1}; }
 function entrer(k){
   if(visiting){ say('La porte de <b>'+esc(world.owner)+'</b> est fermée. Pour l’instant, on ne visite que le dehors.'); return; }
   finBalade(false);                      // on n'emmène pas le chien au salon
+  fermerLeViseur();                      // un viseur oublié, c'est une pièce vue à travers deux bandes noires
   posIle={x:hero.x,y:hero.y};
   ongletAvant=ongletOuvert();
   dedans=true; piece=k||'salon'; sasArme=false;
@@ -3074,6 +3081,7 @@ function entrer(k){
   say('Tu rentres chez toi. Une porte pour changer de pièce, et <b>← Ton île</b> en haut du cadre pour ressortir.');
 }
 function sortir(){
+  fermerLeViseur();
   dedans=false; sasArme=false; majVue();
   const h=world.house, essais=[];
   if(posIle) essais.push(posIle);
@@ -3297,6 +3305,8 @@ addEventListener('keydown',e=>{
   if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); if(!visiting) annuler(); }
   if(e.key.toLowerCase()==='e' && agir()) e.preventDefault();
+  if(e.key.toLowerCase()==='p'){ e.preventDefault(); basculerViseur(); }
+  if(e.key==='Escape') fermerLeViseur();
 });
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 
@@ -3433,6 +3443,7 @@ function majZoomBtn(){
   p.disabled = z >= zPlafond()-0.005;
   m.disabled = z <= zPlancher()+0.005;
 }
+document.getElementById('photo-btn').addEventListener('click',()=>basculerViseur());
 document.getElementById('zoom-plus').addEventListener('click',()=>zoomer(1.22));
 document.getElementById('zoom-moins').addEventListener('click',()=>zoomer(1/1.22));
 cv.addEventListener('wheel',e=>{ e.preventDefault(); zoomer(e.deltaY<0?1.11:1/1.11); },{passive:false});
@@ -3517,6 +3528,11 @@ function frame(t){
   proximity();
   majCam(dt);
   if(dedans) drawInterieur(t); else drawWorld(t);
+  // L'ordre compte, et il n'est pas rattrapable : la photo se prend
+  // **entre** le dessin du monde et celui du viseur. Peinte avant, elle
+  // porterait ses propres bandes noires et sa croix de visée.
+  if(declencher){ declencher=false; prendreLaPhoto(t); }
+  if(viseurOn) viseur(t);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -4104,6 +4120,11 @@ const SONS={
   chien:  ()=>{ souffle(430,'triangle',0.10,0.15,250); setTimeout(()=>souffle(340,'triangle',0.12,0.11,200),135); },
   // Le couvercle qui grince, avant l'arpège du cadeau : deux sons courts
   // valent mieux qu'un son long, et celui-ci dit « ça s'ouvre ».
+  coffre: ()=>{ choc(0.10,700,0.14); setTimeout(()=>souffle(230,'sawtooth',0.16,0.07,410),40); },
+  // Le viseur qui s'ouvre, puis l'obturateur. Deux sons distincts, parce
+  // que ce sont deux gestes distincts : viser n'est pas déclencher.
+  viseur: ()=>{ choc(0.05,2400,0.09); },
+  photo:  ()=>{ choc(0.04,3200,0.16); setTimeout(()=>choc(0.05,1400,0.12),55); }
 };
 function son(n){ if(!sonCoupe && SONS[n]) try{ SONS[n](); }catch(e){} }
 
@@ -4451,6 +4472,35 @@ function buildToi(){
     ? 'Le sac te suit d’un appareil à l’autre et chez les voisins : il est à <b>toi</b>, pas à ton île. Il se remplit sur le sable mouillé, à marée basse, tant que la marée paie encore aujourd’hui.'
     : 'Ton sac est vide. À marée basse, va marcher sur le sable mouillé au bord de ton île : ce que la mer y laisse y tombe. C’est avec ça qu’on remplit la <b>commande du jour</b>, dans l’onglet Voisins.'));
 
+  // L'album. Il vit dans ce navigateur et pas en base, et il le dit :
+  // une photo, ce sont des pixels, et des pixels n'ont rien à faire dans
+  // un jsonb que chaque sauvegarde réécrit.
+  p.appendChild(rule());
+  const fa=field('Ton album');
+  if(album.length){
+    const ga=document.createElement('div'); ga.className='objs';
+    album.forEach((ph,i)=>{
+      const d=document.createElement('div'); d.className='obj acquis'; d.style.cursor='default';
+      const im=document.createElement('img'); im.src=ph.u; im.alt='';
+      im.style.cssText='width:60px;height:40px;object-fit:cover;border-radius:8px;display:block;background:#FDFBF0';
+      const nom=document.createElement('span'); nom.textContent=ph.chez ? ('chez '+(ph.qui||'?')) : (ph.ile||'chez toi');
+      const q=document.createElement('span'); q.className='prix'; q.textContent=ph.jour||'';
+      d.appendChild(im); d.appendChild(nom); d.appendChild(q);
+      d.onclick=()=>{ const a=document.createElement('a');
+        a.download='photo-'+(ph.jour||'')+'.jpg'; a.href=ph.u;
+        document.body.appendChild(a); a.click(); a.remove(); };
+      d.style.cursor='pointer';
+      ga.appendChild(d); });
+    fa.appendChild(ga); p.appendChild(fa);
+    p.appendChild(hint('Clique une vignette pour la réenregistrer. L’album garde les <b>'+ALBUM_MAX+
+      ' dernières</b> et il vit dans <b>ce navigateur</b>, pas en base : il ne te suit pas d’un appareil à l’autre. Le tirage en grand, lui, est descendu dans tes fichiers au moment de la photo.'));
+  }else{
+    p.appendChild(fa);
+    p.appendChild(hint(appareilEnMain()
+      ? 'Ton album est vide. Appuie sur <b>P</b> ou sur 📷, au bord du cadre : le viseur s’ouvre, tu cadres, et un second appui déclenche.'
+      : 'Tu n’as pas d’<b>appareil photo</b>. Il est à la Boutique, au rayon <b>Pour toi</b> : on vise, on déclenche, et la photo descend dans tes fichiers.'));
+  }
+
   paintPreview();
 }
 function paintPreview(){
@@ -4713,7 +4763,7 @@ const DRAWT={
       c.fillStyle='#2A3238';    rr(c,-6,-3,17,4,2); c.fill();
       c.restore(); });
   },
-  moteur(c){ tondeuse(c,0,true); }
+  moteur(c){ tondeuse(c,0,true); },
 };
 // Ce que la mer laisse, en vignette. Le sac et la commande du jour
 // montrent les mêmes dessins que le sable : un enfant reconnaît un
@@ -5438,6 +5488,152 @@ function decode(s){
 
 // La carte postale : le cadre tel qu'il est à l'écran, plus le nom de
 // l'île et son adresse. C'est ce qui s'envoie, une image, pas un lien mort.
+/* ================= l'appareil photo =================
+   La carte postale existait, et c'était un bouton dans un panneau qui
+   enregistrait tout le cadre. C'est exactement ce que le jeu se refuse
+   partout ailleurs, et c'est la leçon déjà écrite pour le coffre : le
+   cadeau du jour s'ouvrait par un bouton, il s'ouvre maintenant quelque
+   part. L'appareil fait pareil pour l'image : on vise, puis on déclenche.
+   La carte postale reste, et elle garde son travail à elle : elle porte
+   l'adresse de l'île, c'est une invitation. La photo, elle, ne porte que
+   ce qu'on a cadré.
+
+   Six choses à ne pas défaire.
+
+   1. **Rien n'en part en base.** Pas une clé de plus dans `mondeNu()`,
+      aucune migration : une photo, ce sont des pixels, et des pixels
+      n'ont rien à faire dans un jsonb que chaque sauvegarde réécrit.
+      L'album vit dans `localStorage`, sous sa propre clé, comme la bourse
+      de secours. Il ne suit donc pas d'un appareil à l'autre, et l'album
+      le dit lui-même plutôt que de le laisser découvrir.
+   2. **Deux temps, pas un.** Le premier appui ouvre le viseur, le second
+      déclenche. Un déclencheur immédiat ne laisse pas cadrer, et cadrer
+      est tout ce qu'il y a à faire ici. C'est la même forme que le
+      comptoir de la boutique, et pour la même raison.
+   3. **La photo est prise avant que le viseur ne soit peint.**
+      `declencher` est lu dans `frame()` entre le dessin du monde et celui
+      du viseur : sinon la photo porte ses propres bandes noires et sa
+      croix de visée, ce qui se voit tout de suite et ne se rattrape pas.
+   4. **On photographie ce qui est dans le cadre, pas le cadre.** Le
+      rectangle est en 3:2 au milieu du viewport, et c'est lui qu'on
+      découpe dans le canvas, à l'échelle réelle des pixels (`dpr`) : un
+      découpage en unités de dessin rendrait une photo floue sur un écran
+      à deux pixels par point.
+   5. **Le viseur se ferme tout seul quand on s'en va** (maison, voisin,
+      panneau). Un viseur ouvert qu'on a oublié, c'est une île qu'on ne
+      voit plus qu'à travers deux bandes noires sans savoir pourquoi.
+   6. **Elle ne rapporte rien.** Pas de gain, pas de plafond, rien dans
+      `faits`. Une photo qui paierait deviendrait une corvée, et le jeu en
+      a déjà trois. Ce qu'elle rapporte est ce qui est dessus. */
+const ALBUM='dansisland:album';
+const ALBUM_MAX=12;
+const PHOTO_L=0.78;                 // largeur du viseur, en part du cadre
+let viseurOn=false, declencher=false, flashJusqua=0;
+// Le rectangle visé, en unités de dessin. 3:2, centré, et jamais plus haut
+// que le cadre : en paysage court, 3:2 déborderait par le bas.
+function cadrePhoto(){
+  let w=CW*PHOTO_L, h=w/1.5;
+  if(h>CH*0.82){ h=CH*0.82; w=h*1.5; }
+  return {x:(CW-w)/2, y:(CH-h)/2, w, h};
+}
+function appareilEnMain(){ return achete('appareil'); }
+function basculerViseur(){
+  if(!appareilEnMain()){
+    say('Il te faut un <b>appareil photo</b> : il est à la Boutique, au rayon <b>Pour toi</b>.'); return; }
+  if(viseurOn){ declencher=true; return; }
+  viseurOn=true; son('viseur'); hudSync();
+  say('<b>Viseur ouvert.</b> Place-toi, cadre, puis appuie encore sur <b>P</b> ou sur 📷 pour déclencher.', 'viseur');
+}
+function fermerLeViseur(){
+  if(!viseurOn) return;
+  viseurOn=false; declencher=false; hudSync();
+  if(wLock==='viseur'){ whisper.classList.remove('on'); wLock=''; }
+}
+/* Le viseur, en repère écran : il se peint après `camLever()`, donc il ne
+   glisse pas avec la caméra. Deux voiles sombres autour du rectangle, des
+   coins blancs, une croix de visée, et un point rouge qui bat. */
+function viseur(t){
+  const r=cadrePhoto();
+  ctx.fillStyle='rgba(12,26,40,.52)';
+  ctx.fillRect(0,0,CW,r.y); ctx.fillRect(0,r.y+r.h,CW,CH-r.y-r.h);
+  ctx.fillRect(0,r.y,r.x,r.h); ctx.fillRect(r.x+r.w,r.y,CW-r.x-r.w,r.h);
+  ctx.strokeStyle='rgba(253,251,240,.92)'; ctx.lineWidth=2.4; ctx.lineCap='round';
+  const c=22;
+  [[r.x,r.y,1,1],[r.x+r.w,r.y,-1,1],[r.x,r.y+r.h,1,-1],[r.x+r.w,r.y+r.h,-1,-1]]
+    .forEach(([px,py,sx,sy])=>{
+      ctx.beginPath(); ctx.moveTo(px+sx*c,py); ctx.lineTo(px,py); ctx.lineTo(px,py+sy*c); ctx.stroke(); });
+  ctx.strokeStyle='rgba(253,251,240,.55)'; ctx.lineWidth=1.6;
+  const mx=r.x+r.w/2, my=r.y+r.h/2;
+  ctx.beginPath(); ctx.moveTo(mx-11,my); ctx.lineTo(mx+11,my);
+  ctx.moveTo(mx,my-11); ctx.lineTo(mx,my+11); ctx.stroke();
+  ctx.fillStyle='rgba(216,68,63,'+(0.45+0.45*Math.abs(Math.sin(t/420)))+')';
+  ctx.beginPath(); ctx.arc(r.x+16,r.y+16,4.5,0,Math.PI*2); ctx.fill();
+  if(t<flashJusqua){
+    ctx.fillStyle='rgba(255,255,255,'+(0.75*(flashJusqua-t)/180)+')';
+    ctx.fillRect(0,0,CW,CH);
+  }
+}
+// Le découpage, à l'échelle réelle des pixels du canvas.
+function prendreLaPhoto(t){
+  const r=cadrePhoto(), k=cv.width/CW;
+  const w=Math.round(r.w*k), h=Math.round(r.h*k);
+  const vue=document.createElement('canvas'); vue.width=w; vue.height=h;
+  vue.getContext('2d').drawImage(cv, Math.round(r.x*k), Math.round(r.y*k), w, h, 0, 0, w, h);
+
+  const chez = visiting ? (world.owner||'quelqu’un') : (mine.me.name||'toi');
+  const lieu = world.name || 'Sans nom';
+  const jour = jourDuJeu();
+
+  // Le tirage : marge blanche, large en bas, comme un polaroid.
+  const m=Math.round(w*0.045), bas=Math.round(w*0.15);
+  const tir=document.createElement('canvas');
+  tir.width=w+m*2; tir.height=h+m+bas;
+  const g=tir.getContext('2d');
+  g.fillStyle='#FDFBF0'; g.fillRect(0,0,tir.width,tir.height);
+  g.drawImage(vue,m,m);
+  g.strokeStyle='rgba(11,60,93,.14)'; g.lineWidth=2; g.strokeRect(m,m,w,h);
+  const ligne=m+h+Math.round(bas*0.58);
+  g.fillStyle='#0B3C5D'; g.textAlign='left'; g.font='700 '+Math.round(w*0.052)+'px "Baloo 2", sans-serif';
+  g.fillText(lieu+(visiting?(' · chez '+chez):''), m, ligne);
+  g.fillStyle='#8AA3B2'; g.textAlign='right'; g.font='600 '+Math.round(w*0.036)+'px Nunito, sans-serif';
+  g.fillText(jour, tir.width-m, ligne);
+
+  const a=document.createElement('a');
+  a.download='photo-'+(world.slug||'ile')+'-'+jour+'.png';
+  a.href=tir.toDataURL('image/png');
+  document.body.appendChild(a); a.click(); a.remove();
+
+  rangerDansLalbum(vue, lieu, chez, jour);
+  flashJusqua=t+180; son('photo'); fermerLeViseur();
+  say('<b>Photo prise'+(visiting?(' chez '+esc(chez)):'')+'.</b> Elle est enregistrée, et elle est dans ton album, onglet <b>Toi</b>.');
+  buildAll();
+}
+/* L'album. Une vignette par photo, en JPEG à 260 px de large : mesuré à
+   ~11 ko pièce, soit ~140 ko pour les douze, là où douze tirages PNG
+   pleine taille en feraient plus de deux mégaoctets et rempliraient
+   `localStorage` à eux seuls. La plus ancienne s'efface quand la
+   treizième arrive, et l'album le dit. */
+let album=[];
+function relireLalbum(){
+  try{ const l=JSON.parse(localStorage.getItem(ALBUM)||'[]');
+    album = Array.isArray(l) ? l.filter(p=>p&&typeof p.u==='string').slice(0,ALBUM_MAX) : []; }
+  catch(e){ album=[]; }
+}
+function rangerDansLalbum(vue, lieu, chez, jour){
+  const L=260, c=document.createElement('canvas');
+  c.width=L; c.height=Math.round(L*vue.height/vue.width);
+  c.getContext('2d').drawImage(vue,0,0,c.width,c.height);
+  album.unshift({u:c.toDataURL('image/jpeg',0.72), ile:lieu, qui:chez, jour, chez:!!visiting});
+  album=album.slice(0,ALBUM_MAX);
+  // `localStorage` est borné : plutôt que d'échouer en silence, on jette
+  // la plus ancienne jusqu'à ce que ça rentre.
+  while(album.length){
+    try{ localStorage.setItem(ALBUM, JSON.stringify(album)); return; }
+    catch(e){ album.pop(); }
+  }
+}
+relireLalbum();
+
 function cartePostale(){
   const m=42, bande=60, src=cv;
   const c=document.createElement('canvas');
@@ -5460,6 +5656,7 @@ function cartePostale(){
 /* ================= navigation ================= */
 async function go(slug){
   finBalade(false);                      // le chien ne suit pas jusque chez les voisins
+  fermerLeViseur();
   if(dedans){ dedans=false; posIle=null; majVue(); }
   if(slug==='me'||(monSlug&&slug===monSlug)){
     visiting=null; world=mine; replanter(mine);
@@ -5548,6 +5745,11 @@ function hudSync(){
   // plus le jour où elle compte.
   const ov=[...document.querySelectorAll('.tabs button')].find(x=>x.dataset.tab==='voisins');
   if(ov) ov.classList.toggle('cadeau', commandeAPorter());
+  // Le troisième bouton rond n'apparaît qu'une fois l'appareil acheté :
+  // un bouton mort n'apprend rien, c'est la règle déjà tenue pour les
+  // objets verrouillés de l'atelier.
+  const pb=document.getElementById('photo-btn');
+  if(pb){ pb.hidden=!appareilEnMain(); pb.setAttribute('aria-pressed',String(viseurOn)); }
   cv.classList.toggle('walking', tool.mode==='marche');
 }
 // L'onglet ouvert est un état du jeu, pas seulement un clic : franchir une

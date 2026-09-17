@@ -74,6 +74,13 @@ Pas encore éprouvé :
   comptes : un qui porte, un qui reçoit. Le crédit du porteur se voit tout
   de suite dans le murmure ; celui de l'hôte ne se vérifie qu'en se
   reconnectant avec l'autre compte.
+- **Le déclenchement de l'appareil photo.** Le viseur a été ouvert et
+  regardé, et le découpage a été éprouvé à la main dans la console : le
+  canvas n'est pas *tainted*, le tirage sort à 182 ko et la vignette à
+  11 ko. Mais le déclenchement lui-même passe par `frame()`, donc par
+  `requestAnimationFrame`, et un navigateur piloté garde l'onglet en
+  arrière-plan : la boucle y est en pause. C'est exactement ce qui empêche
+  déjà d'éprouver le requin et la marche. À faire une fois à la main.
 - **La bourse côté serveur.** `supabase/2026-09-16_bourse_serveur.sql` n'a
   pas été joué au moment où il a été écrit : il n'y avait pas de Postgres
   sous la main pour le relire autrement qu'à l'œil. Tant qu'il n'est pas
@@ -850,6 +857,32 @@ n'est plus une pastille.
 - Écrire une ligne de `livraisons` à la main : la table n'a aucune policy
   d'écriture, comme `bourses`. Elle se lit, par l'hôte et par le porteur :
   c'est un reçu, pas un mur public.
+
+## L'appareil photo
+
+28 shells au rayon **Pour toi**. Un troisième bouton rond apparaît alors au
+bord du cadre, et la touche **P** fait la même chose : le viseur s'ouvre,
+deux voiles sombres cernent un rectangle 3:2, un point rouge bat dans le
+coin. On se place, on cadre, et un second appui déclenche. Le tirage
+descend dans les fichiers, avec le nom de l'île, chez qui on était et la
+date ; une vignette reste dans l'album, onglet **Toi**.
+
+Deux temps et non un, parce que cadrer est tout ce qu'il y a à faire ici.
+C'est la forme du comptoir de la boutique, et celle du coffre : le jeu
+préfère un geste à un bouton.
+
+**L'album vit dans ce navigateur, pas en base**, et il le dit lui-même.
+Une photo, ce sont des pixels, et des pixels n'ont rien à faire dans un
+jsonb que chaque sauvegarde réécrit. Douze vignettes au plus, la plus
+ancienne s'efface quand la treizième arrive. Mesuré : ~11 ko la vignette,
+~140 ko l'album entier, contre plus de deux mégaoctets pour douze tirages.
+
+La **carte postale** reste, dans l'onglet Voisins, et garde son travail à
+elle : elle porte l'adresse de l'île, c'est une invitation. La photo ne
+porte que ce qu'on a cadré.
+
+Elle ne rapporte rien. Pas de gain, pas de plafond : une photo qui paierait
+deviendrait une corvée, et il y en a déjà trois.
 
 ## Les souvenirs
 
