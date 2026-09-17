@@ -5,7 +5,12 @@ set -euo pipefail
 
 rm -rf dist
 mkdir -p dist/src
-cp index.html _redirects og.png dist/   # og.png : l'aperçu des liens partagés
+# og.png : l'aperçu des liens partagés. Le manifest et les icônes : l'île
+# ajoutée à l'écran d'accueil. Une icône oubliée ici et l'installation
+# échoue en silence, sans rien dire dans la console.
+cp index.html _redirects og.png dist/
+cp manifest.webmanifest dist/
+cp icone-192.png icone-512.png icone-maskable.png apple-touch-icon.png dist/
 cp src/config.js src/store.js dist/src/
 
 echo "dist/ prêt :"

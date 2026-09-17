@@ -405,6 +405,49 @@ traverser sans témoin. C'est aussi ce qui rend ces deux-là pénibles à
 éprouver dans un navigateur piloté, où le `rAF` est bridé : pour les
 regarder, il faut baisser le délai d'apparition, pas attendre.
 
+## Le mode paysage et l'app, 17/09/2026
+
+En paysage court sur téléphone, le jeu prend tout l'écran : la page
+disparaît, l'île tient toute la hauteur à gauche, la carte de connexion se
+pose en haut à droite et l'atelier remplit la colonne sous elle. Rien ne
+défile. Détail dans README.md.
+
+Trois choses à ne pas rouvrir :
+
+1. **Le bloc paysage est en fin de feuille de style, pas avec les autres
+   media queries en haut.** Une media query n'a pas plus de poids qu'une
+   règle ordinaire : c'est l'ordre qui tranche. Placé en haut, il était
+   écrasé par les `.tabs`, `.panel`, `.viewport` et `.atelier` déclarés
+   plus bas, sans erreur et sans trace, et seul le rendu le disait. Toute
+   nouvelle règle de ce mode va là.
+2. **`display:contents` sur `.stage` est ce qui sauve la connexion.** Le
+   cadre et l'atelier deviennent des cases de la grille de `.wrap`, donc
+   `#compte` peut se glisser entre les deux. Sans ça il fallait cacher la
+   carte de connexion, et on ne pouvait plus se connecter en paysage.
+3. **La largeur du cadre se calcule depuis la hauteur, jamais l'inverse**
+   (`width:min(calc(100svh * 1.536), calc(100vw - 236px))`). Le canvas doit
+   garder le rapport de son contenu : lui donner une largeur et une hauteur
+   toutes deux contraintes, ou un `object-fit`, déforme la boîte et `pt()`
+   vise à côté. Ce sont les six mille clics du 17/09 qui repartent.
+
+**Le manifest a des chemins absolus.** Une page d'île est servie à `/simon`
+par le catch-all de `_redirects` : un chemin relatif s'y casse le jour où
+quelqu'un écrit `/simon/`. `start_url` vaut `/`, jamais l'île d'où on a
+installé.
+
+**Il n'y a pas de service worker, et c'est un choix.** Chrome n'en exige
+plus pour proposer l'installation, iOS n'en a jamais eu besoin, et un
+service worker sert la version d'hier à qui vient de recevoir le lien de la
+nouvelle. Le jour où il en faudra un, il faudra d'abord une version
+affichée dans l'app et une invite à recharger. En attendant, ne pas en
+ajouter un « juste pour le cache » : un service worker est collant, et
+c'est la façon classique de briquer un site.
+
+**Les icônes se régénèrent, elles ne se dessinent pas à la main.** Elles
+sont le SVG du logo de `index.html` relu en repère 64 et rasterisé. Si le
+logo change, elles changent avec lui, et `build.sh` doit les copier toutes :
+une icône manquante fait échouer l'installation en silence.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

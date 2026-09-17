@@ -7,6 +7,9 @@ Chacun fabrique son île, la publie à son adresse, et va marcher sur celle des 
 ## Ce qu'il y a dans le dossier
 
     index.html          l'app entière (moteur isométrique + éditeur + son + panneaux)
+    manifest.webmanifest  l'île ajoutable à l'écran d'accueil, plein écran, paysage
+    icone-*.png           les icônes de l'app, tirées du logo SVG du site
+    apple-touch-icon.png  la même, pour l'écran d'accueil iOS
     src/config.js       URL et clé publishable Supabase
     src/store.js        seule couche qui parle à Supabase
     supabase/schema.sql tables, RLS, vue archipel — idempotent
@@ -145,10 +148,49 @@ Le cadre fait 768x500, soit un rapport de 1,536. Sa largeur est bornée
 par la hauteur disponible (`max-width: calc((100svh - Xpx) * 1.536)`),
 sinon en paysage il déborde sous l'écran et on joue sans voir son île.
 
-En paysage court (moins de 560 px de haut), l'atelier reprend sa place à
-droite et l'en-tête se fait petit : la hauteur est la denrée rare. En
-portrait étroit, l'accroche disparaît, la grille d'objets passe à trois
-colonnes et la bulle de murmure rétrécit pour ne pas manger l'île.
+En portrait étroit, l'accroche disparaît, la grille d'objets passe à trois
+colonnes et la bulle de murmure rétrécit pour ne pas manger l'île. Une
+pastille « Tourne ton téléphone » se pose en bas à droite du cadre, une
+seule fois par appareil : le média la montre, un doigt la retire pour de
+bon.
+
+**En paysage court (moins de 560 px de haut), le jeu prend tout l'écran.**
+La page disparaît : plus de logo, plus d'accroche, plus de défilement.
+L'île occupe toute la hauteur à gauche, la carte de connexion se pose en
+haut à droite et l'atelier remplit la colonne sous elle, avec ses six
+onglets sur deux rangées de trois. C'est `display:contents` sur `.stage`
+qui le permet : le cadre et l'atelier deviennent des cases de la grille de
+`.wrap`, et la carte de connexion peut se glisser entre les deux. Sans ça
+il fallait la cacher, et on ne pouvait plus se connecter en paysage.
+
+Ce bloc est **à la fin de la feuille de style**, et pas avec les autres
+media queries en haut. Une media query n'a pas plus de poids qu'une règle
+ordinaire : placé en haut, il était écrasé par les `.tabs`, `.panel`,
+`.viewport` et `.atelier` déclarés plus bas, en silence.
+
+## L'île sur l'écran d'accueil
+
+`manifest.webmanifest` et quatre icônes (`icone-192`, `icone-512`,
+`icone-maskable`, `apple-touch-icon`), générées depuis le logo SVG du site.
+Ajoutée à l'écran d'accueil, l'île s'ouvre plein écran, sans barre
+d'adresse, en paysage (`display: standalone`, `orientation: landscape`).
+
+Ça reste un site : la même adresse s'ouvre dans n'importe quel navigateur,
+et une île se partage toujours par son lien (`/simon`). `start_url` vaut
+`/`, jamais l'île d'où on a installé : l'app s'ouvre chez toi.
+
+Les chemins du manifest et des icônes sont **absolus**. Une page d'île est
+servie à `/simon` par le catch-all de `_redirects` ; un chemin relatif s'y
+casserait le jour où quelqu'un écrit `/simon/`.
+
+**Pas de service worker, et c'est un choix.** Chrome n'en exige plus pour
+proposer l'installation, iOS n'en a jamais eu besoin, et un service worker
+mal réglé sert la version d'hier à quelqu'un qui vient de recevoir le lien
+de la nouvelle, sans moyen de le lui dire. Le jour où il en faudra un, il
+faudra d'abord une version affichée dans l'app et une invite à recharger.
+
+Les icônes se refont avec la même recette que le logo : c'est le SVG de
+`index.html` relu en repère 64, rien n'est dessiné à la main.
 
 Le jeu se joue au doigt sans rien ajouter : toucher l'île déplace le
 bonhomme, toucher avec un pinceau actif pose. Le message d'accueil teste
