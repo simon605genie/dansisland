@@ -47,7 +47,13 @@ version épinglée plus ancienne — les clés publishable ne sont pas gérées 
 
 Le schéma est appliqué, le site est déployé, les URLs d'auth pointent sur le
 domaine public. Vérifié en production : création de compte, création d'île,
-vue `archipel`, et les pages d'île (`/simon`) en mode visiteur.
+vue `archipel`, et une page d'île en mode visiteur.
+
+Cette vérification portait sur une île de slug `simon`, **qui n'existe
+plus**. L'archipel ne contient aujourd'hui qu'une île, `dan`
+(« L'île de Dan »), et sa ligne se lit bien en `anon` : c'est exactement
+ce dont le mode visiteur a besoin. Le `/simon` qu'on lit ailleurs dans ce
+fichier est un exemple d'adresse, pas une île à retrouver.
 
 `supabase/2026-09-17_maree.sql` **est joué** (17/09/2026 au soir) : la mer
 est tenue par le serveur, et les shells ramassés sur le sable remontent.
@@ -68,6 +74,15 @@ contre le projet, sans compte, par les fonctions ouvertes à `anon` :
   « new row violates row-level security policy »). Le vide de policy fait
   bien ce qu'on attend de lui, mesuré et pas supposé.
 
+`supabase/2026-09-16_bourse_serveur.sql` **est joué**. Il n'a pas pu
+l'être le jour où il a été écrit, faute de Postgres sous la main, et le
+README a longtemps dit qu'il attendait encore. Deux choses le démentent :
+`bourses.sac` se lit sans `42703` (donc la table existe), et
+`2026-09-17_commande.sql` fait un `alter table public.bourses`, donc il
+n'aurait pas pu passer sans elle. Les quatre migrations sont en base. Ne
+pas le rejouer par prudence : il est rejouable, mais il n'y a plus rien à
+reprendre.
+
 Pas encore éprouvé :
 
 - **La livraison en vrai.** Comme les visites payantes, elle demande deux
@@ -84,13 +99,6 @@ Pas encore éprouvé :
 - **Le compagnon qui rattrape.** Même raison : il est dessiné au bon
   endroit et se choisit bien parmi les bestioles acquises (vérifié), mais
   sa course derrière le bonhomme demande que la boucle tourne.
-- **La bourse côté serveur.** `supabase/2026-09-16_bourse_serveur.sql` n'a
-  pas été joué au moment où il a été écrit : il n'y avait pas de Postgres
-  sous la main pour le relire autrement qu'à l'œil. Tant qu'il n'est pas
-  passé, le client retombe sur sa bourse locale sans rien casser — mais les
-  shells gagnés entre-temps restent dans le navigateur. À jouer dans
-  [l'éditeur SQL](https://supabase.com/dashboard/project/cgputbitzfgokpwbbind/sql/new),
-  d'un bloc, en vérifiant que l'en-tête dit bien « dansisland ».
 - **Les visites payantes en vrai.** Elles demandent deux comptes : un qui
   plante, un qui reçoit. Le crédit du visiteur se voit tout de suite dans
   le murmure ; celui de l'hôte ne se vérifie qu'en se reconnectant avec

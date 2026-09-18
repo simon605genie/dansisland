@@ -329,9 +329,16 @@ sous une île jouable. Le CSS qui n'allait qu'avec (`.pitch`, `.eyebrow`,
 `.tbl`, `.tag`) est parti avec. `.mono` reste : il sert aux codes d'île
 et au message de mode démo.
 
-Le pied de page, lui, reste : c'est le seul endroit qui dit comment
-marcher. Sa dernière phrase (« tout est stocké dans ton navigateur »)
-n'est plus vraie depuis les comptes, et n'a pas été touchée ici.
+**Le pied de page est parti avec la section, contrairement à ce que ce
+fichier a longtemps dit ici.** Il portait « Flèches ou ZQSD pour marcher,
+clic pour te déplacer ou pour poser. Tout est stocké dans ton navigateur »,
+et cette dernière phrase était fausse depuis les comptes. Le commit
+`1473433` a emporté les deux, et `index.html` n'a plus aucun `<footer>` :
+vérifié. Comment marcher se dit maintenant dans le murmure au chargement,
+en une phrase choisie selon `pointer:coarse`, et rien n'y parle du
+stockage. Il n'y a donc plus de phrase fausse à l'écran, et plus d'endroit
+où ajouter du texte sous le jeu : ce qui doit se dire se dit dans le
+murmure ou dans un panneau.
 
 ## La sortie de la maison, 17/09/2026
 
@@ -795,9 +802,9 @@ Six choses à ne pas défaire.
    jsonb que chaque sauvegarde réécrit. L'album vit dans `localStorage`
    sous `dansisland:album`, comme la bourse de secours. Il ne suit donc
    pas d'un appareil à l'autre, **et il le dit lui-même** plutôt que de
-   le laisser découvrir : c'est la dernière phrase du pied de page
-   (« tout est stocké dans ton navigateur ») qui, elle, est devenue
-   fausse sans être corrigée.
+   le laisser découvrir. C'est le seul endroit qui le dise : le pied de
+   page qui annonçait « tout est stocké dans ton navigateur » n'existe
+   plus depuis le commit `1473433` (voir la section « la page allégée »).
 2. **Deux temps, pas un.** Le premier appui ouvre le viseur, le second
    déclenche. Un déclencheur immédiat ne laisse pas cadrer, et cadrer est
    tout ce qu'il y a à faire ici. Même forme que le comptoir de la
