@@ -18,14 +18,16 @@
 #
 #    * ce qui fait **échouer** le job : le site ne répond pas, le build de
 #      ce commit n'est pas passé, ou le jeu ne peut pas démarrer ;
-#    * ce qui ne fait qu'**avertir** : rien, pour l'instant. Les Cloudflare
-#      Pages Functions avaient ce statut ; elles sont sorties du dépôt le
-#      18/09 au soir, donc les vérifier n'avertirait plus de rien — ça
-#      afficherait un avertissement permanent, et un avertissement permanent
-#      cesse d'être lu. Ce qui les remplace est une vérification **dure** :
-#      `/island/<slug>` doit servir le jeu. C'est là qu'atterrissent les
+#    * ce qui ne fait qu'**avertir** : rien. Les adresses publiques ont
+#      **deux** réponses acceptables — leur propre page quand les Cloudflare
+#      Pages Functions sont servies, le jeu quand elles ne le sont pas, le
+#      catch-all prenant alors le relais. Le job n'échoue que sur la
+#      troisième réponse : ni l'une ni l'autre. C'est là qu'atterrissent les
 #      liens déjà partagés, et une adresse partagée qui tombe à côté est la
-#      seule panne dont on ne s'aperçoit jamais soi-même.
+#      seule panne dont on ne s'aperçoit jamais soi-même. Le log dit
+#      laquelle des deux on a, donc il dit aussi si les fonctions sont
+#      vivantes — sans qu'un avertissement permanent finisse par ne plus
+#      être lu.
 # ============================================================
 name: Vérifier le déploiement
 
@@ -137,27 +139,47 @@ jobs:
               duro=1 ;;
           esac
 
-          # --- 4. Les adresses déjà partagées atterrissent quelque part --
-          # `/island/<slug>` et `/carte/<slug>` sont parties dans des cartes
-          # postales et des messages avant que les fonctions ne sortent du
-          # dépôt. Elles doivent donc continuer de mener au jeu, par le
-          # catch-all de `_redirects` et le routeur de `index.html` — qui
-          # sait les ouvrir et retient le parrainage au passage.
+          # --- 4. Les adresses publiques mènent quelque part -------------
+          # `/island/<slug>` et `/carte/<slug>` ont **deux** réponses
+          # acceptables, et c'est voulu :
           #
-          # C'est **bloquant**, et c'est le piège du chemin absolu qui le
-          # justifie : à deux segments, un module importé en relatif se
-          # résout à côté et la page reste blanche. On vérifie donc que la
-          # page servie est bien le jeu, pas seulement qu'elle répond.
+          #   * leur propre page, écrite par la Cloudflare Pages Function ;
+          #   * le jeu, quand les fonctions ne sont pas servies — le
+          #     catch-all de `_redirects` prend le relais et
+          #     `routerDepuisURL()` sait ouvrir ces deux adresses, en
+          #     retenant le parrainage au passage.
+          #
+          # Ce qui n'est **pas** acceptable est la troisième réponse : ni
+          # l'une ni l'autre. C'est là qu'atterrissent les liens déjà
+          # partagés, et c'est le piège du chemin absolu qui rend ça
+          # bloquant — à deux segments, un module importé en relatif se
+          # résout à côté et la page reste blanche, sans rien dire.
           for ad in "/island/dan" "/carte/dan"; do
-            if curl -sS --max-time 25 "$SITE$ad" | grep -q 'Ton petit endroit pour ralentir'; then
-              echos "✅ $ad mène au jeu."
-              resume "✅ **Lien partagé** — \`$ad\` mène au jeu."
+            page=$(curl -sS --max-time 25 "$SITE$ad" || true)
+            if printf '%s' "$page" | grep -q "sur Dan’s Island"; then
+              echos "✅ $ad rend sa page publique (les fonctions sont servies)."
+              resume "✅ **Lien partagé** — \`$ad\` rend sa page publique : les Pages Functions sont servies."
+            elif printf '%s' "$page" | grep -q 'Ton petit endroit pour ralentir'; then
+              echos "✅ $ad mène au jeu (les fonctions ne sont pas servies, le catch-all a pris le relais)."
+              resume "✅ **Lien partagé** — \`$ad\` mène au jeu ; les Pages Functions ne sont pas servies, le catch-all a pris le relais."
             else
-              echos "❌ $ad ne mène pas au jeu : une adresse déjà partagée tombe à côté."
-              resume "❌ **Lien partagé** — \`$ad\` ne mène pas au jeu."
+              echos "❌ $ad ne mène ni à sa page ni au jeu : une adresse déjà partagée tombe à côté."
+              resume "❌ **Lien partagé** — \`$ad\` ne mène ni à sa page publique ni au jeu."
               duro=1
             fi
           done
+
+          # Le plan du site, quand les fonctions sont là. Il ne fait
+          # qu'informer : sans elles, `robots.txt` ne l'annonce pas non plus,
+          # donc il n'y a rien de cassé à signaler.
+          plan=$(curl -sS --max-time 25 "$SITE/sitemap.xml" || true)
+          if printf '%s' "$plan" | grep -q '<urlset'; then
+            n=$(printf '%s' "$plan" | grep -c '<loc>' || true)
+            echos "✅ Le plan du site rend $n adresse(s)."
+            resume "✅ **Plan du site** — \`/sitemap.xml\` rend $n adresse(s)."
+          else
+            echos "·  /sitemap.xml ne rend pas de XML : les fonctions ne sont pas servies."
+          fi
 
           echos ""
           [ "$mou" = "1" ] && echos "⚠️  Des avertissements."
