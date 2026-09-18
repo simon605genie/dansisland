@@ -92,10 +92,22 @@ jobs:
           # écrite en dur dans `index.html` et n'existait pas avant. Elle,
           # le catch-all ne peut pas l'inventer. Cloudflare met une minute
           # ou deux, donc on attend au lieu de conclure trop vite.
+          #
+          # **Jamais `curl | grep -q` ici**, et c'est la deuxième leçon de ce
+          # fichier. `grep -q` sort dès qu'il a trouvé et ferme le tuyau ;
+          # `curl`, qui écrit encore, échoue alors en 23 (« Failure writing
+          # output to destination ») ; et `pipefail` rend l'échec de curl
+          # plutôt que le succès de grep. Le test répond donc **faux au
+          # moment précis où le motif est là**. Mesuré le 18/09 au soir : six
+          # minutes de « c'est encore l'ancienne page » sur un site qui
+          # portait la phrase depuis le premier essai. On capture d'abord,
+          # on cherche ensuite — comme les quatre contrôles qui suivent, qui
+          # étaient déjà écrits ainsi et n'ont, eux, jamais menti.
           echos "→ On attend que le déploiement soit en ligne (témoin : la phrase de l'accueil)"
           vu=0
           for i in $(seq 1 30); do
-            if curl -sS --max-time 20 "$SITE/" | grep -q 'Ton petit endroit pour ralentir'; then
+            page=$(curl -sS --max-time 20 "$SITE/" || true)
+            if printf '%s' "$page" | grep -q 'Ton petit endroit pour ralentir'; then
               vu=1; break
             fi
             echos "   essai $i : c'est encore l'ancienne page — on repatiente 12 s"
