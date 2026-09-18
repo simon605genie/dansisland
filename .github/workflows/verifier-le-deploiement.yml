@@ -18,11 +18,14 @@
 #
 #    * ce qui fait **échouer** le job : le site ne répond pas, le build de
 #      ce commit n'est pas passé, ou le jeu ne peut pas démarrer ;
-#    * ce qui ne fait qu'**avertir** : les Cloudflare Pages Functions ne
-#      sont pas servies. Le jeu marche quand même — le catch-all de
-#      `_redirects` ramène `/island/…` et `/carte/…` sur le jeu, qui sait
-#      les ouvrir. On perd l'aperçu de lien, pas la visite. Un rouge
-#      permanent sur un site qui marche, on cesse de le lire.
+#    * ce qui ne fait qu'**avertir** : rien, pour l'instant. Les Cloudflare
+#      Pages Functions avaient ce statut ; elles sont sorties du dépôt le
+#      18/09 au soir, donc les vérifier n'avertirait plus de rien — ça
+#      afficherait un avertissement permanent, et un avertissement permanent
+#      cesse d'être lu. Ce qui les remplace est une vérification **dure** :
+#      `/island/<slug>` doit servir le jeu. C'est là qu'atterrissent les
+#      liens déjà partagés, et une adresse partagée qui tombe à côté est la
+#      seule panne dont on ne s'aperçoit jamais soi-même.
 # ============================================================
 name: Vérifier le déploiement
 
@@ -86,7 +89,7 @@ jobs:
           # Même piège : on lit le contenu et le type, jamais le code.
           rt=$(curl -sS --max-time 20 "$SITE/robots.txt" || true)
           rtt=$(curl -sS -o /dev/null -w '%{content_type}' --max-time 20 "$SITE/robots.txt" || true)
-          if printf '%s' "$rt" | grep -q 'Sitemap: https://dansisland.app/sitemap.xml'; then
+          if printf '%s' "$rt" | grep -q 'User-agent: \*'; then
             echos "✅ /robots.txt est un vrai fichier ($rtt)."
             resume "✅ **robots.txt** — servi comme un vrai fichier (\`$rtt\`)."
           else
@@ -111,34 +114,30 @@ jobs:
               duro=1 ;;
           esac
 
-          # --- 4. Les pages publiques (avertissement seulement) ----------
-          # `dan` est la seule île de l'archipel réel, et sa ligne se lit
-          # bien en `anon` : c'est exactement ce dont ces pages ont besoin.
-          titre=$(curl -sS --max-time 25 "$SITE/island/dan" | grep -o '<title>[^<]*' | head -1 || true)
-          if printf '%s' "$titre" | grep -q "une île sur Dan’s Island"; then
-            echos "✅ Les Functions sont servies : $titre"
-            resume "✅ **Pages publiques** — \`/island/dan\` rend sa propre page (\`$titre\`)."
-          else
-            echos "⚠️  /island/dan ne rend pas sa page publique (titre vu : '$titre')."
-            echos "    Cloudflare ne lit pas functions/ là où il est. Le jeu marche quand même :"
-            echos "    le catch-all ramène cette adresse sur le jeu, qui sait l'ouvrir."
-            resume "⚠️ **Pages publiques** — \`/island/dan\` ne rend pas sa page (titre vu : \`$titre\`). Cloudflare ne lit pas \`functions/\` à cet emplacement. **Rien n'est cassé** : le catch-all ramène l'adresse sur le jeu. À régler via « Root directory » du projet Pages, ou en déplaçant le dossier."
-            mou=1
-          fi
-
-          plan=$(curl -sS --max-time 25 "$SITE/sitemap.xml" || true)
-          if printf '%s' "$plan" | grep -q '<urlset'; then
-            n=$(printf '%s' "$plan" | grep -c '<loc>' || true)
-            echos "✅ Le plan du site rend $n adresse(s)."
-            resume "✅ **Plan du site** — \`/sitemap.xml\` rend $n adresse(s)."
-          else
-            echos "⚠️  /sitemap.xml ne rend pas de XML. Même cause que ci-dessus."
-            resume "⚠️ **Plan du site** — \`/sitemap.xml\` ne rend pas de XML (même cause que les pages publiques)."
-            mou=1
-          fi
+          # --- 4. Les adresses déjà partagées atterrissent quelque part --
+          # `/island/<slug>` et `/carte/<slug>` sont parties dans des cartes
+          # postales et des messages avant que les fonctions ne sortent du
+          # dépôt. Elles doivent donc continuer de mener au jeu, par le
+          # catch-all de `_redirects` et le routeur de `index.html` — qui
+          # sait les ouvrir et retient le parrainage au passage.
+          #
+          # C'est **bloquant**, et c'est le piège du chemin absolu qui le
+          # justifie : à deux segments, un module importé en relatif se
+          # résout à côté et la page reste blanche. On vérifie donc que la
+          # page servie est bien le jeu, pas seulement qu'elle répond.
+          for ad in "/island/dan" "/carte/dan"; do
+            if curl -sS --max-time 25 "$SITE$ad" | grep -q 'Ton petit endroit pour ralentir'; then
+              echos "✅ $ad mène au jeu."
+              resume "✅ **Lien partagé** — \`$ad\` mène au jeu."
+            else
+              echos "❌ $ad ne mène pas au jeu : une adresse déjà partagée tombe à côté."
+              resume "❌ **Lien partagé** — \`$ad\` ne mène pas au jeu."
+              duro=1
+            fi
+          done
 
           echos ""
-          [ "$mou" = "1" ] && echos "⚠️  Des avertissements : le site marche, mais il lui manque ses pages publiques."
+          [ "$mou" = "1" ] && echos "⚠️  Des avertissements."
           if [ "$duro" = "1" ]; then
             echos "❌ Le déploiement n'est pas bon."
             exit 1

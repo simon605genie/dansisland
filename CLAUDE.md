@@ -1112,39 +1112,44 @@ chargement du compte) — le serveur refuse le second appel, donc ça ne
 coûte rien. Une **erreur** garde le code pour la prochaine fois ; un
 **refus ordinaire** (code inconnu, déjà parrainé) le jette.
 
-### Les pages publiques, et le SEO
+### Les pages publiques — écrites, puis sorties du dépôt
 
-`functions/` — des Cloudflare Pages Functions. Elles sont à la **racine du
-dépôt** et `build.sh` ne les copie **pas** dans `dist/` : Pages les lit à
-la racine, et copiées dans la sortie elles seraient servies comme du texte,
-donc du code publié au lieu d'être exécuté.
+Le jeu est **une seule page peinte dans un canvas**, et `_redirects` la
+sert à toutes les adresses. Un robot — Google, WhatsApp, Signal — ne lit
+pas le JavaScript : il voit « Dan's Island » et la même vignette pour les
+cinquante îles de l'archipel. Trois Cloudflare Pages Functions y
+répondaient (`/island/<slug>`, `/carte/<slug>`, `/sitemap.xml`).
 
-    /island/<slug>   la page publique d'une île
-    /carte/<slug>    la carte postale reçue
-    /sitemap.xml     l'archipel, fabriqué à la demande
+**Elles sont sorties le 18/09/2026 au soir**, et la raison est à retenir
+avant d'y toucher : après la fusion qui les a apportées, le déploiement a
+cessé de passer — quatorze minutes plus tard la production servait encore
+la version d'avant. Cloudflare **compile automatiquement** un dossier
+`functions/` à la racine, et une compilation qui échoue fait échouer
+**tout** le déploiement, sans que rien ne le dise depuis le dépôt. C'était
+l'hypothèse la plus probable, et le dossier est sorti pour la lever.
 
-Pourquoi elles existent : le jeu est **une seule page peinte dans un
-canvas**, et `_redirects` la sert à toutes les adresses. Un robot — Google,
-WhatsApp, Signal — ne lit pas le JavaScript : il voyait « Dan's Island » et
-la même vignette pour les cinquante îles de l'archipel.
+Ce n'est pas une preuve : le log de build n'a pas été lu. Les faire revenir
+est un `git checkout 7da69bf -- functions/`, plus la ligne `Sitemap:` de
+`robots.txt` et les vérifications correspondantes du workflow. **À ne faire
+qu'une fois la vraie cause connue** — sinon on rejoue le même blocage.
 
-Trois règles :
+Trois règles à retrouver le jour où elles reviennent :
 
 1. **En cas de doute, `next()`.** Île inconnue, base injoignable, slug mal
-   formé : on s'efface et le catch-all sert le jeu. `routerDepuisURL()`
-   sait ouvrir `/island/x` et `/carte/x` et retient le parrainage au
-   passage. Une adresse partagée ne tombe jamais sur une page blanche.
+   formé : on s'efface et le catch-all sert le jeu.
 2. **On ne lit que ce qui est public** : la clé publishable sans jeton
    d'utilisateur, donc `auth.uid()` vaut null et la RLS ne montre que les
-   îles publiées. La vue `archipel` suffit et ne trimballe pas le jsonb.
+   îles publiées.
 3. **Les clés de `functions/_commun.js` doublent celles de
    `src/config.js`.** Deux listes qui divergent, et la page publique ne
-   trouve plus l'île que le jeu affiche. `env.SUPABASE_URL` /
-   `env.SUPABASE_KEY` l'emportent quand elles existent.
+   trouve plus l'île que le jeu affiche.
 
-Ce que `?m=` porte sur `/carte/<slug>` est du texte écrit par n'importe
-qui : échappé par `ech()`, coupé à 120 caractères, et il ne sort jamais du
-bloc qui lui est réservé.
+Ce qui **reste vrai sans elles**, et qui est le plus important : le routeur
+de `index.html` sait ouvrir `/island/x` et `/carte/x`, et il retient le
+parrainage au passage. Les liens déjà partagés mènent donc toujours au jeu.
+Le workflow `verifier-le-deploiement.yml` le vérifie **en dur**, pas en
+avertissement : une adresse partagée qui tombe à côté est la seule panne
+dont on ne s'aperçoit jamais soi-même.
 
 ### L'import du module est en chemin absolu
 
