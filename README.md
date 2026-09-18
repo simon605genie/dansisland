@@ -16,14 +16,9 @@ depuis le 17/09/2026.
     manifest.webmanifest  l'île ajoutable à l'écran d'accueil, plein écran, paysage
     icone-*.png           les icônes de l'app, tirées du logo SVG du site
     apple-touch-icon.png  la même, pour l'écran d'accueil iOS
-    robots.txt          tout ouvert, et l'adresse du plan du site
+    robots.txt          tout ouvert
     src/config.js       URL et clé publishable Supabase
     src/store.js        seule couche qui parle à Supabase
-    functions/          les pages publiques (Cloudflare Pages Functions)
-      island/[slug].js    /island/<slug> — la page d'une île, indexable
-      carte/[slug].js     /carte/<slug>  — la carte postale reçue
-      sitemap.xml.js      /sitemap.xml   — l'archipel, à la demande
-      _commun.js          la maquette, la lecture de l'archipel, l'échappement
     supabase/schema.sql tables, RLS, vue archipel — idempotent
     supabase/2026-09-16_grille18.sql  migration à jouer une seule fois
     supabase/2026-09-16_bourse_serveur.sql  la bourse quitte le jsonb — rejouable
@@ -34,9 +29,7 @@ depuis le 17/09/2026.
     _redirects          Cloudflare Pages : catch-all, toute adresse sert index.html
     build.sh            copie dans dist/ les seuls fichiers à publier
 
-Pas de build : ce sont des modules ES servis tels quels. `functions/` n'est
-**pas** copié dans `dist/` — Cloudflare Pages lit les Functions à la racine
-du dépôt, et copiées dans la sortie elles seraient servies comme du texte.
+Pas de build : ce sont des modules ES servis tels quels.
 
 ## Le projet Supabase
 
@@ -125,14 +118,10 @@ Pas encore éprouvé :
   se vérifie qu'en se reconnectant avec l'autre compte. Et il demande
   d'abord que `2026-09-18_parrainage.sql` soit joué.
 - **Les pages publiques servies par Cloudflare.** Elles ont été éprouvées
-  hors ligne, fonction par fonction, avec une base simulée : titre,
-  description, OpenGraph, échappement de `?m=`, repli en `next()` sur une
-  île inconnue ou un slug mal formé, et un plan de site qui écarte les
-  slugs invalides. Ce qui reste à vérifier est **le déploiement** : que
-  Pages lise bien `functions/` à la racine du dépôt malgré la commande de
-  build. Un `curl` sur `/island/dan` après le premier déploiement tranche
-  en une seconde. Si ça ne passe pas, le catch-all ramène ces adresses sur
-  le jeu et rien n'est cassé.
+  hors ligne, fonction par fonction, avec une base simulée, mais jamais
+  servies en vrai : le déploiement s'est bloqué à leur arrivée et elles
+  sont sorties du dépôt (voir « Ce qu'un robot voit » plus haut). Elles
+  reviendront quand la cause du blocage sera connue.
 - **Le partage natif de la carte postale.** `navigator.share({files})`
   n'existe pas dans un navigateur piloté sans contexte sécurisé ni geste
   d'utilisateur réel : le dessin de la carte, le découpage et le repli
@@ -217,30 +206,48 @@ du jeu : un voilier passe au large, des papillons volent le jour, des
 lucioles la nuit, et une étoile filante traverse le ciel de temps en
 temps.
 
-## Ce qu'un robot voit
+## Ce qu'un robot voit, et les pages publiques qui sont sorties
 
 Le jeu est une seule page peinte dans un canvas, et `_redirects` la sert à
-toutes les adresses : Google et WhatsApp voyaient donc le même titre et la
+toutes les adresses : Google et WhatsApp voient donc le même titre et la
 même vignette pour toutes les îles. Trois Cloudflare Pages Functions
-écrivent maintenant de vraies pages HTML côté serveur :
+écrivaient de vraies pages HTML côté serveur — `/island/<slug>`,
+`/carte/<slug>` et `/sitemap.xml`, chacune avec son `title`, sa
+description, son `canonical`, ses balises OpenGraph et ses données
+structurées.
 
-- `/island/<slug>` — le nom de l'île, son propriétaire, son livre d'or, un
-  aperçu SVG dans **ses** couleurs, et deux boutons ;
-- `/carte/<slug>` — la carte postale reçue, avec la phrase de l'expéditeur
-  (elle voyage dans `?m=`, et nulle part ailleurs) ;
-- `/sitemap.xml` — l'archipel, fabriqué à la demande depuis la vue
-  `archipel` : une île créée aujourd'hui y est aujourd'hui.
+**Elles sont sorties du dépôt le 18/09/2026 au soir**, et il faut dire
+pourquoi honnêtement : après la fusion qui les a apportées, le site a
+cessé d'être redéployé — quatorze minutes plus tard la production servait
+encore la version d'avant, mesuré par le workflow ci-dessous. Cloudflare
+compile automatiquement un dossier `functions/` à la racine, et **une
+compilation qui échoue fait échouer tout le déploiement**. C'était
+l'hypothèse la plus probable, et le dossier est sorti pour la lever.
 
-Chacune porte son `title`, sa `meta description`, son `canonical`, ses
-balises OpenGraph et Twitter, et ses données structurées. `robots.txt`
-ouvre tout et donne l'adresse du plan.
+Ce n'est pas une preuve : le log de build Cloudflare n'a pas été lu. Si le
+déploiement était bloqué pour une autre raison, le retrait n'aura servi à
+rien et les fonctions peuvent revenir telles quelles.
 
-**Si les Functions ne sont pas servies** (réglage Cloudflare, dossier au
-mauvais endroit), rien ne casse : le catch-all ramène ces adresses sur le
-jeu, qui sait les ouvrir et retient le parrainage au passage. On perd
-l'aperçu de lien, pas la visite. **À vérifier après le premier
-déploiement** : `curl -s https://dansisland.app/island/dan | head -5` doit
-rendre la page publique, pas `index.html`.
+**Ce qu'on perd :** l'aperçu de lien. Une île partagée sur WhatsApp montre
+le titre et l'image du site, pas les siens.
+
+**Ce qu'on ne perd pas :** la visite. Le catch-all ramène `/island/…` et
+`/carte/…` sur le jeu, `routerDepuisURL()` sait les ouvrir et retient le
+parrainage au passage. Les liens déjà partagés continuent de mener quelque
+part — et le workflow le vérifie maintenant en dur.
+
+### Les faire revenir
+
+Elles sont entières dans l'historique, et rien d'autre ne les référence :
+
+```bash
+git checkout 7da69bf -- functions/
+```
+
+Il faut alors remettre la ligne `Sitemap:` dans `robots.txt`, et rendre au
+workflow ses vérifications de pages publiques (le commit qui les a retirées
+les montre). À ne faire qu'une fois connue la vraie cause du blocage —
+sinon on rejoue le même déploiement bloqué.
 
 ## Mise en route en local
 

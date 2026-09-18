@@ -1,0 +1,145 @@
+# ============================================================
+#  Le site est-il vraiment en ligne, et complet ?
+#
+#  Pourquoi ce fichier existe : Cloudflare Pages déploie `main` tout seul,
+#  et jusqu'ici la seule façon de savoir si ça avait marché était d'aller
+#  regarder le tableau de bord ou de lancer trois `curl` à la main. Un
+#  déploiement qu'on ne vérifie que quand on y pense est un déploiement
+#  qu'on découvre cassé par quelqu'un d'autre.
+#
+#  Ce qu'il fait : il attend que le site porte bien la version qu'on vient
+#  de pousser, puis il regarde les quelques adresses dont la panne serait
+#  silencieuse. Silencieuse est le mot qui compte — un `index.html` qui ne
+#  démarre pas rend une page blanche sans rien dire, et une page publique
+#  qui n'est pas servie ne se voit que dans un aperçu WhatsApp, des jours
+#  plus tard.
+#
+#  Deux niveaux, et la distinction est voulue :
+#
+#    * ce qui fait **échouer** le job : le site ne répond pas, le build de
+#      ce commit n'est pas passé, ou le jeu ne peut pas démarrer ;
+#    * ce qui ne fait qu'**avertir** : rien, pour l'instant. Les Cloudflare
+#      Pages Functions avaient ce statut ; elles sont sorties du dépôt le
+#      18/09 au soir, donc les vérifier n'avertirait plus de rien — ça
+#      afficherait un avertissement permanent, et un avertissement permanent
+#      cesse d'être lu. Ce qui les remplace est une vérification **dure** :
+#      `/island/<slug>` doit servir le jeu. C'est là qu'atterrissent les
+#      liens déjà partagés, et une adresse partagée qui tombe à côté est la
+#      seule panne dont on ne s'aperçoit jamais soi-même.
+# ============================================================
+name: Vérifier le déploiement
+
+on:
+  push:
+  workflow_dispatch:
+  # Une fois par semaine : un site qui marchait peut cesser de marcher sans
+  # qu'on ait rien poussé (certificat, réglage, quota).
+  schedule:
+    - cron: '17 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  verifier:
+    name: Le site répond, et il est complet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vérifier https://dansisland.app
+        env:
+          SITE: https://dansisland.app
+        run: |
+          set -uo pipefail
+          echos() { printf '%s\n' "$*"; }
+          resume() { printf '%s\n' "$*" >> "$GITHUB_STEP_SUMMARY"; }
+
+          duro=0   # ce qui fait échouer
+          mou=0    # ce qui n'avertit que
+
+          # --- 1. Le build de ce commit est-il passé ? -------------------
+          # **On ne regarde jamais un code HTTP ici**, et c'est la leçon du
+          # premier essai de ce fichier : `_redirects` porte un catch-all
+          # `/* /index.html 200`, donc **toute** adresse répond 200, même
+          # celles qui n'existent pas. Un `/robots.txt` à 200 ne prouvait
+          # donc rien du tout — il servait la page du jeu.
+          #
+          # Le témoin est du **contenu** : la phrase de l'accueil, qui est
+          # écrite en dur dans `index.html` et n'existait pas avant. Elle,
+          # le catch-all ne peut pas l'inventer. Cloudflare met une minute
+          # ou deux, donc on attend au lieu de conclure trop vite.
+          echos "→ On attend que le déploiement soit en ligne (témoin : la phrase de l'accueil)"
+          vu=0
+          for i in $(seq 1 30); do
+            if curl -sS --max-time 20 "$SITE/" | grep -q 'Ton petit endroit pour ralentir'; then
+              vu=1; break
+            fi
+            echos "   essai $i : c'est encore l'ancienne page — on repatiente 12 s"
+            sleep 12
+          done
+          if [ "$vu" = "1" ]; then
+            echos "✅ L'accueil porte sa promesse : le build de ce changement est en ligne."
+            resume "✅ **Déployé** — « Ton petit endroit pour ralentir » est servi en dur dans le HTML."
+          else
+            echos "❌ Six minutes plus tard, le site sert toujours l'ancienne page."
+            resume "❌ **Pas déployé** — le site sert encore l'ancienne page six minutes après. Regarde les Deployments du projet Pages : le build a échoué, ou il n'a pas été déclenché."
+            duro=1
+          fi
+
+          # --- 2. Les fichiers qui n'existaient pas avant ----------------
+          # Même piège : on lit le contenu et le type, jamais le code.
+          rt=$(curl -sS --max-time 20 "$SITE/robots.txt" || true)
+          rtt=$(curl -sS -o /dev/null -w '%{content_type}' --max-time 20 "$SITE/robots.txt" || true)
+          if printf '%s' "$rt" | grep -q 'User-agent: \*'; then
+            echos "✅ /robots.txt est un vrai fichier ($rtt)."
+            resume "✅ **robots.txt** — servi comme un vrai fichier (\`$rtt\`)."
+          else
+            echos "❌ /robots.txt ne rend pas son contenu (type vu : '$rtt') — c'est le catch-all qui répond."
+            resume "❌ **robots.txt** — pas servi comme un fichier (type vu : \`$rtt\`) ; c'est le catch-all qui répond."
+            duro=1
+          fi
+
+          # --- 3. Le module démarre-t-il ? -------------------------------
+          # C'est le piège trouvé en éprouvant /carte/<slug> : un module
+          # servi en `text/html` est refusé sans appel, et le jeu ne
+          # démarre pas du tout — page blanche, une ligne dans la console.
+          # On vérifie donc le type MIME, pas seulement le code.
+          ct=$(curl -sS -o /dev/null -w '%{content_type}' --max-time 20 "$SITE/src/store.js" || true)
+          case "$ct" in
+            *javascript*|*ecmascript*)
+              echos "✅ /src/store.js est servi en $ct : le module peut démarrer."
+              resume "✅ **Module** — \`/src/store.js\` servi en \`$ct\`." ;;
+            *)
+              echos "❌ /src/store.js est servi en '$ct' — un module à ce type-là est refusé, le jeu ne démarre pas."
+              resume "❌ **Module** — \`/src/store.js\` servi en \`$ct\` : le jeu ne démarrera pas."
+              duro=1 ;;
+          esac
+
+          # --- 4. Les adresses déjà partagées atterrissent quelque part --
+          # `/island/<slug>` et `/carte/<slug>` sont parties dans des cartes
+          # postales et des messages avant que les fonctions ne sortent du
+          # dépôt. Elles doivent donc continuer de mener au jeu, par le
+          # catch-all de `_redirects` et le routeur de `index.html` — qui
+          # sait les ouvrir et retient le parrainage au passage.
+          #
+          # C'est **bloquant**, et c'est le piège du chemin absolu qui le
+          # justifie : à deux segments, un module importé en relatif se
+          # résout à côté et la page reste blanche. On vérifie donc que la
+          # page servie est bien le jeu, pas seulement qu'elle répond.
+          for ad in "/island/dan" "/carte/dan"; do
+            if curl -sS --max-time 25 "$SITE$ad" | grep -q 'Ton petit endroit pour ralentir'; then
+              echos "✅ $ad mène au jeu."
+              resume "✅ **Lien partagé** — \`$ad\` mène au jeu."
+            else
+              echos "❌ $ad ne mène pas au jeu : une adresse déjà partagée tombe à côté."
+              resume "❌ **Lien partagé** — \`$ad\` ne mène pas au jeu."
+              duro=1
+            fi
+          done
+
+          echos ""
+          [ "$mou" = "1" ] && echos "⚠️  Des avertissements."
+          if [ "$duro" = "1" ]; then
+            echos "❌ Le déploiement n'est pas bon."
+            exit 1
+          fi
+          echos "✅ Le site est en ligne et le jeu peut démarrer."
