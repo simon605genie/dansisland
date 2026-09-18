@@ -684,7 +684,11 @@ parce qu'il relit sa propre bourse après avoir planté. Celle de l'hôte ne
 le regarde pas, et la RLS ne la lui montrerait pas.
 
 Un mot supprimé ne reprend pas les shells. C'est voulu : on ne punit pas le
-propriétaire qui fait le ménage sur son mur.
+propriétaire qui fait le ménage sur son mur. **Il ne les redonne pas non
+plus** : le compteur du jour n'est pas dans `mots`, qui est un mur où l'on
+efface, mais dans `visites`, une ligne `(île, auteur, jour)` que personne
+ne peut écrire ni effacer depuis le client. Jusqu'au 18/09 au matin il
+était dans `mots`, et effacer son mot rouvrait le crédit de la journée.
 
 Plafonds du jour : **10** shells à gagner en allant écrire (cinq
 personnes), **25** à recevoir (cinq personnes). Trente-cinq contre les

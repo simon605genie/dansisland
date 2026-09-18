@@ -4699,22 +4699,41 @@ function peindreMaison(){
 }
 setInterval(()=>{ if(document.getElementById('p-maison').classList.contains('on')) peindreMaison(); },90);
 
+// En visite, les réglages du haut du panneau Île écrivent sur *ton* île
+// pendant que le cadre montre celle de l'hôte : on tape un nom et la plaque
+// ne bouge pas, puisqu'elle dit `world.name`. C'est « je tape et rien ne se
+// passe », le défaut que la boutique et l'atelier ont déjà coûté une fois
+// chacun. On les ferme le temps de la visite, et on dit où est la sortie.
+// L'atelier, plus bas, reste armable : lui, le clic sur l'île le refuse en
+// toutes lettres, là où est le doigt.
+function fermerEnVisite(f){
+  f.querySelectorAll('input,button').forEach(el=>{ el.disabled=true; });
+  return f;
+}
+
 function buildIle(){
   const p=document.getElementById('p-ile'); p.innerHTML='';
-  p.appendChild(textField('Nom de l\'île','name',"L'île de Dan"));
+  if(visiting){
+    p.appendChild(hint('Tu es invité chez <b>'+esc(world.owner)+'</b>. Le haut de ce panneau règle <b>ton</b> île, pas la sienne : tu ne verrais rien changer d’ici, alors il attend que tu sois rentré.'));
+    const fr=document.createElement('div'); fr.className='row';
+    const br=document.createElement('button'); br.className='btn primary'; br.textContent='Rentrer chez toi';
+    br.onclick=()=>go('me'); fr.appendChild(br); p.appendChild(fr);
+  }
+  const fn=textField('Nom de l\'île','name',"L'île de Dan");
+  p.appendChild(visiting?fermerEnVisite(fn):fn);
   const fs=field('Heure'), bs=document.createElement('div'); bs.className='chips';
   [['jour','Jour'],['crépuscule','Crépuscule'],['nuit','Nuit']].forEach(([v,n])=>{
     const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=n;
     b.setAttribute('aria-pressed',String(mine.sky===v));
     b.onclick=()=>{mine.sky=v; saveMine(); buildAll();}; bs.appendChild(b); });
-  fs.appendChild(bs); p.appendChild(fs);
+  fs.appendChild(bs); p.appendChild(visiting?fermerEnVisite(fs):fs);
 
   const fa=field('Ambiance sonore'), ba=document.createElement('div'); ba.className='chips';
   AMBIANCES.forEach(([v,n])=>{
     const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=n;
     b.setAttribute('aria-pressed',String((mine.ambiance||'vagues')===v));
     b.onclick=()=>{ mine.ambiance=v; saveMine(); if(!visiting) majAmbiance(); buildAll(); }; ba.appendChild(b); });
-  fa.appendChild(ba); p.appendChild(fa);
+  fa.appendChild(ba); p.appendChild(visiting?fermerEnVisite(fa):fa);
   p.appendChild(hint('L\u2019ambiance appartient \u00e0 l\u2019\u00eele, pas au joueur : tes visiteurs entendront celle que tu choisis. Le bouton <b>Son</b>, en haut du cadre, coupe tout pour toi seul.'));
 
   const fg=field('Palette du terrain'), bg=document.createElement('div'); bg.className='chips';
@@ -4723,7 +4742,7 @@ function buildIle(){
     b.innerHTML='<span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:'+g.grass+';margin-right:6px"></span>'+g.n;
     b.setAttribute('aria-pressed',String(mine.pal.k===g.k));
     b.onclick=()=>{mine.pal=g; saveMine(); buildAll();}; bg.appendChild(b); });
-  fg.appendChild(bg); p.appendChild(fg);
+  fg.appendChild(bg); p.appendChild(visiting?fermerEnVisite(fg):fg);
   p.appendChild(rule());
 
   const ft=field('Pinceau terrain'), bt=document.createElement('div'); bt.className='chips';

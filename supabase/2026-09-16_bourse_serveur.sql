@@ -365,6 +365,13 @@ grant execute on function public.bourse_cadeau() to authenticated;
 -- Chez soi, rien : `hote = auteur` sort tout de suite.
 -- Un mot supprimé ne reprend pas les shells. C'est voulu : on ne punit
 -- pas le propriétaire qui fait le ménage sur son mur.
+--
+-- ATTENTION, 18/09/2026 : cette version-ci est **périmée**. Demander « y
+-- a-t-il déjà une ligne de moi aujourd'hui ? » à `mots`, c'est compter
+-- sur un mur : effacer son mot rouvrait le crédit du jour. Le compteur a
+-- pris sa propre table dans `supabase/2026-09-18_visites.sql`, qui
+-- remplace la fonction ci-dessous. Si on rejoue ce fichier-ci, rejouer
+-- celui du 18 derrière, sinon le trou revient.
 create or replace function public.mot_credite()
 returns trigger
 language plpgsql security definer set search_path = public as $$

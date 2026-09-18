@@ -878,6 +878,41 @@ Six choses à ne pas défaire.
    n'existe pas. « Au nord » ne suffit pas non plus, ça se projette droit
    au-dessus, derrière la tête.
 
+## Le crédit du jour quitte le mur, 18/09/2026
+
+`supabase/2026-09-18_visites.sql`, **rejouable** : `create table if not
+exists`, `create or replace`, et la reprise finit par `on conflict do
+nothing`.
+
+Trouvé en éprouvant les visites payantes : **supprimer son mot rouvrait le
+crédit du jour.** On plante chez un ami (+2), on efface, on replante, ça
+repaie. `mot_credite()` demandait « ai-je déjà une ligne aujourd'hui ? » à
+`mots`, c'est-à-dire à un mur, une table faite pour perdre des lignes.
+
+Le compteur prend sa table, `visites`, clé primaire `(ile, auteur, jour)`,
+sur le modèle de l'`unique (ile, auteur, jour)` de `livraisons`. Trois
+choses à ne pas défaire :
+
+1. **Aucune policy, aucun grant, pas même en lecture.** Le joueur n'a rien
+   à lire ici : sa bourse dit ce qu'il a gagné, `faits.mot_pose` dit
+   combien de fois. Seule `mot_credite()`, `security definer`, y écrit.
+   `livraisons` était immunisée par accident (pas de policy de delete) ;
+   ici c'est écrit exprès, avec les `drop policy if exists` qui le disent.
+2. **Le jeton ne pointe aucun mot**, ni par id ni par texte. S'il pointait
+   un mot, effacer ce mot rouvrirait la question, et le trou reviendrait
+   par la porte de derrière.
+3. **Le test d'existence *est* l'insert** (`on conflict do nothing` puis
+   `get diagnostics row_count`). Le `select exists` suivi d'un `insert`
+   laissait passer deux mots plantés dans la même seconde.
+
+La reprise remonte tout l'historique de `mots`, pas seulement le jour :
+sans elle, le premier mot replanté après la migration repaierait une
+journée déjà payée.
+
+Ce qui ne change pas : un mot supprimé ne reprend pas les shells. On ne
+punit pas le propriétaire qui fait le ménage sur son mur. Il ne les
+redonne simplement plus.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
