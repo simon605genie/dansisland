@@ -125,11 +125,13 @@ Pas encore éprouvé :
   « +15 shells de bienvenue » au-dessus des onglets) ; celui du parrain ne
   se vérifie qu'en se reconnectant avec l'autre compte. Et il demande
   d'abord que `2026-09-18_parrainage.sql` soit joué.
-- **Les pages publiques servies par Cloudflare.** Elles ont été éprouvées
-  hors ligne, fonction par fonction, avec une base simulée, mais jamais
-  servies en vrai : le déploiement s'est bloqué à leur arrivée et elles
-  sont sorties du dépôt (voir « Ce qu'un robot voit » plus haut). Elles
-  reviendront quand la cause du blocage sera connue.
+- ~~**Les pages publiques servies par Cloudflare.**~~ **Éprouvées en vrai
+  le 18/09 au soir**, et c'est la première fois. Le run de vérification qui
+  a suivi la mise en ligne l'a mesuré : `/island/dan` et `/carte/dan`
+  rendent chacun **leur propre page**, pas le repli du catch-all, et
+  `/sitemap.xml` rend trois adresses. Les Pages Functions tournent donc
+  bien, à la racine du dépôt et sans être copiées dans `dist/`. Un lien de
+  carte postale partagé porte sa vraie page et son aperçu.
 - **Le partage natif de la carte postale.** `navigator.share({files})`
   n'existe pas dans un navigateur piloté sans contexte sécurisé ni geste
   d'utilisateur réel : le dessin de la carte, le découpage et le repli
