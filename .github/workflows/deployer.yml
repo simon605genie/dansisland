@@ -56,14 +56,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Ce pas ne se contente pas de dire « il manque un secret » : il dit
+      # **quels secrets existent**, par leur nom. C'est la différence entre
+      # « va voir dans les réglages » et « tu l'as déjà, il s'appelle
+      # autrement ». `toJSON(secrets)` rend l'objet complet ; on n'en sort
+      # que les clés, jamais les valeurs — et GitHub masque les valeurs dans
+      # les logs de toute façon, mais on ne s'appuie pas là-dessus.
+      #
+      # Les deux noms de rechange (`CF_*`) ne sont pas une invention : c'est
+      # la forme courte que beaucoup d'exemples Cloudflare emploient, et un
+      # dépôt qui déployait déjà peut la porter. Le pas de publication lit
+      # l'un ou l'autre avec `||`.
       - name: Les secrets sont-ils là ?
         env:
-          JETON: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          COMPTE: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TOUS: ${{ toJSON(secrets) }}
+          JETON: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
+          COMPTE: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
         run: |
+          echo "Secrets disponibles pour ce dépôt (noms seulement) :"
+          printf '%s' "${TOUS:-{\}}" | jq -r 'keys[]' | grep -v '^github_token$' | sed 's/^/  · /' \
+            || echo "  (aucun)"
+          echo ""
+
           manque=0
-          [ -z "${JETON:-}" ]  && { echo "❌ Secret manquant : CLOUDFLARE_API_TOKEN";  manque=1; }
-          [ -z "${COMPTE:-}" ] && { echo "❌ Secret manquant : CLOUDFLARE_ACCOUNT_ID"; manque=1; }
+          [ -z "${JETON:-}" ]  && { echo "❌ Aucun jeton : ni CLOUDFLARE_API_TOKEN ni CF_API_TOKEN";  manque=1; }
+          [ -z "${COMPTE:-}" ] && { echo "❌ Aucun compte : ni CLOUDFLARE_ACCOUNT_ID ni CF_ACCOUNT_ID"; manque=1; }
           if [ "$manque" = "1" ]; then
             echo ""
             echo "Settings → Secrets and variables → Actions → New repository secret."
@@ -72,13 +89,17 @@ jobs:
             {
               echo "❌ **Déploiement impossible** — il manque un secret."
               echo ""
+              echo "Noms de secrets vus dans ce dépôt :"
+              printf '%s' "${TOUS:-{\}}" | jq -r 'keys[]' | grep -v '^github_token$' | sed 's/^/- `/;s/$/`/' \
+                || echo "- (aucun)"
+              echo ""
               echo "À ajouter dans *Settings → Secrets and variables → Actions* :"
               echo "- \`CLOUDFLARE_API_TOKEN\` (permission « Cloudflare Pages: Edit »)"
               echo "- \`CLOUDFLARE_ACCOUNT_ID\` (visible dans l'URL du tableau de bord)"
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
-          echo "✅ Les deux secrets sont présents."
+          echo "✅ Un jeton et un compte sont présents."
 
       # `build.sh` est la seule définition de ce qui est public. On ne
       # recopie pas sa liste ici : deux listes qui divergent, et un fichier
@@ -99,8 +120,8 @@ jobs:
       - name: Publier sur Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
           command: pages deploy dist --project-name=dansisland --branch=main
 
       - name: Ce qu'il faut savoir ensuite

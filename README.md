@@ -318,6 +318,29 @@ Il ne remplace pas forcément l'intégration Git : si elle repart, les deux
 coexistent sans dommage — deux déploiements du même contenu. Mais il ne
 dépend plus d'elle.
 
+**Ce qui a débloqué la situation le 18/09 au soir**, à défaut de ces
+secrets : un `wrangler pages deploy` depuis un poste, sur un clone neuf.
+Il n'a demandé aucun jeton — `npx wrangler` ouvre le navigateur pour une
+autorisation, une fois.
+
+```bash
+cd $(mktemp -d) && git clone --depth 1 https://github.com/simon605genie/dansisland.git \
+  && cd dansisland && ./build.sh \
+  && npx wrangler pages deploy dist --project-name dansisland --branch main
+```
+
+Mesuré juste après : `dansisland.app` et `dansisland.pages.dev` portent
+tous deux le nouveau titre et la phrase de l'accueil, et `robots.txt` y est
+servi en `text/plain` — donc comme un fichier, pas par le catch-all. La
+publication est bien allée en **production**.
+
+`main.dansisland.pages.dev` répond toujours « Deployment Not Found ». Ce
+n'est donc pas un témoin de l'état de la production, contrairement à ce que
+le diagnostic du matin en avait tiré : un alias de branche peut ne jamais
+avoir été créé. Ce qu'il dit reste utile — il distingue « le build ne
+tourne pas » de « le domaine ne pointe pas sur le bon projet » — mais il ne
+dit rien à lui seul.
+
 ### Savoir si c'est vraiment en ligne
 
 `.github/workflows/verifier-le-deploiement.yml` le dit à chaque push, et
