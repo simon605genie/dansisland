@@ -277,11 +277,54 @@ Réglages de l'intégration Git, côté Cloudflare :
     Output directory    dist
     Production branch   main
 
-Déploiement à la main, si besoin :
+Déploiement à la main, si besoin — et c'est le chemin le plus court quand
+l'intégration Git ne répond plus :
 
 ```bash
 ./build.sh && npx wrangler pages deploy dist --project-name dansisland --branch main
 ```
+
+### Quand l'intégration Git décroche
+
+Le 18/09/2026, la production a cessé d'être redéployée : `dansisland.app`
+**et** `dansisland.pages.dev` servaient tous deux l'ancienne page, et
+`main.dansisland.pages.dev` répondait « Deployment Not Found » — donc aucun
+déploiement n'existait pour `main`. Ni le DNS, ni le cache, ni le contenu du
+dépôt : le build ne se déclenchait plus.
+
+Une intégration Git qui décroche est **muette**. Rien dans le dépôt ne le
+dit, aucun e-mail ne part, et on s'en aperçoit en regardant le site des
+jours plus tard. D'où `.github/workflows/deployer.yml`, qui rend le
+déploiement explicite : il se lit, il laisse un log, et il échoue
+bruyamment.
+
+Il demande deux secrets, à ajouter une fois dans **Settings → Secrets and
+variables → Actions** :
+
+    CLOUDFLARE_API_TOKEN    un jeton « Cloudflare Pages: Edit »
+    CLOUDFLARE_ACCOUNT_ID   l'identifiant de compte, lisible dans l'URL
+                            du tableau de bord
+
+Sans eux, le job s'arrête au premier pas en nommant ce qui manque, plutôt
+que d'échouer plus loin sur une erreur d'authentification illisible. Ils
+restent chez GitHub : ils ne passent pas dans les logs et ne sont pas dans
+ce dépôt.
+
+Il ne remplace pas forcément l'intégration Git : si elle repart, les deux
+coexistent sans dommage — deux déploiements du même contenu. Mais il ne
+dépend plus d'elle.
+
+### Savoir si c'est vraiment en ligne
+
+`.github/workflows/verifier-le-deploiement.yml` le dit à chaque push, et
+une fois par semaine. Il attend que le site porte la version qu'on vient
+de pousser, puis vérifie `robots.txt`, le type MIME de `/src/store.js` et
+le fait que `/island/<slug>` et `/carte/<slug>` mènent au jeu.
+
+**Son témoin est du contenu, jamais un code HTTP**, et c'est une leçon
+payée : `_redirects` porte un catch-all `/* /index.html 200`, donc *toute*
+adresse répond 200 sur ce site, y compris celles qui n'existent pas. Le
+premier essai de ce fichier concluait « déployé » sur un site inchangé.
 
 Après le déploiement, dans **Auth → URL Configuration** : Site URL sur
 `https://dansisland.app`, et `https://dansisland.app/**` dans les Redirect
