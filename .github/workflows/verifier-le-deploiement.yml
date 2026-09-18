@@ -54,35 +54,44 @@ jobs:
           mou=0    # ce qui n'avertit que
 
           # --- 1. Le build de ce commit est-il passé ? -------------------
-          # `robots.txt` est le témoin : il est arrivé avec ce changement,
-          # il n'existait pas avant. S'il répond 200, le nouveau `dist/`
-          # est en ligne. Cloudflare met une minute ou deux, donc on
-          # attend au lieu de conclure trop vite.
-          echos "→ On attend que le déploiement soit en ligne (témoin : /robots.txt)"
-          code=000
+          # **On ne regarde jamais un code HTTP ici**, et c'est la leçon du
+          # premier essai de ce fichier : `_redirects` porte un catch-all
+          # `/* /index.html 200`, donc **toute** adresse répond 200, même
+          # celles qui n'existent pas. Un `/robots.txt` à 200 ne prouvait
+          # donc rien du tout — il servait la page du jeu.
+          #
+          # Le témoin est du **contenu** : la phrase de l'accueil, qui est
+          # écrite en dur dans `index.html` et n'existait pas avant. Elle,
+          # le catch-all ne peut pas l'inventer. Cloudflare met une minute
+          # ou deux, donc on attend au lieu de conclure trop vite.
+          echos "→ On attend que le déploiement soit en ligne (témoin : la phrase de l'accueil)"
+          vu=0
           for i in $(seq 1 30); do
-            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$SITE/robots.txt" || echo 000)
-            [ "$code" = "200" ] && break
-            echos "   essai $i : $code — on repatiente 12 s"
+            if curl -sS --max-time 20 "$SITE/" | grep -q 'Ton petit endroit pour ralentir'; then
+              vu=1; break
+            fi
+            echos "   essai $i : c'est encore l'ancienne page — on repatiente 12 s"
             sleep 12
           done
-          if [ "$code" = "200" ]; then
-            echos "✅ /robots.txt répond 200 : le build de ce changement est en ligne."
-            resume "✅ **Déployé** — \`/robots.txt\` répond 200."
+          if [ "$vu" = "1" ]; then
+            echos "✅ L'accueil porte sa promesse : le build de ce changement est en ligne."
+            resume "✅ **Déployé** — « Ton petit endroit pour ralentir » est servi en dur dans le HTML."
           else
-            echos "❌ /robots.txt répond $code après six minutes."
-            resume "❌ **Pas déployé** — \`/robots.txt\` répond \`$code\` après six minutes. Regarde les Deployments du projet Pages."
+            echos "❌ Six minutes plus tard, le site sert toujours l'ancienne page."
+            resume "❌ **Pas déployé** — le site sert encore l'ancienne page six minutes après. Regarde les Deployments du projet Pages : le build a échoué, ou il n'a pas été déclenché."
             duro=1
           fi
 
-          # --- 2. La page du jeu, et son nouveau discours ----------------
-          accueil=$(curl -sS --max-time 25 "$SITE/" || true)
-          if printf '%s' "$accueil" | grep -q 'Ton petit endroit pour ralentir'; then
-            echos "✅ L'accueil porte sa promesse."
-            resume "✅ **Accueil** — « Ton petit endroit pour ralentir » est servi en dur dans le HTML."
+          # --- 2. Les fichiers qui n'existaient pas avant ----------------
+          # Même piège : on lit le contenu et le type, jamais le code.
+          rt=$(curl -sS --max-time 20 "$SITE/robots.txt" || true)
+          rtt=$(curl -sS -o /dev/null -w '%{content_type}' --max-time 20 "$SITE/robots.txt" || true)
+          if printf '%s' "$rt" | grep -q 'Sitemap: https://dansisland.app/sitemap.xml'; then
+            echos "✅ /robots.txt est un vrai fichier ($rtt)."
+            resume "✅ **robots.txt** — servi comme un vrai fichier (\`$rtt\`)."
           else
-            echos "❌ L'accueil ne porte pas sa phrase : c'est l'ancienne page, ou elle n'a pas été servie."
-            resume "❌ **Accueil** — la phrase d'accueil n'est pas dans le HTML servi."
+            echos "❌ /robots.txt ne rend pas son contenu (type vu : '$rtt') — c'est le catch-all qui répond."
+            resume "❌ **robots.txt** — pas servi comme un fichier (type vu : \`$rtt\`) ; c'est le catch-all qui répond."
             duro=1
           fi
 
