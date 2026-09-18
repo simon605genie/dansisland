@@ -1112,28 +1112,38 @@ chargement du compte) — le serveur refuse le second appel, donc ça ne
 coûte rien. Une **erreur** garde le code pour la prochaine fois ; un
 **refus ordinaire** (code inconnu, déjà parrainé) le jette.
 
-### Les pages publiques — écrites, puis sorties du dépôt
+### Les pages publiques, et l'aller-retour qui a servi de leçon
 
 Le jeu est **une seule page peinte dans un canvas**, et `_redirects` la
 sert à toutes les adresses. Un robot — Google, WhatsApp, Signal — ne lit
 pas le JavaScript : il voit « Dan's Island » et la même vignette pour les
-cinquante îles de l'archipel. Trois Cloudflare Pages Functions y
-répondaient (`/island/<slug>`, `/carte/<slug>`, `/sitemap.xml`).
+cinquante îles de l'archipel. Trois Cloudflare Pages Functions y répondent
+(`/island/<slug>`, `/carte/<slug>`, `/sitemap.xml`).
 
-**Elles sont sorties le 18/09/2026 au soir**, et la raison est à retenir
-avant d'y toucher : après la fusion qui les a apportées, le déploiement a
-cessé de passer — quatorze minutes plus tard la production servait encore
-la version d'avant. Cloudflare **compile automatiquement** un dossier
-`functions/` à la racine, et une compilation qui échoue fait échouer
-**tout** le déploiement, sans que rien ne le dise depuis le dépôt. C'était
-l'hypothèse la plus probable, et le dossier est sorti pour la lever.
+`functions/` est à la **racine du dépôt** et `build.sh` ne le copie **pas**
+dans `dist/` : Cloudflare cherche les Pages Functions dans le répertoire du
+projet, pas dans le dossier publié. Copiées dans la sortie, elles seraient
+servies comme du texte — du code publié au lieu d'être exécuté.
 
-Ce n'est pas une preuve : le log de build n'a pas été lu. Les faire revenir
-est un `git checkout 7da69bf -- functions/`, plus la ligne `Sitemap:` de
-`robots.txt` et les vérifications correspondantes du workflow. **À ne faire
-qu'une fois la vraie cause connue** — sinon on rejoue le même blocage.
+**L'aller-retour du 18/09/2026 au soir, et ce qu'il a coûté de ne pas
+mesurer.** Après la fusion qui les apportait, le déploiement a cessé de
+passer. Cloudflare compile automatiquement `functions/`, et une compilation
+qui échoue fait échouer **tout** le déploiement : hypothèse plausible, et
+le dossier est sorti pour la lever. **Elle était fausse.** Six minutes plus
+tard, la production servait toujours l'ancienne page.
 
-Trois règles à retrouver le jour où elles reviennent :
+Le diagnostic — écrit après, et qui aurait dû venir avant — a tranché en
+deux minutes : `dansisland.app` **et** `dansisland.pages.dev` servaient
+tous deux la vieille page (donc ni DNS ni cache), et
+`main.dansisland.pages.dev` répondait « Deployment Not Found » (donc aucun
+déploiement pour `main`). Le build ne se déclenchait plus, et le contenu du
+dépôt n'y était pour rien. Les fonctions sont revenues telles quelles.
+
+La leçon est celle que ce fichier répète partout : **mesurer d'abord,
+retirer ensuite.** Un pas de diagnostic qui distingue deux causes vaut une
+demi-heure d'hypothèses, et il est maintenant en tête du workflow.
+
+Trois règles, elles n'ont pas bougé :
 
 1. **En cas de doute, `next()`.** Île inconnue, base injoignable, slug mal
    formé : on s'efface et le catch-all sert le jeu.
@@ -1144,12 +1154,13 @@ Trois règles à retrouver le jour où elles reviennent :
    `src/config.js`.** Deux listes qui divergent, et la page publique ne
    trouve plus l'île que le jeu affiche.
 
-Ce qui **reste vrai sans elles**, et qui est le plus important : le routeur
-de `index.html` sait ouvrir `/island/x` et `/carte/x`, et il retient le
-parrainage au passage. Les liens déjà partagés mènent donc toujours au jeu.
-Le workflow `verifier-le-deploiement.yml` le vérifie **en dur**, pas en
-avertissement : une adresse partagée qui tombe à côté est la seule panne
-dont on ne s'aperçoit jamais soi-même.
+Et une quatrième, née de l'aller-retour : **les adresses publiques ont deux
+réponses acceptables.** Leur propre page quand les fonctions sont servies,
+le jeu quand elles ne le sont pas — `routerDepuisURL()` sait ouvrir
+`/island/x` et `/carte/x`, et il retient le parrainage au passage. Le
+workflow n'échoue que sur la troisième réponse, ni l'une ni l'autre, et son
+log dit laquelle des deux on a. Un avertissement permanent finit par ne
+plus être lu ; une vérification qui accepte les deux états réels, non.
 
 ### L'import du module est en chemin absolu
 

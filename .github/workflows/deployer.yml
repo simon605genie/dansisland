@@ -83,9 +83,18 @@ jobs:
       # `build.sh` est la seule définition de ce qui est public. On ne
       # recopie pas sa liste ici : deux listes qui divergent, et un fichier
       # part en ligne sans qu'on l'ait voulu — ou n'y part pas.
+      #
+      # Il ne copie **pas** `functions/` dans `dist/`, et c'est correct pour
+      # les deux chemins de déploiement : wrangler cherche les Pages
+      # Functions dans le **répertoire courant**, pas dans le dossier publié.
+      # Le pas suivant tourne à la racine du dépôt, donc il les trouve.
+      # Copiées dans `dist/`, elles seraient au contraire servies comme des
+      # fichiers texte.
       - name: Préparer dist/
         run: |
           bash build.sh
+          echo "Pages Functions présentes à la racine :"
+          find functions -type f 2>/dev/null | sort || echo "  (aucune)"
 
       - name: Publier sur Cloudflare Pages
         uses: cloudflare/wrangler-action@v3

@@ -16,9 +16,14 @@ depuis le 17/09/2026.
     manifest.webmanifest  l'île ajoutable à l'écran d'accueil, plein écran, paysage
     icone-*.png           les icônes de l'app, tirées du logo SVG du site
     apple-touch-icon.png  la même, pour l'écran d'accueil iOS
-    robots.txt          tout ouvert
+    robots.txt          tout ouvert, et l'adresse du plan du site
     src/config.js       URL et clé publishable Supabase
     src/store.js        seule couche qui parle à Supabase
+    functions/          les pages publiques (Cloudflare Pages Functions)
+      island/[slug].js    /island/<slug> — la page d'une île, indexable
+      carte/[slug].js     /carte/<slug>  — la carte postale reçue
+      sitemap.xml.js      /sitemap.xml   — l'archipel, à la demande
+      _commun.js          la maquette, la lecture de l'archipel, l'échappement
     supabase/schema.sql tables, RLS, vue archipel — idempotent
     supabase/2026-09-16_grille18.sql  migration à jouer une seule fois
     supabase/2026-09-16_bourse_serveur.sql  la bourse quitte le jsonb — rejouable
@@ -29,7 +34,10 @@ depuis le 17/09/2026.
     _redirects          Cloudflare Pages : catch-all, toute adresse sert index.html
     build.sh            copie dans dist/ les seuls fichiers à publier
 
-Pas de build : ce sont des modules ES servis tels quels.
+Pas de build : ce sont des modules ES servis tels quels. `functions/` n'est
+**pas** copié dans `dist/` — Cloudflare lit les Pages Functions à la racine
+du projet, pas dans le dossier publié, et copiées dans la sortie elles
+seraient servies comme du texte.
 
 ## Le projet Supabase
 
@@ -216,38 +224,34 @@ même vignette pour toutes les îles. Trois Cloudflare Pages Functions
 description, son `canonical`, ses balises OpenGraph et ses données
 structurées.
 
-**Elles sont sorties du dépôt le 18/09/2026 au soir**, et il faut dire
-pourquoi honnêtement : après la fusion qui les a apportées, le site a
-cessé d'être redéployé — quatorze minutes plus tard la production servait
-encore la version d'avant, mesuré par le workflow ci-dessous. Cloudflare
-compile automatiquement un dossier `functions/` à la racine, et **une
-compilation qui échoue fait échouer tout le déploiement**. C'était
+**Elles sont sorties du dépôt le 18/09/2026 au soir, puis remises le même
+soir**, et l'aller-retour vaut d'être raconté parce qu'il dit ce qu'on a
+appris.
+
+Après la fusion qui les apportait, le site a cessé d'être redéployé.
+Cloudflare compile automatiquement un dossier `functions/` à la racine, et
+une compilation qui échoue fait échouer **tout** le déploiement : c'était
 l'hypothèse la plus probable, et le dossier est sorti pour la lever.
 
-Ce n'est pas une preuve : le log de build Cloudflare n'a pas été lu. Si le
-déploiement était bloqué pour une autre raison, le retrait n'aura servi à
-rien et les fonctions peuvent revenir telles quelles.
+**Elle était fausse.** Six minutes après la fusion qui les retirait, la
+production servait toujours l'ancienne page. Le diagnostic a ensuite
+tranché : `dansisland.app` **et** `dansisland.pages.dev` servaient tous
+deux la vieille page — donc ni DNS ni cache — et
+`main.dansisland.pages.dev` répondait « Deployment Not Found », donc aucun
+déploiement n'existait pour `main`. Le build ne se déclenchait plus, et ça
+n'avait rien à voir avec le contenu du dépôt.
 
-**Ce qu'on perd :** l'aperçu de lien. Une île partagée sur WhatsApp montre
-le titre et l'image du site, pas les siens.
+Les fonctions sont donc revenues telles quelles, par
+`git checkout 7da69bf -- functions/`, avec la ligne `Sitemap:` de
+`robots.txt` et les vérifications du workflow.
 
-**Ce qu'on ne perd pas :** la visite. Le catch-all ramène `/island/…` et
-`/carte/…` sur le jeu, `routerDepuisURL()` sait les ouvrir et retient le
-parrainage au passage. Les liens déjà partagés continuent de mener quelque
-part — et le workflow le vérifie maintenant en dur.
-
-### Les faire revenir
-
-Elles sont entières dans l'historique, et rien d'autre ne les référence :
-
-```bash
-git checkout 7da69bf -- functions/
-```
-
-Il faut alors remettre la ligne `Sitemap:` dans `robots.txt`, et rendre au
-workflow ses vérifications de pages publiques (le commit qui les a retirées
-les montre). À ne faire qu'une fois connue la vraie cause du blocage —
-sinon on rejoue le même déploiement bloqué.
+**Ce qui reste vrai quoi qu'il arrive :** les adresses publiques ont
+**deux** réponses acceptables. Leur propre page quand les fonctions sont
+servies ; le jeu quand elles ne le sont pas, le catch-all prenant le relais
+et `routerDepuisURL()` sachant les ouvrir en retenant le parrainage. Le
+workflow n'échoue que sur la troisième réponse — ni l'une ni l'autre — et
+son log dit laquelle des deux on a, donc il dit aussi si les fonctions sont
+vivantes.
 
 ## Mise en route en local
 

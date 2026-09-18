@@ -7,9 +7,11 @@
 User-agent: *
 Allow: /
 
-# Pas de ligne `Sitemap:` ici, et c'est délibéré depuis le 18/09/2026 au
-# soir : le plan du site était fabriqué à la demande par une Cloudflare
-# Pages Function, et ces fonctions sont sorties du dépôt (voir README).
-# Annoncer un plan à une adresse qui rend la page du jeu — le catch-all de
-# `_redirects` répond 200 à tout — vaut moins que ne rien annoncer du tout.
-# La ligne revient avec les fonctions.
+# Le plan du site est fabriqué à la demande depuis l'archipel
+# (functions/sitemap.xml.js) : une île créée aujourd'hui y est aujourd'hui.
+# Cette ligne part et revient avec les fonctions : elle a été retirée le
+# 18/09/2026 au soir quand elles sont sorties du dépôt, et remise avec
+# elles. Annoncer un plan à une adresse qui rend la page du jeu — le
+# catch-all de `_redirects` répond 200 à tout — vaut moins que ne rien
+# annoncer.
+Sitemap: https://dansisland.app/sitemap.xml
