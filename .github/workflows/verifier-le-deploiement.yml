@@ -78,6 +78,27 @@ jobs:
           echos() { printf '%s\n' "$*"; }
           resume() { printf '%s\n' "$*" >> "$GITHUB_STEP_SUMMARY"; }
 
+          # **Chercher dans une page ne passe jamais par un tuyau ici**, et
+          # ce fichier l'a appris deux fois dans la même soirée.
+          #
+          # `grep -q` sort dès qu'il a trouvé et ferme son entrée. Ce qui
+          # écrivait dedans reçoit alors un tuyau cassé — `curl: (23)` au
+          # premier essai, `printf: write error: Broken pipe` au second,
+          # après que le correctif eut retiré `curl` du tuyau sans retirer
+          # le tuyau. Et `pipefail` rend cet échec-là plutôt que le succès
+          # de `grep`. Le test répond donc **faux au moment précis où le
+          # motif est là**, c'est-à-dire le seul moment qui compte.
+          #
+          # Les mêmes lignes ne cassaient pas sur `robots.txt` : l'écrivain
+          # a le temps de finir avant que `grep` ne sorte. Il faut une page
+          # entière — 368 ko — pour que la course se voie. Un défaut qui ne
+          # se montre que sur le gros fichier est un défaut qu'on croit
+          # corrigé.
+          #
+          # `contient` est en bash pur : pas de tuyau, pas de processus,
+          # rien qui puisse se casser entre les deux.
+          contient() { case "$2" in (*"$1"*) return 0 ;; (*) return 1 ;; esac; }
+
           duro=0   # ce qui fait échouer
           mou=0    # ce qui n'avertit que
 
@@ -92,22 +113,11 @@ jobs:
           # écrite en dur dans `index.html` et n'existait pas avant. Elle,
           # le catch-all ne peut pas l'inventer. Cloudflare met une minute
           # ou deux, donc on attend au lieu de conclure trop vite.
-          #
-          # **Jamais `curl | grep -q` ici**, et c'est la deuxième leçon de ce
-          # fichier. `grep -q` sort dès qu'il a trouvé et ferme le tuyau ;
-          # `curl`, qui écrit encore, échoue alors en 23 (« Failure writing
-          # output to destination ») ; et `pipefail` rend l'échec de curl
-          # plutôt que le succès de grep. Le test répond donc **faux au
-          # moment précis où le motif est là**. Mesuré le 18/09 au soir : six
-          # minutes de « c'est encore l'ancienne page » sur un site qui
-          # portait la phrase depuis le premier essai. On capture d'abord,
-          # on cherche ensuite — comme les quatre contrôles qui suivent, qui
-          # étaient déjà écrits ainsi et n'ont, eux, jamais menti.
           echos "→ On attend que le déploiement soit en ligne (témoin : la phrase de l'accueil)"
           vu=0
           for i in $(seq 1 30); do
             page=$(curl -sS --max-time 20 "$SITE/" || true)
-            if printf '%s' "$page" | grep -q 'Ton petit endroit pour ralentir'; then
+            if contient 'Ton petit endroit pour ralentir' "$page"; then
               vu=1; break
             fi
             echos "   essai $i : c'est encore l'ancienne page — on repatiente 12 s"
@@ -126,7 +136,7 @@ jobs:
           # Même piège : on lit le contenu et le type, jamais le code.
           rt=$(curl -sS --max-time 20 "$SITE/robots.txt" || true)
           rtt=$(curl -sS -o /dev/null -w '%{content_type}' --max-time 20 "$SITE/robots.txt" || true)
-          if printf '%s' "$rt" | grep -q 'User-agent: \*'; then
+          if contient 'User-agent: *' "$rt"; then
             echos "✅ /robots.txt est un vrai fichier ($rtt)."
             resume "✅ **robots.txt** — servi comme un vrai fichier (\`$rtt\`)."
           else
@@ -168,10 +178,10 @@ jobs:
           # résout à côté et la page reste blanche, sans rien dire.
           for ad in "/island/dan" "/carte/dan"; do
             page=$(curl -sS --max-time 25 "$SITE$ad" || true)
-            if printf '%s' "$page" | grep -q "sur Dan’s Island"; then
+            if contient 'sur Dan’s Island' "$page"; then
               echos "✅ $ad rend sa page publique (les fonctions sont servies)."
               resume "✅ **Lien partagé** — \`$ad\` rend sa page publique : les Pages Functions sont servies."
-            elif printf '%s' "$page" | grep -q 'Ton petit endroit pour ralentir'; then
+            elif contient 'Ton petit endroit pour ralentir' "$page"; then
               echos "✅ $ad mène au jeu (les fonctions ne sont pas servies, le catch-all a pris le relais)."
               resume "✅ **Lien partagé** — \`$ad\` mène au jeu ; les Pages Functions ne sont pas servies, le catch-all a pris le relais."
             else
@@ -185,7 +195,7 @@ jobs:
           # qu'informer : sans elles, `robots.txt` ne l'annonce pas non plus,
           # donc il n'y a rien de cassé à signaler.
           plan=$(curl -sS --max-time 25 "$SITE/sitemap.xml" || true)
-          if printf '%s' "$plan" | grep -q '<urlset'; then
+          if contient '<urlset' "$plan"; then
             n=$(printf '%s' "$plan" | grep -c '<loc>' || true)
             echos "✅ Le plan du site rend $n adresse(s)."
             resume "✅ **Plan du site** — \`/sitemap.xml\` rend $n adresse(s)."

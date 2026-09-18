@@ -353,6 +353,18 @@ payée : `_redirects` porte un catch-all `/* /index.html 200`, donc *toute*
 adresse répond 200 sur ce site, y compris celles qui n'existent pas. Le
 premier essai de ce fichier concluait « déployé » sur un site inchangé.
 
+**Et chercher ce contenu ne passe par aucun tuyau**, ce qui est la seconde
+leçon, payée deux fois dans la même soirée. `grep -q` sort dès qu'il a
+trouvé et ferme son entrée ; celui qui écrivait dedans reçoit un tuyau
+cassé — `curl: (23)` d'abord, `printf: write error: Broken pipe` ensuite,
+quand le correctif avait retiré `curl` du tuyau sans retirer le tuyau — et
+`pipefail` rend cet échec-là plutôt que le succès de `grep`. Le test répond
+donc faux **au moment précis où le motif est là**, le seul qui compte. La
+course ne se voit pas sur `robots.txt`, qui tient en vingt lignes : il faut
+la page entière, 368 ko, pour que l'écrivain n'ait pas fini à temps. Un
+défaut qui ne se montre que sur le gros fichier est un défaut qu'on croit
+corrigé. D'où `contient`, en bash pur, sans tuyau ni processus.
+
 Après le déploiement, dans **Auth → URL Configuration** : Site URL sur
 `https://dansisland.app`, et `https://dansisland.app/**` dans les Redirect
 URLs. Le `/**` est nécessaire pour revenir sur une adresse d'île.
