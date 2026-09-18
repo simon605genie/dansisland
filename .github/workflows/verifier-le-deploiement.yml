@@ -45,6 +45,29 @@ jobs:
     name: Le site répond, et il est complet
     runs-on: ubuntu-latest
     steps:
+      # Ce que sert chaque adresse du projet. Diagnostic pur : il n'échoue
+      # jamais, il regarde. Il existe parce qu'un site qui ne se met pas à
+      # jour a deux causes très différentes et qu'on ne peut pas les
+      # distinguer depuis le dépôt :
+      #
+      #   * le build ne tourne pas → toutes les adresses sont vieilles ;
+      #   * le build tourne mais le domaine ne pointe pas dessus → le
+      #     `.pages.dev` est à jour et le domaine public ne l'est pas.
+      #
+      # Deux minutes de log ici valent une demi-heure d'hypothèses.
+      - name: Ce que sert chaque adresse
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          for h in https://dansisland.app \
+                   https://dansisland.pages.dev \
+                   https://main.dansisland.pages.dev; do
+            t=$(curl -sS --max-time 20 "$h/" 2>/dev/null | grep -o '<title>[^<]*' | head -1 || true)
+            n=$(curl -sS --max-time 20 "$h/" 2>/dev/null | grep -c 'Ton petit endroit pour ralentir' || true)
+            r=$(curl -sS -o /dev/null -w '%{content_type}' --max-time 20 "$h/robots.txt" 2>/dev/null || true)
+            printf '%-42s titre=%-52s neuf=%s robots=%s\n' "$h" "${t:-(rien)}" "$n" "${r:-(rien)}"
+          done
+
       - name: Vérifier https://dansisland.app
         env:
           SITE: https://dansisland.app
