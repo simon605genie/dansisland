@@ -9,9 +9,16 @@ mkdir -p dist/src
 # ajoutée à l'écran d'accueil. Une icône oubliée ici et l'installation
 # échoue en silence, sans rien dire dans la console.
 cp index.html _redirects og.png dist/
-cp manifest.webmanifest dist/
+cp manifest.webmanifest robots.txt dist/
 cp icone-192.png icone-512.png icone-maskable.png apple-touch-icon.png dist/
 cp src/config.js src/store.js dist/src/
+
+# `functions/` n'est **pas** copié, et c'est important : Cloudflare Pages lit
+# les Pages Functions à la racine du dépôt, pas dans le dossier de sortie.
+# Copiées dans dist/, elles seraient servies comme des fichiers texte — donc
+# du code publié au lieu d'être exécuté.
+# Il n'y a pas non plus de sitemap.xml ici : il est fabriqué à la demande
+# depuis l'archipel par functions/sitemap.xml.js.
 
 echo "dist/ prêt :"
 find dist -type f | sort

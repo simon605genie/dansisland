@@ -913,6 +913,262 @@ Ce qui ne change pas : un mot supprimé ne reprend pas les shells. On ne
 punit pas le propriétaire qui fait le ménage sur son mur. Il ne les
 redonne simplement plus.
 
+## Le jeu se présente comme un jeu de détente — 18/09/2026
+
+Tout ce qui suit répond à une seule phrase : **« Mon petit endroit pour
+ralentir. »** Ce n'est pas une accroche, c'est ce qui tranche les
+arbitrages. Un jeu de détente ne se présente pas en ouvrant six onglets
+d'un coup, ne compte pas les points, ne gronde pas, et donne envie de
+rester même quand on ne fait rien.
+
+### L'accueil, et les premiers pas
+
+`#accueil` est un **voile, pas une page** : le jeu tourne derrière, flouté,
+la mer bouge et les mouettes passent. C'est délibéré, et c'est ce qui dit
+ce qu'est le jeu mieux qu'un paragraphe. Ne pas en faire un écran plein
+opaque, et ne pas le remplacer par une image fixe.
+
+Trois choses à ne pas défaire :
+
+1. **Son texte est dans le HTML, en dur.** C'est le **seul** texte du site
+   qu'un robot puisse lire — tout le reste est peint dans un canvas. Le
+   réécrire en JavaScript, c'est rendre le site muet pour Google. Les
+   trois blocs du socle (« Rien à perdre », « Une île qui vit », « Des
+   voisins ») sont là pour ça autant que pour le lecteur.
+2. **Il ne s'ouvre qu'à la racine**, et une seule fois
+   (`dansisland:entre`). Qui arrive par le lien d'une île vient voir cette
+   île, pas une page de présentation. Et si le compte a déjà une île,
+   `demarrer()` referme l'accueil dès que la session est revenue.
+3. **`ZMIN`, `vue`, `iso()` n'ont pas bougé.** L'accueil est du CSS
+   par-dessus, rien de plus.
+
+Le **guide** tient en quatre pas — bonhomme, maison, île, visite — dans le
+bandeau au-dessus des onglets. Chaque pas **se coche sur le geste**, pas
+sur la lecture : `guideFait(n)` est appelé depuis `set()` (pour `me.*` et
+`house.*`), depuis le clic qui pose sur l'île, et depuis `go()` quand on
+débarque chez quelqu'un. Un guide qui avance sur un bouton « suivant »
+apprend à lire, pas à jouer. Il s'efface au quatrième pas et ne revient
+jamais (`dansisland:guide`).
+
+### La note qui ne s'efface pas
+
+Le murmure ne convient pas à ce qui s'explique **une fois dans une vie**.
+Il dure 2,2 s, et surtout `proximity()` le réécrit à l'image suivante dès
+qu'un coffre ou un souvenir est sous les pieds : mesuré, le « +1 shell,
+voilà à quoi ça sert » était recouvert avant d'avoir été lu.
+
+`noteUneFois(icone, html)` prend donc la place du bandeau du guide, au
+même endroit, et **attend qu'on la referme**. Elle passe devant le guide ;
+le pas repris à la fermeture n'a pas bougé. Deux choses l'utilisent : les
+premiers shells gagnés (`dansisland:shells1`) et la bienvenue d'un
+parrain. Ne pas y mettre autre chose : une note qui revient n'est plus une
+note.
+
+`say()` a gagné un troisième paramètre, `duree`, pour les phrases un peu
+longues qui n'ont pas d'état à dire. Les messages **verrouillés** ne
+passent toujours pas par ce minuteur.
+
+### Cinq onglets, et « Dedans » qui n'en est plus un
+
+`Moi · Maison · Île · Voisins · Boutique`. On n'entre pas chez soi par une
+barre de navigation : **le panneau Maison suit le bonhomme.** Dehors il
+règle la maison qu'on voit et porte le bouton **🚪 Entrer** ; dedans,
+`buildMaison()` appelle `buildDedans(p)` avec son propre panneau, et c'est
+l'atelier des pièces. `buildDedans` reçoit donc l'élément à remplir au
+lieu d'aller le chercher — c'est ce qui permet aux deux ateliers de vivre
+au même endroit.
+
+Conséquence assumée : **on ne décore plus l'intérieur depuis le dehors.**
+Il faut entrer. C'est la même règle que partout ici — le coffre s'ouvre là
+où il est, la commande se porte au pas de la porte.
+
+En paysage court, cinq onglets dans 235 px font 47 px chacun et
+« Boutique » serait coupé. La barre y passe donc à **trois puis deux**, et
+c'est une grille de **six** colonnes qui le rend (les trois premiers sur
+deux colonnes, les deux derniers sur trois) : une grille de trois aurait
+laissé un trou à droite de la seconde rangée. Vérifié à 360 px et à
+780x360, sans débordement.
+
+Au passage, un défaut qui datait d'avant : en paysage court, `.objs` en
+quatre colonnes de 60 px débordait d'une colonne de 210 px utiles, et la
+quatrième vignette sortait de l'écran. Trois colonnes et des vignettes de
+52 px. Mesuré, pas déduit.
+
+### Ce qui bouge en plus
+
+Quatre choses, et pas une ne touche à l'état du jeu : rien en base, aucune
+clé de plus dans `mondeNu()`, rien pour Ctrl+Z, aucun gain, aucune perte.
+C'est la ligne déjà écrite pour les mouettes et le requin.
+
+**Le voilier** (`avancerVoilier`, `dessinerVoilier`) passe au **nord**,
+derrière l'île, et il suit la **corde de l'ellipse de la mer** à sa
+latitude : le même contour que `seaPath()`, pour la raison déjà écrite
+pour le requin — deux contours qui divergent, et la coque sort sur le
+papier. Sa minuterie est en `dt` accumulé et pas en `t`, comme celle du
+requin : un onglet en arrière-plan met `rAF` en pause, et un bateau qui
+traverse sans témoin n'a traversé pour personne.
+
+**Les papillons le jour, les lucioles la nuit** (`insectes()`). Tout se
+déduit de `t` : aucun état à tenir, rien à remettre à zéro. Deux pièges :
+
+1. Elles ne volent **qu'au-dessus de `terre()`**, jamais `tileAt()` : à
+   marée basse le sable mouillé compte, et un papillon au milieu de la mer
+   se lit comme un défaut d'affichage.
+2. Elles se peignent **après le voile de nuit**, sinon une luciole passe
+   sous le bleu nuit et ne brille plus du tout.
+
+Mesuré : à zoom 0,78 un papillon de 6 px était un grain de poussière. Ils
+font le double, et le blanc a été remplacé par un bleu clair — un papillon
+blanc sur du sable clair est une tache.
+
+**L'étoile filante** (`etoileFilante`) vit dans `ciel()`, donc en repère
+écran et derrière la mer. Tout se déduit de `t` : une toutes les onze
+secondes environ, deux fois sur trois, et la course est tirée du numéro de
+son passage. Si on la rate, il y en a une autre.
+
+## La carte postale, le parrainage, les pages publiques — 18/09/2026
+
+`supabase/2026-09-18_parrainage.sql`, **rejouable** : `create table if not
+exists`, `create or replace`, et les réglages s'insèrent en `on conflict
+do nothing` — rejouer le fichier ne réécrit pas une valeur réglée à la
+main dans le dashboard.
+
+### La carte postale
+
+Elle existait, et c'était un bouton qui enregistrait le cadre dans les
+fichiers : une image qui ne partait nulle part. C'est maintenant l'objet
+qu'on envoie. Six choses à ne pas défaire :
+
+1. **Rien n'en part en base.** Pas de table, pas de stockage, pas une clé
+   de plus dans `mondeNu()`. La carte se **redessine** depuis l'île à
+   chaque fois : c'est une image dérivée, comme le sable de la marée se
+   déduit du rayon. Une carte stockée serait une île figée à purger un
+   jour.
+2. **L'image part avec le message.** `navigator.share({files})` met la
+   vraie image dans la conversation WhatsApp, pas un lien qui la promet.
+   C'est le seul chemin qui donne ça sans serveur, et c'est pour ça qu'il
+   passe avant tous les autres. Le lien est **aussi** dans le texte :
+   Android laisse tomber `url` quand il y a des fichiers.
+3. **Il y a toujours une sortie** : `wa.me` (application sur téléphone,
+   web.whatsapp.com sur ordinateur, aucun numéro à donner), le lien à
+   copier, l'image à enregistrer. Un bouton qui ne marche que sur un
+   téléphone récent n'existe pas pour les autres.
+4. **Deux temps, pas un.** On ouvre le comptoir, on voit ce qu'on envoie,
+   puis on envoie. Même forme que la boutique, le viseur et le coffre.
+5. **La photo est en large (1,8) et pas au rapport du cadre (1,536).** Le
+   cadre montre l'île entourée d'eau jusqu'aux quatre coins, et sur une
+   carte ça fait une île perdue dans une flaque : on prend une tranche
+   horizontale centrée sur le milieu du monde, qui est aussi le milieu du
+   cadre. `CARTE_H` se **déduit** de la marge, de la photo et de la bande.
+   Jamais d'étirement : une île écrasée se voit tout de suite.
+6. **Elle ne rapporte rien à l'envoi.** Ce qui paie, c'est quelqu'un qui
+   arrive. Une carte qui paierait à l'envoi deviendrait une corvée, et on
+   en enverrait dix par jour sans les regarder.
+
+Le comptoir se ferme dans `go()`, comme le viseur : une carte préparée
+chez soi puis envoyée depuis l'île d'un autre montrerait l'île d'un autre.
+
+La **commande du jour reste en tête de Voisins** et la carte vient juste
+après : la commande est la raison d'y aller *aujourd'hui* et elle se
+périme à minuit ; la carte est la raison pour laquelle il y a des voisins
+tout court.
+
+### Le parrainage
+
+**Ton adresse est ton code.** Pas de code à inventer, pas de table de
+codes à tenir, et un lien qui se lit. Trois choses à ne pas défaire :
+
+1. **`parrainages` n'a aucune policy d'écriture**, comme `bourses`,
+   `livraisons` et `visites`. Le vide *est* la protection. Seule
+   `parrainer()`, `security definer`, y écrit.
+2. **La clé primaire est le filleul**, et le test d'existence *est*
+   l'insert (`on conflict do nothing` puis `row_count`) : un `select
+   exists` suivi d'un `insert` laisse passer deux appels lancés dans la
+   même seconde. C'est la leçon de `visites`.
+3. **Le filleul doit vraiment avoir son île.** Ouvrir un compte ne vaut
+   rien : c'est l'île créée qui paie, des deux côtés. C'est aussi ce qui
+   rend le parrainage coûteux à fabriquer en série.
+
+Les récompenses sont dans la table **`reglages`**, et se changent par une
+ligne de SQL sans redéployer :
+
+    update public.reglages set v = 40 where k = 'parrainage_parrain';
+
+`plafond()` et `gain()` sont passées de `immutable` à `stable` parce
+qu'elles lisent maintenant cette table. Les sept clés d'avant rendent
+exactement les mêmes nombres. La borne anti-abus est
+`plafond('parrainage') = gain × parrainage_par_jour` : un lien magique est
+gratuit, donc fabriquer des comptes l'est aussi.
+
+Le parrainage est dans la **famille des visites**, pas dans celle des
+corvées : c'est quelqu'un qui n'était pas là et qui est arrivé. Ne jamais
+en faire un revenu qui se boucle chez soi.
+
+Côté client, le code est retenu dans `localStorage` (`dansisland:parrain`)
+jusqu'à ce qu'il serve : entre le clic sur la carte postale et l'île
+créée, il y a un lien magique, une boîte mail et parfois un autre jour.
+`reglerLeParrainage()` est appelé à deux endroits (création de l'île,
+chargement du compte) — le serveur refuse le second appel, donc ça ne
+coûte rien. Une **erreur** garde le code pour la prochaine fois ; un
+**refus ordinaire** (code inconnu, déjà parrainé) le jette.
+
+### Les pages publiques, et le SEO
+
+`functions/` — des Cloudflare Pages Functions. Elles sont à la **racine du
+dépôt** et `build.sh` ne les copie **pas** dans `dist/` : Pages les lit à
+la racine, et copiées dans la sortie elles seraient servies comme du texte,
+donc du code publié au lieu d'être exécuté.
+
+    /island/<slug>   la page publique d'une île
+    /carte/<slug>    la carte postale reçue
+    /sitemap.xml     l'archipel, fabriqué à la demande
+
+Pourquoi elles existent : le jeu est **une seule page peinte dans un
+canvas**, et `_redirects` la sert à toutes les adresses. Un robot — Google,
+WhatsApp, Signal — ne lit pas le JavaScript : il voyait « Dan's Island » et
+la même vignette pour les cinquante îles de l'archipel.
+
+Trois règles :
+
+1. **En cas de doute, `next()`.** Île inconnue, base injoignable, slug mal
+   formé : on s'efface et le catch-all sert le jeu. `routerDepuisURL()`
+   sait ouvrir `/island/x` et `/carte/x` et retient le parrainage au
+   passage. Une adresse partagée ne tombe jamais sur une page blanche.
+2. **On ne lit que ce qui est public** : la clé publishable sans jeton
+   d'utilisateur, donc `auth.uid()` vaut null et la RLS ne montre que les
+   îles publiées. La vue `archipel` suffit et ne trimballe pas le jsonb.
+3. **Les clés de `functions/_commun.js` doublent celles de
+   `src/config.js`.** Deux listes qui divergent, et la page publique ne
+   trouve plus l'île que le jeu affiche. `env.SUPABASE_URL` /
+   `env.SUPABASE_KEY` l'emportent quand elles existent.
+
+Ce que `?m=` porte sur `/carte/<slug>` est du texte écrit par n'importe
+qui : échappé par `ech()`, coupé à 120 caractères, et il ne sort jamais du
+bloc qui lui est réservé.
+
+### L'import du module est en chemin absolu
+
+`import * as store from '/src/store.js'` et non `./src/store.js`, pour
+exactement la raison déjà écrite pour le manifest et les icônes. Le
+catch-all sert `index.html` à **toutes** les adresses, y compris à deux
+segments comme `/carte/dan` — le repli quand la fonction n'a pas répondu.
+Un chemin relatif s'y résout en `/carte/src/store.js`, que le catch-all
+sert en `text/html`, et **un module au mauvais type MIME est refusé sans
+appel** : le jeu ne démarre pas du tout, écran vide, une seule ligne dans
+la console. Trouvé en éprouvant `/carte/<slug>`, pas deviné.
+
+### L'invite de rotation
+
+Elle disait quoi faire et pas pourquoi, et une consigne sans raison se
+referme d'un doigt sans qu'on l'ait suivie. Elle dit maintenant les deux,
+et la seconde ligne est une invitation : on ne tourne pas son téléphone
+pour obéir, on le tourne pour entrer sur son île.
+
+Elle **arrive à 2,6 s**, après que le murmure du chargement s'est effacé
+(2,2 s). Rétrécir le murmure pour lui faire de la place donnait une
+colonne de six mots qui couvrait l'île : c'est le temps qui les sépare,
+pas la largeur.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

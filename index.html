@@ -1,9 +1,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B3C5D">
-<title>Dan's Island</title>
-<meta name="description" content="Fabrique ton île, publie-la à ton adresse, va marcher chez les voisins et laisse-leur un mot.">
+<title>Dan's Island — ton petit endroit pour ralentir</title>
+<meta name="description" content="Un jeu de détente. Crée ton personnage, construis ta maison et ton île, puis va découvrir celles de tes voisins. Rien à gagner, rien à perdre : un endroit où ralentir.">
 <link rel="canonical" href="https://dansisland.app/">
+<meta name="robots" content="index, follow, max-image-preview:large">
 <!-- L'aperçu partagé (WhatsApp, Messages, Slack, Signal). Ces robots ne
      lisent pas le JavaScript : tout doit être écrit ici, en dur, et l'image
      doit être un vrai fichier servi à une adresse absolue en https.
@@ -13,18 +14,31 @@
 <meta property="og:site_name" content="Dan's Island">
 <meta property="og:locale" content="fr_BE">
 <meta property="og:url" content="https://dansisland.app/">
-<meta property="og:title" content="Dan's Island">
-<meta property="og:description" content="Fabrique ton île, publie-la à ton adresse, va marcher chez les voisins et laisse-leur un mot.">
-<meta property="og:image" content="https://dansisland.app/og.png?v=1">
-<meta property="og:image:secure_url" content="https://dansisland.app/og.png?v=1">
+<meta property="og:title" content="Dan's Island — ton petit endroit pour ralentir">
+<meta property="og:description" content="Un jeu de détente. Crée ton personnage, construis ta maison et ton île, puis va découvrir celles de tes voisins.">
+<meta property="og:image" content="https://dansisland.app/og.png?v=2">
+<meta property="og:image:secure_url" content="https://dansisland.app/og.png?v=2">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Une île isométrique avec sa maison, son phare et ses palmiers.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Dan's Island">
-<meta name="twitter:description" content="Fabrique ton île, publie-la à ton adresse, va marcher chez les voisins et laisse-leur un mot.">
-<meta name="twitter:image" content="https://dansisland.app/og.png?v=1">
+<meta name="twitter:title" content="Dan's Island — ton petit endroit pour ralentir">
+<meta name="twitter:description" content="Un jeu de détente. Crée ton personnage, construis ta maison et ton île, puis va découvrir celles de tes voisins.">
+<meta name="twitter:image" content="https://dansisland.app/og.png?v=2">
+<!-- Données structurées. Un jeu de navigateur, gratuit, en français : c'est
+     tout ce qu'un moteur peut en dire d'utile, et rien n'y est inventé. Les
+     pages publiques d'îles et de cartes postales portent les leurs, écrites
+     par les fonctions Cloudflare (voir functions/). -->
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"VideoGame","name":"Dan's Island",
+ "url":"https://dansisland.app/","inLanguage":"fr",
+ "applicationCategory":"Game","gamePlatform":"Navigateur web",
+ "genre":["Jeu de détente","Construction","Bac à sable"],
+ "description":"Un jeu de détente. Crée ton personnage, construis ta maison et ton île, puis va découvrir celles de tes voisins.",
+ "image":"https://dansisland.app/og.png?v=2",
+ "offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap">
@@ -294,7 +308,13 @@ a{color:var(--link)}
 
 /* ---------- atelier ---------- */
 .atelier{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden}
-.tabs{display:grid; grid-template-columns:repeat(6,1fr); background:var(--sunk); border-bottom:1px solid var(--line)}
+/* Cinq onglets, et pas six. « Dedans » n'en est plus un : on n'entre pas
+   chez soi par une barre de navigation, on entre en marchant sur le seuil
+   ou par le bouton **Entrer** du panneau Maison. L'atelier du dedans est
+   donc devenu ce que montre le panneau Maison quand on est dedans — même
+   endroit, même onglet, le contenu suit le bonhomme. Un onglet de moins,
+   c'est aussi cinq pixels de plus par onglet à 360 px. */
+.tabs{display:grid; grid-template-columns:repeat(5,1fr); background:var(--sunk); border-bottom:1px solid var(--line)}
 .tabs button{
   appearance:none; background:none; border:0; border-right:1px solid var(--line);
   padding:13px 1px; font-family:"Baloo 2",sans-serif; font-size:12.5px; font-weight:700; color:var(--ink-3);
@@ -437,6 +457,164 @@ textarea{
 .gb li b{color:var(--ink); font-weight:700}
 
 
+/* ================= l'entrée dans le jeu =================
+   Avant, on arrivait sur six onglets, une carte de connexion et une île
+   déjà là : toute l'interface d'un coup, et rien qui dise ce que c'est.
+   L'accueil dit une phrase et pose deux portes, et c'est tout.
+
+   Trois choses tenues ici :
+
+   1. **Le jeu continue derrière.** L'accueil est un voile, pas une page :
+      la mer bouge, les mouettes passent, le soleil est là. Une image fixe
+      aurait dit « prototype » ; l'île qui vit dit ce qu'est le jeu mieux
+      qu'une phrase. C'est pour ça que ce n'est pas un écran à part.
+   2. **Son texte est dans le HTML, en dur.** C'est la seule chose de ce
+      site qu'un robot puisse lire : le reste est peint dans un canvas.
+      Ne jamais le remplacer par du texte construit en JavaScript.
+   3. **Il ne revient pas.** Une fois entré, `dansisland:entre` le retient.
+      Une porte qu'il faut repousser à chaque visite n'est plus une porte. */
+.accueil{
+  position:fixed; inset:0; z-index:40; display:grid; place-items:center;
+  padding:24px 18px; overflow-y:auto;
+  /* Le voile laisse passer l'île. C'est tout l'intérêt de ne pas en faire
+     une page à part : la mer bouge, les mouettes traversent, le soleil est
+     là — et ça dit ce qu'est le jeu mieux qu'un paragraphe. Le flou tient
+     la lisibilité du texte par-dessus, et le halo central l'assure au
+     centre, là où il y a le plus à lire. */
+  background:
+    radial-gradient(62% 48% at 50% 46%, rgba(250,246,234,.93), rgba(250,246,234,.66) 74%),
+    rgba(250,246,234,.58);
+  -webkit-backdrop-filter:blur(7px); backdrop-filter:blur(7px);
+  animation:accueilentre .5s ease both;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .accueil{
+    background:radial-gradient(62% 48% at 50% 46%, rgba(6,36,52,.93), rgba(6,36,52,.66) 74%), rgba(6,36,52,.58);
+  }
+}
+:root[data-theme="dark"] .accueil{
+  background:radial-gradient(62% 48% at 50% 46%, rgba(6,36,52,.93), rgba(6,36,52,.66) 74%), rgba(6,36,52,.58);
+}
+.accueil[hidden]{display:none}
+@keyframes accueilentre{from{opacity:0}to{opacity:1}}
+.accueil .carte{
+  width:min(560px,100%); text-align:center;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+}
+.accueil .mark{width:74px; height:74px; margin-bottom:10px;
+  animation:accueilflotte 6s ease-in-out infinite}
+@keyframes accueilflotte{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.accueil h2{font-size:clamp(34px,8vw,54px); font-weight:800; letter-spacing:.005em}
+.accueil .trait{display:block; width:min(300px,78%); height:11px; overflow:visible; margin:1px 0 14px}
+.accueil .promesse{
+  font-family:"Baloo 2",sans-serif; font-weight:700; font-size:clamp(19px,4.4vw,25px);
+  color:var(--teal); margin:0 0 10px; line-height:1.25;
+}
+.accueil .dit{color:var(--ink-2); font-size:16px; max-width:40ch; margin:0 0 22px; line-height:1.55}
+.accueil .portes{display:flex; flex-wrap:wrap; gap:10px; justify-content:center}
+.accueil .portes .btn{font-size:17px; padding:13px 22px; border-radius:14px}
+.accueil .portes .btn.primary{box-shadow:0 4px 0 rgba(180,76,108,.35)}
+/* Ce qui se lit sous les deux portes, et que les robots lisent aussi. Trois
+   lignes, pas une brochure : la section de présentation d'avant a été
+   retirée le 17/09 parce qu'elle parlait par-dessus le jeu, et il ne
+   s'agit pas de la remettre sous un autre nom. */
+.accueil .socle{
+  margin-top:26px; padding-top:18px; border-top:1.5px solid var(--line);
+  display:grid; grid-template-columns:repeat(3,1fr); gap:14px; width:100%;
+}
+.accueil .socle div{font-size:13px; color:var(--ink-3); line-height:1.45}
+.accueil .socle b{display:block; font-family:"Baloo 2",sans-serif; font-size:14.5px;
+  font-weight:700; color:var(--ink-2); margin-bottom:2px}
+.accueil .bas{margin-top:16px; font-size:12.5px; color:var(--ink-3)}
+@media (max-width:520px){
+  .accueil{padding:18px 14px; place-items:start center}
+  .accueil .mark{width:56px; height:56px}
+  .accueil .socle{grid-template-columns:1fr; gap:9px; margin-top:20px}
+}
+/* Paysage court : le même accueil, mais couché. Sans ça, sur un téléphone
+   tenu en travers, le titre seul remplissait l'écran et les deux portes
+   tombaient sous le pli — un accueil qu'il faut faire défiler pour trouver
+   la porte n'est pas un accueil. */
+@media (orientation:landscape) and (max-height:560px){
+  .accueil{padding:12px 16px}
+  .accueil .mark{width:44px; height:44px; margin-bottom:4px}
+  .accueil h2{font-size:30px}
+  .accueil .trait{height:8px; margin-bottom:8px}
+  .accueil .promesse{font-size:17px; margin-bottom:5px}
+  .accueil .dit{font-size:13.5px; margin-bottom:13px}
+  .accueil .portes .btn{font-size:14.5px; padding:9px 16px}
+  .accueil .socle{display:none}
+  .accueil .bas{margin-top:9px}
+}
+
+/* ---------- le guide des premiers pas ----------
+   Quatre pas, une ligne chacun, et on apprend en faisant. Il vit au-dessus
+   des onglets parce que c'est là que se trouve ce qu'il demande, et il
+   s'efface pour de bon au dernier pas. Pas de fenêtre modale, pas de
+   surbrillance qui suit le doigt : le jeu se refuse ça partout ailleurs. */
+/* `flex-wrap` et une base de 150 px sur le texte, et pas `flex:1` : avec
+   une base de zéro, le texte se faisait écraser par les deux boutons et
+   tombait à un mot par ligne — mesuré à 360 px, le bandeau prenait alors
+   plus de place que le cadre du jeu. Avec le retour à la ligne, la phrase
+   tient sa largeur et ce sont les boutons qui descendent. */
+.guide{
+  display:flex; flex-wrap:wrap; align-items:center; gap:7px 10px; padding:9px 12px;
+  background:var(--sand); color:#0B3C5D; border-bottom:1px solid var(--line);
+}
+.guide[hidden]{display:none}
+.guide .pas{
+  flex:none; width:25px; height:25px; border-radius:50%; display:grid; place-items:center;
+  background:#0B3C5D; color:#FDFBF0; font-family:"Baloo 2",sans-serif; font-weight:800; font-size:13px;
+}
+.guide .quoi{flex:1 1 150px; min-width:0; font-size:13.5px; line-height:1.35; font-weight:600}
+.guide .quoi b{font-family:"Baloo 2",sans-serif}
+.guide button{
+  flex:none; appearance:none; border:0; background:rgba(11,60,93,.12); color:#0B3C5D;
+  font-family:"Baloo 2",sans-serif; font-weight:700; font-size:12px; padding:5px 10px;
+  border-radius:999px; cursor:pointer;
+}
+.guide button:hover{background:rgba(11,60,93,.2)}
+/* Les points de progression : quatre pas, on voit où on en est. */
+.guide .points{flex:none; display:flex; gap:4px}
+.guide .points i{width:6px; height:6px; border-radius:50%; background:rgba(11,60,93,.25)}
+.guide .points i.fait{background:#0B3C5D}
+.guide .points i.ici{background:var(--pink); box-shadow:0 0 0 2px rgba(244,140,168,.4)}
+
+/* ---------- la carte postale ----------
+   Elle était un bouton qui enregistrait le cadre. C'est maintenant un
+   objet qu'on fabrique et qu'on envoie : on écrit une phrase, on voit ce
+   qu'on envoie, et on l'envoie. L'aperçu est là pour ça — personne
+   n'envoie une image qu'il n'a pas vue. */
+.cartebox{
+  background:var(--sunk); border:1.5px solid var(--line); border-radius:14px;
+  padding:12px; display:flex; flex-direction:column; gap:10px;
+}
+.cartebox canvas{
+  width:100%; height:auto; display:block; border-radius:10px;
+  background:#FDFBF0; border:1px solid var(--line);
+}
+.cartebox .row .btn{flex:1 1 auto}
+.btn.whats{background:#25D366; border-color:#1FB855; color:#06331B}
+.btn.whats:hover{filter:brightness(1.06)}
+/* L'invitation, chez un voisin, pour qui n'a pas encore d'île. C'est la
+   seule réclame du site, et elle ne parle que là où elle a un sens :
+   quelqu'un vient de marcher sur l'île de quelqu'un d'autre.
+
+   Elle vit **dans l'atelier**, au-dessus des onglets, avec le guide : c'est
+   le seul endroit qui existe dans les trois mises en page. Posée dans la
+   page, elle serait tombée dans la grille du mode paysage et l'aurait
+   décalée d'une rangée. */
+.invite{
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px;
+  background:var(--pink); color:#0B3C5D; border-bottom:1px solid var(--line);
+  padding:11px 14px; font-size:14px; font-weight:600; line-height:1.35;
+}
+.invite[hidden]{display:none}
+.invite b{font-family:"Baloo 2",sans-serif; font-weight:800}
+.invite .btn{background:#0B3C5D; border-color:#0B3C5D; color:#FDFBF0; margin-left:auto; font-size:13.5px; padding:7px 13px}
+.invite .btn:hover{filter:brightness(1.15)}
+@media (max-width:520px){ .invite{font-size:13px; padding:9px 11px} .invite .btn{margin-left:0} }
+
 /* ================= le mode paysage =================
    Paysage sur téléphone : le jeu prend tout l'écran, et la page disparaît.
    Avant, on tenait le téléphone en travers et on voyait quand même le logo,
@@ -488,17 +666,35 @@ textarea{
     border:0; border-left:1px solid var(--line); border-radius:0; box-shadow:none;
     display:flex; flex-direction:column; overflow:hidden;
   }
-  .tabs{flex:0 0 auto; grid-template-columns:repeat(3,1fr)}
-  /* Six onglets en une rangée dans une colonne de 270 px, c'est 45 px par
-     onglet : « Boutique » y était coupé. Deux rangées de trois coûtent une
-     quarantaine de pixels au panneau, qui en a de reste, et les mots
-     redeviennent lisibles. */
+  /* Cinq onglets en une rangée dans une colonne de 235 px, c'est 47 px par
+     onglet : « Boutique » y serait coupé. Trois puis deux, donc — et c'est
+     une grille de six colonnes qui le rend, les trois premiers sur deux
+     colonnes et les deux derniers sur trois. Une grille de trois aurait
+     laissé un trou à droite de la seconde rangée. */
+  .tabs{flex:0 0 auto; grid-template-columns:repeat(6,1fr)}
   .tabs button{font-size:11.5px; padding:9px 0; letter-spacing:-.01em}
-  .tabs button:nth-child(3n){border-right:0}
-  .tabs button:nth-child(-n+3){border-bottom:1px solid var(--line)}
+  .tabs button:nth-child(-n+3){grid-column:span 2; border-bottom:1px solid var(--line)}
+  .tabs button:nth-child(n+4){grid-column:span 3}
+  .tabs button:nth-child(3){border-right:0}
+  /* Le guide et l'invitation tiennent moins de place quand l'écran est
+     couché : ici la hauteur est tout ce qui manque. */
+  .guide{padding:6px 9px; gap:5px 7px}
+  .guide .quoi{flex:1 1 120px; font-size:11.5px}
+  .guide button{font-size:11px; padding:4px 8px}
+  .guide .pas{width:21px; height:21px; font-size:12px}
+  .invite{margin:0; border-radius:0; padding:7px 10px; font-size:12px; gap:6px}
   /* Le panneau prend ce qui reste et défile tout seul. `max-height` en vh
      n'a plus de sens ici : la colonne est déjà bornée par la grille. */
   .panel{flex:1 1 auto; min-height:0; max-height:none; padding:13px}
+  /* La grille d'objets débordait de la colonne, et depuis toujours : quatre
+     vignettes de 60 px dans 210 px utiles, ça fait 240, donc la quatrième
+     sortait de l'écran à droite. Mesuré à 780x360. Trois vignettes un peu
+     plus petites y tiennent — un objet coupé au bord de l'écran ne se
+     clique pas, et l'atelier n'a pas de défilement horizontal pour aller
+     le chercher. */
+  .objs{grid-template-columns:repeat(3,1fr)}
+  .obj canvas{width:52px; height:52px}
+  .cartebox{padding:9px; gap:7px}
 }
 /* En app installée, il n'y a plus de barre d'adresse : la même mise en page
    vaut jusqu'à des écrans plus hauts, et `display-mode` est ce qui permet de
@@ -510,20 +706,42 @@ textarea{
    revient pas, et il s'en va tout seul dès qu'on tourne : c'est le média
    qui le montre, pas du JavaScript. Une main tapote, il disparaît pour de
    bon (localStorage). */
+/* Ce n'était qu'une consigne : « Tourne ton téléphone ». Elle disait quoi
+   faire et pas pourquoi, et une consigne sans raison se referme d'un doigt
+   sans qu'on l'ait suivie. Elle dit maintenant les deux, et la seconde
+   ligne est une invitation, pas un ordre : on ne tourne pas son téléphone
+   pour obéir, on le tourne pour entrer sur son île. */
 .tourne{
   /* En bas à droite, sous les boutons de zoom et au-dessus du murmure :
      c'est le seul coin libre, et surtout il ne passe pas devant le
      bonhomme. Une invite qui cache ce qu'elle invite à regarder, non. */
-  position:absolute; right:11px; bottom:34px; z-index:4;
-  display:none; align-items:center; gap:6px; border:0;
-  background:#0B3C5D; color:#FDFBF0; border-radius:999px; padding:5px 11px;
-  font-family:"Baloo 2",sans-serif; font-weight:700; font-size:11px;
-  box-shadow:0 3px 10px rgba(11,60,93,.3); cursor:pointer; pointer-events:auto;
+  position:absolute; right:9px; bottom:28px; z-index:4; max-width:min(178px,58%);
+  display:none; align-items:center; gap:8px; border:0; text-align:left;
+  background:#0B3C5D; color:#FDFBF0; border-radius:12px; padding:7px 10px;
+  font-family:"Baloo 2",sans-serif; font-weight:700; font-size:10.5px; line-height:1.25;
+  box-shadow:0 4px 14px rgba(11,60,93,.34); cursor:pointer; pointer-events:auto;
+  animation:tournearrive .6s ease both 2.6s;
 }
-@keyframes tournepivot{0%,62%,100%{transform:rotate(0)}78%{transform:rotate(-82deg)}}
-.tourne span{display:inline-block; font-size:13px; animation:tournepivot 2.8s ease-in-out infinite}
+@keyframes tournearrive{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
+/* Le téléphone bascule, puis revient : c'est le geste demandé, joué en
+   petit. Le `prefers-reduced-motion` global, tout en haut, le fige. */
+@keyframes tournepivot{0%,52%,100%{transform:rotate(0)}70%,88%{transform:rotate(-82deg)}}
+.tourne span{
+  flex:none; display:grid; place-items:center; width:19px; height:27px;
+  border:2px solid #FDFBF0; border-radius:4px; font-size:0; margin-bottom:1px;
+  animation:tournepivot 3.2s ease-in-out infinite;
+}
+.tourne span::after{content:''; width:9px; height:1.5px; background:#FDFBF0; border-radius:1px}
+.tourne .mieux{display:block; color:var(--sand); font-weight:800}
 @media (orientation:portrait) and (pointer:coarse) and (max-width:640px){
   .tourne:not([hidden]){display:flex}
+}
+/* Le bandeau du guide, sur un écran étroit : le numéro s'en va (les quatre
+   points disent déjà où on en est) et la phrase prend sa ligne, pour que
+   « Suivant » et « Passer » tiennent ensemble sur la suivante. */
+@media (max-width:520px){
+  .guide .pas{display:none}
+  .guide .quoi{flex:1 1 100%}
 }
 
 </style>
@@ -546,7 +764,7 @@ textarea{
         </svg>
       </div>
     </div>
-    <p class="tagline"><b>Prototype jouable, en isométrique.</b> Fabrique ton bonhomme, ta maison, ton île — puis va marcher chez les voisins et laisse-leur un mot.</p>
+    <p class="tagline"><b>Ton petit endroit pour ralentir.</b> Crée ton personnage, construis ta maison et ton île — puis va découvrir celles de tes voisins.</p>
   </header>
 
   <section class="compte" id="compte" aria-live="polite"></section>
@@ -569,31 +787,81 @@ textarea{
         <button type="button" id="zoom-moins" aria-label="Voir toute l’île">−</button>
         <button type="button" id="photo-btn" aria-label="Appareil photo" hidden>📷</button>
       </div>
-      <button class="tourne" id="tourne" type="button" hidden><span>⟳</span> Tourne ton téléphone</button>
+      <button class="tourne" id="tourne" type="button" hidden><span>⟳</span>
+        <em style="font-style:normal"><b class="mieux">Dan’s Island se joue mieux en paysage.</b>
+        Tourne ton téléphone pour entrer sur ton île.</em></button>
 
     </div>
 
     <aside class="atelier">
+      <!-- Le guide des premiers pas et l'invitation vivent ici, au-dessus des
+           onglets : c'est le seul endroit présent dans les trois mises en page
+           (large, portrait, paysage court). Posés dans la page, ils tomberaient
+           dans la grille du mode paysage et la décaleraient d'une rangée. -->
+      <div class="guide" id="guide" hidden></div>
+      <div class="invite" id="invite" hidden></div>
       <div class="tabs" role="tablist">
-        <button role="tab" aria-selected="true" data-tab="toi">Toi</button>
+        <button role="tab" aria-selected="true" data-tab="toi">Moi</button>
         <button role="tab" aria-selected="false" data-tab="maison">Maison</button>
         <button role="tab" aria-selected="false" data-tab="ile">Île</button>
-        <button role="tab" aria-selected="false" data-tab="dedans">Dedans</button>
         <button role="tab" aria-selected="false" data-tab="voisins">Voisins</button>
         <button role="tab" aria-selected="false" data-tab="boutique">Boutique</button>
       </div>
       <div class="panel on" id="p-toi"></div>
       <div class="panel" id="p-maison"></div>
       <div class="panel" id="p-ile"></div>
-      <div class="panel" id="p-dedans"></div>
       <div class="panel" id="p-voisins"></div>
       <div class="panel" id="p-boutique"></div>
     </aside>
   </section>
 </div>
 
+<!-- ============================================================
+     L'accueil. Une phrase, deux portes, et le jeu qui vit derrière.
+
+     Tout ce qui est ici est écrit en dur, et c'est voulu : c'est le seul
+     texte du site qu'un robot puisse lire, puisque tout le reste est peint
+     dans un canvas. Le changer, c'est changer ce que Google raconte du jeu.
+     ============================================================ -->
+<div class="accueil" id="accueil" hidden>
+  <main class="carte">
+    <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+      <rect width="64" height="64" rx="15" fill="#0B3C5D"/>
+      <path d="M10 44c0-7 6-12 13-12s13 5 13 12z" fill="#8B5E3C"/>
+      <path d="M22 33V19" stroke="#FAF6EA" stroke-width="3.4" stroke-linecap="round"/>
+      <path d="M22 19c-5-4-10-3-12 1 4-1 7 0 9 2M22 19c5-4 10-3 12 1-4-1-7 0-9 2M22 19c-1-5 2-8 6-8-2 2-3 5-2 8" fill="#FAF6EA"/>
+      <circle cx="46" cy="20" r="7" fill="#F48CA8"/>
+      <rect x="42" y="32" width="8" height="18" rx="4" fill="#FAF6EA"/>
+    </svg>
+    <h2>DAN’S ISLAND</h2>
+    <svg class="trait" viewBox="0 0 300 12" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M2 8C28 -1 50 11 78 6s44 -9 74 -1 44 10 72 3 50 -6 72 1" fill="none" stroke="#148A9C" stroke-width="7" stroke-linecap="round"/>
+    </svg>
+    <p class="promesse">Ton petit endroit pour ralentir.</p>
+    <p class="dit">Crée ton personnage, construis ta maison et ton île,
+      puis va découvrir celles de tes voisins.</p>
+    <div class="portes">
+      <button class="btn primary" id="acc-creer" type="button">Créer mon île</button>
+      <button class="btn" id="acc-visiter" type="button">Visiter l’île de Dan</button>
+    </div>
+    <div class="socle">
+      <div><b>Rien à perdre</b>Pas de score, pas de minuteur, pas de partie ratée. On construit, on regarde, on revient.</div>
+      <div><b>Une île qui vit</b>La mer monte et descend, un requin passe au large, les mouettes traversent le ciel.</div>
+      <div><b>Des voisins</b>Ton île a son adresse. On s’y promène, on y laisse un mot, on rapporte un souvenir.</div>
+    </div>
+    <p class="bas">Gratuit, sans publicité, sans achat. Ça se joue dans le navigateur, au doigt ou au clavier.</p>
+  </main>
+</div>
+
 <script type="module">
-import * as store from './src/store.js';
+// Chemin **absolu**, et pour la même raison que le manifest et les icônes :
+// le catch-all de `_redirects` sert cette page à toutes les adresses, y
+// compris celles à deux segments comme `/carte/dan` (le repli quand la
+// fonction Cloudflare n'a pas répondu). Un `./src/store.js` s'y résout en
+// `/carte/src/store.js`, que le catch-all sert en `text/html` — et un
+// module au mauvais type MIME est refusé sans appel : le jeu ne démarre
+// pas du tout, écran vide, une seule ligne dans la console.
+import * as store from '/src/store.js';
 
 (function(){
 "use strict";
@@ -1164,6 +1432,10 @@ function gagner(n,quoi){
   b.shells+=n;
   if(n&&quoi&&bourseServeur) store.bourseGagner(quoi,n).then(appliquerBourse).catch(()=>{});
   else garderBourseLocale();
+  // Le tout premier shell gagné dit à quoi ça sert. Une fois, et plus
+  // jamais : la monnaie ne doit pas être au centre avant qu'on sache ce
+  // qu'elle achète.
+  if(n>0) expliquerLesShells(n);
   return n;
 }
 
@@ -2190,6 +2462,7 @@ function ciel(t){
     ctx.fillStyle='rgba(242,237,220,.85)';
     for(let i=0;i<26;i++){ const h=h2(i*3.1,i*1.7), h3=h2(i*5.3,i*2.9);
       ctx.beginPath(); ctx.arc(h*CW, h3*190, 0.7+h*1.2, 0, Math.PI*2); ctx.fill(); }
+    etoileFilante(t);
   } else {
     const warm = world.sky==='crépuscule';
     const sunC = warm ? '#F09A6B' : '#F7D774';
@@ -2354,6 +2627,158 @@ function dessinerPoisson(t){
   ctx.beginPath(); ctx.ellipse(-0.5,1.4,5.2,1.7,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#1B1714'; ctx.beginPath(); ctx.arc(4.4,-0.9,1.1,0,Math.PI*2); ctx.fill();
   ctx.restore();
+}
+
+/* ================= ce qui passe, et ce qui vole =================
+   Trois choses de plus qui bougent toutes seules, et pas une ne touche à
+   l'état du jeu : rien en base, aucune clé de plus dans `mondeNu()`, rien
+   à mémoriser pour Ctrl+Z, aucun gain, aucune perte. C'est du dessin.
+
+   Elles sont là pour une raison et une seule : **on doit avoir envie de
+   rester même quand on ne fait rien**. Une île où il ne se passe rien
+   pendant qu'on la regarde est une image, et on ne regarde pas une image
+   longtemps.
+
+   Le voilier suit le **même contour que la mer** — la corde de l'ellipse
+   à sa latitude — pour la raison déjà écrite pour le requin : deux
+   contours qui divergent, et la coque sort sur le papier. Il passe au
+   **nord**, derrière l'île, et il est peint avec le requin, donc sous les
+   cases : quand sa route croise la terre, ça se lit comme « derrière ».
+
+   Sa minuterie est en `dt` accumulé et pas en `t`, comme celle du requin :
+   un onglet en arrière-plan met `requestAnimationFrame` en pause, et un
+   bateau qui traverse sans témoin n'a traversé pour personne. */
+let voilier=null, voilierDans=14000;
+function avancerVoilier(dt){
+  if(voilier){ voilier.u += dt*voilier.v; if(voilier.u>1.06) voilier=null; return; }
+  voilierDans-=dt; if(voilierDans>0) return;
+  voilierDans=42000+Math.random()*58000;
+  voilier={ u:-0.06,
+            v:0.000020+Math.random()*0.000013,     // ~50 s la traversée
+            sens:Math.random()<0.5?1:-1,
+            k:-0.84+Math.random()*0.20,            // la latitude, au nord de la mer
+            c:Math.random()<0.35?'#F48CA8':'#FDFBF2' };
+}
+function dessinerVoilier(t){
+  if(!voilier) return;
+  const c=merCentre(), k=voilier.k;
+  // La demi-corde de l'ellipse à cette latitude : c'est ce qui garde la
+  // coque dans l'eau d'un bout à l'autre de la traversée.
+  const demi=MER_RX*Math.sqrt(Math.max(0,1-k*k))*0.94;
+  const x=c.x+(voilier.sens>0 ? -demi+2*demi*voilier.u : demi-2*demi*voilier.u);
+  const y=c.y+k*MER_RY+Math.sin(t/1900)*1.5;
+  ctx.save(); ctx.translate(x,y); ctx.rotate(Math.sin(t/1500)*0.035);
+  ctx.scale(voilier.sens,1);
+  // Le sillage : deux traits blancs derrière, sinon le bateau glisse sur
+  // une mer qui ne s'en aperçoit pas.
+  ctx.strokeStyle='rgba(255,255,255,.45)'; ctx.lineWidth=1.6; ctx.lineCap='round';
+  for(let i=1;i<=2;i++){ ctx.beginPath();
+    ctx.moveTo(-11-i*9, i*1.6); ctx.lineTo(-5-i*9, i*1.6); ctx.stroke(); }
+  // Les voiles. Deux triangles, le grand derrière le petit.
+  ctx.fillStyle=voilier.c; ctx.strokeStyle='rgba(11,60,93,.4)'; ctx.lineWidth=1.1;
+  ctx.beginPath(); ctx.moveTo(0,-23); ctx.lineTo(0,-2); ctx.lineTo(-11,-2); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle=shade(voilier.c,-14);
+  ctx.beginPath(); ctx.moveTo(1.4,-20); ctx.lineTo(1.4,-2); ctx.lineTo(9,-2); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.strokeStyle='rgba(11,60,93,.55)'; ctx.lineWidth=1.3;
+  ctx.beginPath(); ctx.moveTo(0,-24); ctx.lineTo(0,-1); ctx.stroke();
+  // La coque.
+  ctx.fillStyle='#8B5E3C';
+  ctx.beginPath(); ctx.moveTo(-11,-2); ctx.lineTo(11,-2);
+  ctx.quadraticCurveTo(7,4,-7,4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.18)';
+  ctx.beginPath(); ctx.moveTo(-11,-2); ctx.lineTo(11,-2); ctx.lineTo(9,0); ctx.lineTo(-10,0); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+/* Les papillons le jour, les lucioles la nuit. Huit bestioles, et **tout
+   se déduit de `t`** : aucun état à tenir, rien à remettre à zéro en
+   entrant dans la maison ou en changeant d'île, rien qui puisse fuir en
+   base. C'est la même ligne que les mouettes et les nuages.
+
+   Deux choses à ne pas défaire :
+
+   1. **Elles ne volent qu'au-dessus de la terre.** `terre()` et pas
+      `tileAt()` : à marée basse le sable mouillé compte, et un papillon
+      posé au milieu de la mer se lit comme un défaut d'affichage.
+   2. **Elles se peignent après le voile de nuit**, sinon une luciole
+      passe sous le bleu nuit et ne brille plus du tout — une luciole qui
+      ne brille pas n'est qu'un point. */
+const BESTIOLES=8;
+function insectes(t){
+  const nuit=world.sky==='nuit', c=(GRID-1)/2;
+  const r=Math.max(2.0,(world.rayon||RAYON0)-1.4);
+  if(nuit){ ctx.save(); ctx.globalCompositeOperation='lighter'; }
+  for(let i=0;i<BESTIOLES;i++){
+    const ph=h2(i*13.7,i*5.3)*Math.PI*2;
+    const vit=0.00012+h2(i*3.1,i*9.4)*0.00020;
+    const ray=r*(0.30+0.62*h2(i*7.7,i*2.2));
+    const a=ph+t*vit*(i%2?1:-1);
+    const gx=c+Math.cos(a)*ray, gy=c+Math.sin(a*1.27+ph)*ray*0.86;
+    if(!terre(Math.floor(gx),Math.floor(gy))) continue;
+    const q=ctr(gx-0.5,gy-0.5);
+    if(nuit){
+      // La luciole : un halo qui respire, et un cœur net. Sans le cœur,
+      // le halo seul se lit comme une poussière sur l'écran.
+      const h=17+Math.sin(t/820+i*2.1)*8;
+      const pul=0.35+0.65*Math.abs(Math.sin(t/620+ph*3));
+      const g=ctx.createRadialGradient(q.x,q.y-h,0,q.x,q.y-h,15);
+      g.addColorStop(0,'rgba(247,215,116,'+(0.6*pul)+')');
+      g.addColorStop(1,'rgba(247,215,116,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(q.x,q.y-h,15,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,246,206,'+(0.85*pul)+')';
+      ctx.beginPath(); ctx.arc(q.x,q.y-h,2.1,0,Math.PI*2); ctx.fill();
+    }else{
+      // Le papillon : deux ailes qui battent, et une ombre au sol qui dit
+      // à quelle hauteur il est. C'est le battement qui fait l'animal.
+      const h=21+Math.sin(t/390+i*2)*10;
+      const bat=Math.abs(Math.sin(t/95+i*1.7));
+      const col=[ '#F48CA8','#F4D6A0','#5EC6B3','#9ADCE8' ][i%4];
+      ctx.globalAlpha=0.13;
+      ctx.fillStyle='#0B3C5D'; ctx.beginPath();
+      ctx.ellipse(q.x,q.y,5.4-h*0.06,2.3-h*0.026,0,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=1;
+      ctx.save(); ctx.translate(q.x,q.y-h);
+      ctx.fillStyle=col; ctx.strokeStyle='rgba(11,60,93,.4)'; ctx.lineWidth=0.9;
+      [-1,1].forEach(s=>{
+        ctx.save(); ctx.scale(s*(0.25+0.75*bat),1);
+        ctx.beginPath(); ctx.ellipse(3.9,-1.6,4.2,3.0,0.3,0,Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(3.1,2.2,3.0,2.2,-0.3,0,Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.restore(); });
+      ctx.fillStyle='#3F4A52';
+      ctx.beginPath(); ctx.ellipse(0,0,1.2,3.5,0,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  }
+  if(nuit) ctx.restore();
+}
+
+/* L'étoile filante. Elle se déduit entièrement de `t` : une toutes les
+   onze secondes environ, qui dure moins d'une seconde, et dont la course
+   est tirée du numéro de son passage. Rien à tenir, rien à remettre à
+   zéro — et si on la rate, il y en a une autre.
+
+   Elle est dans `ciel()`, donc en repère écran et derrière la mer : c'est
+   le fond du monde, il ne glisse pas quand la caméra suit le bonhomme. */
+const FILANTE_PER=11000, FILANTE_DUR=780;
+function etoileFilante(t){
+  const n=Math.floor(t/FILANTE_PER), u=(t%FILANTE_PER)/FILANTE_DUR;
+  if(u>=1) return;
+  const g1=h2(n*3.7,n*11.3), g2=h2(n*5.1,n*2.9);
+  if(g2<0.35) return;                        // une fois sur trois, le ciel se tait
+  const x0=g1*CW*0.8, y0=12+g2*70, L=110+g1*90;
+  const x=x0+u*L, y=y0+u*L*0.42;
+  // Elle s'allume, elle s'éteint : une traînée à luminosité constante qui
+  // disparaît d'un coup se lit comme un défaut d'affichage.
+  const al=Math.sin(u*Math.PI);
+  const g=ctx.createLinearGradient(x,y,x-34,y-14);
+  g.addColorStop(0,'rgba(255,250,224,'+(0.9*al)+')');
+  g.addColorStop(1,'rgba(255,250,224,0)');
+  ctx.strokeStyle=g; ctx.lineWidth=2.2; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-34,y-14); ctx.stroke();
+  ctx.fillStyle='rgba(255,252,238,'+al+')';
+  ctx.beginPath(); ctx.arc(x,y,1.7,0,Math.PI*2); ctx.fill();
 }
 
 function drawTiles(t){
@@ -2523,7 +2948,7 @@ function drawWorld(t){
   // Le ciel de devant sort de la caméra le temps de se peindre : nuages et
   // mouettes sont un décor d'écran, pas des objets de l'île.
   camLever(); cielDevant(t); camPoser();
-  dessinerRequin(t); dessinerPoisson(t); drawTiles(t); seuilDeLaMaison();
+  dessinerRequin(t); dessinerPoisson(t); dessinerVoilier(t); drawTiles(t); seuilDeLaMaison();
 
   if(tool.mode!=='marche'&&hover.x>=0&&!visiting){
     // Deux cases sur deux quand on déplace la maison : viser une seule case
@@ -2622,6 +3047,8 @@ function drawWorld(t){
     glow(hq.x,hq.y-LIFT-22,86,world.sky==='nuit'?0.34:0.2);
     ctx.restore();
   }
+  // Après le voile : une luciole peinte dessous ne brillerait pas.
+  insectes(t);
   camLever();
 }
 
@@ -3092,7 +3519,7 @@ function entrer(k){
   const c=e?aCoteDeLaPorte(e):{x:Math.floor(p.w/2),y:Math.floor(p.h/2)};
   hero.x=c.x+0.5; hero.y=c.y+0.5; hero.face='bas'; target=null;
   majVue(); degager(); tool.mode='marche'; tool.kind=null;
-  son('arrivee'); majAmbiance(); hudSync(); buildAll(); ouvrirOnglet('dedans');
+  son('arrivee'); majAmbiance(); hudSync(); buildAll(); ouvrirOnglet('maison');
   say('Tu rentres chez toi. Une porte pour changer de pièce, et <b>← Ton île</b> en haut du cadre pour ressortir.');
 }
 function sortir(){
@@ -3349,7 +3776,7 @@ cv.addEventListener('click',e=>{
   // clique et rien ne se passe » est le pire des retours. C'est le même
   // défaut que la boutique d'avant, au même endroit : là où est le doigt.
   if(tool.mode==='meuble'){
-    say('Un meuble se pose <b>dedans</b>. Monte sur le seuil de ta porte, ou prends le bouton <b>Entrer</b> de l’onglet Dedans.');
+    say('Un meuble se pose <b>dedans</b>. Monte sur le seuil de ta porte, ou prends le bouton <b>Entrer</b> du panneau Maison.');
     return;
   }
   if(tool.mode==='marche'){ target={x:q.fx,y:q.fy}; return; }
@@ -3382,7 +3809,8 @@ cv.addEventListener('click',e=>{
     world.objects.push(neuf); son('poser');
   }
   else if(tool.mode==='tourner'){ tournerSurIle(q.x,q.y); }
-  else if(tool.mode==='maison'){ poserMaison(q.x,q.y); }
+  else if(tool.mode==='maison'){ poserMaison(q.x,q.y); guideFait(2); }
+  if(tool.mode==='terrain'||tool.mode==='objet') guideFait(3);
   saveMine();
 });
 
@@ -3539,7 +3967,7 @@ function frame(t){
   hero.immobile = hero.moving ? 0 : hero.immobile+dt;
   avancerCompagnon(dt);
   surveillerLeTrajet(dt);
-  if(!dedans){ avancerRequin(dt); avancerPoisson(dt); }
+  if(!dedans){ avancerRequin(dt); avancerPoisson(dt); avancerVoilier(dt); }
   if(!dedans&&!visiting){ if(herbeAcote()) tondeuseJusqua=t+1100; tondre(); avancerLaBalade(dt);
     ramasserLaMaree(); }
   proximity();
@@ -4324,12 +4752,16 @@ addEventListener('pointerdown',()=>{ if(!sonCoupe){ ctxAudio(); majAmbiance(); }
 /* ================= murmures ================= */
 const whisper=document.getElementById('whisper');
 let wTimer=null, wLock='';
-function say(msg,lock){
+function say(msg,lock,duree){
   whisper.innerHTML=msg; whisper.classList.add('on'); wLock=lock||'';
   clearTimeout(wTimer);
   // Assez pour lire une ligne, pas assez pour rester devant le bonhomme.
   // Les messages qui doivent tenir portent un verrou et ne passent pas ici.
-  if(!lock) wTimer=setTimeout(()=>{whisper.classList.remove('on');},2200);
+  // `duree` est pour les trois ou quatre phrases qui s'expliquent une fois
+  // dans une vie — les premiers shells, la fin du guide, la bienvenue d'un
+  // parrain. Elles ne portent pas de verrou parce qu'elles ne disent pas un
+  // état : elles disent quelque chose, et puis s'en vont.
+  if(!lock) wTimer=setTimeout(()=>{whisper.classList.remove('on');}, duree||2200);
 }
 // Le nom lisible de chaque objet, pris dans les mêmes listes que les boutons :
 // deux listes qui divergent, c'est un objet qui n'a pas le même nom selon l'endroit.
@@ -4500,7 +4932,11 @@ function ramasserSouvenir(){
 
 /* ================= panneaux ================= */
 function get(p){return p.split('.').reduce((o,k)=>o[k],mine);}
-function set(p,v){const k=p.split('.'),l=k.pop(); k.reduce((o,x)=>o[x],mine)[l]=v; saveMine(); if(!visiting) world=mine; buildAll();}
+function set(p,v){const k=p.split('.'),l=k.pop(); k.reduce((o,x)=>o[x],mine)[l]=v; saveMine(); if(!visiting) world=mine;
+  // Le guide se coche sur le geste, pas sur la lecture : régler son
+  // bonhomme *est* le premier pas, régler sa maison le deuxième.
+  if(p.indexOf('me.')===0) guideFait(1); else if(p.indexOf('house.')===0) guideFait(2);
+  buildAll();}
 function field(label){ const f=document.createElement('div'); f.className='field';
   const l=document.createElement('div'); l.className='lab'; l.textContent=label; f.appendChild(l); return f; }
 function chips(label,path,opts){
@@ -4659,8 +5095,20 @@ function paintPreview(){
 }
 setInterval(()=>{ if(document.getElementById('p-toi').classList.contains('on')) paintPreview(); },90);
 
+/* Le panneau Maison suit le bonhomme.
+   « Dedans » n'est plus un onglet : on n'entre pas chez soi par une barre
+   de navigation. Dehors, ce panneau règle la maison qu'on voit — toit,
+   murs, porte, emplacement — et porte le bouton **Entrer**. Dedans, c'est
+   l'atelier des pièces. Même onglet, même endroit sous le doigt, et un
+   onglet de moins dans une barre qui en avait six.
+
+   Conséquence assumée : on ne décore plus l'intérieur depuis le dehors. Il
+   faut y entrer, et c'est la même règle que partout ailleurs ici — le
+   coffre s'ouvre là où il est, la commande se porte au pas de la porte, le
+   chien se décroche à côté du chien. */
 function buildMaison(){
   const p=document.getElementById('p-maison'); p.innerHTML='';
+  if(dedans){ buildDedans(p); return; }
   const c=document.createElement('canvas'); c.id='apercu-maison'; c.width=660; c.height=304;
   p.appendChild(c);
   p.appendChild(textField('Enseigne','house.sign','Chez Dan'));
@@ -4682,6 +5130,21 @@ function buildMaison(){
     buildAll(); };
   row.appendChild(dep); f.appendChild(row); p.appendChild(f);
   p.appendChild(hint('Tu cliques la case, la maison s\'y pose : le coin que tu vises est son coin nord, le plus haut \u00e0 l\'\u00e9cran. La maison est le point de rendez-vous, on d\u00e9barque toujours devant sa porte.'));
+
+  // Entrer est une **action**, pas un onglet. On entre en marchant sur le
+  // seuil, par `E`, par le bouton rose du cadre \u2014 et par ici, pour qui
+  // d\u00e9couvre. Les quatre font la m\u00eame chose, et aucune ne s'appelle
+  // \u00ab Dedans \u00bb.
+  p.appendChild(rule());
+  const fe2=field('L\u2019int\u00e9rieur'), re2=document.createElement('div'); re2.className='row';
+  const be2=document.createElement('button'); be2.className='btn primary';
+  be2.textContent='\ud83d\udeaa Entrer';
+  be2.disabled=!!visiting;
+  be2.onclick=()=>entrer('salon');
+  re2.appendChild(be2); fe2.appendChild(re2); p.appendChild(fe2);
+  p.appendChild(hint(visiting
+    ? 'La porte de <b>'+esc(world.owner)+'</b> est ferm\u00e9e : on ne visite que le dehors. Rentre chez toi pour ouvrir la tienne.'
+    : 'Trois pi\u00e8ces, et personne d\u2019autre n\u2019y entre. Tu peux aussi <b>marcher sur le seuil</b> de ta porte : c\u2019est la m\u00eame chose, sans passer par un bouton. Une fois dedans, ce panneau devient l\u2019atelier des pi\u00e8ces.'));
   peindreMaison();
 }
 function peindreMaison(){
@@ -4982,28 +5445,28 @@ function apercuMeuble(g,t,col,o){
 }
 
 /* ---- l'atelier de l'intérieur ----
-   Un onglet \u00e0 part, visible m\u00eame depuis l'\u00eele : une pi\u00e8ce qu'on ne peut
-   d\u00e9corer qu'apr\u00e8s avoir trouv\u00e9 la porte est une pi\u00e8ce qu'on ne d\u00e9core pas.
    Il \u00e9crit toujours dans `mine` : on n'entre que chez soi. */
-function buildDedans(){
-  const p=document.getElementById('p-dedans'); p.innerHTML='';
+// L'atelier du dedans. Il ne s'appelle plus « Dedans » et n'a plus
+// d'onglet : `buildMaison()` l'appelle avec son propre panneau quand le
+// bonhomme est à l'intérieur. Il reçoit donc l'élément à remplir plutôt
+// que d'aller le chercher — c'est ce qui permet aux deux ateliers de vivre
+// au même endroit.
+function buildDedans(p){
   const it=normaliserInterieur(mine), d=it.pieces[piece], def=pieceDef(piece);
 
   const fr=field('Pi\u00e8ce'), br=document.createElement('div'); br.className='chips';
   PIECES.forEach(q=>{
     const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=q.n;
     b.setAttribute('aria-pressed',String(piece===q.k));
-    b.onclick=()=>{ if(dedans&&piece!==q.k) allerPiece(q.k,piece); else { piece=q.k; buildAll(); } };
+    b.onclick=()=>{ if(piece!==q.k) allerPiece(q.k,piece); };
     br.appendChild(b); });
   fr.appendChild(br); p.appendChild(fr);
 
   const rp=document.createElement('div'); rp.className='row';
   const be=document.createElement('button'); be.className='btn primary';
-  be.textContent = dedans ? 'Ressortir' : 'Entrer dans la maison';
-  be.disabled = !!visiting;
-  be.onclick=()=>{ if(dedans) sortir(); else entrer(piece); };
+  be.textContent = '\u2190 Ressortir';
+  be.onclick=()=>sortir();
   rp.appendChild(be); p.appendChild(rp);
-  if(visiting) p.appendChild(hint('Tu es invit\u00e9 chez <b>'+esc(world.owner)+'</b>. On n\u2019entre que chez soi : rentre sur ton \u00eele pour ouvrir ta porte.'));
   p.appendChild(rule());
 
   p.appendChild(chipsLibre('Sol', SOLS.map(x=>[x[0],x[1]]), d.sol,
@@ -5234,8 +5697,13 @@ async function acheter(a){
   vitrine=null; son('achat'); buildAll();
   // Un équipement n'a pas d'atelier : il agit tout de suite, sur place.
   if(EQUIPEMENT[a.k]){ say('<b>'+esc(a.n)+'</b> est à toi, et ça marche déjà. '+esc(a.d)); return; }
-  ouvrirOnglet(a.ou==='ile'?'ile':'dedans');
-  say('<b>'+esc(a.n)+'</b> est à toi. Tu la trouveras dans ton atelier, et tu peux en poser autant que tu veux.');
+  ouvrirOnglet(a.ou==='ile'?'ile':'maison');
+  // Un meuble ne se pose que dedans, et le panneau Maison ne devient
+  // l'atelier des pièces qu'une fois la porte franchie : le dire ici évite
+  // le « j'ai payé et je ne trouve rien ».
+  say(a.ou==='ile'
+    ? ('<b>'+esc(a.n)+'</b> est à toi. Tu la trouveras dans ton atelier, et tu peux en poser autant que tu veux.')
+    : ('<b>'+esc(a.n)+'</b> est à toi. <b>Entre dans ta maison</b> : l’atelier des pièces t’attend dans ce même panneau, et tu peux en poser autant que tu veux.'));
 }
 
 /* ---- le cadeau du jour ----
@@ -5397,6 +5865,29 @@ function buildVoisins(){
   p.appendChild(carteCommande());
   p.appendChild(rule());
 
+  /* La carte postale. Elle vient juste après la commande du jour — la
+     commande reste en tête parce que c'est la raison d'aller chez les
+     voisins **aujourd'hui**, et elle se périme à minuit. La carte, elle,
+     est la raison pour laquelle il y a des voisins tout court. */
+  const fc=field('Ta carte postale');
+  if(carteOuverte && !visiting){
+    fc.appendChild(carteComptoir());
+  }else{
+    const rc=document.createElement('div'); rc.className='row';
+    const oc=document.createElement('button'); oc.className='btn primary';
+    oc.style.flex='1 1 auto'; oc.style.fontSize='15.5px';
+    oc.textContent='💌 Envoyer ma carte postale';
+    oc.disabled=!!visiting;
+    oc.onclick=()=>{ carteOuverte=true; buildAll(); };
+    rc.appendChild(oc); fc.appendChild(rc);
+    fc.appendChild(hint(visiting
+      ? 'Une carte postale montre <b>ton</b> île, pas celle de l’hôte. Rentre chez toi, et elle t’attend ici.'
+      : 'Une image de ton île, ton nom, ton adresse, et une phrase de toi. Elle part dans WhatsApp, dans un message, où tu veux — et qui la reçoit peut venir marcher chez toi.'));
+  }
+  p.appendChild(fc);
+  p.appendChild(carteParrainage());
+  p.appendChild(rule());
+
   const f=field('L\u2019archipel'+(store.configure?'':' \u00b7 d\u00e9mo'));
   const list=document.createElement('div');
   list.style.display='flex'; list.style.flexDirection='column'; list.style.gap='7px';
@@ -5424,8 +5915,9 @@ function buildVoisins(){
   alea.onclick=()=>{ const autres=rows.filter(r=>r.slug!==ici);
     if(!autres.length){ say('Il n\u2019y a encore personne d\u2019autre \u00e0 visiter.'); return; }
     go(autres[Math.floor(Math.random()*autres.length)].slug); };
-  const cp0=document.createElement('button'); cp0.className='btn'; cp0.textContent='\ud83d\uddbc Carte postale';
-  cp0.onclick=()=>cartePostale();
+  const cp0=document.createElement('button'); cp0.className='btn'; cp0.textContent='\ud83d\udd17 Copier mon lien';
+  cp0.disabled=!monSlug;
+  cp0.onclick=()=>copierLien(lienIle(),'Ton lien est copi\u00e9. Qui cr\u00e9e son \u00eele en arrivant par l\u00e0 devient ton filleul.');
   r0.appendChild(alea); r0.appendChild(cp0); f.appendChild(r0);
   p.appendChild(f); p.appendChild(rule());
 
@@ -5497,6 +5989,10 @@ function peindreCompte(){
         ileId=ile.id; monSlug=ile.slug; mine.id=ile.id; mine.slug=ile.slug;
         say('Ton \u00eele est en ligne : <b>'+esc(location.host+'/'+ile.slug)+'</b>');
         majURL('/'+ile.slug); await chargerArchipel(); peindreCompte(); buildAll();
+        // Elle existe : le code de parrainage retenu à l'arrivée peut
+        // enfin servir. Le serveur refuse le second appel, donc l'appeler
+        // ici **et** au chargement du compte ne coûte rien.
+        reglerLeParrainage();
       }catch(e){ say('Cr\u00e9ation impossible : '+esc(e.message||e)); }
       cr.disabled=false;
     };
@@ -5552,10 +6048,30 @@ async function chargerCatalogue(){
     if(Number.isFinite(g.mot_recu)) GAIN_MOT_RECU=g.mot_recu;
     if(Number.isFinite(g.commande)) GAIN_COMMANDE=g.commande;
     if(Number.isFinite(g.commande_recue)) GAIN_COMMANDE_RECUE=g.commande_recue;
+    if(Number.isFinite(g.parrainage)) GAIN_PARRAIN=g.parrainage;
+    if(Number.isFinite(g.bienvenue))  GAIN_BIENVENUE=g.bienvenue;
+  }catch(e){}
+  // Les récompenses du parrainage vivent dans `reglages`, une table qu'on
+  // règle à la main dans le dashboard. Tant que la migration n'est pas
+  // passée, les nombres portés en dur ne servent qu'à afficher — et c'est
+  // le serveur qui crédite, comme pour tout le reste.
+  try{
+    const r=await store.parrainage();
+    if(Number.isFinite(r.parrain)) GAIN_PARRAIN=r.parrain;
+    if(Number.isFinite(r.filleul)) GAIN_BIENVENUE=r.filleul;
   }catch(e){}
 }
 
 async function demarrer(){
+  // Le code de parrainage, puis l'adresse nettoyée : les deux avant tout
+  // le reste, sinon un `history.replaceState` passerait après le premier
+  // `pushState` du routeur et remettrait la query.
+  capterLaQuery();
+  // L'accueil s'ouvre **tout de suite**, avant que la session ne revienne :
+  // sinon on voit une seconde d'interface complète, et c'est exactement ce
+  // qu'on essaie d'éviter. Il ne s'ouvre qu'à la racine — qui arrive par le
+  // lien d'une île vient voir cette île, pas une page de présentation.
+  if(!dejaEntre() && location.pathname.replace(/\/+$/,'')==='') ouvrirAccueil();
   peindreCompte();
   if(store.configure){
     store.surChangementDeCompte(async(u)=>{
@@ -5574,6 +6090,10 @@ async function demarrer(){
     if(moi) await chargerMonCompte();
     await chargerArchipel();
     peindreCompte();
+    // Une île déjà publiée : celui-là n'a rien à découvrir, on lui rend
+    // son île. Un battement d'accueil plutôt qu'une seconde d'interface
+    // complète, c'est le bon sens du compromis.
+    if(monSlug) fermerAccueil();
   }
   replanter(mine);
   routerDepuisURL();
@@ -5634,6 +6154,11 @@ async function chargerMonCompte(){
       if(localPlusFrais) saveMine();   // le brouillon local gagne, on le repousse
       replanter(mine);
       if(!visiting) world=mine;
+      // Le code retenu au clic sur la carte postale se règle ici : c'est
+      // le premier moment où l'île existe vraiment, et c'est l'île qui
+      // paie, pas le compte.
+      reglerLeParrainage();
+      try{ filleuls=await store.mesFilleuls(); }catch(e){ filleuls=0; }
     }
   }catch(e){ say('Compte charg\u00e9 partiellement : '+esc(e.message||e)); }
 }
@@ -5808,29 +6333,485 @@ function rangerDansLalbum(vue, lieu, chez, jour){
 }
 relireLalbum();
 
-function cartePostale(){
-  const m=42, bande=60, src=cv;
-  const c=document.createElement('canvas');
-  c.width=src.width+m*2; c.height=src.height+m*2+bande;
-  const g=c.getContext('2d');
-  g.fillStyle='#FDFBF0'; g.fillRect(0,0,c.width,c.height);
-  g.drawImage(src,m,m);
-  g.strokeStyle='rgba(11,60,93,.16)'; g.lineWidth=2; g.strokeRect(m,m,src.width,src.height);
-  const bas=m+src.height+bande-4;
-  g.fillStyle='#0B3C5D'; g.textAlign='left'; g.font='700 42px "Baloo 2", sans-serif';
-  g.fillText(world.name||'Sans nom', m, bas);
-  g.fillStyle='#8AA3B2'; g.textAlign='right'; g.font='600 26px Nunito, sans-serif';
-  g.fillText(location.host+'/'+(world.slug||monSlug||''), c.width-m, bas-4);
+/* ================= la carte postale =================
+   C'\u00e9tait un bouton qui enregistrait le cadre dans les fichiers, et rien
+   d'autre : une image qui ne partait nulle part. C'est maintenant l'objet
+   qu'on envoie.
+
+   Ce qui la distingue de la photo, et qui ne doit pas se confondre : la
+   **photo** ne porte que ce qu'on a cadr\u00e9, elle est un souvenir. La
+   **carte postale** porte l'adresse de l'\u00eele et une phrase \u2014 c'est une
+   invitation, et elle s'envoie.
+
+   Six choses \u00e0 ne pas d\u00e9faire.
+
+   1. **Rien n'en part en base.** Pas de table, pas de stockage, pas une
+      cl\u00e9 de plus dans `mondeNu()`. La carte se **redessine** depuis l'\u00eele,
+      \u00e0 chaque fois : c'est une image d\u00e9riv\u00e9e, comme le sable de la mar\u00e9e
+      se d\u00e9duit du rayon. Une carte stock\u00e9e serait une \u00eele fig\u00e9e qu'il
+      faudrait purger un jour.
+   2. **L'image part avec le message.** `navigator.share({files})` met la
+      vraie image dans la conversation WhatsApp, pas un lien qui promet
+      une image. C'est le seul chemin qui donne \u00e7a sans serveur, et c'est
+      pour \u00e7a qu'il passe avant tous les autres.
+   3. **Il y a toujours une sortie.** Pas de partage natif : WhatsApp par
+      `wa.me`, le lien \u00e0 copier, l'image \u00e0 enregistrer. Un bouton qui ne
+      marche que sur un t\u00e9l\u00e9phone r\u00e9cent n'existe pas pour les autres.
+   4. **Deux temps, pas un.** On ouvre le comptoir, on voit ce qu'on
+      envoie, puis on envoie. Personne n'envoie une image qu'il n'a pas
+      vue, et c'est la m\u00eame forme que la boutique et le viseur.
+   5. **Le lien porte le parrainage**, et c'est le slug de l'\u00eele qui le
+      porte : pas de code \u00e0 inventer, pas de table de codes \u00e0 tenir. Ton
+      adresse *est* ton code.
+   6. **Elle ne rapporte rien \u00e0 l'envoi.** Ce qui paie, c'est quelqu'un
+      qui arrive \u2014 une \u00eele cr\u00e9\u00e9e, un mot laiss\u00e9. Une carte postale qui
+      paierait \u00e0 l'envoi deviendrait une corv\u00e9e de plus, et on en
+      enverrait dix par jour sans les regarder. */
+/* Les proportions de la carte. La photo est en large (1,8) et pas au
+   rapport du cadre (1,536) : le cadre montre l'île entourée d'eau jusqu'aux
+   quatre coins, et sur une carte postale ça fait une île perdue au milieu
+   d'une flaque. On prend donc une tranche horizontale centrée sur le milieu
+   du monde, qui est aussi le milieu du cadre — l'île le remplit, et ce
+   qu'on coupe est de l'eau vide.
+
+   `CARTE_H` se **déduit** : la marge, la photo, la bande écrite. Écrire les
+   trois nombres à la main, et le jour où la photo change de rapport la
+   bande déborde ou flotte. */
+const CARTE_W=1200, CARTE_M=48, CARTE_RATIO=1.8, CARTE_BANDE=200;
+const CARTE_PW=CARTE_W-CARTE_M*2;
+const CARTE_PH=Math.round(CARTE_PW/CARTE_RATIO);
+const CARTE_H=CARTE_M+CARTE_PH+CARTE_BANDE;
+const CARTE_MOT='Je t\u2019envoie une carte postale depuis mon \u00eele sur Dan\u2019s Island. '+
+                'Viens la visiter et cr\u00e9e la tienne.';
+let carteOuverte=false, cartePhrase='';
+
+// L'adresse \u00e0 partager. Le slug de l'\u00eele est aussi le code de parrainage :
+// `de=` le redit dans la query pour que le lien marche m\u00eame si la page
+// publique n'est pas servie par une fonction (voir functions/).
+function lienCarte(){
+  const s=monSlug||'';
+  return s ? (location.origin+'/carte/'+s) : (location.origin+'/');
+}
+function lienIle(){
+  const s=monSlug||'';
+  return s ? (location.origin+'/'+s+'?de='+encodeURIComponent(s)) : (location.origin+'/');
+}
+function texteCarte(){
+  return CARTE_MOT+'\n'+lienCarte();
+}
+// Une ligne qui ne d\u00e9borde pas. On coupe au mot, et on met un vrai point
+// de suspension : \u00ab \u2026 \u00bb plut\u00f4t que trois points, c'est la typo du reste.
+function ligneCoupee(g,s,large){
+  if(g.measureText(s).width<=large) return s;
+  let out=s;
+  while(out.length>1 && g.measureText(out+'\u2026').width>large) out=out.slice(0,-1);
+  const esp=out.lastIndexOf(' ');
+  if(esp>large/22) out=out.slice(0,esp);
+  return out.replace(/[ ,;:]+$/,'')+'\u2026';
+}
+/* Le dessin. Un vrai objet : une photo \u00e0 marge, une bande \u00e9crite, un
+   timbre avec le bonhomme dedans et son cachet de la poste. Tout est
+   peint ici, rien n'est une image charg\u00e9e \u2014 le site n'a toujours qu'un
+   seul fichier PNG, celui de l'aper\u00e7u partag\u00e9. */
+function dessinerCartePostale(g,phrase){
+  const nom=(monSlug? mine.name : world.name)||'Mon \u00eele';
+  const adr=(location.host+'/'+(monSlug||'')).replace(/\/$/,'');
+  g.setTransform(1,0,0,1,0,0);
+  g.fillStyle='#FDFBF0'; g.fillRect(0,0,CARTE_W,CARTE_H);
+
+  // La photo. On découpe une tranche du cadre, centrée, au rapport de la
+  // carte : jamais d'étirement. Une île écrasée se voit tout de suite, et
+  // c'est la même règle que le cadre du jeu, dont la largeur se calcule
+  // depuis la hauteur pour ne jamais déformer le canvas.
+  const m=CARTE_M, pw=CARTE_PW, ph=CARTE_PH;
+  const sh=Math.min(cv.height, Math.round(cv.width/CARTE_RATIO));
+  const sy=Math.round((cv.height-sh)/2);
+  g.save();
+  rr(g,m,m,pw,ph,14); g.clip();
+  g.drawImage(cv, 0,sy,cv.width,sh, m,m,pw,ph);
+  g.restore();
+  g.strokeStyle='rgba(11,60,93,.16)'; g.lineWidth=2.5;
+  rr(g,m,m,pw,ph,14); g.stroke();
+
+  const y0=m+ph;
+  // Le nom, et le trait ondul\u00e9 de la charte sous lui.
+  g.textAlign='left'; g.textBaseline='alphabetic';
+  g.fillStyle='#0B3C5D'; g.font='800 46px "Baloo 2", Nunito, sans-serif';
+  const nomL=ligneCoupee(g,nom,780);
+  g.fillText(nomL,m+12,y0+70);
+  const lg=Math.min(320,g.measureText(nomL).width);
+  g.strokeStyle='#148A9C'; g.lineWidth=6; g.lineCap='round';
+  g.beginPath();
+  for(let i=0;i<=24;i++){
+    const x=m+12+lg*i/24, y=y0+84+Math.sin(i/24*Math.PI*3)*3.2;
+    if(i===0) g.moveTo(x,y); else g.lineTo(x,y);
+  }
+  g.stroke();
+
+  // La phrase. Elle est facultative : sans elle, la carte dit simplement
+  // d'o\u00f9 elle vient, et c'est d\u00e9j\u00e0 une invitation.
+  g.fillStyle='#3F6B85'; g.font='600 26px Nunito, sans-serif';
+  g.fillText(ligneCoupee(g,phrase||'Viens marcher chez moi.',760), m+12, y0+128);
+  g.fillStyle='#8AA3B2'; g.font='500 22px "DM Mono", ui-monospace, monospace';
+  g.fillText(adr, m+12, y0+166);
+
+  // Le timbre. Bord dentel\u00e9, le bonhomme dedans, et le cachet par-dessus :
+  // c'est ce qui fait qu'on la lit comme une carte postale et pas comme
+  // une capture d'\u00e9cran encadr\u00e9e.
+  const tw=124, th=148, tx=CARTE_W-m-tw, ty=y0+Math.round((CARTE_BANDE-th)/2)+4;
+  g.fillStyle='#FDFBF0'; g.fillRect(tx,ty,tw,th);
+  g.fillStyle='#F1EBDA';
+  for(let i=0;i*13<tw;i++){ g.beginPath(); g.arc(tx+6+i*13,ty,6,0,Math.PI*2); g.fill();
+                            g.beginPath(); g.arc(tx+6+i*13,ty+th,6,0,Math.PI*2); g.fill(); }
+  for(let i=0;i*13<th;i++){ g.beginPath(); g.arc(tx,ty+6+i*13,6,0,Math.PI*2); g.fill();
+                            g.beginPath(); g.arc(tx+tw,ty+6+i*13,6,0,Math.PI*2); g.fill(); }
+  g.fillStyle='#FDFBF0'; g.fillRect(tx+5,ty+5,tw-10,th-10);
+  g.strokeStyle='rgba(11,60,93,.3)'; g.lineWidth=2; g.strokeRect(tx+9,ty+9,tw-18,th-18);
+  g.save(); g.beginPath(); g.rect(tx+9,ty+9,tw-18,th-18); g.clip();
+  g.fillStyle=(mine.pal||GROUNDS[0]).water; g.fillRect(tx+9,ty+9,tw-18,th-18);
+  g.fillStyle=(mine.pal||GROUNDS[0]).grass;
+  g.beginPath(); g.ellipse(tx+tw/2,ty+th-26,44,22,0,0,Math.PI*2); g.fill();
+  drawChar(g,tx+tw/2,ty+th-30,mine.me,1.55,'bas',0);
+  g.restore();
+  g.fillStyle='#0B3C5D'; g.textAlign='center'; g.font='800 11px "Baloo 2", sans-serif';
+  g.fillText('DAN\u2019S ISLAND',tx+tw/2,ty+th-13);
+  // Le cachet : deux arcs et la date, en travers du coin du timbre.
+  g.save(); g.translate(tx-10,ty+12); g.rotate(-0.22);
+  g.strokeStyle='rgba(11,60,93,.34)'; g.lineWidth=3;
+  g.beginPath(); g.arc(0,0,34,0,Math.PI*2); g.stroke();
+  g.beginPath(); g.arc(0,0,27,0,Math.PI*2); g.stroke();
+  g.fillStyle='rgba(11,60,93,.44)'; g.textAlign='center'; g.font='700 13px Nunito, sans-serif';
+  g.fillText(jourDuJeu(),0,5);
+  g.restore();
+  g.textAlign='left';
+}
+function carteEnImage(){
+  const c=document.createElement('canvas'); c.width=CARTE_W; c.height=CARTE_H;
+  dessinerCartePostale(c.getContext('2d'),cartePhrase);
+  return c;
+}
+function enregistrerCarte(){
   const a=document.createElement('a');
-  a.download=(world.slug||'ile')+'.png'; a.href=c.toDataURL('image/png');
+  a.download='carte-'+(monSlug||'dansisland')+'-'+jourDuJeu()+'.png';
+  a.href=carteEnImage().toDataURL('image/png');
   document.body.appendChild(a); a.click(); a.remove();
-  say('Carte postale enregistr\u00e9e.');
+  say('Carte postale enregistr\u00e9e dans tes fichiers.');
+}
+// Le partage natif, avec l'image dedans. C'est lui qui met la carte dans
+// la conversation plut\u00f4t qu'un lien qui promet une carte.
+function envoyerCartePostale(){
+  const c=carteEnImage();
+  if(!c.toBlob){ enregistrerCarte(); return; }
+  c.toBlob(async(blob)=>{
+    if(!blob){ enregistrerCarte(); return; }
+    const f=new File([blob],'carte-'+(monSlug||'dansisland')+'.png',{type:'image/png'});
+    try{
+      if(navigator.canShare && navigator.canShare({files:[f]})){
+        // `url` en plus des fichiers : Android la laisse parfois tomber,
+        // donc le lien est **aussi** dans le texte. Un lien perdu, c'est
+        // une carte postale sans adresse.
+        await navigator.share({title:'Dan\u2019s Island', text:texteCarte(), files:[f]});
+        say('Carte postale envoy\u00e9e. Merci pour ton \u00eele.');
+        return;
+      }
+      if(navigator.share){
+        await navigator.share({title:'Dan\u2019s Island', text:CARTE_MOT, url:lienCarte()});
+        say('Lien envoy\u00e9. L\u2019image, elle, t\u2019attend dans tes fichiers.');
+        enregistrerCarte();
+        return;
+      }
+    }catch(e){ if(e && e.name==='AbortError') return; }
+    // Aucun partage natif : l'image descend et le lien va dans le
+    // presse-papiers. Deux gestes au lieu d'un, mais rien ne se perd.
+    enregistrerCarte();
+    copierLien(lienCarte(),'Le lien de ta carte est copi\u00e9 : colle-le dans ton message.');
+  },'image/png');
+}
+function partagerWhatsApp(){
+  // `wa.me` ouvre l'application sur t\u00e9l\u00e9phone et web.whatsapp.com sur
+  // ordinateur : c'est le seul lien qui marche des deux c\u00f4t\u00e9s, et il n'a
+  // besoin d'aucun num\u00e9ro.
+  const u='https://wa.me/?text='+encodeURIComponent(texteCarte());
+  const w=window.open(u,'_blank','noopener');
+  if(!w) location.href=u;
+  say('WhatsApp s\u2019ouvre. <b>Ajoute l\u2019image</b> si tu veux qu\u2019elle parte avec : elle vient d\u2019\u00eatre enregistr\u00e9e.');
+  enregistrerCarte();
+}
+function copierLien(url,mot){
+  if(navigator.clipboard) navigator.clipboard.writeText(url)
+    .then(()=>say(mot||'Lien copi\u00e9.'),()=>say('Copie \u00e0 la main : '+esc(url)));
+  else say('Copie \u00e0 la main : '+esc(url));
+}
+// Le comptoir de la carte postale, dans l'onglet Voisins. Il se ferme
+// quand on part chez quelqu'un : une carte de son \u00eele pr\u00e9par\u00e9e puis
+// envoy\u00e9e depuis l'\u00eele d'un autre montrerait l'\u00eele d'un autre.
+function carteComptoir(){
+  const box=document.createElement('div'); box.className='cartebox';
+  const c=document.createElement('canvas'); c.width=CARTE_W; c.height=CARTE_H;
+  dessinerCartePostale(c.getContext('2d'),cartePhrase);
+  box.appendChild(c);
+
+  const f=field('Ta petite phrase');
+  const i=document.createElement('input'); i.type='text'; i.maxLength=48;
+  i.placeholder='Viens marcher chez moi.'; i.value=cartePhrase;
+  i.oninput=()=>{ cartePhrase=i.value.slice(0,48);
+    dessinerCartePostale(c.getContext('2d'),cartePhrase); };
+  f.appendChild(i); box.appendChild(f);
+
+  const r1=document.createElement('div'); r1.className='row';
+  const env=document.createElement('button'); env.className='btn primary';
+  env.textContent='\ud83d\udc8c Envoyer ma carte postale';
+  env.onclick=()=>envoyerCartePostale();
+  const wa=document.createElement('button'); wa.className='btn whats';
+  wa.textContent='Partager sur WhatsApp';
+  wa.onclick=()=>partagerWhatsApp();
+  r1.appendChild(env); r1.appendChild(wa); box.appendChild(r1);
+
+  const r2=document.createElement('div'); r2.className='row';
+  const sv=document.createElement('button'); sv.className='btn'; sv.textContent='Enregistrer l\u2019image';
+  sv.onclick=()=>enregistrerCarte();
+  const cl=document.createElement('button'); cl.className='btn'; cl.textContent='Copier le lien';
+  cl.onclick=()=>copierLien(lienCarte());
+  const fm=document.createElement('button'); fm.className='btn'; fm.textContent='Fermer';
+  fm.onclick=()=>{ carteOuverte=false; buildAll(); };
+  r2.appendChild(sv); r2.appendChild(cl); r2.appendChild(fm); box.appendChild(r2);
+
+  box.appendChild(hint(monSlug
+    ? ('Le lien m\u00e8ne \u00e0 ta carte, puis \u00e0 ton \u00eele : <span class="mono">'+esc(lienCarte())+'</span>. '+
+       'Qui cr\u00e9e son \u00eele en arrivant par l\u00e0 devient ton <b>filleul</b>, et vous recevez des shells tous les deux.')
+    : 'Ton \u00eele n\u2019a pas encore d\u2019adresse : la carte s\u2019enregistre et s\u2019envoie, mais le lien ram\u00e8ne \u00e0 l\u2019accueil. '+
+      'Donne-lui son adresse dans le bandeau, en haut de la page, et le lien m\u00e8nera chez toi.'));
+  return box;
+}
+
+/* ================= l'accueil, les premiers pas, le parrainage =========
+   Trois choses qui n'existaient pas, et qui répondent à la même question :
+   qu'est-ce qu'on voit quand on arrive ?
+
+   Avant, on voyait tout. Six onglets, une carte de connexion, une île
+   déjà construite et un murmure qui annonçait des touches. Le jeu ne se
+   présentait pas : il s'ouvrait en grand et laissait chercher.
+
+   L'accueil dit une phrase et pose deux portes. Le guide dit un pas à la
+   fois, et s'efface au quatrième. Le parrainage relie l'île qui naît à la
+   carte postale qui l'a fait naître. */
+
+const ACC_VU='dansisland:entre';
+const GUIDE_OU='dansisland:guide';
+const PARRAIN='dansisland:parrain';
+const SHELLS1='dansisland:shells1';
+const accueilEl=document.getElementById('accueil');
+const guideEl=document.getElementById('guide');
+const inviteEl=document.getElementById('invite');
+
+/* ---- l'accueil ----
+   Il ne bloque rien : le jeu tourne derrière, la mer bouge, les mouettes
+   passent. C'est un voile, pas une page — et c'est ce qui dit ce qu'est le
+   jeu mieux qu'un paragraphe. Il ne revient pas : `dansisland:entre`. */
+function dejaEntre(){ try{ return !!localStorage.getItem(ACC_VU); }catch(e){ return true; } }
+function ouvrirAccueil(){ if(accueilEl) accueilEl.hidden=false; }
+function fermerAccueil(){
+  if(!accueilEl||accueilEl.hidden) return;
+  accueilEl.hidden=true;
+  try{ localStorage.setItem(ACC_VU,'1'); }catch(e){}
+}
+if(accueilEl){
+  document.getElementById('acc-creer').onclick=()=>{ fermerAccueil(); demarrerLeGuide(); };
+  document.getElementById('acc-visiter').onclick=()=>{ fermerAccueil(); visiterUneIle(); };
+  // Échap ferme, comme pour le viseur : une porte se pousse dans les deux sens.
+  addEventListener('keydown',e=>{ if(e.key==='Escape') fermerAccueil(); });
+}
+// « Visiter l'île de Dan ». Si elle n'est pas là — archipel hors ligne,
+// slug changé — on ouvre la première île venue plutôt que d'annoncer une
+// erreur à quelqu'un qui vient d'arriver.
+function visiterUneIle(){
+  const dan=voisins.find(v=>v.slug==='dan');
+  go(dan ? 'dan' : (voisins[0] ? voisins[0].slug : 'dan'));
+}
+
+/* ---- les premiers pas ----
+   Quatre pas, une ligne chacun, et **on apprend en faisant** : chaque pas
+   se coche tout seul quand le geste est fait, pas quand on a lu. « Suivant »
+   est là pour qui veut aller plus vite, « Passer » pour qui sait déjà.
+   Le bandeau s'efface au quatrième et ne revient jamais. */
+const PAS=[null,
+  {o:'toi',     q:'<b>Ton bonhomme.</b> Silhouette, cheveux, tenue.'},
+  {o:'maison',  q:'<b>Ta maison.</b> Un toit, des murs, une porte.'},
+  {o:'ile',     q:'<b>Ton île.</b> Prends un arbre, puis clique une case.'},
+  {o:'voisins', q:'<b>Tes voisins.</b> Va marcher sur l’île d’un autre.'}
+];
+let guidePas=0;
+try{ guidePas=parseInt(localStorage.getItem(GUIDE_OU)||'0',10)||0; }catch(e){ guidePas=0; }
+function garderGuide(){ try{ localStorage.setItem(GUIDE_OU,String(guidePas)); }catch(e){} }
+function guideEnCours(){ return guidePas>=1 && guidePas<=4; }
+
+/* ---- la note qui ne s'efface pas ----
+   Le murmure ne convient pas à ce qui s'explique une fois dans une vie.
+   Il s'efface en deux secondes, et surtout `proximity()` le réécrit à
+   l'image suivante dès qu'on a un coffre ou un souvenir sous les pieds :
+   mesuré, le « +1 shell, voilà à quoi ça sert » était recouvert avant
+   d'avoir été lu. La note prend donc la place du bandeau du guide — le
+   même endroit, au-dessus des onglets — et elle attend qu'on la referme.
+
+   Elle passe devant le guide : les deux ne parlent jamais en même temps,
+   et le pas repris à la fermeture n'a pas bougé. */
+let note1=null, noteIcone='';
+function noteUneFois(icone, html){ noteIcone=icone; note1=html; peindreGuide(); }
+function fermerLaNote(){ note1=null; peindreGuide(); }
+
+function peindreGuide(){
+  if(!guideEl) return;
+  if(note1){
+    guideEl.hidden=false; guideEl.innerHTML='';
+    const n=document.createElement('span'); n.className='pas'; n.style.background='transparent';
+    n.style.fontSize='17px'; n.textContent=noteIcone;
+    const q=document.createElement('span'); q.className='quoi'; q.innerHTML=note1;
+    const ok=document.createElement('button'); ok.type='button'; ok.textContent='Compris';
+    ok.onclick=()=>fermerLaNote();
+    guideEl.appendChild(n); guideEl.appendChild(q); guideEl.appendChild(ok);
+    return;
+  }
+  if(!guideEnCours()){ guideEl.hidden=true; guideEl.innerHTML=''; return; }
+  const p=PAS[guidePas];
+  guideEl.hidden=false; guideEl.innerHTML='';
+  const n=document.createElement('span'); n.className='pas'; n.textContent=String(guidePas);
+  const q=document.createElement('span'); q.className='quoi'; q.innerHTML=p.q;
+  const pts=document.createElement('span'); pts.className='points';
+  for(let i=1;i<=4;i++){ const d=document.createElement('i');
+    d.className = i<guidePas ? 'fait' : (i===guidePas ? 'ici' : ''); pts.appendChild(d); }
+  const su=document.createElement('button'); su.type='button'; su.textContent='Suivant';
+  su.onclick=()=>avancerLeGuide();
+  const pa=document.createElement('button'); pa.type='button'; pa.textContent='Passer';
+  pa.onclick=()=>finirLeGuide(false);
+  guideEl.appendChild(n); guideEl.appendChild(q); guideEl.appendChild(pts);
+  guideEl.appendChild(su); guideEl.appendChild(pa);
+}
+function demarrerLeGuide(){
+  if(guidePas){ ouvrirOnglet(guideEnCours()?PAS[guidePas].o:'toi'); buildAll(); return; }
+  guidePas=1; garderGuide(); ouvrirOnglet('toi'); buildAll();
+  say('<b>Un pas à la fois.</b> Le bandeau au-dessus des onglets dit ce qui vient — et rien ne presse.',null,5200);
+}
+function avancerLeGuide(){
+  if(!guideEnCours()) return;
+  guidePas++;
+  if(guidePas>4){ finirLeGuide(true); return; }
+  garderGuide(); ouvrirOnglet(PAS[guidePas].o); buildAll();
+}
+// Le pas se coche quand le geste est fait. Appelé depuis là où le geste a
+// lieu, jamais depuis un minuteur : un guide qui avance tout seul apprend
+// à regarder, pas à faire.
+function guideFait(n){ if(guidePas===n) avancerLeGuide(); }
+function finirLeGuide(dire){
+  guidePas=9; garderGuide(); buildAll();
+  if(dire) say('<b>Tu sais tout.</b> Le reste se découvre en marchant : la marée qui descend, '+
+    'le coffre du jour, le chien qui veut sortir. Bon séjour.',null,6500);
+}
+
+/* ---- l'invitation ----
+   Chez un voisin, pour qui n'a pas encore d'île. C'est la seule réclame du
+   site et elle ne parle qu'au seul moment où elle a un sens : quelqu'un
+   vient de marcher sur l'île de quelqu'un d'autre et a vu à quoi ça
+   ressemble. Elle emporte le parrainage au passage. */
+function peindreInvite(){
+  if(!inviteEl) return;
+  if(!visiting || dedans || monSlug){ inviteEl.hidden=true; inviteEl.innerHTML=''; return; }
+  inviteEl.hidden=false; inviteEl.innerHTML='';
+  const t=document.createElement('span');
+  t.style.flex='1 1 170px';
+  t.innerHTML='Tu es chez <b>'+esc(world.owner||'quelqu’un')+'</b>. Toi aussi, tu peux avoir ton île.';
+  const b=document.createElement('button'); b.className='btn'; b.type='button';
+  b.textContent='Créer mon île';
+  b.onclick=()=>{
+    if(world.slug) capterParrain(world.slug);
+    go('me');
+    demarrerLeGuide();
+    say('Ton île t’attend. Fabrique-toi d’abord, puis donne-lui son adresse '+
+        'dans le bandeau, en haut de la page.',null,6000);
+  };
+  inviteEl.appendChild(t); inviteEl.appendChild(b);
+}
+
+/* ---- le parrainage ----
+   Ton adresse **est** ton code : pas de code à inventer, pas de table de
+   codes à tenir, et un lien qu'on lit. Le serveur fait tout le reste —
+   il refuse l'auto-parrainage, le second, et celui qui n'a pas d'île.
+   Voir `supabase/2026-09-18_parrainage.sql`.
+
+   Le code est retenu ici jusqu'à ce qu'il serve : entre le clic sur la
+   carte postale et l'île créée, il y a un lien magique, une boîte mail et
+   parfois un autre jour. */
+let filleuls=0;
+let GAIN_PARRAIN=25, GAIN_BIENVENUE=15;
+function capterParrain(code){
+  const c=String(code||'').toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,24);
+  if(c.length<2 || c===monSlug) return;
+  try{ if(!localStorage.getItem(PARRAIN)) localStorage.setItem(PARRAIN,c); }catch(e){}
+}
+function parrainRetenu(){ try{ return localStorage.getItem(PARRAIN)||''; }catch(e){ return ''; } }
+async function reglerLeParrainage(){
+  const code=parrainRetenu();
+  if(!code || !store.configure || !moi || !ileId) return;
+  let r;
+  // Une erreur ici, c'est la migration qui n'est pas passée ou le réseau
+  // qui manque : on **garde** le code pour la prochaine fois. Un refus
+  // ordinaire (code inconnu, déjà parrainé) le jette, lui.
+  try{ r=await store.parrainer(code); }catch(e){ return; }
+  try{ localStorage.removeItem(PARRAIN); }catch(e){}
+  if(!r || !r.ok) return;
+  if(r.bourse) appliquerBourse(r.bourse);
+  try{ filleuls=await store.mesFilleuls(); }catch(e){}
+  try{ localStorage.setItem(SHELLS1,'1'); }catch(e){}
+  noteUneFois('\ud83d\udc8c',
+    '<b>+'+(r.gagne|0)+' shells</b> de bienvenue, offerts par <b>'+esc(code)+'</b> — '+
+    'et autant pour lui. Les shells servent à personnaliser ton île : va voir la <b>Boutique</b>.');
+  buildAll();
+}
+function carteParrainage(){
+  const f=field('Inviter quelqu’un');
+  if(!monSlug){
+    f.appendChild(hint('Ton île n’a pas encore d’adresse. Donne-lui-en une dans le bandeau, en haut de '+
+      'la page : cette adresse sera aussi ton <b>code de parrainage</b>.'));
+    return f;
+  }
+  const l=document.createElement('ul'); l.className='gb';
+  const li=document.createElement('li');
+  li.innerHTML='Quand quelqu’un crée son île depuis ton lien : <b>+'+GAIN_PARRAIN+' shells</b> pour toi, '+
+               '<b>+'+GAIN_BIENVENUE+'</b> pour lui.';
+  l.appendChild(li);
+  if(filleuls){
+    const li2=document.createElement('li');
+    li2.innerHTML='<b>'+filleuls+' île'+(filleuls>1?'s sont nées':' est née')+'</b> de tes liens. Merci pour l’archipel.';
+    l.appendChild(li2);
+  }
+  f.appendChild(l);
+  return f;
+}
+
+/* ---- les premiers shells ----
+   Une monnaie qu'on reçoit sans savoir à quoi elle sert n'est qu'un
+   chiffre qui monte. On l'explique **une fois**, au premier gain, et plus
+   jamais : c'est exactement ce que demande le brief, et c'est la même
+   règle que l'invite de rotation — une explication qui revient n'est plus
+   une explication. */
+function expliquerLesShells(n){
+  try{
+    if(localStorage.getItem(SHELLS1)) return;
+    localStorage.setItem(SHELLS1,'1');
+  }catch(e){ return; }
+  noteUneFois('\ud83d\udc1a',
+    '<b>+'+n+' shell'+(n>1?'s':'')+'.</b> Les shells servent à personnaliser ton île : '+
+    'des objets à poser, des meubles, des bottes pour marcher plus vite. '+
+    'Tout ça t’attend dans la <b>Boutique</b>.');
 }
 
 /* ================= navigation ================= */
 async function go(slug){
   finBalade(false);                      // le chien ne suit pas jusque chez les voisins
   fermerLeViseur();
+  // Une carte postale préparée chez soi puis envoyée depuis l'île d'un
+  // autre montrerait l'île d'un autre. Le comptoir se ferme en partant,
+  // comme le viseur.
+  carteOuverte=false;
   if(dedans){ dedans=false; posIle=null; majVue(); }
   if(slug==='me'||(monSlug&&slug===monSlug)){
     visiting=null; world=mine; replanter(mine);
@@ -5865,16 +6846,48 @@ async function go(slug){
   // distingue rien.
   document.title = visiting ? ((world.name||'Une île')+' · Dan’s Island') : 'Dan’s Island';
   camSauter();                            // on débarque, on ne glisse pas
+  // Le quatrième pas du guide, c'est **être** chez quelqu'un. Il se coche
+  // ici, avant le message d'arrivée, pour que les deux tiennent dans une
+  // seule bulle : deux messages coup sur coup, c'est le premier perdu.
+  const finDuGuide = visiting && guidePas===4;
+  if(finDuGuide) finirLeGuide(false);
   hudSync(); buildAll();
-  if(visiting) say('Tu d\u00e9barques chez <b>'+esc(world.owner)+'</b>. Marche, lis, laisse un mot — mais tu ne peux rien changer.');
+  if(visiting) say('Tu d\u00e9barques chez <b>'+esc(world.owner)+'</b>. Marche, lis, laisse un mot — mais tu ne peux rien changer.'
+    + (finDuGuide ? ' <b>Tu sais tout</b> : le reste se d\u00e9couvre en marchant.' : ''),
+    null, finDuGuide ? 7000 : 0);
 }
 function majURL(chemin){
   try{ if(location.pathname!==chemin) history.pushState({},'',chemin); }catch(e){}
 }
 addEventListener('popstate',()=>{ routerDepuisURL(); });
+// Ce qu'il y a avant l'île dans l'adresse, et pourquoi.
+//
+//   /dan            le jeu, chez Dan. C'est l'adresse qu'on partage.
+//   /island/dan     la page publique de l'île : du texte qu'un robot lit,
+//                   un aperçu, et deux boutons. Servie par une fonction
+//                   Cloudflare (voir functions/), jamais par cette page.
+//   /carte/dan      la carte postale de Dan, même chose.
+//
+// Si les fonctions ne sont pas déployées, le catch-all de `_redirects`
+// ramène les deux dernières ici : on ouvre l'île, c'est ce qu'on venait
+// voir, et on retient le parrainage au passage. Une adresse partagée ne
+// doit jamais tomber sur une page blanche.
 function routerDepuisURL(){
-  const slug=location.pathname.replace(/^\/+|\/+$/g,'').toLowerCase();
-  go(slug||'me');
+  const brut=location.pathname.replace(/^\/+|\/+$/g,'').toLowerCase();
+  const pub=brut.match(/^(?:island|ile|carte)\/([a-z0-9][a-z0-9-]{1,23})$/);
+  if(pub){ capterParrain(pub[1]); majURL('/'+pub[1]); go(pub[1]); return; }
+  go(brut||'me');
+}
+// `?de=<slug>` est ce que portent les liens de la carte postale et des
+// pages publiques. On le retient et on le retire de la barre d'adresse :
+// il a fait son travail, et une adresse d'île doit rester lisible.
+function capterLaQuery(){
+  if(!location.search) return;
+  try{
+    const q=new URLSearchParams(location.search);
+    if(q.get('de')) capterParrain(q.get('de'));
+    history.replaceState({},'',location.pathname);
+  }catch(e){}
 }
 let sousAffiches=null;              // le dernier chiffre montré, pour voir la hausse
 function hudSync(){
@@ -5946,7 +6959,11 @@ peindreSon();
 function buildAll(){
   const ouvert=document.querySelector('.panel.on');
   const y=ouvert?ouvert.scrollTop:0;
-  buildToi(); buildMaison(); buildIle(); buildDedans(); buildVoisins(); buildBoutique(); hudSync();
+  buildToi(); buildMaison(); buildIle(); buildVoisins(); buildBoutique(); hudSync();
+  // Le guide et l'invitation vivent hors des panneaux, au-dessus des
+  // onglets : ils se repeignent avec le reste plutôt que d'avoir leur
+  // propre horloge.
+  peindreGuide(); peindreInvite();
   if(ouvert&&y) ouvert.scrollTop=y;
 }
 buildAll();
