@@ -4402,11 +4402,20 @@ function proximity(){
   });
   souvenirProche = (visiting && objet) ? objet : null;
   const bulle=(k,html)=>{ if(wLock!==k) say(html,k); };
-  if(panneau){ bulle('sign'+panneau.x+'-'+panneau.y,
+  // Ces deux branches sortent avant le ménage de la fin : elles doivent
+  // donc dire elles-mêmes ce que porte la plaque rose. Sans ça, elle garde
+  // le libellé d'avant — « Déposer la commande » devant un objet du voisin —
+  // et elle annonce un geste pendant qu'`agir()` en fait un autre. C'est ce
+  // que le commentaire au-dessus d'`agir()` interdit. Le souvenir était le
+  // seul geste du jeu sans plaque : injoignable au doigt, alors que la bulle
+  // réclamait une touche que le téléphone n'a pas.
+  if(panneau){ boutonRose(null);
+    bulle('sign'+panneau.x+'-'+panneau.y,
     '<b>'+esc(panneau.by)+'</b> a écrit : « '+esc(panneau.txt)+' »'); return; }
-  if(souvenirProche){ bulle('souv'+objet.x+'-'+objet.y,
+  if(souvenirProche){ boutonRose('Ramener un souvenir');
+    bulle('souv'+objet.x+'-'+objet.y,
     'Un<span></span> <b>'+(NOM_OBJ[objet.t]||'objet')+'</b> de chez '+esc(world.owner)+
-    '. Appuie sur <b>E</b> pour en ramener un souvenir.'); return; }
+    '. Appuie sur <b>E</b> ou touche le bouton rose pour en ramener un souvenir.'); return; }
   // Le chien : le sortir, ou le ramener quand on renonce en cours de route.
   if(!visiting){
     if(balade){
@@ -4430,7 +4439,10 @@ function proximity(){
     }
     return;
   }
-  if(objet&&objet.de){ bulle('souv'+objet.x+'-'+objet.y,
+  // Même cas, chez soi : un souvenir rapporté se regarde, il ne se ramasse
+  // pas. Rien à faire, donc pas de plaque — et surtout pas celle d'avant.
+  if(objet&&objet.de){ boutonRose(null);
+    bulle('souv'+objet.x+'-'+objet.y,
     'Souvenir rapporté de chez <b>'+esc(objet.de)+'</b>.'); return; }
   // La porte de la maison. Elle n'ouvre que chez soi : c'est une règle de
   // jeu, pas un secret : `interieur` voyage dans le même jsonb que le reste.
