@@ -1,0 +1,105 @@
+# ============================================================
+#  Déployer sur Cloudflare Pages, sans dépendre de l'intégration Git.
+#
+#  Pourquoi ce fichier existe : le 18/09/2026, la production a cessé d'être
+#  redéployée. Mesuré depuis un runner — `dansisland.app` et
+#  `dansisland.pages.dev` servaient tous deux l'ancienne page, et
+#  `main.dansisland.pages.dev` répondait « Deployment Not Found », donc
+#  aucun déploiement n'existait pour `main`. Ce n'était ni le DNS, ni le
+#  cache, ni le contenu du dépôt : **le build ne se déclenchait plus**.
+#
+#  Une intégration Git qui décroche est muette : rien dans le dépôt ne le
+#  dit, aucun e-mail ne part, et on s'en aperçoit en regardant le site des
+#  jours plus tard. Ce workflow rend le déploiement **explicite** : il est
+#  ici, il se lit, il laisse un log, et il échoue bruyamment.
+#
+#  Il ne remplace pas forcément l'intégration Git — si elle repart, les
+#  deux coexistent sans dommage (deux déploiements du même contenu). Mais
+#  il ne dépend plus d'elle.
+#
+#  CE QU'IL FAUT LUI DONNER, et une seule fois :
+#
+#    Settings → Secrets and variables → Actions → New repository secret
+#
+#      CLOUDFLARE_API_TOKEN    un jeton avec la permission
+#                              « Cloudflare Pages: Edit » sur ce compte
+#      CLOUDFLARE_ACCOUNT_ID   l'identifiant de compte, visible dans l'URL
+#                              du tableau de bord Cloudflare
+#
+#  Ils restent chez GitHub : personne ne les lit, ils ne passent pas dans
+#  les logs, et ils ne sont pas dans ce dépôt. Sans eux, le job s'arrête
+#  au premier pas en disant exactement ce qui manque — plutôt que d'aller
+#  échouer plus loin sur une erreur d'authentification illisible.
+# ============================================================
+name: Déployer
+
+on:
+  push:
+    branches: [main]
+  # Pour redéployer sans rien changer au code — après avoir réglé quelque
+  # chose côté Cloudflare, par exemple.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Deux pushes rapprochés ne doivent pas déployer dans le désordre : le
+# dernier gagne, et on ne coupe pas un déploiement en cours.
+concurrency:
+  group: deployer-pages
+  cancel-in-progress: false
+
+jobs:
+  deployer:
+    name: Construire dist/ et le publier
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Les secrets sont-ils là ?
+        env:
+          JETON: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          COMPTE: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          manque=0
+          [ -z "${JETON:-}" ]  && { echo "❌ Secret manquant : CLOUDFLARE_API_TOKEN";  manque=1; }
+          [ -z "${COMPTE:-}" ] && { echo "❌ Secret manquant : CLOUDFLARE_ACCOUNT_ID"; manque=1; }
+          if [ "$manque" = "1" ]; then
+            echo ""
+            echo "Settings → Secrets and variables → Actions → New repository secret."
+            echo "Le jeton demande la permission « Cloudflare Pages: Edit »."
+            echo "L'identifiant de compte se lit dans l'URL du tableau de bord."
+            {
+              echo "❌ **Déploiement impossible** — il manque un secret."
+              echo ""
+              echo "À ajouter dans *Settings → Secrets and variables → Actions* :"
+              echo "- \`CLOUDFLARE_API_TOKEN\` (permission « Cloudflare Pages: Edit »)"
+              echo "- \`CLOUDFLARE_ACCOUNT_ID\` (visible dans l'URL du tableau de bord)"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "✅ Les deux secrets sont présents."
+
+      # `build.sh` est la seule définition de ce qui est public. On ne
+      # recopie pas sa liste ici : deux listes qui divergent, et un fichier
+      # part en ligne sans qu'on l'ait voulu — ou n'y part pas.
+      - name: Préparer dist/
+        run: |
+          bash build.sh
+
+      - name: Publier sur Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=dansisland --branch=main
+
+      - name: Ce qu'il faut savoir ensuite
+        if: success()
+        run: |
+          {
+            echo "✅ **Publié** sur le projet Pages \`dansisland\`, branche \`main\`."
+            echo ""
+            echo "Le workflow **Vérifier le déploiement** dit dans la minute si"
+            echo "le site porte bien cette version."
+          } >> "$GITHUB_STEP_SUMMARY"
