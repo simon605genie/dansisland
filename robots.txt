@@ -1,0 +1,12 @@
+# Dan's Island — un jeu de détente. https://dansisland.app
+#
+# Tout est ouvert : les îles sont publiées par leurs propriétaires, et une
+# île qu'on ne peut pas trouver ne reçoit pas de visite. Ce qui n'est pas
+# publié n'est pas servi — c'est la RLS qui s'en charge, pas ce fichier.
+
+User-agent: *
+Allow: /
+
+# Le plan du site est fabriqué à la demande depuis l'archipel
+# (functions/sitemap.xml.js) : une île créée aujourd'hui y est aujourd'hui.
+Sitemap: https://dansisland.app/sitemap.xml

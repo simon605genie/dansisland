@@ -16,17 +16,27 @@ depuis le 17/09/2026.
     manifest.webmanifest  l'île ajoutable à l'écran d'accueil, plein écran, paysage
     icone-*.png           les icônes de l'app, tirées du logo SVG du site
     apple-touch-icon.png  la même, pour l'écran d'accueil iOS
+    robots.txt          tout ouvert, et l'adresse du plan du site
     src/config.js       URL et clé publishable Supabase
     src/store.js        seule couche qui parle à Supabase
+    functions/          les pages publiques (Cloudflare Pages Functions)
+      island/[slug].js    /island/<slug> — la page d'une île, indexable
+      carte/[slug].js     /carte/<slug>  — la carte postale reçue
+      sitemap.xml.js      /sitemap.xml   — l'archipel, à la demande
+      _commun.js          la maquette, la lecture de l'archipel, l'échappement
     supabase/schema.sql tables, RLS, vue archipel — idempotent
     supabase/2026-09-16_grille18.sql  migration à jouer une seule fois
     supabase/2026-09-16_bourse_serveur.sql  la bourse quitte le jsonb — rejouable
     supabase/2026-09-17_maree.sql     la marée — rejouable
     supabase/2026-09-17_commande.sql  la commande du jour et le sac, rejouable
+    supabase/2026-09-18_visites.sql   le crédit du jour quitte le mur, rejouable
+    supabase/2026-09-18_parrainage.sql  le parrainage et les réglages, rejouable
     _redirects          Cloudflare Pages : catch-all, toute adresse sert index.html
     build.sh            copie dans dist/ les seuls fichiers à publier
 
-Pas de build : ce sont des modules ES servis tels quels.
+Pas de build : ce sont des modules ES servis tels quels. `functions/` n'est
+**pas** copié dans `dist/` — Cloudflare Pages lit les Functions à la racine
+du dépôt, et copiées dans la sortie elles seraient servies comme du texte.
 
 ## Le projet Supabase
 
@@ -74,6 +84,29 @@ contre le projet, sans compte, par les fonctions ouvertes à `anon` :
   « new row violates row-level security policy »). Le vide de policy fait
   bien ce qu'on attend de lui, mesuré et pas supposé.
 
+`supabase/2026-09-18_parrainage.sql` **n'est pas encore joué** : il a été
+écrit sans Postgres ni réseau sous la main. Il est rejouable, et tout ce
+qu'il apporte dégrade proprement tant qu'il n'est pas passé —
+`parrainer()` et `parrainage()` n'existent pas, le client attrape
+l'erreur, **garde le code de parrainage pour la prochaine fois** et
+affiche les récompenses portées en dur (25 / 15). Rien ne se perd, rien ne
+se paie deux fois : le serveur refuse le second appel.
+
+À jouer dans l'éditeur SQL du projet **dansisland** (vérifier que l'en-tête
+affiche « dansisland » et pas « mamash's project ») :
+<https://supabase.com/dashboard/project/cgputbitzfgokpwbbind/sql/new>
+
+Ce qu'il faut vérifier après coup, comme pour les précédentes :
+
+```sql
+select public.parrainage();                    -- {"parrain":25,"filleul":15}
+select public.economie() -> 'gains';           -- doit porter parrainage et bienvenue
+select * from public.reglages order by k;      -- trois lignes
+select public.parrainer('dan');                -- « connecte-toi » en anon, pas « does not exist »
+insert into public.parrainages (filleul,parrain,code) values (gen_random_uuid(),gen_random_uuid(),'x');
+                                               -- doit être refusé en 42501
+```
+
 `supabase/2026-09-16_bourse_serveur.sql` **est joué**. Il n'a pas pu
 l'être le jour où il a été écrit, faute de Postgres sous la main, et le
 README a longtemps dit qu'il attendait encore. Deux choses le démentent :
@@ -85,6 +118,26 @@ reprendre.
 
 Pas encore éprouvé :
 
+- **Le parrainage de bout en bout.** Comme les visites payantes et la
+  livraison, il demande deux comptes : un qui invite, un qui crée son île
+  depuis le lien. Le crédit du filleul se voit tout de suite (la note
+  « +15 shells de bienvenue » au-dessus des onglets) ; celui du parrain ne
+  se vérifie qu'en se reconnectant avec l'autre compte. Et il demande
+  d'abord que `2026-09-18_parrainage.sql` soit joué.
+- **Les pages publiques servies par Cloudflare.** Elles ont été éprouvées
+  hors ligne, fonction par fonction, avec une base simulée : titre,
+  description, OpenGraph, échappement de `?m=`, repli en `next()` sur une
+  île inconnue ou un slug mal formé, et un plan de site qui écarte les
+  slugs invalides. Ce qui reste à vérifier est **le déploiement** : que
+  Pages lise bien `functions/` à la racine du dépôt malgré la commande de
+  build. Un `curl` sur `/island/dan` après le premier déploiement tranche
+  en une seconde. Si ça ne passe pas, le catch-all ramène ces adresses sur
+  le jeu et rien n'est cassé.
+- **Le partage natif de la carte postale.** `navigator.share({files})`
+  n'existe pas dans un navigateur piloté sans contexte sécurisé ni geste
+  d'utilisateur réel : le dessin de la carte, le découpage et le repli
+  (enregistrement + lien copié) ont été éprouvés, l'envoi lui-même demande
+  un vrai téléphone. Le repli, lui, ne dépend de rien.
 - **La livraison en vrai.** Comme les visites payantes, elle demande deux
   comptes : un qui porte, un qui reçoit. Le crédit du porteur se voit tout
   de suite dans le murmure ; celui de l'hôte ne se vérifie qu'en se
@@ -131,6 +184,63 @@ n'est plus modifiable depuis l'interface. Ça se fait en SQL.
 ```sql
 update public.iles set slug = 'nouveau' where slug = 'ancien';
 ```
+
+## L'entrée, la carte postale, le parrainage — 18/09/2026
+
+Le jeu se présente maintenant comme ce qu'il est : **un jeu de détente**.
+On arrive sur un accueil qui dit une phrase — « Ton petit endroit pour
+ralentir » — et pose deux portes : *Créer mon île* et *Visiter l'île de
+Dan*. Le jeu tourne derrière, flouté : la mer bouge, les mouettes passent.
+Puis un guide de quatre pas — bonhomme, maison, île, visite — se coche
+tout seul au fur et à mesure qu'on les fait, et s'efface pour de bon.
+
+La barre est passée de six onglets à cinq : **Moi · Maison · Île · Voisins
+· Boutique**. « Dedans » n'en est plus un — on entre en marchant sur le
+seuil, par `E`, par le bouton rose, ou par **🚪 Entrer** dans le panneau
+Maison, et c'est ce panneau qui devient l'atelier des pièces une fois la
+porte franchie.
+
+La **carte postale** est devenue l'objet qu'on envoie : une image de l'île
+avec son nom, son adresse, un timbre et une phrase de soi. Sur téléphone,
+le partage natif met la **vraie image** dans la conversation WhatsApp ;
+partout ailleurs il reste `wa.me`, le lien à copier et l'image à
+enregistrer. Le lien mène à `/carte/<slug>`, une page publique qui montre
+la carte, l'île, et propose de créer la sienne.
+
+Et **ton adresse est ton code de parrainage** : qui crée son île en
+arrivant par ton lien te rapporte des shells, et en reçoit autant. Les
+montants vivent dans la table `reglages` et se changent par une ligne de
+SQL, sans redéployer.
+
+Quatre choses de plus bougent toutes seules, et aucune ne touche à l'état
+du jeu : un voilier passe au large, des papillons volent le jour, des
+lucioles la nuit, et une étoile filante traverse le ciel de temps en
+temps.
+
+## Ce qu'un robot voit
+
+Le jeu est une seule page peinte dans un canvas, et `_redirects` la sert à
+toutes les adresses : Google et WhatsApp voyaient donc le même titre et la
+même vignette pour toutes les îles. Trois Cloudflare Pages Functions
+écrivent maintenant de vraies pages HTML côté serveur :
+
+- `/island/<slug>` — le nom de l'île, son propriétaire, son livre d'or, un
+  aperçu SVG dans **ses** couleurs, et deux boutons ;
+- `/carte/<slug>` — la carte postale reçue, avec la phrase de l'expéditeur
+  (elle voyage dans `?m=`, et nulle part ailleurs) ;
+- `/sitemap.xml` — l'archipel, fabriqué à la demande depuis la vue
+  `archipel` : une île créée aujourd'hui y est aujourd'hui.
+
+Chacune porte son `title`, sa `meta description`, son `canonical`, ses
+balises OpenGraph et Twitter, et ses données structurées. `robots.txt`
+ouvre tout et donne l'adresse du plan.
+
+**Si les Functions ne sont pas servies** (réglage Cloudflare, dossier au
+mauvais endroit), rien ne casse : le catch-all ramène ces adresses sur le
+jeu, qui sait les ouvrir et retient le parrainage au passage. On perd
+l'aperçu de lien, pas la visite. **À vérifier après le premier
+déploiement** : `curl -s https://dansisland.app/island/dan | head -5` doit
+rendre la page publique, pas `index.html`.
 
 ## Mise en route en local
 

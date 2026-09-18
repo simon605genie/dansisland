@@ -220,6 +220,37 @@ export async function economie() {
   return data || {};
 }
 
+/* ---------------- le parrainage ----------------
+   Une carte postale part, quelqu'un la reçoit, et parfois il crée son île.
+   `parrainer()` est le seul chemin : le client donne le slug qu'il a
+   suivi, le serveur vérifie que l'île du filleul existe vraiment, refuse
+   l'auto-parrainage et le second, et crédite les deux comptes.
+
+   Elle ne lève pas d'exception pour un refus ordinaire (code inconnu,
+   déjà parrainé) : elle rend `{ok:false, pourquoi}`. Créer son île ne
+   doit pas échouer parce qu'on est arrivé par un lien périmé. */
+export async function parrainer(code) {
+  const { data, error } = await sb.rpc('parrainer', { code });
+  if (error) throw error;
+  return data || { ok: false };
+}
+
+// Ce que valent les deux récompenses. Lisible sans compte : la page
+// publique d'une carte postale l'annonce avant qu'on se connecte.
+export async function parrainage() {
+  const { data, error } = await sb.rpc('parrainage');
+  if (error) throw error;
+  return data || {};
+}
+
+// Combien d'îles sont nées de tes cartes postales. Un chiffre, pas une
+// liste de noms.
+export async function mesFilleuls() {
+  const { data, error } = await sb.rpc('mes_filleuls');
+  if (error) throw error;
+  return Number(data) || 0;
+}
+
 /* ---------------- livre d'or ---------------- */
 
 export async function motsDe(ileId) {
