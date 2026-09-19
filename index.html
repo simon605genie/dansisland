@@ -5639,7 +5639,14 @@ const DRAWT={
 function apercuTrouvaille(g,k,pale){
   g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,60,60);
   g.save(); g.translate(30,36); g.scale(1.25,1.25);
-  if(pale) g.globalAlpha=0.22;
+  // 0,22 disait bien « tu ne l'as pas », mais il disait surtout « tu ne
+  // verras pas quoi chercher » : dans le panneau Voisins, ces deux
+  // vignettes sont la **seule** image de ce que la mer laisse sur le sable,
+  // et c'est exactement ce qu'on part chercher. L'étiquette dessous porte
+  // déjà l'état en toutes lettres (« il en faut un ») ; la vignette, elle,
+  // doit rester reconnaissable. 0,55 garde la différence sans effacer le
+  // dessin.
+  if(pale) g.globalAlpha=0.55;
   (DESSIN_TROUVAILLE[k]||DESSIN_TROUVAILLE.coquillage)(g);
   g.restore();
 }
