@@ -201,6 +201,17 @@ a{color:var(--link)}
      partagent une ligne. */
   .compte{font-size:12px; gap:6px}
   .compte>span{flex:1 1 100%; line-height:1.35}
+  /* …mais une fois qu'il n'y a plus de champ, cette pleine largeur n'a plus
+     de raison d'être : elle empilait cinq rangées — nom, adresse, Copier,
+     état, Se déconnecter — soit **167 px**, sur un téléphone où le cadre du
+     jeu n'en fait que 234. La carte faisait les trois quarts de la taille
+     du jeu, pour dire au joueur sa propre adresse.
+
+     Elles se remettent donc à la file, et rien ne disparaît : en portrait
+     il y a la place pour deux rangées, et l'adresse de l'île est ce qu'on
+     partage. C'est l'écran couché, et lui seul, qui doit en plus cacher ce
+     qui existe ailleurs — sa colonne ne fait que 235 px. */
+  .compte.pose>span{flex:0 1 auto}
   .compte input[type=text],.compte input[type=email]{min-width:0; flex:1 1 110px; font-size:13.5px; padding:8px 10px}
   .compte .btn{font-size:13px; padding:8px 11px}
   .tabs button{font-size:10.5px; padding:12px 0; letter-spacing:-.01em}
@@ -581,12 +592,28 @@ textarea{
    des onglets parce que c'est là que se trouve ce qu'il demande, et il
    s'efface pour de bon au dernier pas. Pas de fenêtre modale, pas de
    surbrillance qui suit le doigt : le jeu se refuse ça partout ailleurs. */
-/* `flex-wrap` et une base de 150 px sur le texte, et pas `flex:1` : avec
+/* `flex-wrap`, et une base large sur le texte plutôt que `flex:1` : avec
    une base de zéro, le texte se faisait écraser par les deux boutons et
    tombait à un mot par ligne — mesuré à 360 px, le bandeau prenait alors
    plus de place que le cadre du jeu. Avec le retour à la ligne, la phrase
-   tient sa largeur et ce sont les boutons qui descendent. */
+   tient sa largeur et ce sont les boutons qui descendent.
+
+   Cette base a d'abord valu 150 px, et « Suivant » et « Passer » tenaient
+   ensemble sur la seconde rangée grâce à une règle en
+   `@media (max-width:520px)`. Mais ce qui serre ce bandeau, c'est la
+   largeur du **panneau**, pas celle de la fenêtre : la colonne de droite
+   fait 360 px sur un écran de 1280, donc la règle ne se déclenchait jamais
+   là où elle servait. Mesuré : sur grand écran, « Passer » tombait seul
+   47 px sous « Suivant », et le bandeau montait à 105 px.
+
+   `--pasw` est la place que prend le numéro, **gouttière comprise**, et la
+   phrase prend exactement tout le reste de la première rangée. Les points
+   et les deux boutons descendent donc ensemble à *n'importe quelle*
+   largeur, sans qu'on ait à demander la sienne à qui que ce soit. La
+   valeur doit suivre `gap` et `.pas` — d'où la variable, redéclarée à
+   chaque palier, plutôt que le même nombre recopié trois fois. */
 .guide{
+  --pasw:35px;   /* 25 px de pastille + 10 px de gouttière */
   display:flex; flex-wrap:wrap; align-items:center; gap:7px 10px; padding:9px 12px;
   background:var(--sand); color:#0B3C5D; border-bottom:1px solid var(--line);
 }
@@ -595,7 +622,7 @@ textarea{
   flex:none; width:25px; height:25px; border-radius:50%; display:grid; place-items:center;
   background:#0B3C5D; color:#FDFBF0; font-family:"Baloo 2",sans-serif; font-weight:800; font-size:13px;
 }
-.guide .quoi{flex:1 1 150px; min-width:0; font-size:13.5px; line-height:1.35; font-weight:600}
+.guide .quoi{flex:1 1 calc(100% - var(--pasw)); min-width:0; font-size:13.5px; line-height:1.35; font-weight:600}
 .guide .quoi b{font-family:"Baloo 2",sans-serif}
 .guide button{
   flex:none; appearance:none; border:0; background:rgba(11,60,93,.12); color:#0B3C5D;
@@ -685,6 +712,23 @@ textarea{
      de la hauteur et les onglets commencent au milieu de l'écran. */
   #compte input{min-width:0; flex:1 1 70px; padding:5px 8px; font-size:12px}
   #compte .btn{font-size:11.5px; padding:5px 9px; white-space:nowrap}
+  /* Et une fois qu'il n'y a plus rien à saisir, elle se pose sur une seule
+     rangée. Mesuré à 780x360 : elle prenait **156 px des 360** de l'écran,
+     six enfants empilés par `#compte>span{flex:1 1 100%}` — deux fois ce
+     qui restait au panneau, qui n'avait plus que 73 px. On voyait trois
+     lignes d'atelier sous une carte qui ne sert qu'à dire qui on est.
+
+     Ce qui part est ce qui existe ailleurs : l'adresse de l'île et son
+     bouton de copie sont dans l'onglet Voisins, sous « 🔗 Copier mon
+     lien ». Ce qui reste est ce qui n'est nulle part ailleurs — le nom, la
+     pastille d'état et « Se déconnecter ».
+
+     Rien de tout ça ne touche l'état « il reste à saisir » : la carte s'y
+     étale comme avant, et **on se connecte toujours en paysage**, ce qui
+     est la raison d'être du `display:contents` sur `.stage`. */
+  #compte.pose{padding:4px 10px}
+  #compte.pose>span{flex:0 1 auto}
+  #compte.pose .redite{display:none}
   .viewport{
     grid-column:1; grid-row:1 / span 2; align-self:center;
     width:min(calc(100svh * 1.536), calc(100vw - 236px));
@@ -707,8 +751,8 @@ textarea{
   .tabs button:nth-child(3){border-right:0}
   /* Le guide et l'invitation tiennent moins de place quand l'écran est
      couché : ici la hauteur est tout ce qui manque. */
-  .guide{padding:6px 9px; gap:5px 7px}
-  .guide .quoi{flex:1 1 120px; font-size:11.5px}
+  .guide{--pasw:28px; padding:6px 9px; gap:5px 7px}   /* 21 + 7 */
+  .guide .quoi{font-size:11.5px}
   .guide button{font-size:11px; padding:4px 8px}
   .guide .pas{width:21px; height:21px; font-size:12px}
   .invite{margin:0; border-radius:0; padding:7px 10px; font-size:12px; gap:6px}
@@ -786,12 +830,14 @@ textarea{
 @media (orientation:portrait) and (pointer:coarse) and (max-width:640px){
   .tourne:not([hidden]){display:flex}
 }
-/* Le bandeau du guide, sur un écran étroit : le numéro s'en va (les quatre
-   points disent déjà où on en est) et la phrase prend sa ligne, pour que
-   « Suivant » et « Passer » tiennent ensemble sur la suivante. */
+/* Le bandeau du guide, sur un écran étroit : le numéro s'en va, les quatre
+   points disent déjà où on en est. Ce palier ne s'occupe plus que de ça —
+   « Suivant » et « Passer » tiennent ensemble à toutes les largeurs depuis
+   que la phrase prend le reste de sa rangée, plus haut. `--pasw` tombe donc
+   à zéro avec la pastille qu'il mesurait. */
 @media (max-width:520px){
+  .guide{--pasw:0px}
   .guide .pas{display:none}
-  .guide .quoi{flex:1 1 100%}
 }
 
 </style>
@@ -1392,6 +1438,18 @@ let GAIN_MOT_POSE=2, GAIN_MOT_RECU=5;
 let GAIN_COMMANDE=6, GAIN_COMMANDE_RECUE=8;
 // Le catalogue. `ou` dit dans quel atelier l'objet réapparaît une fois
 // acheté : c'est la seule chose qui distingue un objet d'île d'un meuble.
+/* La vitrine, rayon par rayon, et **chaque rayon par prix croissant** :
+   c'est ce que l'œil suit en descendant la liste, et un prix qui revient en
+   arrière se lit comme une erreur. Les trois chers (girouette, carillon,
+   boîte aux lettres) avaient été ajoutés à la fin du rayon « île », donc
+   après la montgolfière à 60 : 42, 50 et 55 après 60. Remis à leur place.
+
+   Ces trois-là ne décorent pas, ils font quelque chose, et ce qu'ils font
+   était jusqu'ici enfermé dans un panneau. Aucun ne rapporte un shell et
+   aucun ne touche à un plafond — faire monter un gain avec un achat revient
+   à vendre de la monnaie, c'est écrit depuis le 16/09. Ce qu'ils coûtent
+   vraiment est en SQL, dans `catalogue` ; ce qui est ici n'est qu'un
+   affichage de secours. */
 const BOUTIQUE=[
   {ou:'ile',   k:'chat',        n:'Chat',              prix:12, c:'#E4A95C', d:'Il s’assied où il veut et ne s’en excuse pas.'},
   {ou:'ile',   k:'herisson',    n:'Hérisson',          prix:14, c:'#8B6F4E', d:'Il traverse la pelouse sans se presser.'},
@@ -1407,16 +1465,12 @@ const BOUTIQUE=[
   {ou:'ile',   k:'boutique',    n:'Échoppe',           prix:35, c:'#FDFBF2', d:'Un auvent rayé, et l’île a un centre.'},
   {ou:'ile',   k:'toboggan',    n:'Toboggan',          prix:38, c:'#45CFE8', d:'Une échelle, une glissade, on recommence.'},
   {ou:'ile',   k:'moulin',      n:'Moulin',            prix:40, c:'#FDFBF2', d:'On le voit de loin. C’est tout l’intérêt.'},
+  {ou:'ile',   k:'girouette',   n:'Girouette',         prix:42, c:'#8F98A6', d:'Elle tourne avec la mer. Va la voir, et elle te dit où en est la marée et dans combien de temps elle change.'},
   {ou:'ile',   k:'cabane',      n:'Cabane perchée',    prix:45, c:'#A9764A', d:'Une échelle, un plancher dans l’arbre, une fenêtre allumée.'},
   {ou:'ile',   k:'statue',      n:'Statue',            prix:50, c:'#D9CDB4', d:'En pierre, le bras levé, pour longtemps.'},
-  {ou:'ile',   k:'montgolfiere',n:'Montgolfière',      prix:60, c:'#F48CA8', d:'Amarrée au sol, mais elle y pense.'},
-  // Les trois chers. Ils ne décorent pas : ils font quelque chose, et ce
-  // qu'ils font était jusqu'ici enfermé dans un panneau. Aucun ne rapporte
-  // un shell et aucun ne touche à un plafond — faire monter un gain avec un
-  // achat revient à vendre de la monnaie, c'est écrit depuis le 16/09.
-  {ou:'ile',   k:'girouette',   n:'Girouette',         prix:42, c:'#8F98A6', d:'Elle tourne avec la mer. Va la voir, et elle te dit où en est la marée et dans combien de temps elle change.'},
   {ou:'ile',   k:'carillon',    n:'Carillon',          prix:50, c:'#D9CDB4', d:'Cinq tubes et un peu de vent. Il sonne tout seul, de loin en loin — et tes visiteurs l’entendent aussi.'},
   {ou:'ile',   k:'boitelettres',n:'Boîte aux lettres', prix:55, c:'#B44C6C', d:'Le drapeau se lève quand on t’a laissé un mot. Va la relever, et tu lis ce qu’on t’a écrit sans ouvrir un panneau.'},
+  {ou:'ile',   k:'montgolfiere',n:'Montgolfière',      prix:60, c:'#F48CA8', d:'Amarrée au sol, mais elle y pense.'},
   {ou:'dedans',k:'tapisrond',   n:'Tapis rond',        prix:12, c:'#F48CA8', d:'Deux cases au sol, sous tout le reste.'},
   {ou:'dedans',k:'guirlande',   n:'Guirlande',         prix:14, c:'#F4D6A0', d:'Cinq ampoules le long du mur.'},
   {ou:'dedans',k:'bibliotheque',n:'Bibliothèque',      prix:20, c:'#8B5E3C', d:'Trois rangs de livres, et personne pour les ranger.'},
@@ -1424,10 +1478,10 @@ const BOUTIQUE=[
   {ou:'dedans',k:'tele',        n:'Télévision',        prix:30, c:'#3F4A52', d:'Elle passe toujours la même chose.'},
   {ou:'dedans',k:'aquarium',    n:'Aquarium',          prix:35, c:'#8B5E3C', d:'Deux poissons qui ne s’arrêtent jamais.'},
   {ou:'dedans',k:'piano',       n:'Piano',             prix:45, c:'#2A3238', d:'Douze touches noires, et le couvercle fermé.'},
+  {ou:'toi',   k:'compagnon',   n:'Compagnon',         prix:20, c:'#E4A95C', d:'Le chien, le crabe ou la mouette te suit partout, même chez les voisins. Ils sont déjà à toi ; ça se choisit dans l’onglet Toi.'},
   {ou:'toi',   k:'bottes',      n:'Bottes',            prix:25, c:'#B44C6C', d:'Tu marches un tiers plus vite, dehors comme dedans.'},
-  {ou:'toi',   k:'moteur',      n:'Tondeuse à moteur', prix:45, c:'#2E7D5B', d:'Elle tond les quatre cases voisines en passant.'},
   {ou:'toi',   k:'appareil',    n:'Appareil photo',    prix:28, c:'#3F4A52', d:'Un viseur, un déclencheur, et l’album qui va avec.'},
-  {ou:'toi',   k:'compagnon',   n:'Compagnon',         prix:20, c:'#E4A95C', d:'Le chien, le crabe ou la mouette te suit partout, même chez les voisins. Ils sont déjà à toi ; ça se choisit dans l’onglet Toi.'}
+  {ou:'toi',   k:'moteur',      n:'Tondeuse à moteur', prix:45, c:'#2E7D5B', d:'Elle tond les quatre cases voisines en passant.'}
 ];
 // Le rayon « Pour toi » ne vend pas des objets à poser mais ce que le
 // bonhomme sait faire. Rien n'entre dans `objects` ni dans les meubles :
@@ -2507,10 +2561,10 @@ function dessinDe(g,t,col,o,etat){
   (DRAW[t]||DRAW.rocher)(g,col,etat); g.restore();
 }
 const OBJ_GROUPS=[
-  ['Nature',[['arbre','Arbre à fleurs'],['palmier','Palmier'],['sapin','Sapin'],['buisson','Buisson'],['cactus','Cactus'],['fleur','Fleur'],['rocher','Rocher'],['mare','Mare aux canards'],['puits','Puits']]],
-  ['Village',[['boutique','Échoppe'],['phare','Phare'],['ponton','Ponton'],['lampe','Lampadaire'],['banc','Banc'],['barriere','Barrière'],['cloture','Clôture'],['coffre','Coffre'],['fontaine','Fontaine'],['moulin','Moulin'],['statue','Statue'],['girouette','Girouette'],['carillon','Carillon'],['boitelettres','Boîte aux lettres']]],
-  ['Dehors',[['feudecamp','Feu de camp'],['hamac','Hamac'],['tente','Tente'],['balancoire','Balançoire'],['toboggan','Toboggan'],['cabane','Cabane perchée'],['montgolfiere','Montgolfière']]],
-  ['Bestioles',[['chien','Chien'],['tortue','Tortue'],['crabe','Crabe'],['mouette','Mouette'],['chat','Chat'],['herisson','Hérisson'],['renard','Renard']]]
+  ['Nature',[['arbre','Arbre à fleurs'],['palmier','Palmier'],['sapin','Sapin'],['buisson','Buisson'],['cactus','Cactus'],['fleur','Fleur','f'],['rocher','Rocher'],['mare','Mare aux canards','f'],['puits','Puits']]],
+  ['Village',[['boutique','Échoppe','f'],['phare','Phare'],['ponton','Ponton'],['lampe','Lampadaire'],['banc','Banc'],['barriere','Barrière','f'],['cloture','Clôture','f'],['coffre','Coffre'],['fontaine','Fontaine','f'],['moulin','Moulin'],['statue','Statue','f'],['girouette','Girouette','f'],['carillon','Carillon'],['boitelettres','Boîte aux lettres','f']]],
+  ['Dehors',[['feudecamp','Feu de camp'],['hamac','Hamac'],['tente','Tente','f'],['balancoire','Balançoire','f'],['toboggan','Toboggan'],['cabane','Cabane perchée','f'],['montgolfiere','Montgolfière','f']]],
+  ['Bestioles',[['chien','Chien'],['tortue','Tortue','f'],['crabe','Crabe'],['mouette','Mouette','f'],['chat','Chat'],['herisson','Hérisson'],['renard','Renard']]]
 ];
 
 function drawHouse(c,h,t){
@@ -4128,7 +4182,7 @@ cv.addEventListener('click',e=>{
 function tournerSurIle(x,y){
   const o=(world.objects||[]).find(k=>k.t!=='panneau'&&k.x===x&&k.y===y);
   if(!o){ say('Rien à tourner ici.'); return; }
-  if(!PIVOT_ILE[o.t]){ say('Un<span></span> <b>'+(NOM_OBJ[o.t]||'objet')+'</b> n’a pas de sens : il est pareil des deux côtés.'); return; }
+  if(!PIVOT_ILE[o.t]){ say(unObjet(o.t,true,true)+' n’a pas de sens : il est pareil des deux côtés.'); return; }
   memoriser(); o.o = o.o==='sw' ? 'se' : 'sw'; son('poser'); saveMine(); buildAll();
 }
 // La maison se pose au clic, comme le reste. Quatre flèches qui suivent les
@@ -4142,7 +4196,7 @@ function poserMaison(x,y){
   const gene=(mine.objects||[]).find(o=>cases.some(c=>c[0]===o.x&&c[1]===o.y));
   if(gene){ say(gene.t==='panneau'
     ? 'Un mot du livre d’or est planté là. Choisis un autre endroit.'
-    : 'Il y a un<span></span> <b>'+(NOM_OBJ[gene.t]||'objet')+'</b> sous la maison. Efface-le d’abord.'); return; }
+    : 'Il y a '+unObjet(gene.t,false,true)+' sous la maison. Efface-le d’abord.'); return; }
   if(h.x===x&&h.y===y) return;
   memoriser(); h.x=x; h.y=y; saveMine(); son('poser');
   // Le bonhomme ne doit pas se retrouver enfermé dans les murs.
@@ -5261,10 +5315,37 @@ function say(msg,lock,duree){
 // Le nom lisible de chaque objet, pris dans les mêmes listes que les boutons :
 // deux listes qui divergent, c'est un objet qui n'a pas le même nom selon l'endroit.
 const NOM_OBJ={}; OBJ_GROUPS.forEach(g=>g[1].forEach(o=>{ NOM_OBJ[o[0]]=o[1].toLowerCase(); }));
+/* Le genre est une propriété du **type**, dans le catalogue — troisième
+   case de la ligne, `'f'` — exactement comme l'article d'une pièce vit dans
+   `PIECES`. Les deux consommateurs d'`OBJ_GROUPS` lisent par position
+   (`[v]`, `[v,n]`), donc une case de plus ne coûte rien.
+
+   Sans ça, trois phrases collaient « un » devant un nom variable, et **15
+   des 37 objets sont féminins** : « Un fleur de chez Lila » à chaque visite
+   chez un voisin, « Un échoppe », « Un tortue », « Un balançoire ». C'est le
+   même défaut que « Te voilà dans le chambre », au même endroit du même
+   raisonnement : un article en dur devant un nom qui change ne peut pas
+   être juste. Tout nouvel objet féminin doit porter son `'f'`. */
+const FEM_OBJ={}; OBJ_GROUPS.forEach(g=>g[1].forEach(o=>{ if(o[2]==='f') FEM_OBJ[o[0]]=1; }));
+// « un rocher », « une fleur ». `maj` pour un début de phrase, `gras` pour
+// mettre le nom en valeur sans emporter l'article avec lui.
+function unObjet(t,maj,gras){
+  const n=NOM_OBJ[t]||'objet', a=(FEM_OBJ[t]&&NOM_OBJ[t])?'une ':'un ';
+  return (maj?a.charAt(0).toUpperCase()+a.slice(1):a)+(gras?'<b>'+n+'</b>':n);
+}
+// « Ton chat », « Ta mouette ». Devant une voyelle, « ta » redevient
+// « ton » — aucune bestiole n'est dans ce cas aujourd'hui, mais la règle
+// est du français, pas un cas particulier de cette liste-ci.
+function tonObjet(t){
+  const n=NOM_OBJ[t]||'objet';
+  return ((FEM_OBJ[t] && !/^[aeiouyéèêàâîïôöûü]/i.test(n)) ? 'Ta ' : 'Ton ')+'<b>'+n+'</b>';
+}
 // Ce que le chien laisse n'est dans aucun rayon de l'atelier — il n'y a rien
 // à poser, il arrive tout seul — mais les messages ont besoin de son nom,
 // sinon la maison dit « il y a un objet sous la maison ».
-NOM_OBJ.crotte='crotte';
+// Elle n'est dans aucun rayon, donc son genre ne peut pas venir du
+// catalogue : il se pose ici, à côté de son nom, et pas ailleurs.
+NOM_OBJ.crotte='crotte'; FEM_OBJ.crotte=1;
 let souvenirProche=null;
 // Le bouton rose du cadre et la touche E sont le même geste. Il ne dit pas
 // toujours la même chose : ce qui est sous la main décide.
@@ -5360,7 +5441,7 @@ function proximity(){
     '<b>'+esc(panneau.by)+'</b> a écrit : « '+esc(panneau.txt)+' »'); return; }
   if(souvenirProche){ boutonRose('Ramener un souvenir');
     bulle('souv'+objet.x+'-'+objet.y,
-    'Un<span></span> <b>'+(NOM_OBJ[objet.t]||'objet')+'</b> de chez '+esc(world.owner)+
+    unObjet(objet.t,true,true)+' de chez '+esc(world.owner)+
     '. Appuie sur <b>E</b> ou touche le bouton rose pour en ramener un souvenir.'); return; }
   /* Le chien, puis ce qu'il a laissé.
 
@@ -5574,7 +5655,15 @@ function buildToi(){
   p.appendChild(chips('Regard','me.eyes',[['rond','Rond'],['joyeux','Joyeux'],['malin','Malin'],['calme','Calme'],['endormi','Endormi']]));
   p.appendChild(swatches('Tenue','me.outfit',CLOTH));
   p.appendChild(chips('Accessoire','me.acc',[['aucun','Aucun'],['chapeau','Chapeau'],['lunettes','Lunettes'],['couronne','Couronne'],['cape','Cape']]));
-  p.appendChild(hint('Les pastilles sont les couleurs de la charte. La pipette au bout de chaque rangée ouvre tout le spectre — c\'est ça, « tout est donnée ».'));
+  /* Cette phrase disait : « Les pastilles sont les couleurs de la charte.
+     La pipette au bout de chaque rangée ouvre tout le spectre — c'est ça,
+     "tout est donnée". » Trois mots de concepteur — charte, spectre, tout
+     est donnée — et une citation d'un slogan que le joueur n'a jamais lu.
+     C'est ce pour quoi la section de présentation sous le jeu a été
+     supprimée le 17/09, revenu par un panneau. Ce qui compte pour l'enfant,
+     c'est qu'il y a un bouton au bout de la rangée et qu'il donne toutes
+     les couleurs. */
+  p.appendChild(hint('Les pastilles sont des couleurs toutes prêtes. La pipette, au bout de chaque rangée, ouvre toutes les autres — la couleur exacte de tes cheveux, si tu veux.'));
 
   // L'équipement se voit ici, pas seulement dans la vitrine : un pouvoir
   // qu'on a acheté et qu'on ne retrouve nulle part finit par s'oublier.
@@ -5603,7 +5692,7 @@ function buildToi(){
     p.appendChild(chipsLibre('Ton compagnon',
       [['','Aucun']].concat(dispo.map(c=>[c[0],c[1]])),
       compagnonChoisi(), k=>{ mine.me.compagnon=k; saveMine(); majCompagnon(); buildAll();
-        say(k ? ('Ton <b>'+esc(NOM_OBJ[k]||k)+'</b> te suit maintenant partout, même chez les voisins.')
+        say(k ? (tonObjet(k)+' te suit maintenant partout, même chez les voisins.')
               : 'Tu marches seul.'); }));
     const manque=COMPAGNONS.filter(c=>!achete(c[0]));
     p.appendChild(hint(manque.length
@@ -5890,7 +5979,15 @@ function buildIle(){
   be.appendChild(e); be.appendChild(tr); fe.appendChild(be); p.appendChild(fe);
   p.appendChild(chipsLibre('Sens',[['se','\u2198 Vers la droite'],['sw','\u2199 Vers la gauche']],tool.orient,
     v=>{ tool.orient=v; buildAll(); }));
-  p.appendChild(hint('Le sens ne change que ce qui suit un axe : <b>banc</b>, <b>barrière</b>, <b>clôture</b>, <b>ponton</b>, <b>échoppe</b>, <b>balançoire</b>, <b>hamac</b>, <b>toboggan</b>, <b>tente</b>. Un arbre est pareil des deux côtés. <b>\u27f3 Tourner</b> retourne ce qui est déjà posé, sans l\'effacer.'));
+  /* La liste se **lit** dans `PIVOT_ILE`, elle ne se recopie pas. Elle était
+     écrite à la main juste ici, et elle disait exactement la bonne chose —
+     jusqu'au jour où un objet orientable serait ajouté sans que personne ne
+     pense à cette phrase. C'est le piège déjà nommé pour la vitrine et les
+     prix SQL : deux listes qui divergent, et le panneau annonce un geste que
+     l'objet ne fait pas. Ici il n'y en a plus qu'une. */
+  const axes=Object.keys(PIVOT_ILE).map(k=>'<b>'+(NOM_OBJ[k]||k)+'</b>').join(', ');
+  p.appendChild(hint('Le sens ne change que ce qui suit un axe : '+axes+
+    '. Un arbre est pareil des deux côtés. <b>\u27f3 Tourner</b> retourne ce qui est déjà posé, sans l\'effacer.'));
 
   const fc=field('Couleur de l\'objet'), bc=document.createElement('div'); bc.className='sw';
   OBJ_COLORS.forEach(c=>{
@@ -6652,10 +6749,28 @@ function buildVoisins(){
   p.appendChild(carteCommande());
   p.appendChild(rule());
 
-  /* La carte postale. Elle vient juste après la commande du jour — la
-     commande reste en tête parce que c'est la raison d'aller chez les
-     voisins **aujourd'hui**, et elle se périme à minuit. La carte, elle,
-     est la raison pour laquelle il y a des voisins tout court. */
+  /* La carte postale. Elle se **construit** ici mais se **pose** plus bas,
+     après l'archipel — d'où le fragment.
+
+     Elle venait juste après la commande, et c'était raisonné : la commande
+     est la raison d'y aller aujourd'hui, la carte la raison pour laquelle
+     il y a des voisins tout court. Ce qui manquait à ce raisonnement, c'est
+     la mesure. La commande, la carte et l'invitation font ensemble plus de
+     500 px, et la **première île** tombait à y=670 dans un panneau qui en
+     montre 660 sur grand écran, 656 dans 625 en portrait, 833 dans 73 en
+     paysage court : hors de vue dans les trois mises en page. On ouvrait
+     « Voisins » et on n'y voyait aucun voisin.
+
+     Pire au moment où ça compte le plus : le quatrième pas du guide dit
+     « va marcher sur l'île d'un autre », et le moyen de le faire était sous
+     un écran de texte. Et tant que le sac est vide — donc pour tout
+     nouveau venu — la commande ne propose personne, elle explique.
+
+     C'est le défaut déjà corrigé le 19/09 pour le bloc Compagnon, « à un
+     écran de défilement du haut » : **ce qu'un onglet est doit être en
+     haut de cet onglet.** La commande garde sa place, elle ; ce sont la
+     carte et l'invitation qui passent après les îles. */
+  const apres=document.createDocumentFragment();
   const fc=field('Ta carte postale');
   if(carteOuverte && !visiting){
     fc.appendChild(carteComptoir());
@@ -6671,9 +6786,9 @@ function buildVoisins(){
       ? 'Une carte postale montre <b>ton</b> île, pas celle de l’hôte. Rentre chez toi, et elle t’attend ici.'
       : 'Une image de ton île, ton nom, ton adresse, et une phrase de toi. Elle part dans WhatsApp, dans un message, où tu veux — et qui la reçoit peut venir marcher chez toi.'));
   }
-  p.appendChild(fc);
-  p.appendChild(carteParrainage());
-  p.appendChild(rule());
+  apres.appendChild(fc);
+  apres.appendChild(carteParrainage());
+  apres.appendChild(rule());
 
   const f=field('L\u2019archipel'+(store.configure?'':' \u00b7 d\u00e9mo'));
   const list=document.createElement('div');
@@ -6707,6 +6822,7 @@ function buildVoisins(){
   cp0.onclick=()=>copierLien(lienIle(),'Ton lien est copi\u00e9. Qui cr\u00e9e son \u00eele en arrivant par l\u00e0 devient ton filleul.');
   r0.appendChild(alea); r0.appendChild(cp0); f.appendChild(r0);
   p.appendChild(f); p.appendChild(rule());
+  p.appendChild(apres);
 
   // ---- sauvegarde / restauration hors ligne ----
   const sf=field('Code de sauvegarde'), ta=document.createElement('textarea');
@@ -6777,7 +6893,22 @@ function refusLisible(e){
   return 'Envoi impossible : '+m;
 }
 
-function peindreCompte(){
+/* La carte de connexion a deux états, et un seul des deux a besoin de
+   place : **tant qu'il reste quelque chose à saisir**, elle demande une
+   adresse e-mail ou l'adresse de l'île, et elle doit s'étaler. Une fois
+   tout réglé, elle ne fait plus que dire qui on est.
+
+   `pose` marque le second, et il se déduit — la carte porte-t-elle encore
+   un champ ? — plutôt que de se recopier à chaque branche de
+   `peindreCompte()`, qui en a quatre et qui sort par `return` au milieu.
+   Un drapeau posé à la main dans quatre branches, c'est une branche qui
+   l'oubliera. */
+function peindreCompte(){ peindreCarteCompte(); formeDuCompte(); }
+function formeDuCompte(){
+  const box=document.getElementById('compte'); if(!box) return;
+  box.classList.toggle('pose', !box.querySelector('input'));
+}
+function peindreCarteCompte(){
   const box=document.getElementById('compte'); if(!box) return;
   box.innerHTML='';
   // La carte se refait entière à chaque passage : le compte à rebours du
@@ -6864,8 +6995,12 @@ function peindreCompte(){
     ajout(sl); ajout(cr);
   } else {
     const url=location.host+'/'+monSlug;
-    ajout(txt('\u00b7 ton \u00eele : <span class="lien">'+esc(url)+'</span>'));
-    const cp=document.createElement('button'); cp.className='btn'; cp.textContent='Copier le lien';
+    // `redite` marque ce qui existe **ailleurs** : l'adresse et son bouton
+    // de copie sont aussi dans l'onglet Voisins, sous \u00ab \ud83d\udd17 Copier mon
+    // lien \u00bb. C'est ce qui permet \u00e0 l'\u00e9cran couch\u00e9 de s'en passer sans rien
+    // perdre. Ne pas en marquer un dont ce serait le seul endroit.
+    ajout(txt('\u00b7 ton \u00eele : <span class="lien">'+esc(url)+'</span>','redite'));
+    const cp=document.createElement('button'); cp.className='btn redite'; cp.textContent='Copier le lien';
     cp.onclick=()=>{ const full=location.origin+'/'+monSlug;
       if(navigator.clipboard) navigator.clipboard.writeText(full).then(()=>say('Lien copi\u00e9.'),()=>say('Copie \u00e0 la main : '+esc(full)));
       else say('Copie \u00e0 la main : '+esc(full)); };

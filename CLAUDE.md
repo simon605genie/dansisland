@@ -2087,6 +2087,286 @@ pièce fait repasser la quatrième à la ligne, **à 360 px seulement** : la
 règle du 16/09 est juste, et elle a maintenant sa mesure plutôt que sa
 consigne.
 
+## La règle qui mesurait la mauvaise largeur — 19/09/2026
+
+Vu sur une capture d'écran large, pas dans le code : dans le bandeau du
+guide, « Passer » tombait **seul** sous « Suivant », et le bandeau montait
+à 105 px.
+
+Or la feuille de style porte, depuis le 18/09, une règle écrite exprès pour
+que les deux tiennent ensemble :
+
+    @media (max-width:520px){ .guide .pas{display:none} .guide .quoi{flex:1 1 100%} }
+
+Elle marchait — sur un téléphone. **Ce qui serre ce bandeau, c'est la
+largeur du panneau, pas celle de la fenêtre.** La colonne de droite fait
+360 px sur un écran de 1280 : la règle ne se déclenchait donc jamais là où
+elle servait. Mesuré aux quatre tailles : séparés de 47 px sur grand écran,
+ensemble partout ailleurs.
+
+C'est la même famille que `fitDedans()` branché en plafond et que les deux
+phrases qui ne passaient pas par `laPiece()` : **une règle juste, dont la
+condition ne porte pas sur ce qu'elle protège.** Aucune des trois ne se
+voit à la lecture, parce que chacune a l'air de faire son travail.
+
+La correction ne demande plus de largeur à personne. `--pasw` est la place
+que prend le numéro, gouttière comprise, et la phrase prend exactement le
+reste de sa rangée :
+
+    .guide{ --pasw:35px }                  /* 25 de pastille + 10 de gouttière */
+    .guide .quoi{ flex:1 1 calc(100% - var(--pasw)) }
+
+Les points et les deux boutons descendent donc ensemble **à n'importe
+quelle largeur**. Deux choses à tenir :
+
+1. **`--pasw` doit suivre `gap` et `.pas`**, et c'est pour ça que c'est une
+   variable redéclarée à chaque palier plutôt que le même nombre recopié
+   trois fois. À 700 px la pastille passe à 21 px et la gouttière à 7, donc
+   `--pasw:28px` ; à 520 px la pastille s'en va, donc `0`.
+2. **Le palier de 520 px ne s'occupe plus que de la pastille.** Il ne
+   reste plus rien de la mise en page dedans : elle est vraie partout, ou
+   elle est fausse partout.
+
+Gagné au passage : le bandeau perd 18 px sur grand écran (105 → 87) et
+16 px en paysage court (85 → 69).
+
+### Le harnais ne pouvait pas le voir, et c'est le vrai enseignement
+
+`etroit.mjs` éprouve 360 px et 780x360 — les deux tailles que ce dépôt
+exige. **Les deux étaient vertes**, et elles avaient raison de l'être : le
+défaut n'existait qu'au-dessus de 520 px.
+
+Un harnais qui n'éprouve que les tailles étroites raisonne comme la règle
+fautive : il regarde la fenêtre. Il hérite donc de son angle mort — c'est
+mot pour mot la leçon du contrôle 12 de `test/objets.mjs`, où une regex qui
+cherchait des sélecteurs ne pouvait pas voir ce qu'un moteur CSS calcule.
+
+La section ajoutée regarde donc **les deux bouts**, 1280 px compris. Et
+elle ouvre le bandeau pour de bon : `aide.mjs` sème `dansisland:guide = 4`
+par défaut, pour que l'accueil ne gêne pas les autres harnais, donc il faut
+le remettre à zéro et cliquer « créer mon île » — sans quoi on mesure un
+bandeau absent en croyant mesurer sa mise en page.
+
+*(Deux fausses pistes écartées avant celle-là, et toutes deux par la
+mesure. **Le guide n'avance pas tout seul** : je l'ai cru en le voyant au
+pas 4 sur une capture, c'était la graine d'`aide.mjs`. Et **la caméra ne
+dérive pas** : la boîte englobante de la mer est décentrée de 37 px, mais
+c'est la bosse de `wMer()`, pas le cadrage — le centroïde eau+herbe tombe à
+1,2 px du centre du cadre. Une boîte englobante mesure le contour le plus
+saillant ; un centroïde mesure où est la masse. Pour juger d'un centrage,
+c'est le second qu'il faut.)*
+
+## « Voisins » ne montrait aucun voisin — 19/09/2026
+
+L'onglet s'ouvrait sur la commande du jour, puis la carte postale, puis
+l'invitation : plus de 500 px de texte avant la première île. Mesuré, dans
+les trois mises en page :
+
+    grand écran     1re île à y=670   panneau de 660 px   hors de vue
+    portrait 390    1re île à y=656   panneau de 625 px   hors de vue
+    paysage court   1re île à y=833   panneau de  73 px   hors de vue
+
+Et au pire moment : le **quatrième pas du guide** dit « va marcher sur
+l'île d'un autre », et le moyen de le faire était sous un écran de
+défilement. Tant que le sac est vide — donc pour tout nouveau venu — la
+commande ne propose personne, elle explique.
+
+C'est le défaut déjà corrigé le 19/09 pour le bloc Compagnon, « à un écran
+de défilement du haut », et la règle est la même : **ce qu'un onglet est
+doit être en haut de cet onglet.**
+
+L'archipel passe donc en deuxième, juste après la commande. Ce que ça ne
+change pas, et qui reste raisonné comme le 18/09 :
+
+1. **La commande garde la tête.** C'est la raison d'y aller *aujourd'hui*,
+   et elle se périme à minuit.
+2. **La carte reste avant l'invitation.** Elle descend seulement sous les
+   îles : elle se construit toujours au même endroit dans `buildVoisins()`,
+   elle se **pose** plus bas — d'où le `DocumentFragment`.
+
+Résultat : la première île passe de y=670 à **y=333**, visible sans défiler
+sur grand écran comme en portrait.
+
+**En paysage court, non, et ce n'est pas cet ordre-là qui le décidera** :
+le panneau n'y fait que 73 px de haut. Mesuré à 780x360 — carte de
+connexion 156 px, bandeau du guide 69, onglets 62, et il reste 73 pour le
+panneau. La carte de connexion prend à elle seule 43 % de la hauteur de
+l'écran, deux fois ce que reçoit le panneau. C'est noté ici pour ce que
+c'est : un vrai défaut d'ergonomie, mesuré, pas encore corrigé.
+
+Le contrôle de `etroit.mjs` distingue les deux : **l'ordre** des blocs est
+vérifié aux quatre tailles, la **visibilité sans défiler** seulement là où
+le panneau a la place. Affirmer la seconde en paysage court, ce serait
+demander au test de mentir.
+
+### La carte de connexion prenait la place du jeu
+
+Corrigé dans la foulée, puisque c'est ce que la mesure précédente avait
+mis au jour. À 780x360, `#compte` faisait **156 px des 360** de l'écran :
+six enfants empilés par `#compte>span{flex:1 1 100%}`, deux fois ce qui
+restait au panneau.
+
+Elle a deux états, et un seul a besoin de place. **Tant qu'il reste
+quelque chose à saisir** — une adresse e-mail pour se connecter, ou
+l'adresse de l'île à choisir — elle doit s'étaler. Une fois tout réglé,
+elle ne fait plus que dire qui on est.
+
+`pose` marque le second, et **il se déduit** : la carte porte-t-elle encore
+un `input` ? `peindreCompte()` a quatre branches et sort par `return` au
+milieu de trois d'entre elles — un drapeau posé à la main dans quatre
+branches, c'est une branche qui l'oubliera. D'où le découpage en
+`peindreCarteCompte()` + `formeDuCompte()`.
+
+Ce qui part en paysage est marqué `redite` : **ce qui existe ailleurs.**
+L'adresse de l'île et son bouton de copie sont dans l'onglet Voisins, sous
+« 🔗 Copier mon lien ». Ce qui reste est ce qui n'est nulle part ailleurs —
+le nom, la pastille d'état, « Se déconnecter ». Ne pas marquer `redite` un
+élément dont ce serait le seul endroit.
+
+    carte de connexion   156 px  →   61 px
+    panneau               73 px  →  168 px
+
+**On se connecte toujours en paysage**, et c'est la raison d'être du
+`display:contents` sur `.stage` : rien de tout ceci ne touche l'état « il
+reste à saisir ». Le contrôle l'éprouve pour de bon — le faux serveur rend
+toujours un compte complet, donc il **remet un champ à la main** et vérifie
+que l'état « posé » tombe, que le champ est large, et que ce qui avait été
+caché revient. Un harnais qui ne sait pas produire un état doit le
+fabriquer et le dire, pas faire comme si.
+
+Ce que ça ne règle pas : la première île reste hors de vue en paysage
+court, parce que le bloc de la commande y fait 322 px à lui seul, soit plus
+que les 168 px du panneau. Le panneau a plus que doublé, ce n'est pas la
+même chose que d'avoir de la place.
+
+**Debout aussi**, et c'était la même cause. `.compte>span{flex:1 1 100%}`
+existe, à 430 px, pour faire de la place au **champ** — mais quand il n'y a
+plus de champ, il empilait cinq rangées : nom, adresse, Copier, état, Se
+déconnecter, soit **167 px**, sur un téléphone où le cadre du jeu n'en fait
+que 234. La carte faisait les trois quarts de la taille du jeu, pour dire au
+joueur sa propre adresse.
+
+Pas le même remède, en revanche : en portrait **rien ne disparaît**, les
+rangées se remettent simplement à la file. Il y a la place pour deux, et
+l'adresse de l'île est ce qu'on partage. C'est l'écran couché, et lui seul,
+qui doit en plus cacher les `redite` : sa colonne ne fait que 235 px.
+
+    carte, portrait 375x667   167 px  →  77 px
+    cadre du jeu              y=240   →  y=150
+
+### Un seuil calibré sur une machine tombe sur une autre
+
+Le contrôle de la carte couchée est passé ici et a **échoué en CI**, sur la
+seule ligne qui exigeait `panneau >= 150` : le runner rend le texte un peu
+plus large, la carte y fait 67 px au lieu de 61 et le panneau 143 au lieu de
+168. Le gain était pourtant bien là — 73 → 143.
+
+Le défaut tenait en une phrase, « deux fois plus de place pour dire qui on
+est que pour jouer », et c'est donc un **rapport** qu'il fallait vérifier :
+`panneau > carte`. Vrai à 168/61 comme à 143/67, faux à 73/156. L'écart
+entre deux mesures du même écran ne dépend pas de la police ; un nombre
+absolu, si. Un plancher large (120 px) reste à côté, pour le cas où tout
+rétrécirait en gardant le rapport.
+
+C'est la troisième fois de la journée qu'une mesure raisonne comme son
+objet : la regex qui cherchait des sélecteurs, le harnais qui ne mesurait
+que des fenêtres étroites, et maintenant le seuil qui ne connaissait qu'une
+police.
+
+## « Un fleur de chez Lila » — 19/09/2026
+
+Lu à l'écran en allant visiter un voisin, pas dans le code. Trois phrases
+collaient un article en dur devant un nom d'objet variable, et **15 des 37
+objets sont féminins** : une échoppe, une tortue, une balançoire, une
+montgolfière, une boîte aux lettres… La phrase de la visite est celle qu'on
+voit le plus souvent de tout le jeu.
+
+C'est mot pour mot le défaut de « Te voilà dans le chambre », corrigé le
+matin même, réapparu ailleurs. Écrit une fois de plus, donc : **un article
+en dur devant un nom qui change ne peut pas être juste.**
+
+Le remède est le même que pour les pièces. Le genre est une propriété du
+**type**, dans le catalogue — troisième case de la ligne, `'f'` :
+
+    ['fleur','Fleur','f']      ['rocher','Rocher']
+
+Les deux consommateurs d'`OBJ_GROUPS` lisent par position (`[v]`, `[v,n]`),
+donc une case de plus ne coûte rien. Quatre phrases passent maintenant par
+`unObjet(t,maj,gras)` et `tonObjet(t)` : le souvenir chez un voisin, l'objet
+sous la maison, l'objet qu'on ne peut pas tourner, le compagnon qui te suit.
+
+Trois choses à tenir :
+
+1. **Tout nouvel objet féminin doit porter son `'f'`.** C'est la même
+   consigne que « une quatrième pièce portera son `art` », et elle a le même
+   garde-fou : le contrôle 13 refuse toute phrase qui recolle un article
+   devant `NOM_OBJ`.
+2. **La crotte n'est dans aucun rayon**, donc son genre ne peut pas venir du
+   catalogue : il se pose à la main, à côté de son nom, et c'est exactement
+   celui qu'on peut oublier. Le contrôle le vérifie nommément.
+3. **`ta` redevient `ton` devant une voyelle.** Aucune bestiole n'est dans
+   ce cas aujourd'hui ; la règle est du français, pas un cas particulier de
+   cette liste-ci.
+
+Au passage, les trois `<span></span>` vides qui séparaient « Un » du nom
+sont partis avec : aucun commentaire ne les expliquait, et ils ne faisaient
+rien.
+
+### Ce qu'un contrôle peut prouver ici, et ce qu'il ne peut pas
+
+Le contrôle 13 vérifie le **câblage** — qu'aucune phrase ne recolle un
+article à la main — et c'est ce qui empêche le défaut de revenir.
+
+Il ne peut pas vérifier le **français**. Mon premier jet comparait les
+marques `'f'` du catalogue à une liste de féminins que j'avais écrite juste
+à côté : deux listes de la même main, qui s'accordent par construction. Ça
+ne prouve que ma constance. Il **imprime** donc les deux relevés, « une
+fleur · une mare aux canards · … » et « un rocher · un puits · … », pour
+qu'une personne les relise une fois — et la phrase de la visite a été lue
+dans le jeu qui tournait : « Une fleur de chez Lila ».
+
+C'est la limite déjà rencontrée avec le son, qui ne s'éprouve pas sous
+pilotage : il y a des choses dont le juge est quelqu'un, pas un harnais. Un
+contrôle honnête les affiche au lieu de prétendre les vérifier.
+
+## Deux listes mal rangées, et une phrase de concepteur — 19/09/2026
+
+Trouvées en **parcourant les panneaux et en lisant ce qui s'y écrit**, comme
+« Un fleur ».
+
+### La vitrine revenait en arrière
+
+Chaque rayon de `BOUTIQUE` est écrit par prix croissant, et c'est l'ordre de
+déclaration qui s'affiche : ce que le fichier montre est ce que l'enfant
+voit. Or les trois chers du matin avaient été **ajoutés à la fin** du rayon
+« île », donc après la montgolfière à 60. La colonne des prix lisait :
+
+    … 38  40  45  50  60  42  50  55
+
+Et le rayon « toi » n'avait jamais été rangé : **25, 45, 28, 20**. Un prix
+qui revient en arrière au milieu d'une liste se lit comme une erreur.
+
+Les deux rayons sont rangés, et le contrôle 13 le tient. Ajouter un article
+à la fin de son rayon est le geste le plus naturel du monde, donc c'est
+celui qu'il faut garder : le contrôle nomme l'article fautif et son prix.
+
+Le commentaire qui expliquait les trois chers a suivi en tête du tableau :
+il parlait d'eux en tant que groupe, et ils ne sont plus côte à côte.
+
+### « c'est ça, tout est donnée »
+
+Le bas de l'onglet Toi disait : « Les pastilles sont les couleurs de la
+charte. La pipette au bout de chaque rangée ouvre tout le spectre — c'est
+ça, "tout est donnée". » Trois mots de concepteur et la citation d'un slogan
+que le joueur n'a jamais lu.
+
+C'est exactement ce pour quoi la section de présentation sous le jeu a été
+supprimée le 17/09 — « la planche de vente d'un prototype » — revenu par un
+panneau. Ce qui compte pour l'enfant, c'est qu'il y a un bouton au bout de
+la rangée et qu'il donne toutes les couleurs : « Les pastilles sont des
+couleurs toutes prêtes. La pipette, au bout de chaque rangée, ouvre toutes
+les autres — la couleur exacte de tes cheveux, si tu veux. »
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
