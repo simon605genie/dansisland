@@ -524,7 +524,36 @@ c.titre('12. tout élément caché par `hidden` doit vraiment disparaître');
   }
 }
 
-c.titre('13. personne ne colle « un » devant un nom d’objet');
+c.titre('13. la vitrine est rangée par prix, rayon par rayon');
+{
+  /* Chaque rayon était écrit par prix croissant — puis les trois chers ont
+     été **ajoutés à la fin** du rayon « île », donc après la montgolfière à
+     60 : la colonne des prix lisait 40, 45, 50, 60, 42, 50, 55. Et le rayon
+     « toi » n'avait jamais été rangé du tout : 25, 45, 28, 20.
+
+     Un prix qui revient en arrière au milieu d'une liste se lit comme une
+     erreur, et c'est l'ordre **de déclaration** qui s'affiche : ce que le
+     fichier montre est ce que l'enfant voit. Ajouter un article à la fin de
+     son rayon est le geste le plus naturel du monde, donc c'est celui qu'il
+     faut garder. */
+  const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const bloc = (src.match(/const BOUTIQUE=\[([\s\S]*?)\n\];/) || [])[1] || '';
+  const lignes = [...bloc.matchAll(/\{ou:'(\w+)',\s*k:'(\w+)',\s*n:'([^']*)',\s*prix:(\d+)/g)]
+    .map(m => ({ ou: m[1], k: m[2], n: m[3], prix: +m[4] }));
+  c.dit(lignes.length >= 25, 'la vitrine a été lue (' + lignes.length + ' articles)');
+  const rayons = [...new Set(lignes.map(l => l.ou))];
+  c.dit(rayons.length >= 3, 'ses rayons ont été lus (' + rayons.join(', ') + ')');
+  for (const r of rayons) {
+    const l = lignes.filter(x => x.ou === r);
+    const mauvais = l.filter((x, i) => i && x.prix < l[i - 1].prix);
+    console.log('     ' + r.padEnd(7) + ' ' + l.map(x => x.prix).join(' ') +
+                (mauvais.length ? '   ⚠️ ' + mauvais.map(x => x.n).join(', ') : ''));
+    c.dit(mauvais.length === 0, 'rayon « ' + r + ' » — les prix ne reviennent jamais en arrière' +
+          (mauvais.length ? ' (' + mauvais.map(x => x.n + ' à ' + x.prix).join(', ') + ')' : ''));
+  }
+}
+
+c.titre('14. personne ne colle « un » devant un nom d’objet');
 {
   /* « Un fleur de chez Lila. » — lu à l'écran en allant visiter un voisin,
      pas dans le code. Trois phrases collaient un article en dur devant

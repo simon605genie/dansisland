@@ -1438,6 +1438,18 @@ let GAIN_MOT_POSE=2, GAIN_MOT_RECU=5;
 let GAIN_COMMANDE=6, GAIN_COMMANDE_RECUE=8;
 // Le catalogue. `ou` dit dans quel atelier l'objet réapparaît une fois
 // acheté : c'est la seule chose qui distingue un objet d'île d'un meuble.
+/* La vitrine, rayon par rayon, et **chaque rayon par prix croissant** :
+   c'est ce que l'œil suit en descendant la liste, et un prix qui revient en
+   arrière se lit comme une erreur. Les trois chers (girouette, carillon,
+   boîte aux lettres) avaient été ajoutés à la fin du rayon « île », donc
+   après la montgolfière à 60 : 42, 50 et 55 après 60. Remis à leur place.
+
+   Ces trois-là ne décorent pas, ils font quelque chose, et ce qu'ils font
+   était jusqu'ici enfermé dans un panneau. Aucun ne rapporte un shell et
+   aucun ne touche à un plafond — faire monter un gain avec un achat revient
+   à vendre de la monnaie, c'est écrit depuis le 16/09. Ce qu'ils coûtent
+   vraiment est en SQL, dans `catalogue` ; ce qui est ici n'est qu'un
+   affichage de secours. */
 const BOUTIQUE=[
   {ou:'ile',   k:'chat',        n:'Chat',              prix:12, c:'#E4A95C', d:'Il s’assied où il veut et ne s’en excuse pas.'},
   {ou:'ile',   k:'herisson',    n:'Hérisson',          prix:14, c:'#8B6F4E', d:'Il traverse la pelouse sans se presser.'},
@@ -1453,16 +1465,12 @@ const BOUTIQUE=[
   {ou:'ile',   k:'boutique',    n:'Échoppe',           prix:35, c:'#FDFBF2', d:'Un auvent rayé, et l’île a un centre.'},
   {ou:'ile',   k:'toboggan',    n:'Toboggan',          prix:38, c:'#45CFE8', d:'Une échelle, une glissade, on recommence.'},
   {ou:'ile',   k:'moulin',      n:'Moulin',            prix:40, c:'#FDFBF2', d:'On le voit de loin. C’est tout l’intérêt.'},
+  {ou:'ile',   k:'girouette',   n:'Girouette',         prix:42, c:'#8F98A6', d:'Elle tourne avec la mer. Va la voir, et elle te dit où en est la marée et dans combien de temps elle change.'},
   {ou:'ile',   k:'cabane',      n:'Cabane perchée',    prix:45, c:'#A9764A', d:'Une échelle, un plancher dans l’arbre, une fenêtre allumée.'},
   {ou:'ile',   k:'statue',      n:'Statue',            prix:50, c:'#D9CDB4', d:'En pierre, le bras levé, pour longtemps.'},
-  {ou:'ile',   k:'montgolfiere',n:'Montgolfière',      prix:60, c:'#F48CA8', d:'Amarrée au sol, mais elle y pense.'},
-  // Les trois chers. Ils ne décorent pas : ils font quelque chose, et ce
-  // qu'ils font était jusqu'ici enfermé dans un panneau. Aucun ne rapporte
-  // un shell et aucun ne touche à un plafond — faire monter un gain avec un
-  // achat revient à vendre de la monnaie, c'est écrit depuis le 16/09.
-  {ou:'ile',   k:'girouette',   n:'Girouette',         prix:42, c:'#8F98A6', d:'Elle tourne avec la mer. Va la voir, et elle te dit où en est la marée et dans combien de temps elle change.'},
   {ou:'ile',   k:'carillon',    n:'Carillon',          prix:50, c:'#D9CDB4', d:'Cinq tubes et un peu de vent. Il sonne tout seul, de loin en loin — et tes visiteurs l’entendent aussi.'},
   {ou:'ile',   k:'boitelettres',n:'Boîte aux lettres', prix:55, c:'#B44C6C', d:'Le drapeau se lève quand on t’a laissé un mot. Va la relever, et tu lis ce qu’on t’a écrit sans ouvrir un panneau.'},
+  {ou:'ile',   k:'montgolfiere',n:'Montgolfière',      prix:60, c:'#F48CA8', d:'Amarrée au sol, mais elle y pense.'},
   {ou:'dedans',k:'tapisrond',   n:'Tapis rond',        prix:12, c:'#F48CA8', d:'Deux cases au sol, sous tout le reste.'},
   {ou:'dedans',k:'guirlande',   n:'Guirlande',         prix:14, c:'#F4D6A0', d:'Cinq ampoules le long du mur.'},
   {ou:'dedans',k:'bibliotheque',n:'Bibliothèque',      prix:20, c:'#8B5E3C', d:'Trois rangs de livres, et personne pour les ranger.'},
@@ -1470,10 +1478,10 @@ const BOUTIQUE=[
   {ou:'dedans',k:'tele',        n:'Télévision',        prix:30, c:'#3F4A52', d:'Elle passe toujours la même chose.'},
   {ou:'dedans',k:'aquarium',    n:'Aquarium',          prix:35, c:'#8B5E3C', d:'Deux poissons qui ne s’arrêtent jamais.'},
   {ou:'dedans',k:'piano',       n:'Piano',             prix:45, c:'#2A3238', d:'Douze touches noires, et le couvercle fermé.'},
+  {ou:'toi',   k:'compagnon',   n:'Compagnon',         prix:20, c:'#E4A95C', d:'Le chien, le crabe ou la mouette te suit partout, même chez les voisins. Ils sont déjà à toi ; ça se choisit dans l’onglet Toi.'},
   {ou:'toi',   k:'bottes',      n:'Bottes',            prix:25, c:'#B44C6C', d:'Tu marches un tiers plus vite, dehors comme dedans.'},
-  {ou:'toi',   k:'moteur',      n:'Tondeuse à moteur', prix:45, c:'#2E7D5B', d:'Elle tond les quatre cases voisines en passant.'},
   {ou:'toi',   k:'appareil',    n:'Appareil photo',    prix:28, c:'#3F4A52', d:'Un viseur, un déclencheur, et l’album qui va avec.'},
-  {ou:'toi',   k:'compagnon',   n:'Compagnon',         prix:20, c:'#E4A95C', d:'Le chien, le crabe ou la mouette te suit partout, même chez les voisins. Ils sont déjà à toi ; ça se choisit dans l’onglet Toi.'}
+  {ou:'toi',   k:'moteur',      n:'Tondeuse à moteur', prix:45, c:'#2E7D5B', d:'Elle tond les quatre cases voisines en passant.'}
 ];
 // Le rayon « Pour toi » ne vend pas des objets à poser mais ce que le
 // bonhomme sait faire. Rien n'entre dans `objects` ni dans les meubles :
@@ -5647,7 +5655,15 @@ function buildToi(){
   p.appendChild(chips('Regard','me.eyes',[['rond','Rond'],['joyeux','Joyeux'],['malin','Malin'],['calme','Calme'],['endormi','Endormi']]));
   p.appendChild(swatches('Tenue','me.outfit',CLOTH));
   p.appendChild(chips('Accessoire','me.acc',[['aucun','Aucun'],['chapeau','Chapeau'],['lunettes','Lunettes'],['couronne','Couronne'],['cape','Cape']]));
-  p.appendChild(hint('Les pastilles sont les couleurs de la charte. La pipette au bout de chaque rangée ouvre tout le spectre — c\'est ça, « tout est donnée ».'));
+  /* Cette phrase disait : « Les pastilles sont les couleurs de la charte.
+     La pipette au bout de chaque rangée ouvre tout le spectre — c'est ça,
+     "tout est donnée". » Trois mots de concepteur — charte, spectre, tout
+     est donnée — et une citation d'un slogan que le joueur n'a jamais lu.
+     C'est ce pour quoi la section de présentation sous le jeu a été
+     supprimée le 17/09, revenu par un panneau. Ce qui compte pour l'enfant,
+     c'est qu'il y a un bouton au bout de la rangée et qu'il donne toutes
+     les couleurs. */
+  p.appendChild(hint('Les pastilles sont des couleurs toutes prêtes. La pipette, au bout de chaque rangée, ouvre toutes les autres — la couleur exacte de tes cheveux, si tu veux.'));
 
   // L'équipement se voit ici, pas seulement dans la vitrine : un pouvoir
   // qu'on a acheté et qu'on ne retrouve nulle part finit par s'oublier.

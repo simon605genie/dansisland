@@ -2329,6 +2329,44 @@ C'est la limite déjà rencontrée avec le son, qui ne s'éprouve pas sous
 pilotage : il y a des choses dont le juge est quelqu'un, pas un harnais. Un
 contrôle honnête les affiche au lieu de prétendre les vérifier.
 
+## Deux listes mal rangées, et une phrase de concepteur — 19/09/2026
+
+Trouvées en **parcourant les panneaux et en lisant ce qui s'y écrit**, comme
+« Un fleur ».
+
+### La vitrine revenait en arrière
+
+Chaque rayon de `BOUTIQUE` est écrit par prix croissant, et c'est l'ordre de
+déclaration qui s'affiche : ce que le fichier montre est ce que l'enfant
+voit. Or les trois chers du matin avaient été **ajoutés à la fin** du rayon
+« île », donc après la montgolfière à 60. La colonne des prix lisait :
+
+    … 38  40  45  50  60  42  50  55
+
+Et le rayon « toi » n'avait jamais été rangé : **25, 45, 28, 20**. Un prix
+qui revient en arrière au milieu d'une liste se lit comme une erreur.
+
+Les deux rayons sont rangés, et le contrôle 13 le tient. Ajouter un article
+à la fin de son rayon est le geste le plus naturel du monde, donc c'est
+celui qu'il faut garder : le contrôle nomme l'article fautif et son prix.
+
+Le commentaire qui expliquait les trois chers a suivi en tête du tableau :
+il parlait d'eux en tant que groupe, et ils ne sont plus côte à côte.
+
+### « c'est ça, tout est donnée »
+
+Le bas de l'onglet Toi disait : « Les pastilles sont les couleurs de la
+charte. La pipette au bout de chaque rangée ouvre tout le spectre — c'est
+ça, "tout est donnée". » Trois mots de concepteur et la citation d'un slogan
+que le joueur n'a jamais lu.
+
+C'est exactement ce pour quoi la section de présentation sous le jeu a été
+supprimée le 17/09 — « la planche de vente d'un prototype » — revenu par un
+panneau. Ce qui compte pour l'enfant, c'est qu'il y a un bouton au bout de
+la rangée et qu'il donne toutes les couleurs : « Les pastilles sont des
+couleurs toutes prêtes. La pipette, au bout de chaque rangée, ouvre toutes
+les autres — la couleur exacte de tes cheveux, si tu veux. »
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
