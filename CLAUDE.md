@@ -2273,6 +2273,62 @@ objet : la regex qui cherchait des sélecteurs, le harnais qui ne mesurait
 que des fenêtres étroites, et maintenant le seuil qui ne connaissait qu'une
 police.
 
+## « Un fleur de chez Lila » — 19/09/2026
+
+Lu à l'écran en allant visiter un voisin, pas dans le code. Trois phrases
+collaient un article en dur devant un nom d'objet variable, et **15 des 37
+objets sont féminins** : une échoppe, une tortue, une balançoire, une
+montgolfière, une boîte aux lettres… La phrase de la visite est celle qu'on
+voit le plus souvent de tout le jeu.
+
+C'est mot pour mot le défaut de « Te voilà dans le chambre », corrigé le
+matin même, réapparu ailleurs. Écrit une fois de plus, donc : **un article
+en dur devant un nom qui change ne peut pas être juste.**
+
+Le remède est le même que pour les pièces. Le genre est une propriété du
+**type**, dans le catalogue — troisième case de la ligne, `'f'` :
+
+    ['fleur','Fleur','f']      ['rocher','Rocher']
+
+Les deux consommateurs d'`OBJ_GROUPS` lisent par position (`[v]`, `[v,n]`),
+donc une case de plus ne coûte rien. Quatre phrases passent maintenant par
+`unObjet(t,maj,gras)` et `tonObjet(t)` : le souvenir chez un voisin, l'objet
+sous la maison, l'objet qu'on ne peut pas tourner, le compagnon qui te suit.
+
+Trois choses à tenir :
+
+1. **Tout nouvel objet féminin doit porter son `'f'`.** C'est la même
+   consigne que « une quatrième pièce portera son `art` », et elle a le même
+   garde-fou : le contrôle 13 refuse toute phrase qui recolle un article
+   devant `NOM_OBJ`.
+2. **La crotte n'est dans aucun rayon**, donc son genre ne peut pas venir du
+   catalogue : il se pose à la main, à côté de son nom, et c'est exactement
+   celui qu'on peut oublier. Le contrôle le vérifie nommément.
+3. **`ta` redevient `ton` devant une voyelle.** Aucune bestiole n'est dans
+   ce cas aujourd'hui ; la règle est du français, pas un cas particulier de
+   cette liste-ci.
+
+Au passage, les trois `<span></span>` vides qui séparaient « Un » du nom
+sont partis avec : aucun commentaire ne les expliquait, et ils ne faisaient
+rien.
+
+### Ce qu'un contrôle peut prouver ici, et ce qu'il ne peut pas
+
+Le contrôle 13 vérifie le **câblage** — qu'aucune phrase ne recolle un
+article à la main — et c'est ce qui empêche le défaut de revenir.
+
+Il ne peut pas vérifier le **français**. Mon premier jet comparait les
+marques `'f'` du catalogue à une liste de féminins que j'avais écrite juste
+à côté : deux listes de la même main, qui s'accordent par construction. Ça
+ne prouve que ma constance. Il **imprime** donc les deux relevés, « une
+fleur · une mare aux canards · … » et « un rocher · un puits · … », pour
+qu'une personne les relise une fois — et la phrase de la visite a été lue
+dans le jeu qui tournait : « Une fleur de chez Lila ».
+
+C'est la limite déjà rencontrée avec le son, qui ne s'éprouve pas sous
+pilotage : il y a des choses dont le juge est quelqu'un, pas un harnais. Un
+contrôle honnête les affiche au lieu de prétendre les vérifier.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

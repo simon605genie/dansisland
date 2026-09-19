@@ -524,5 +524,52 @@ c.titre('12. tout élément caché par `hidden` doit vraiment disparaître');
   }
 }
 
+c.titre('13. personne ne colle « un » devant un nom d’objet');
+{
+  /* « Un fleur de chez Lila. » — lu à l'écran en allant visiter un voisin,
+     pas dans le code. Trois phrases collaient un article en dur devant
+     `NOM_OBJ[…]`, et **15 des 37 objets sont féminins** : une échoppe, une
+     tortue, une balançoire, une montgolfière… La phrase de la visite est
+     celle qu'on voit le plus souvent de tout le jeu.
+
+     C'est mot pour mot le défaut de « Te voilà dans le chambre », et le
+     remède est le même : le genre est une propriété du **type**, dans le
+     catalogue, troisième case de la ligne.
+
+     Ce que ce contrôle peut faire, et ce qu'il ne peut pas. Il vérifie le
+     **câblage** — qu'aucune phrase ne recolle un article à la main — et
+     c'est ce qui empêche le défaut de revenir. Il ne peut pas vérifier le
+     **français** : comparer mes marques `'f'` à une liste que j'aurais
+     écrite à côté ne prouverait que ma constance. La grammaire, elle, a été
+     relue une fois sur la liste imprimée ci-dessous, et la phrase de la
+     visite a été lue dans le jeu qui tournait — « Une fleur de chez Lila ».
+     Le relevé est imprimé pour qu'on puisse la relire, pas pour décorer. */
+  const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const bloc = (src.match(/const OBJ_GROUPS=\[\n([\s\S]*?)\n\];/) || [])[1] || '';
+  const objets = [...bloc.matchAll(/\['([a-z0-9]+)','([^']+)'(,'f')?\]/g)]
+    .map(x => ({ k: x[1], n: x[2], f: !!x[3] }));
+  c.dit(objets.length >= 30, 'le catalogue a été lu (' + objets.length + ' objets)');
+  const fem = objets.filter(o => o.f);
+  c.dit(fem.length >= 10, fem.length + ' objets portent leur « f »');
+  console.log('     féminins : ' + fem.map(o => 'une ' + o.n.toLowerCase()).join(' · '));
+  console.log('     masculins : ' + objets.filter(o => !o.f).map(o => 'un ' + o.n.toLowerCase()).join(' · '));
+
+  // Le câblage : plus une seule phrase qui recolle l'article elle-même.
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
+  const colles = [...code.matchAll(/['’ ](?:[Uu]n|[Uu]ne|[TtSs]on|[Tt]a)\s*(?:<[^>]*>)?\s*'\s*\+\s*\(?\s*NOM_OBJ\[/g)];
+  c.dit(colles.length === 0, 'aucune phrase ne colle un article devant NOM_OBJ (' + colles.length + ')');
+  for (const [q, re] of [
+    ['le souvenir chez un voisin', /unObjet\(objet\.t,true,true\)\+' de chez '/],
+    ['l’objet sous la maison', /'Il y a '\+unObjet\(gene\.t,false,true\)\+' sous la maison/],
+    ['l’objet qu’on ne peut pas tourner', /say\(unObjet\(o\.t,true,true\)\+' n’a pas de sens/],
+    ['le compagnon qui te suit', /tonObjet\(k\)\+' te suit maintenant partout/],
+  ]) c.dit(re.test(code), q + ' passe par la fonction');
+  // Et la crotte, qui n'est dans aucun rayon : son genre se pose à la main,
+  // donc c'est exactement celui qu'on peut oublier.
+  c.dit(/NOM_OBJ\.crotte='crotte'; FEM_OBJ\.crotte=1;/.test(code),
+        'la crotte, hors catalogue, porte quand même son genre');
+}
+
 await nav.close(); s.fermer();
 process.exit(c.fin() ? 1 : 0);

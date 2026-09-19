@@ -2553,10 +2553,10 @@ function dessinDe(g,t,col,o,etat){
   (DRAW[t]||DRAW.rocher)(g,col,etat); g.restore();
 }
 const OBJ_GROUPS=[
-  ['Nature',[['arbre','Arbre à fleurs'],['palmier','Palmier'],['sapin','Sapin'],['buisson','Buisson'],['cactus','Cactus'],['fleur','Fleur'],['rocher','Rocher'],['mare','Mare aux canards'],['puits','Puits']]],
-  ['Village',[['boutique','Échoppe'],['phare','Phare'],['ponton','Ponton'],['lampe','Lampadaire'],['banc','Banc'],['barriere','Barrière'],['cloture','Clôture'],['coffre','Coffre'],['fontaine','Fontaine'],['moulin','Moulin'],['statue','Statue'],['girouette','Girouette'],['carillon','Carillon'],['boitelettres','Boîte aux lettres']]],
-  ['Dehors',[['feudecamp','Feu de camp'],['hamac','Hamac'],['tente','Tente'],['balancoire','Balançoire'],['toboggan','Toboggan'],['cabane','Cabane perchée'],['montgolfiere','Montgolfière']]],
-  ['Bestioles',[['chien','Chien'],['tortue','Tortue'],['crabe','Crabe'],['mouette','Mouette'],['chat','Chat'],['herisson','Hérisson'],['renard','Renard']]]
+  ['Nature',[['arbre','Arbre à fleurs'],['palmier','Palmier'],['sapin','Sapin'],['buisson','Buisson'],['cactus','Cactus'],['fleur','Fleur','f'],['rocher','Rocher'],['mare','Mare aux canards','f'],['puits','Puits']]],
+  ['Village',[['boutique','Échoppe','f'],['phare','Phare'],['ponton','Ponton'],['lampe','Lampadaire'],['banc','Banc'],['barriere','Barrière','f'],['cloture','Clôture','f'],['coffre','Coffre'],['fontaine','Fontaine','f'],['moulin','Moulin'],['statue','Statue','f'],['girouette','Girouette','f'],['carillon','Carillon'],['boitelettres','Boîte aux lettres','f']]],
+  ['Dehors',[['feudecamp','Feu de camp'],['hamac','Hamac'],['tente','Tente','f'],['balancoire','Balançoire','f'],['toboggan','Toboggan'],['cabane','Cabane perchée','f'],['montgolfiere','Montgolfière','f']]],
+  ['Bestioles',[['chien','Chien'],['tortue','Tortue','f'],['crabe','Crabe'],['mouette','Mouette','f'],['chat','Chat'],['herisson','Hérisson'],['renard','Renard']]]
 ];
 
 function drawHouse(c,h,t){
@@ -4174,7 +4174,7 @@ cv.addEventListener('click',e=>{
 function tournerSurIle(x,y){
   const o=(world.objects||[]).find(k=>k.t!=='panneau'&&k.x===x&&k.y===y);
   if(!o){ say('Rien à tourner ici.'); return; }
-  if(!PIVOT_ILE[o.t]){ say('Un<span></span> <b>'+(NOM_OBJ[o.t]||'objet')+'</b> n’a pas de sens : il est pareil des deux côtés.'); return; }
+  if(!PIVOT_ILE[o.t]){ say(unObjet(o.t,true,true)+' n’a pas de sens : il est pareil des deux côtés.'); return; }
   memoriser(); o.o = o.o==='sw' ? 'se' : 'sw'; son('poser'); saveMine(); buildAll();
 }
 // La maison se pose au clic, comme le reste. Quatre flèches qui suivent les
@@ -4188,7 +4188,7 @@ function poserMaison(x,y){
   const gene=(mine.objects||[]).find(o=>cases.some(c=>c[0]===o.x&&c[1]===o.y));
   if(gene){ say(gene.t==='panneau'
     ? 'Un mot du livre d’or est planté là. Choisis un autre endroit.'
-    : 'Il y a un<span></span> <b>'+(NOM_OBJ[gene.t]||'objet')+'</b> sous la maison. Efface-le d’abord.'); return; }
+    : 'Il y a '+unObjet(gene.t,false,true)+' sous la maison. Efface-le d’abord.'); return; }
   if(h.x===x&&h.y===y) return;
   memoriser(); h.x=x; h.y=y; saveMine(); son('poser');
   // Le bonhomme ne doit pas se retrouver enfermé dans les murs.
@@ -5307,10 +5307,37 @@ function say(msg,lock,duree){
 // Le nom lisible de chaque objet, pris dans les mêmes listes que les boutons :
 // deux listes qui divergent, c'est un objet qui n'a pas le même nom selon l'endroit.
 const NOM_OBJ={}; OBJ_GROUPS.forEach(g=>g[1].forEach(o=>{ NOM_OBJ[o[0]]=o[1].toLowerCase(); }));
+/* Le genre est une propriété du **type**, dans le catalogue — troisième
+   case de la ligne, `'f'` — exactement comme l'article d'une pièce vit dans
+   `PIECES`. Les deux consommateurs d'`OBJ_GROUPS` lisent par position
+   (`[v]`, `[v,n]`), donc une case de plus ne coûte rien.
+
+   Sans ça, trois phrases collaient « un » devant un nom variable, et **15
+   des 37 objets sont féminins** : « Un fleur de chez Lila » à chaque visite
+   chez un voisin, « Un échoppe », « Un tortue », « Un balançoire ». C'est le
+   même défaut que « Te voilà dans le chambre », au même endroit du même
+   raisonnement : un article en dur devant un nom qui change ne peut pas
+   être juste. Tout nouvel objet féminin doit porter son `'f'`. */
+const FEM_OBJ={}; OBJ_GROUPS.forEach(g=>g[1].forEach(o=>{ if(o[2]==='f') FEM_OBJ[o[0]]=1; }));
+// « un rocher », « une fleur ». `maj` pour un début de phrase, `gras` pour
+// mettre le nom en valeur sans emporter l'article avec lui.
+function unObjet(t,maj,gras){
+  const n=NOM_OBJ[t]||'objet', a=(FEM_OBJ[t]&&NOM_OBJ[t])?'une ':'un ';
+  return (maj?a.charAt(0).toUpperCase()+a.slice(1):a)+(gras?'<b>'+n+'</b>':n);
+}
+// « Ton chat », « Ta mouette ». Devant une voyelle, « ta » redevient
+// « ton » — aucune bestiole n'est dans ce cas aujourd'hui, mais la règle
+// est du français, pas un cas particulier de cette liste-ci.
+function tonObjet(t){
+  const n=NOM_OBJ[t]||'objet';
+  return ((FEM_OBJ[t] && !/^[aeiouyéèêàâîïôöûü]/i.test(n)) ? 'Ta ' : 'Ton ')+'<b>'+n+'</b>';
+}
 // Ce que le chien laisse n'est dans aucun rayon de l'atelier — il n'y a rien
 // à poser, il arrive tout seul — mais les messages ont besoin de son nom,
 // sinon la maison dit « il y a un objet sous la maison ».
-NOM_OBJ.crotte='crotte';
+// Elle n'est dans aucun rayon, donc son genre ne peut pas venir du
+// catalogue : il se pose ici, à côté de son nom, et pas ailleurs.
+NOM_OBJ.crotte='crotte'; FEM_OBJ.crotte=1;
 let souvenirProche=null;
 // Le bouton rose du cadre et la touche E sont le même geste. Il ne dit pas
 // toujours la même chose : ce qui est sous la main décide.
@@ -5406,7 +5433,7 @@ function proximity(){
     '<b>'+esc(panneau.by)+'</b> a écrit : « '+esc(panneau.txt)+' »'); return; }
   if(souvenirProche){ boutonRose('Ramener un souvenir');
     bulle('souv'+objet.x+'-'+objet.y,
-    'Un<span></span> <b>'+(NOM_OBJ[objet.t]||'objet')+'</b> de chez '+esc(world.owner)+
+    unObjet(objet.t,true,true)+' de chez '+esc(world.owner)+
     '. Appuie sur <b>E</b> ou touche le bouton rose pour en ramener un souvenir.'); return; }
   /* Le chien, puis ce qu'il a laissé.
 
@@ -5649,7 +5676,7 @@ function buildToi(){
     p.appendChild(chipsLibre('Ton compagnon',
       [['','Aucun']].concat(dispo.map(c=>[c[0],c[1]])),
       compagnonChoisi(), k=>{ mine.me.compagnon=k; saveMine(); majCompagnon(); buildAll();
-        say(k ? ('Ton <b>'+esc(NOM_OBJ[k]||k)+'</b> te suit maintenant partout, même chez les voisins.')
+        say(k ? (tonObjet(k)+' te suit maintenant partout, même chez les voisins.')
               : 'Tu marches seul.'); }));
     const manque=COMPAGNONS.filter(c=>!achete(c[0]));
     p.appendChild(hint(manque.length
