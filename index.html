@@ -1652,14 +1652,14 @@ const DEMO=[
   mkN('cactus','Îlot Cactus','Nour',GROUNDS[3],'crépuscule',
     [{t:'cactus',x:3,y:5,c:'#6FA37A'},{t:'cactus',x:8,y:6,c:'#6FA37A'},{t:'cactus',x:6,y:9,c:'#6FA37A'},
      {t:'rocher',x:4,y:8,c:'#A88A63'},{t:'rocher',x:9,y:4,c:'#A88A63'},{t:'coffre',x:5,y:3,c:'#8B5E3C'},
-     {t:'lampe',x:7,y:4,c:'#F48CA8'},{t:'boutique',x:3,y:3,c:'#F4D6A0'},{t:'crabe',x:8,y:9,c:'#F0736E'},
+     {t:'lampe',x:7,y:4,c:'#F48CA8'},{t:'barriere',x:3,y:3,c:'#A88A63',o:'se'},{t:'crabe',x:8,y:9,c:'#F0736E'},
      {t:'buisson',x:9,y:7,c:'#6FA37A'},{t:'chien',x:4,y:6,c:'#C89A63'}],
     {name:'Nour',body:'costaud',skin:'#8B5E3C',hair:'piquants',hairC:'#5E3A22',eyes:'malin',outfit:'#F4D6A0',acc:'chapeau'},
     {x:5,y:6,wall:'#F4D6A0',roof:'#8B5E3C',door:'#5E3A22',roofShape:'plat',sign:'La Halte'}),
   mkN('pins','Pins-Noirs','Yann',GROUNDS[5],'nuit',
     [{t:'sapin',x:2,y:4,c:'#2E7D6B'},{t:'sapin',x:3,y:7,c:'#2E7D6B'},{t:'sapin',x:9,y:5,c:'#2E7D6B'},
      {t:'sapin',x:8,y:8,c:'#2E7D6B'},{t:'lampe',x:6,y:7,c:'#F4D6A0'},{t:'lampe',x:4,y:5,c:'#F4D6A0'},
-     {t:'rocher',x:7,y:3,c:'#4B6B84'},{t:'banc',x:5,y:8,c:'#0B3C5D',o:'sw'},{t:'phare',x:9,y:2,c:'#FDFBF2'},
+     {t:'rocher',x:7,y:3,c:'#4B6B84'},{t:'banc',x:5,y:8,c:'#0B3C5D',o:'sw'},{t:'rocher',x:9,y:2,c:'#5A7D96'},
      {t:'buisson',x:2,y:8,c:'#245C4E'},{t:'ponton',x:6,y:10,c:'#7A5636',o:'sw'},{t:'mouette',x:10,y:6,c:'#FDFBF2'}],
     {name:'Yann',body:'élancé',skin:'#F7DCC0',hair:'longs',hairC:'#F6F1E2',eyes:'endormi',outfit:'#148A9C',acc:'cape'},
     {x:5,y:5,wall:'#0B3C5D',roof:'#051D2A',door:'#8B5E3C',roofShape:'pointu',sign:'Refuge'})
@@ -1678,12 +1678,28 @@ const COUL_OBJ={arbre:'#2E7D5B',palmier:'#2E7D5B',sapin:'#2E7D6B',buisson:'#2E7D
   ponton:'#A9764A',lampe:'#F4D6A0',banc:'#8B5E3C',barriere:'#FDFBF2',cloture:'#FDFBF2',
   coffre:'#8B5E3C',chien:'#C89A63',tortue:'#5EA36B',crabe:'#F0736E',mouette:'#FDFBF2'};
 // Chaque île a son parti pris : une île qui mélange tout ne ressemble à rien.
+/* Ce que les îles de démonstration portent — et **rien de payant**.
+
+   La règle est écrite depuis le 16/09 : « ne pas mettre d'objet de la
+   boutique sur les îles bot : on en ramène un souvenir gratuitement, et la
+   boutique ne sert plus à rien. » Elle était pourtant enfreinte par deux
+   entrées, `phare` (30 shells) au port et `boutique` (35) au village, et
+   personne ne s'en était aperçu parce qu'un souvenir porte `o.de` : il ne
+   débloque pas le pinceau, donc rien ne casse — on gagne juste un objet à
+   30 shells en allant se promener.
+
+   Le port garde son caractère avec un `crabe` sur ses rochers, et le
+   village avec un `coffre` au milieu : deux objets gratuits, et le coffre
+   a l'avantage d'être **la** chose qu'on regarde sur une place.
+
+   `test/objets.mjs` vérifie maintenant cette liste contre `BOUTIQUE` :
+   la règle ne peut plus se perdre en silence. */
 const THEMES=[
   {n:'plage',  v:['palmier','palmier','fleur','rocher','crabe','mouette','ponton','banc']},
   {n:'foret',  v:['sapin','sapin','arbre','buisson','buisson','rocher','banc','lampe']},
   {n:'desert', v:['cactus','cactus','rocher','rocher','coffre','crabe','barriere']},
-  {n:'village',v:['boutique','lampe','lampe','barriere','cloture','banc','fleur','arbre']},
-  {n:'port',   v:['phare','ponton','ponton','mouette','coffre','rocher','lampe','cloture']}
+  {n:'village',v:['coffre','lampe','lampe','barriere','cloture','banc','fleur','arbre']},
+  {n:'port',   v:['crabe','ponton','ponton','mouette','coffre','rocher','lampe','cloture']}
 ];
 const NOMS_ILE=['La Crique','Sable-Rose','Trois-Palmiers','Le Phare Bleu','Anse Douce',
   'Cap Mouette','La Tortue','Vent d\u2019Ouest','Bois-Joli','Petite Houle','L\u2019Écume',

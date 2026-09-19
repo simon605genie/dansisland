@@ -1550,10 +1550,8 @@ Sept choses à ne pas défaire.
    `slug_libre()` et les contraintes : deux listes qui divergent.
 2. **Aucun n'est sur les îles bot** (`THEMES`). On en ramènerait un
    souvenir gratuitement, et la Boutique ne servirait plus à rien.
-   *(Au passage : `phare` et `boutique`, eux, y sont, et c'est contraire à
-   cette règle. Un souvenir porte `o.de`, donc `normaliserEconomie()` ne
-   crédite pas le pinceau — le mal est borné à l'objet. Corriger ça
-   changerait l'aspect des vingt îles de démonstration, et ça se décide.)*
+   *(`phare` et `boutique` l'étaient, contre cette règle : corrigé le
+   19/09, voir la section « les îles de démonstration ».)*
 3. **`etatObjet(o,t)` est le seul endroit qui dit ce qu'un dessin lit du
    jeu.** Quatre objets le font — coffre, boîte, girouette, carillon — et
    le cinquième passera par là aussi. Avant, `drawWorld()` appelait
@@ -1745,6 +1743,47 @@ sait où est le doigt.
    Le faux tient maintenant le contrat du serveur — il marque le jour et
    rend `gain`, `serie` ou `deja`. **Quand un contrôle porte sur ce qui
    se passe *après* un appel, le faux doit changer d'état comme le vrai.**
+
+## Les îles de démonstration ne portent plus rien de payant — 19/09/2026
+
+La règle est écrite depuis le 16/09 : « ne pas mettre d'objet de la
+boutique sur les îles bot : on en ramène un souvenir gratuitement, et la
+boutique ne sert plus à rien. » Elle était enfreinte à **deux** endroits,
+et depuis le début.
+
+    THEMES                port    → phare     (30 shells)   →  crabe
+                          village → boutique  (35 shells)   →  coffre
+    DEMO, écrites à la    pins    → phare                   →  rocher
+    main                  cactus  → boutique                →  barriere
+
+Rien ne le signalait, et c'est ce qui rend ce défaut instructif : un
+souvenir porte `o.de`, donc `normaliserEconomie()` ne crédite pas le
+pinceau. Il n'y a ni erreur, ni trace, ni pinceau débloqué — juste un
+objet à 30 shells qu'on ramène en allant se promener.
+
+Le port garde son caractère avec un crabe sur ses rochers, le village
+avec un coffre au milieu de la place, « Îlot Cactus » avec un enclos de
+bois, et « Pins-Noirs » avec un second rocher sur sa côte nord. Vérifié
+en rendant les îles, pas en relisant la liste.
+
+### Ce que ce défaut a appris sur les contrôles
+
+Le contrôle 9 de `test/objets.mjs` est **statique** : il lit `BOUTIQUE`,
+`THEMES` et le bloc `DEMO` dans la source et croise les listes. Un
+contrôle qui visiterait les îles n'en couvrirait jamais vingt, et celui-ci
+ne peut pas se périmer quand la boutique s'agrandit.
+
+**Mais mon premier essai ne lisait que `THEMES`, et il passait au vert.**
+Ce sont les îles écrites à la main qui l'ont démenti — repérées sur une
+capture d'écran, pas par le test. Un contrôle qui ne couvre qu'une des
+deux sources dit « tout va bien » avec assurance, et c'est pire que pas de
+contrôle du tout : il ferme la question.
+
+La leçon, à côté de « mesurer d'abord » : **vérifier que le contrôle voit
+tout ce qu'il prétend voir.** Ici, la preuve tenait en une ligne — compter
+ce qu'il a lu (`31` articles, `5` thèmes, `16` types posés à la main) et
+refuser un compte qui sent le vide. Les trois `c.dit()` de comptage sont
+là pour ça, pas pour décorer.
 
 ## Reste du contexte
 

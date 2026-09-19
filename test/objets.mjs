@@ -11,6 +11,7 @@
    Il éprouve aussi ce que chacun apporte, puisque c'est leur seule raison
    d'être : sans fonction, ce sont des décorations à 50 shells. */
 import { navigateur, servir, onglet, compteur, attendre } from './aide.mjs';
+import { readFileSync } from 'fs';
 
 const s = await servir(8155);
 const nav = await navigateur();
@@ -259,6 +260,52 @@ c.titre('8. le coffre — le « +shells » ne doit plus être recouvert');
   c.dit(d.plaque === null, 'la plaque est retombée : il n’y a plus rien à ouvrir');
   c.dit(erreurs.length === 0, 'aucune erreur de console' + (erreurs.length ? ' → ' + erreurs[0] : ''));
   await ctx.close();
+}
+
+c.titre('9. les îles de démonstration ne portent rien de payant');
+{
+  /* « Ne pas mettre d'objet de la boutique sur les îles bot : on en ramène
+     un souvenir gratuitement, et la boutique ne sert plus à rien. » La
+     règle est écrite depuis le 16/09 et elle était **enfreinte** — `phare`
+     (30 shells) au port, `boutique` (35) au village — sans que rien ne le
+     signale : un souvenir porte `o.de`, donc il ne débloque pas le
+     pinceau, et il n'y a ni erreur ni trace. Juste un objet à 30 shells
+     qu'on ramène en se promenant.
+
+     Ce contrôle est **statique** : il lit les deux listes dans la source
+     plutôt que de visiter vingt îles. C'est le seul moyen d'être sûr de
+     les couvrir toutes, et il ne peut pas se périmer quand la boutique
+     s'agrandit ou qu'un thème change. */
+  const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+
+  const payants = [...src.matchAll(/\{ou:'(?:ile|dedans|toi)',\s*k:'([a-z]+)'/g)].map(m => m[1]);
+  c.dit(payants.length > 20, 'la liste des articles payants a été lue (' + payants.length + ')');
+
+  const themes = [...src.matchAll(/\{n:'([a-z]+)',\s*v:\[([^\]]+)\]\}/g)]
+    .map(m => [m[1], m[2].match(/'[a-z]+'/g).map(x => x.slice(1, -1))]);
+  c.dit(themes.length === 5, 'les cinq thèmes des îles bot ont été lus');
+
+  const fautes = [];
+  for (const [nom, objets] of themes)
+    for (const o of objets)
+      if (payants.includes(o)) fautes.push(nom + ' → ' + o);
+  if (fautes.length) console.log('     ' + fautes.join(', '));
+  c.dit(fautes.length === 0,
+        'aucun thème ne porte un objet payant' + (fautes.length ? ' → ' + fautes.join(', ') : ''));
+
+  /* Et les **trois îles écrites à la main**, qui ne passent pas par les
+     thèmes du tout. Mon premier essai ne regardait que `THEMES` et
+     déclarait la règle tenue : c'est une capture d'écran qui a montré une
+     échoppe bien vivante sur « Îlot Cactus ». Un contrôle qui ne couvre
+     qu'une des deux sources dit « tout va bien » avec assurance, et c'est
+     pire que pas de contrôle du tout. */
+  const dur = src.slice(src.indexOf('const DEMO=['), src.indexOf('for(let i=0;i<NOMS_ILE.length'));
+  const poses = [...new Set([...dur.matchAll(/\{t:'([a-z]+)'/g)].map(m => m[1]))];
+  c.dit(poses.length > 10, 'les objets des îles écrites à la main ont été lus (' + poses.length + ')');
+  const durs = poses.filter(o => payants.includes(o));
+  if (durs.length) console.log('     ' + durs.join(', '));
+  c.dit(durs.length === 0,
+        'aucune île écrite à la main ne porte un objet payant' + (durs.length ? ' → ' + durs.join(', ') : ''));
 }
 
 await nav.close(); s.fermer();
