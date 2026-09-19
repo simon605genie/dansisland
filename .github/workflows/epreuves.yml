@@ -1,0 +1,56 @@
+# ============================================================
+#  Les épreuves, à chaque push.
+#
+#  Ce qu'elles couvrent : ce que la **page** fait, dans un vrai navigateur,
+#  contre un serveur simulé. Pas le SQL — celui-là s'éprouve dans l'éditeur
+#  du projet, et le README porte ses cinq requêtes.
+#
+#  Elles existent parce que les quatre défauts qu'elles surveillent ont tous
+#  été trouvés à l'œil, tard, et qu'aucun n'aurait survécu à un contrôle :
+#  des balises affichées en clair au milieu d'une phrase, dix appuis qui
+#  donnaient neuf erreurs, une invite qui battait trop vite, une vignette
+#  qui sortait de l'écran en paysage court.
+#
+#  Le site, lui, n'a toujours **ni dépendance ni build** : `package.json`
+#  ne sert qu'à `test/`, et `build.sh` ne copie ni l'un ni l'autre.
+# ============================================================
+name: Épreuves
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  epreuves:
+    name: La page fait ce qu'elle dit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Pas de `npm ci` : il n'y a pas de lockfile, et il n'y en aura pas
+      # pour une seule dépendance de développement. `--no-save` garde
+      # `package.json` intact.
+      - name: Installer Playwright
+        run: npm install --no-save playwright
+
+      # `--with-deps` installe aussi les bibliothèques système dont Chromium
+      # a besoin sur un runner nu. Sans elles, le navigateur se lance et
+      # meurt aussitôt, avec une erreur qui ne parle que de sandbox.
+      - name: Installer Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Les quatre épreuves
+        run: node test/lancer.mjs
+
+      # `build.sh` est la seule définition de ce qui est public : s'il
+      # échoue, rien ne pourra être publié, et autant l'apprendre ici.
+      - name: build.sh passe
+        run: bash build.sh

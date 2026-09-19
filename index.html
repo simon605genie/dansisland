@@ -5125,7 +5125,7 @@ function proximity(){
         bulle('porte:livre','La porte de <b>'+esc(world.owner)+'</b> est fermée. Tu as déjà porté la commande aujourd’hui ; elle revient demain.');
       else if(store.configure&&moi&&bourseServeur)
         bulle('porte:manque','La porte de <b>'+esc(world.owner)+'</b> est fermée. C’est ici qu’on dépose la commande du jour, et il te manque <b>'+
-          esc(commandeManque().join('</b> et <b>'))+'</b> dans ton sac.');
+          commandeManque().map(esc).join('</b> et <b>')+'</b> dans ton sac.');
       else
         bulle('porte:ferme','La porte de <b>'+esc(world.owner)+'</b> est fermée. Pour l’instant, on ne visite que le dehors.');
       return; }
@@ -6078,7 +6078,12 @@ function carteCommande(){
     f.appendChild(hint('🧺 <b>Ton sac est prêt.</b> Va chez quelqu’un, marche jusqu’au pas de sa porte, et appuie sur <b>E</b> ou touche le bouton rose : tu gagnes <b>'+GAIN_COMMANDE+' shells</b>, et lui <b>'+GAIN_COMMANDE_RECUE+'</b>, qu’il trouvera en rentrant.'));
   }else{
     const m=commandeManque();
-    f.appendChild(hint('Il te manque <b>'+esc(m.join('</b> et <b>'))+'</b>. À marée basse, la mer les laisse sur le sable mouillé au bord de <b>ton</b> île : c’est là qu’on remplit le sac. Chez les voisins, il n’y a rien à ramasser : on y va les mains pleines, pas l’inverse.'));
+    // On échappe **chaque** nom, puis on joint. L'inverse — joindre d'abord,
+    // échapper ensuite — échappe aussi le balisage de la jointure, et les
+    // `</b>` s'affichent en clair au milieu de la phrase. C'était le cas ici
+    // et dans la bulle du pas de la porte ; quatre lignes plus bas, les noms
+    // des porteurs le faisaient déjà dans le bon ordre.
+    f.appendChild(hint('Il te manque <b>'+m.map(esc).join('</b> et <b>')+'</b>. À marée basse, la mer les laisse sur le sable mouillé au bord de <b>ton</b> île : c’est là qu’on remplit le sac. Chez les voisins, il n’y a rien à ramasser : on y va les mains pleines, pas l’inverse.'));
   }
   if(livraisonsRecues.length){
     const noms=livraisonsRecues.map(l=>esc(l.auteur_nom||'Quelqu’un'));

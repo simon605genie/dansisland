@@ -1380,6 +1380,47 @@ valeur — mesuré, pas supposé. On éprouve donc la formule, pas le rendu. Le
 son, lui, ne s'éprouve pas du tout de cette façon : il n'y a pas de sortie
 audio ici, et le jugement musical revient à l'oreille de quelqu'un.
 
+## Les épreuves entrent dans le dépôt — 19/09/2026
+
+`npm test`, quatre harnais dans `test/`. Ils font tourner **la vraie page
+dans un vrai navigateur** contre `test/faux-store.js`, copié sous le nom
+`src/store.js` dans un dossier jetable : sans réseau, sans compte, et sans
+toucher à la base de production.
+
+Ils ont chacun un défaut réel derrière eux, trouvé à l'œil et tard :
+
+    balises.mjs     des `</b>` affichés en clair au milieu d'une phrase
+    etroit.mjs      une vignette qui sortait de l'écran en paysage court
+    parrainage.mjs  les trois branches de reglerLeParrainage()
+    lien.mjs        dix appuis qui donnaient neuf erreurs
+
+Quatre choses à ne pas défaire :
+
+1. **Le site n'a toujours ni dépendance ni build.** `package.json` ne sert
+   qu'à `test/`, et `build.sh` ne copie ni l'un ni l'autre dans `dist/` —
+   il copie une liste explicite, donc il n'y a rien à y ajouter.
+2. **`faux-store.js` doit exporter exactement ce que `index.html`
+   importe.** Un export qui manque, et la page ne démarre pas du tout :
+   module refusé, écran vide, une ligne dans la console. Quand
+   `index.html` appelle un nouveau `store.quelquechose`, il faut l'ajouter
+   là aussi.
+3. **`navigateur()` se rabat sur le Chromium présent.** Le paquet npm
+   attend un numéro de build précis ; un conteneur qui porte déjà des
+   navigateurs sous `PLAYWRIGHT_BROWSERS_PATH` n'a pas forcément le même,
+   et l'erreur ne dit que « Executable doesn't exist ». Ne pas remplacer ça
+   par un chemin en dur : il serait faux sur l'autre machine.
+4. **Un test qui ne tombe pas sur le défaut qu'il vise ne vaut rien.**
+   `balises.mjs` a été éprouvé en remettant le bug d'origine — et le
+   premier essai le laissait passer, parce qu'il lisait
+   `.panel:not([hidden])`, ce qui rendait une chaîne vide. C'est
+   `offsetParent !== null` qu'il faut : ce qui compte est ce qui est
+   **visible**.
+
+Ce qu'ils ne couvrent pas, et il ne faut pas prétendre le contraire : le
+SQL (qui s'éprouve dans l'éditeur du projet), le rendu image par image (le
+`rAF` est bridé sous pilotage), le son (pas de sortie audio), et tout ce
+qui demande deux comptes.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
