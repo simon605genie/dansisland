@@ -359,9 +359,11 @@ dépôt : le build ne se déclenchait plus.
 
 Une intégration Git qui décroche est **muette**. Rien dans le dépôt ne le
 dit, aucun e-mail ne part, et on s'en aperçoit en regardant le site des
-jours plus tard. D'où `.github/workflows/deployer.yml`, qui rend le
+jours plus tard. D'où `.github/workflows/mettre-en-ligne.yml`, qui rend le
 déploiement explicite : il se lit, il laisse un log, et il échoue
-bruyamment.
+bruyamment. *(Ce fichier s'est d'abord appelé `deployer.yml` : il a été
+renommé le 19/09 pendant le diagnostic du blocage, et ce paragraphe
+désignait encore l'ancien nom.)*
 
 Il demande deux secrets, à ajouter une fois dans **Settings → Secrets and
 variables → Actions** :
@@ -371,7 +373,13 @@ variables → Actions** :
                             du tableau de bord
 
 Sans eux, le job s'arrête au premier pas en nommant ce qui manque, plutôt
-que d'échouer plus loin sur une erreur d'authentification illisible. Ils
+que d'échouer plus loin sur une erreur d'authentification illisible.
+
+**Et c'est exactement où il en est, mesuré le 19/09 au soir.** Le workflow
+n'est plus bloqué — il se planifie, il tourne, il passe le `checkout`, et il
+s'arrête au pas « Les secrets sont-ils là ? », tout le reste en `skipped`.
+Autrement dit : **il ne manque que ces deux secrets.** Les ajouter suffit,
+et le prochain push sur `main` publie. Ils
 restent chez GitHub : ils ne passent pas dans les logs et ne sont pas dans
 ce dépôt.
 
