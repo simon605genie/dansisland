@@ -1683,6 +1683,69 @@ changé. Ce qui a fait avancer, c'est la paire de sondes : deux fichiers
 identiques à une ligne près. Une comparaison qui isole **une** variable
 vaut dix relectures.
 
+## Les verrous de bulle, et le coffre qui se taisait — 19/09/2026
+
+Deux défauts de la même famille, trouvés en peaufinant, tous deux
+attrapés par `test/objets.mjs` avant d'être corrigés — et le second était
+**écrit dans ce fichier depuis le 17/09** sans que personne le reprenne.
+
+### Le ménage des verrous ne peut plus se périmer
+
+Le bas de `proximity()` levait les bulles dont la clé commençait par l'un
+des cinq préfixes d'une **liste écrite à la main** :
+`['sign','souv','porte','chien','coffre']`. Les trois clés ajoutées le
+19/09 — `crotte`, `boite:*`, `girouette` — n'y étaient pas. Conséquence
+exacte : **leur bulle restait à l'écran pour toujours** dès qu'on
+s'éloignait de l'objet. C'est la faute déjà nommée pour le chien — « un
+verrou de bulle qui survit à son état, c'est un message qui reste à
+l'écran pour toujours » — et elle est revenue par la porte de derrière :
+la règle était écrite, la liste ne l'était pas.
+
+Le remplaçant est un **registre qui se remplit tout seul** : `bulle()`
+inscrit sa clé dans `VERROUS_PROX`, et le ménage lève ce que le registre
+connaît. Une bulle de proximité nouvelle est couverte le jour où elle est
+écrite, sans que personne ait à y penser. `verrouProx(k)` rend sa clé,
+pour que les constantes s'écrivent en `const`.
+
+**`baladeloin` en reste dehors, et gratuitement** : il ne passe pas par
+`bulle()` mais par `say()` en direct, donc il ne s'inscrit jamais, et
+c'est toujours `taireLattente()` qui le lève. La règle du chien survit au
+changement sans une ligne pour la tenir.
+
+### Le coffre recouvrait son propre cadeau
+
+« Le coffre a encore ce défaut-là, lui », écrit le 17/09 à propos de la
+clé de bulle de `porterLaCommande()`. C'était vrai, et ça restait vrai :
+`ouvrirCadeau()` finissait par un `say(msg)` **sans verrou**, donc
+`proximity()` repassait à l'image suivante, voyait un coffre désormais
+vide, et recouvrait le « +5 shells » par « tu l'as déjà ouvert
+aujourd'hui » — avant qu'on ait eu le temps de lire ce qu'on avait gagné.
+Le contrôle 8 de `test/objets.mjs` le reproduit mot pour mot quand on
+remet le défaut.
+
+`ouvrirCadeau(surLeCoffre)` prend donc un paramètre, et les deux clés du
+coffre existent (`coffre:plein`, `coffre:vide`) comme celles de la boîte.
+**Le paramètre n'est pas une commodité** : depuis le bouton du panneau,
+personne n'est sur un coffre, donc le ménage lèverait la bulle à l'image
+suivante et le message n'aurait fait que clignoter. C'est l'appelant qui
+sait où est le doigt.
+
+### Deux choses apprises sur le harnais
+
+1. **Un contrôle peut passer pour la mauvaise raison.** Le premier essai
+   du contrôle « s'éloigner efface la bulle » passait — parce qu'en
+   marchant le bonhomme tondait une touffe, et ce message-là recouvrait
+   la bulle sans rien prouver. Il attend maintenant **2,8 s** : un
+   message de tonte n'a pas de verrou et s'efface seul à 2,2 s, un verrou
+   survivant ne s'efface jamais. Après l'attente, un murmure encore
+   allumé *est* le défaut.
+2. **Un faux trop gentil n'éprouve rien.** `bourseCadeau()` de
+   `faux-store.js` rendait la bourse inchangée : `cadeauDispo()` restait
+   vrai, et le contrôle du recouvrement passait pour la mauvaise raison.
+   Le faux tient maintenant le contrat du serveur — il marque le jour et
+   rend `gain`, `serie` ou `deja`. **Quand un contrôle porte sur ce qui
+   se passe *après* un appel, le faux doit changer d'état comme le vrai.**
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

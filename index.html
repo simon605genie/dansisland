@@ -5174,6 +5174,12 @@ addEventListener('pointerdown',()=>{ if(!sonCoupe){ ctxAudio(); majAmbiance(); }
 /* ================= murmures ================= */
 const whisper=document.getElementById('whisper');
 let wTimer=null, wLock='';
+// Les verrous que `proximity()` a le droit de lever en s'éloignant. Voir
+// le ménage en bas de `proximity()` : c'est lui qui explique pourquoi
+// c'est un registre qui se remplit tout seul et non une liste tenue à la
+// main. `verrouProx()` rend sa clé, pour pouvoir s'écrire en `const`.
+const VERROUS_PROX=new Set();
+function verrouProx(k){ VERROUS_PROX.add(k); return k; }
 function say(msg,lock,duree){
   whisper.innerHTML=msg; whisper.classList.add('on'); wLock=lock||'';
   clearTimeout(wTimer);
@@ -5235,7 +5241,7 @@ function agir(){
     const cr=crotteProche(); if(cr){ nettoyer(cr); return true; }
     // Un coffre vide n'est pas un refus : il n'a simplement rien à donner
     // aujourd'hui, et la bulle le dit déjà. Le bouton rose ne s'affiche pas.
-    if(coffreProche()&&cadeauDispo()){ son('coffre'); ouvrirCadeau(); return true; }
+    if(coffreProche()&&cadeauDispo()){ son('coffre'); ouvrirCadeau(true); return true; }
     // La boîte aux lettres, juste après le coffre : les deux sont des
     // choses qui attendent d'être relevées, et une boîte vide n'est pas
     // plus un refus qu'un coffre vide.
@@ -5274,7 +5280,7 @@ function proximity(){
   // pieds en devient un — celle-là ferait un cadeau qu'on ne veut pas, et
   // elle n'a de toute façon pas de nom dans `NOM_OBJ`.
   souvenirProche = (visiting && objet && objet.t!=='crotte') ? objet : null;
-  const bulle=(k,html)=>{ if(wLock!==k) say(html,k); };
+  const bulle=(k,html)=>{ verrouProx(k); if(wLock!==k) say(html,k); };
   // Ces deux branches sortent avant le ménage de la fin : elles doivent
   // donc dire elles-mêmes ce que porte la plaque rose. Sans ça, elle garde
   // le libellé d'avant — « Déposer la commande » devant un objet du voisin —
@@ -5310,10 +5316,10 @@ function proximity(){
   if(!visiting&&coffreProche()){
     if(cadeauDispo()){
       boutonRose('Ouvrir le coffre');
-      bulle('coffre','<b>Ton coffre.</b> Il y a quelque chose dedans aujourd’hui. <b>E</b> pour l’ouvrir.');
+      bulle(COFFRE_PLEIN,'<b>Ton coffre.</b> Il y a quelque chose dedans aujourd’hui. <b>E</b> pour l’ouvrir.');
     }else{
       boutonRose(null);
-      bulle('coffre','Ton coffre est vide : tu l’as déjà ouvert aujourd’hui. Il se remplit demain.');
+      bulle(COFFRE_VIDE,'Ton coffre est vide : tu l’as déjà ouvert aujourd’hui. Il se remplit demain.');
     }
     return;
   }
@@ -5386,7 +5392,24 @@ function proximity(){
       : 'Ta porte. Monte sur le seuil, ou <b>E</b> pour rentrer chez toi.'); return;
   }
   sasArme=true; boutonRose(null);
-  if(['sign','souv','porte','chien','coffre'].some(k=>wLock.indexOf(k)===0)){ whisper.classList.remove('on'); wLock=''; }
+  /* Le ménage. Il était une **liste de préfixes écrite à la main**, et
+     c'est exactement ce que ce fichier interdit ailleurs : deux listes qui
+     divergent. Le 19/09, trois clés neuves — `crotte`, `boite:*`,
+     `girouette` — n'y étaient pas, donc leur bulle restait à l'écran pour
+     toujours dès qu'on s'éloignait. C'est la faute déjà nommée pour le
+     chien : « un verrou de bulle qui survit à son état, c'est un message
+     qui reste à l'écran pour toujours ».
+
+     Le registre ne peut plus se périmer : **toute clé passée à `bulle()`
+     s'y inscrit d'elle-même**, et le ménage lève ce que le registre
+     connaît. Une bulle de proximité nouvelle est couverte le jour où elle
+     est écrite, sans que personne ait à y penser.
+
+     `baladeloin` en reste dehors, et c'est voulu : il ne passe pas par
+     `bulle()` mais par `say()` en direct, donc il ne s'inscrit jamais.
+     C'est `taireLattente()` qui le lève, comme c'est écrit depuis le
+     chien. La règle survit au changement, sans une ligne pour la tenir. */
+  if(VERROUS_PROX.has(wLock)){ whisper.classList.remove('on'); wLock=''; }
 }
 // On ne vole rien : on ramène une copie, signée du nom de l'hôte. L'île
 // visitée n'est pas touchée, et la tienne garde la trace de qui tu as vu.
@@ -6256,7 +6279,7 @@ function jourDecale(n){
 function jourDuJeu(){ return bourseJourVu || aujourdhui(); }
 function cadeauDispo(){ return mine.bourse && mine.bourse.cadeau!==jourDuJeu(); }
 function nomArticle(k){ const a=BOUTIQUE.find(x=>x.k===k); return a?a.n:k; }
-async function ouvrirCadeau(){
+async function ouvrirCadeau(surLeCoffre){
   if(!cadeauDispo()) return;
   const b=mine.bourse;
   let msg;
@@ -6288,7 +6311,19 @@ async function ouvrirCadeau(){
     }
     garderBourseLocale();
   }
-  vitrine=null; son('achat'); buildAll(); say(msg);
+  vitrine=null; son('achat'); buildAll();
+  /* Sous la clé de l'état d'après quand on est sur le coffre, et pas sans
+     verrou. Ce défaut était **écrit dans CLAUDE.md depuis le 17/09** —
+     « le coffre a encore ce défaut-là, lui » — et il est le même que celui
+     de la boîte aux lettres : `proximity()` repasse à l'image suivante,
+     voit un coffre vide, et recouvre le « +5 shells » par « tu l'as déjà
+     ouvert aujourd'hui » avant qu'on ait pu le lire.
+
+     Depuis un panneau, en revanche, personne n'est sur un coffre : le
+     ménage lèverait la bulle à l'image suivante et le message n'aurait
+     fait que clignoter. D'où le paramètre : c'est l'appelant qui sait où
+     est le doigt. */
+  if(surLeCoffre) say(msg, COFFRE_VIDE); else say(msg, 0, 4200);
 }
 
 /* ---- le coffre du jour ----
@@ -6373,7 +6408,8 @@ function boiteProche(){
    Relever vide la boîte, donc l'état d'après est `boite:vide`, et c'est
    sous cette clé que les mots lus s'affichent. Ils restent tant qu'on est
    dessus, et le ménage du bas de `proximity()` les lève quand on s'en va. */
-const BOITE_VIDE='boite:vide', BOITE_PLEIN='boite:plein';
+const COFFRE_VIDE=verrouProx('coffre:vide'), COFFRE_PLEIN=verrouProx('coffre:plein');
+const BOITE_VIDE=verrouProx('boite:vide'), BOITE_PLEIN=verrouProx('boite:plein');
 function releverLaBoite(){
   const n=motsNouveaux;
   const recus=(mine.mots||[]).filter(m=>!moi||m.auteur!==moi.id).slice(-n||0);
@@ -6416,7 +6452,7 @@ function dureeLisible(sec){
 // raison que la boîte : sous une clé différente, la réponse serait
 // recouverte par l'invitation à l'image suivante. `say()` écrit toujours,
 // lui, donc réappuyer sur E rafraîchit bien le délai.
-const GIROUETTE_CLE='girouette';
+const GIROUETTE_CLE=verrouProx('girouette');
 function lireLaGirouette(){
   const p=prochaineMaree(); son('piece');
   say(p.basse
