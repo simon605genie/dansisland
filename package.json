@@ -1,0 +1,12 @@
+{
+  "name": "dansisland",
+  "private": true,
+  "type": "module",
+  "description": "Dan's Island — les épreuves. Le site, lui, n'a ni dépendance ni build : ce fichier ne sert qu'à test/.",
+  "scripts": {
+    "test": "node test/lancer.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}

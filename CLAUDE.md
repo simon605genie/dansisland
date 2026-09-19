@@ -1254,6 +1254,173 @@ Toute accélération future de ces valeurs se regarde **sur un vrai
 téléphone**, pas sur un cadre de 19 px dans un navigateur de bureau : c'est
 là que la différence se voit, et c'est de là qu'est venu le signalement.
 
+## La musique, et la mer qui a enfin un fond — 19/09/2026
+
+Deux ajouts, aucune migration, **aucune clé de plus dans `mondeNu()`** : le
+choix d'ambiance y était déjà, et la mer est du dessin.
+
+### La musique est une ambiance de plus
+
+Il y avait des nappes, des oiseaux et des grillons ; il n'y avait pas une
+note. `AMBIANCES` gagne `musique`, et c'est tout ce que ça coûte en
+données — `mine.ambiance` est déjà dans `mondeNu()`, donc une valeur de
+plus dans un jsonb ne demande rien à personne. Le défaut reste `vagues` :
+personne ne se réveille avec de la musique qu'il n'a pas choisie.
+
+Cinq choses à ne pas défaire :
+
+1. **Elle est générative, jamais enregistrée.** C'est la règle déjà écrite
+   en tête de la section audio : pas de fichier à héberger, pas de licence
+   à vérifier, pas un octet à charger avant de jouer. Et une boucle de
+   trois minutes se reconnaît au bout d'un quart d'heure — or c'est une
+   île où l'on reste.
+2. **La gamme est pentatonique, cinq degrés et pas un de plus.** Il n'y a
+   pas de note fausse dans une pentatonique : c'est ce qui permet de tirer
+   les notes au hasard sans jamais déraper. Une gamme de sept degrés
+   demanderait des règles d'enchaînement, donc un moteur, donc un bug.
+3. **Le mode suit le ciel de l'île, et se relit à chaque note.** Passer en
+   nuit assombrit la musique sans rien redémarrer. `GAMMES` a donc les
+   mêmes clés que `sky` — si une quatrième heure apparaît un jour, elle
+   doit y entrer aussi, sinon on retombe sur `jour` en silence.
+4. **Une phrase sur trois reste une note seule.** Dans une musique de ce
+   genre le silence fait autant que les notes ; un tapis continu devient
+   un fond qu'on n'entend plus, et qu'on finit par couper.
+5. **L'écho n'est pas un effet, c'est la pièce.** Sans lui chaque note
+   s'arrête net et s'entend comme un bip. Le passe-bas est **dans** la
+   boucle : la reprise est plus sourde que la note, ce qui est exactement
+   ce que fait de l'air, et c'est ça qui se lit comme de la distance.
+
+`arreterAmbiance()` coupe le minuteur des notes **et** débranche la boucle
+de délai. Une boucle de délai laissée branchée sur elle-même continue de
+tourner à vide : elle s'éteint toute seule, mais elle n'a plus de raison
+d'exister.
+
+### La mer avait une couleur, pas un fond
+
+Un aplat d'une seule couleur, et une île posée dessus flotte. Le dégradé
+part **du bord de l'île** — `kPlage()`, déjà calculé pour le requin — et
+non du centre : sous l'île il n'y a rien à voir, et un dégradé parti du
+milieu s'assombrirait trop tôt là où on regarde.
+
+Il est **elliptique, pas circulaire**, d'où le passage dans un repère mis à
+l'échelle. La mer fait 438x240 : un dégradé rond atteindrait le large bien
+plus tôt au nord et au sud qu'à l'est et à l'ouest, soit l'inverse de la
+vérité, puisque c'est au nord et au sud que la bande d'eau est la plus
+mince. Le `clip` est posé **avant** la mise à l'échelle — la découpe reste
+dans le repère du monde, seul le dégradé s'étire.
+
+Mesuré sur les pixels : `(83,221,243)` contre la plage, `(63,201,226)` au
+large. Le haut-fond existe, il ne se devine pas.
+
+### Les éclats sur l'eau
+
+Vingt-deux, tirés de `h2()` et de `t` : aucun état, rien en base, rien pour
+Ctrl+Z. La ligne déjà écrite pour les mouettes et le requin.
+
+**Chacun a sa propre période.** Des éclats qui battraient ensemble se
+liraient comme un clignotement de l'écran, pas comme de l'eau. Vérifié en
+arithmétique pure, hors navigateur : 22 périodes distinctes sur 22, tous
+s'allument au moins une fois en vingt secondes, 2,7 allumés en moyenne,
+sept au plus — et parfois zéro, l'eau se repose.
+
+Ils vivent dans l'anneau qui va du bord de l'île à 97 % du rayon. Tout
+contre le contour ils déborderaient sur le papier une fois sur trois, là où
+`wMer()` rentre.
+
+### La pièce n'avait pas de volume
+
+Les deux parois étaient séparées de **seize valeurs** (`-18` contre `-2`) :
+à l'écran, elles se lisaient comme un seul plan replié. Trente-quatre
+suffisent à ce que l'œil les sépare, et c'est encore doux. Les quatre
+couleurs de mur sont toutes claires, donc un écart **plat** ne peut rien
+écraser vers le noir ; le jour où un mur sombre apparaît, il faudra un
+écart relatif, et c'est ici qu'il faudra le mettre.
+
+Et les fenêtres montraient le ciel sans rien éclairer. Une pièce dont les
+fenêtres ne posent aucune tache de jour sur le plancher se lit comme un
+décor, pas comme un endroit. La flaque est **écrasée au rapport de la
+case** (`th/tw`) — un rond y serait posé sur le sol au lieu d'être couché
+dans le plan — et elle passe **après le sol et avant les meubles**, sinon
+elle traverserait une commode.
+
+**La nuit, rien.** C'est le halo du lampadaire qui éclaire, et deux sources
+qui s'ajoutent feraient une pièce plus claire de nuit que de jour.
+
+### Le voile laissait enfin passer l'île
+
+`#accueil` promettait de laisser voir le jeu derrière — c'est écrit plus
+haut, et c'est la raison même de n'en pas faire une page. Il ne le faisait
+pas : les bords étaient à **86 %** d'opacité, et l'île n'y était plus
+qu'une tache.
+
+Le piège est arithmétique et il vaut d'être écrit : la couche plate et le
+dégradé **se composent**. Lire `.66` dans le dégradé et `.58` dessous ne
+donne pas 66 %, ça donne `1-(1-,66)(1-,58) = 86 %`. Les valeurs avaient
+l'air modérées et ne l'étaient pas.
+
+Le halo garde ce qui compte — 95 % au centre, 85 % encore sous la carte,
+donc le texte ne perd rien — et les bords descendent à 54 %. La mer, le
+soleil et les mouettes reviennent.
+
+Les **trois** déclarations doivent rester d'accord : la claire, celle du
+`@media (prefers-color-scheme: dark)` et celle de `:root[data-theme="dark"]`.
+Vérifié dans les deux thèmes, en large et à 390 px.
+
+*(Au passage, une mesure à ne pas refaire comme moi : j'ai d'abord calculé
+le contraste du titre contre une luminance de voile **écrite en dur**, en
+supposant le voile crème dans les deux thèmes. Il rendait 1,05 en sombre et
+j'ai cru à un titre invisible. Le voile est bleu nuit en sombre, et tout
+allait bien. Un contraste se mesure contre le fond réellement calculé, pas
+contre celui qu'on croit.)*
+
+**Ces trois choses ne se vérifient pas dans un navigateur piloté**, et
+c'est la limite déjà notée pour le requin : le `rAF` y est bridé, le canvas
+garde la dernière image peinte, et seize mesures rendent seize fois la même
+valeur — mesuré, pas supposé. On éprouve donc la formule, pas le rendu. Le
+son, lui, ne s'éprouve pas du tout de cette façon : il n'y a pas de sortie
+audio ici, et le jugement musical revient à l'oreille de quelqu'un.
+
+## Les épreuves entrent dans le dépôt — 19/09/2026
+
+`npm test`, quatre harnais dans `test/`. Ils font tourner **la vraie page
+dans un vrai navigateur** contre `test/faux-store.js`, copié sous le nom
+`src/store.js` dans un dossier jetable : sans réseau, sans compte, et sans
+toucher à la base de production.
+
+Ils ont chacun un défaut réel derrière eux, trouvé à l'œil et tard :
+
+    balises.mjs     des `</b>` affichés en clair au milieu d'une phrase
+    etroit.mjs      une vignette qui sortait de l'écran en paysage court
+    parrainage.mjs  les trois branches de reglerLeParrainage()
+    lien.mjs        dix appuis qui donnaient neuf erreurs
+
+Quatre choses à ne pas défaire :
+
+1. **Le site n'a toujours ni dépendance ni build.** `package.json` ne sert
+   qu'à `test/`, et `build.sh` ne copie ni l'un ni l'autre dans `dist/` —
+   il copie une liste explicite, donc il n'y a rien à y ajouter.
+2. **`faux-store.js` doit exporter exactement ce que `index.html`
+   importe.** Un export qui manque, et la page ne démarre pas du tout :
+   module refusé, écran vide, une ligne dans la console. Quand
+   `index.html` appelle un nouveau `store.quelquechose`, il faut l'ajouter
+   là aussi.
+3. **`navigateur()` se rabat sur le Chromium présent.** Le paquet npm
+   attend un numéro de build précis ; un conteneur qui porte déjà des
+   navigateurs sous `PLAYWRIGHT_BROWSERS_PATH` n'a pas forcément le même,
+   et l'erreur ne dit que « Executable doesn't exist ». Ne pas remplacer ça
+   par un chemin en dur : il serait faux sur l'autre machine.
+4. **Un test qui ne tombe pas sur le défaut qu'il vise ne vaut rien.**
+   `balises.mjs` a été éprouvé en remettant le bug d'origine — et le
+   premier essai le laissait passer, parce qu'il lisait
+   `.panel:not([hidden])`, ce qui rendait une chaîne vide. C'est
+   `offsetParent !== null` qu'il faut : ce qui compte est ce qui est
+   **visible**.
+
+Ce qu'ils ne couvrent pas, et il ne faut pas prétendre le contraire : le
+SQL (qui s'éprouve dans l'éditeur du projet), le rendu image par image (le
+`rAF` est bridé sous pilotage), le son (pas de sortie audio), et tout ce
+qui demande deux comptes.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

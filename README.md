@@ -283,6 +283,47 @@ vivantes.
 Les adresses d'îles (`/simon`) renvoient un 404 en local : `_redirects` n'est
 lu que par Cloudflare Pages. Seule la racine est testable ainsi.
 
+## Les épreuves
+
+    npm install          # une seule dépendance, et seulement pour test/
+    npx playwright install chromium
+    npm test
+
+Quatre harnais, dans `test/`, qui font tourner **la vraie page dans un vrai
+navigateur** contre un serveur simulé (`test/faux-store.js` remplace
+`src/store.js` dans une copie jetable — le dépôt n'est jamais modifié, et
+rien ne touche la base de production).
+
+    balises.mjs     aucun panneau ne montre de balise en clair
+    etroit.mjs      360 px et 780x360 : rien ne déborde, rien n'est coupé
+    parrainage.mjs  les trois branches de reglerLeParrainage()
+    lien.mjs        le lien de connexion, et l'invite de rotation
+
+Ils existent parce que les quatre défauts qu'ils surveillent ont tous été
+trouvés à l'œil, tard, et qu'aucun n'aurait survécu à un contrôle : des
+`</b>` affichés en clair au milieu d'une phrase, dix appuis qui donnaient
+neuf erreurs, une invite qui battait trop vite, une vignette qui sortait de
+l'écran en paysage court.
+
+**Le site n'a toujours ni dépendance ni build.** `package.json` ne sert
+qu'à `test/`, et `build.sh` ne copie ni l'un ni l'autre dans `dist/`.
+
+Ce qu'ils ne couvrent pas, et il ne faut pas croire le contraire :
+
+- **le SQL**, qui s'éprouve dans l'éditeur du projet — voir les cinq
+  vérifications plus haut, et la mise en garde sur le rôle `postgres` ;
+- **le rendu image par image**, parce que le `rAF` est bridé dans un
+  navigateur piloté : le canvas garde la dernière image peinte et dix
+  mesures rendent dix fois la même valeur. Ce qui se déduit de `t` —
+  éclats sur l'eau, requin, voilier — s'éprouve par sa formule, hors
+  navigateur ;
+- **le son**, qui n'a pas de sortie ici ;
+- **ce qui demande deux comptes** : parrainage de bout en bout, livraison,
+  visites payantes.
+
+`.github/workflows/epreuves.yml` les lance à chaque push, et vérifie que
+`build.sh` passe.
+
 ## Déploiement
 
 Projet Pages **dansisland**, branche de production `main`, compte
