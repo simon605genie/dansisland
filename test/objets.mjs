@@ -468,5 +468,61 @@ c.titre('11. les listes qui doivent rester d’accord');
   c.dit(absents.length === 0, 'faux-store.js exporte tout ce qu’index.html demande');
 }
 
+c.titre('12. tout élément caché par `hidden` doit vraiment disparaître');
+{
+  /* Le défaut du 17/09 : `.zoom button` portait `display:grid`, une règle
+     d'auteur, qui l'emporte sur le `[hidden]{display:none}` de la feuille
+     du navigateur. Le bouton de l'appareil photo restait donc **visible et
+     cliquable avant tout achat** — `basculerViseur()` refusait bien, donc
+     rien ne fuyait, mais c'est le bouton mort que ce dépôt s'interdit, et
+     rien ne le signalait.
+
+     **Ce contrôle a d'abord été écrit en regex, et il ne l'attrapait
+     pas** : il construisait les sélecteurs depuis l'`id` et les classes de
+     chaque élément, alors que la règle fautive vise un **ancêtre**
+     (`.zoom button`). Il avait donc précisément l'angle mort du bug qu'il
+     visait. On demande maintenant au navigateur, qui résout toute la
+     cascade — spécificité, ordre, media queries — et qui ne peut pas se
+     tromper sur ce que voit l'œil.
+
+     Deux tailles, parce qu'une règle peut ne mordre que sous media query :
+     le large ordinaire, et le portrait tactile étroit où vit `.tourne`. */
+  const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const caches = [...new Set([...src.matchAll(/id="([a-z\-]+)"[^>]*\shidden/g),
+                              ...src.matchAll(/\shidden[^>]*id="([a-z\-]+)"/g)]
+                              .map(m => m[1]))].sort();
+  console.log('     cachés par hidden : ' + caches.join(', '));
+  c.dit(caches.length >= 5, 'les éléments cachés ont été trouvés (' + caches.length + ')');
+
+  for (const [nom, taille, tactile] of [['large', { width: 1200, height: 860 }, false],
+                                        ['portrait tactile', { width: 390, height: 780 }, true]]) {
+    const { ctx, page, erreurs } = await onglet(nav, {
+      taille, tactile,
+      memoire: { 'dansisland:entre': '1', 'dansisland:guide': '1', 'dansisland:muet': '1' },
+    });
+    await page.goto(s.url, { waitUntil: 'load' });
+    await attendre(1600);
+    // On cache chacun et on lit ce que le navigateur en fait, puis on
+    // remet : mesurer ne doit pas changer l'état de la page.
+    const vus = await page.evaluate(ids => ids.map(id => {
+      const el = document.getElementById(id);
+      if (!el) return [id, 'absent'];
+      const avant = el.hidden;
+      el.hidden = true;
+      const d = getComputedStyle(el).display;
+      el.hidden = avant;
+      return [id, d];
+    }), caches);
+    const fautifs = vus.filter(([, d]) => d !== 'none' && d !== 'absent').map(([i, d]) => i + ':' + d);
+    if (fautifs.length) console.log('     ' + nom + ' → ' + fautifs.join(', '));
+    c.dit(vus.filter(([, d]) => d === 'absent').length === 0,
+          nom + ' — tous les éléments existent dans la page');
+    c.dit(fautifs.length === 0,
+          nom + ' — `hidden` les fait tous disparaître' + (fautifs.length ? ' → ' + fautifs.join(', ') : ''));
+    c.dit(erreurs.length === 0, nom + ' — aucune erreur de console');
+    await ctx.close();
+  }
+}
+
 await nav.close(); s.fermer();
 process.exit(c.fin() ? 1 : 0);
