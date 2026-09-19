@@ -2504,6 +2504,26 @@ Vérifié aussi que le changement est **neutre chez soi**, en faisant tourner
 la même sonde sur la version d'avant et sur la nouvelle : 52 boutons, un
 seul éteint (« ↶ Annuler », faute d'historique), identique des deux côtés.
 
+### Et le panneau Maison, d'un cran plus loin
+
+Le même défaut, trouvé en regardant à côté : ses deux boutons d'action
+(déplacer, entrer) étaient bien fermés en visite, mais les **sept réglages
+d'apparence** restaient ouverts — enseigne, toiture, couleurs, volets,
+cheminée.
+
+Différence qui compte : ceux-là **marchaient**. Ce n'était pas un clic mort,
+c'était une modification de **ta** maison, faite depuis l'île de quelqu'un
+d'autre, dont tu ne vois pas le résultat. C'est mot pour mot la raison déjà
+écrite dans le panneau Île — « tu ne verrais rien changer d'ici, alors il
+attend que tu sois rentré » — et elle vaut pour la maison sans changer un
+mot.
+
+    en visite   36/36 boutons et 4/4 champs fermés
+    chez soi     0/36 et 0/4 — rien n'a bougé
+
+La note d'en-tête le dit, à la place où on la lit : « Ces réglages sont ceux
+de **ta** maison, que tu ne vois pas d'ici : ils t'attendent chez toi. »
+
 *(Au passage, deux pièges de sonde. `world` dans une page de test n'est pas
 le monde du jeu mais le **canvas** : un élément à `id` devient une globale,
 donc `world.objects` vaut `undefined` et compte zéro sans rien prouver.

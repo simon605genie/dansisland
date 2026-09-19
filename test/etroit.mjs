@@ -301,8 +301,48 @@ c.titre('chez un voisin, le panneau Île est fermé en entier');
   c.dit(chez2.objs > 10, 'en visite, les vignettes sont toujours là (on voit ce qu’on aura chez soi)');
   c.dit(chez2.objsOff === chez2.objs, 'mais toutes éteintes — aucun pinceau ne s’arme chez les autres');
   c.dit(chez2.chipsOff === chez2.chips, 'et toutes les puces aussi');
+
+  /* Et le panneau Maison, qui avait le même défaut d'un cran plus loin :
+     ses deux boutons d'action étaient fermés en visite, mais les sept
+     réglages d'apparence restaient ouverts. Ceux-là **marchaient** — ce
+     n'était pas un clic mort, c'était une modification de ta maison que tu
+     ne vois pas d'ici. Même raison, même remède. */
+  const mai = () => page.evaluate(() => {
+    const p = document.getElementById('p-maison');
+    const bs = [...p.querySelectorAll('button')], ins = [...p.querySelectorAll('input')];
+    return { b: bs.length, bOff: bs.filter(x => x.disabled).length,
+             i: ins.length, iOff: ins.filter(x => x.disabled).length };
+  });
+  await ouvrir('maison');
+  const mv = await mai();
+  console.log('     maison en visite : ' + mv.bOff + '/' + mv.b + ' boutons, ' +
+              mv.iOff + '/' + mv.i + ' champs éteints');
+  c.dit(mv.b > 20 && mv.bOff === mv.b, 'en visite, toute l’apparence de la maison est fermée');
+  c.dit(mv.i > 0 && mv.iOff === mv.i, 'ses champs de texte aussi');
   c.dit(erreurs.length === 0, 'aucune erreur de console');
   await ctx.close();
+
+  // Et chez soi, rien n'est fermé — la première chose à refuser.
+  const t = await onglet(nav, { taille: { width: 1280, height: 900 } });
+  await t.page.goto(s.url, { waitUntil: 'load' });
+  await attendre(2400);
+  await t.page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'maison');
+    if (b) b.click();
+  });
+  await attendre(600);
+  const mc = await t.page.evaluate(() => {
+    const p = document.getElementById('p-maison');
+    const bs = [...p.querySelectorAll('button')], ins = [...p.querySelectorAll('input')];
+    return { b: bs.length, bOff: bs.filter(x => x.disabled).length,
+             i: ins.length, iOff: ins.filter(x => x.disabled).length };
+  });
+  console.log('     maison chez moi  : ' + mc.bOff + '/' + mc.b + ' boutons, ' +
+              mc.iOff + '/' + mc.i + ' champs éteints');
+  c.dit(mc.b > 20 && mc.bOff === 0, 'chez moi, la maison se règle toujours (' + mc.b + ' boutons, aucun éteint)');
+  c.dit(mc.iOff === 0, 'et ses champs de texte se remplissent');
+  c.dit(t.erreurs.length === 0, 'aucune erreur de console');
+  await t.ctx.close();
 }
 
 await nav.close(); s.fermer();

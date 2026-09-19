@@ -5822,14 +5822,24 @@ function buildMaison(){
   if(dedans){ buildDedans(p); return; }
   const c=document.createElement('canvas'); c.id='apercu-maison'; c.width=660; c.height=304;
   p.appendChild(c);
-  p.appendChild(textField('Enseigne','house.sign','Chez Dan'));
-  p.appendChild(chips('Toiture','house.roofShape',[['pointu','Pointu'],['dome','Dôme'],['plat','Plat']]));
-  p.appendChild(swatches('Couleur du toit','house.roof',ROOFS));
-  p.appendChild(swatches('Murs','house.wall',WALLS));
-  p.appendChild(swatches('Porte','house.door',DOORS));
-  p.appendChild(chips('Volets','house.volets',
+  /* Chez un voisin, l'apparence de la maison se ferme, exactement comme le
+     haut du panneau Île : ces réglages touchent **ta** maison, et tu ne la
+     vois pas d'ici. Ils marchaient, eux — ce n'était pas un clic mort mais
+     une modification qu'on ne voit pas — et c'est la même raison écrite
+     dans le panneau Île : « il attend que tu sois rentré ».
+
+     Les deux boutons d'action (déplacer, entrer) étaient déjà fermés ; il
+     ne restait que l'apparence, ouverte. */
+  const pose=(f)=>p.appendChild(visiting?fermerEnVisite(f):f);
+  if(visiting) p.appendChild(hint('Tu es invité chez <b>'+esc(world.owner)+'</b>. Ces réglages sont ceux de <b>ta</b> maison, que tu ne vois pas d’ici : ils t’attendent chez toi.'));
+  pose(textField('Enseigne','house.sign','Chez Dan'));
+  pose(chips('Toiture','house.roofShape',[['pointu','Pointu'],['dome','Dôme'],['plat','Plat']]));
+  pose(swatches('Couleur du toit','house.roof',ROOFS));
+  pose(swatches('Murs','house.wall',WALLS));
+  pose(swatches('Porte','house.door',DOORS));
+  pose(chips('Volets','house.volets',
     [['aucun','Sans'],['creme','Crème'],['bois','Bois'],['toit','Comme le toit'],['porte','Comme la porte']]));
-  p.appendChild(chips('Cheminée','house.cheminee',[[false,'Sans'],[true,'Avec']]));
+  pose(chips('Cheminée','house.cheminee',[[false,'Sans'],[true,'Avec']]));
   p.appendChild(rule());
   const f=field('Emplacement'), row=document.createElement('div'); row.className='row';
   const dep=document.createElement('button');
