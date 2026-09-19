@@ -1421,6 +1421,103 @@ SQL (qui s'éprouve dans l'éditeur du projet), le rendu image par image (le
 `rAF` est bridé sous pilotage), le son (pas de sortie audio), et tout ce
 qui demande deux comptes.
 
+## Le chien qui salit, les bestioles qu'on ne trouvait pas, et la terre qu'on ne voyait pas grandir — 19/09/2026
+
+Trois retours d'usage, aucune migration, **aucune clé de plus dans
+`mondeNu()`** — la crotte est un objet de `objects`, qui y est déjà.
+
+### Le chien laisse quelque chose, et on le nettoie
+
+Une fois par balade, à un point tiré au hasard entre le premier et
+l'avant-dernier, le chien s'arrête. Une crotte se pose sur sa case, et
+elle se ramasse comme le reste : on marche dessus, `E` ou le bouton rose.
+
+Cinq choses à ne pas défaire :
+
+1. **Ce n'est pas une corvée de plus, et ça ne paie rien.** Pas de gain,
+   pas de plafond, rien dans `faits`. Une troisième corvée payante ferait
+   un revenu solitaire de plus, contre la règle « l'île grandit parce que
+   des gens sont passés ». Et un enfant qui ne nettoie pas ne perd rien :
+   c'est la ligne déjà écrite pour le chien qui s'assied.
+2. **Le rang dans `agir()` est le même que dans `proximity()`** —
+   souvenir, chien, **crotte**, coffre, porte — et les deux passent par
+   `crotteProche()`. C'est la règle déjà écrite pour le chien et pour le
+   coffre : un bouton qui annonce un geste et une touche qui en fait un
+   autre.
+3. **Elle est exclue des souvenirs.** `souvenirProche()` ignore
+   `t==='crotte'` : sans ça on en rapporterait une de chez un voisin, et
+   ce n'est pas un cadeau.
+4. **`leChienSarrete()` refuse une case déjà occupée**, hors rayon ou hors
+   terre. Rien ne se pose sous un objet existant, et rien ne tombe à
+   l'eau : un objet invisible qu'on ne peut pas ramasser est pire que pas
+   d'objet du tout.
+5. **`nettoyer()` passe par `memoriser()`**, donc Ctrl+Z la fait revenir.
+   C'est cohérent avec la gomme, qui est le même geste.
+
+Elle n'est **pas** dans l'atelier : rien à poser, rien à acheter. C'est le
+chien qui la met, comme la tondeuse est un dessin que le moteur sort.
+
+### Les bestioles étaient là, et personne ne les trouvait
+
+Signalé par des joueurs : « les animaux ne sont pas accessibles ». Ils
+l'étaient — `chien`, `crabe` et `mouette` sont **gratuits**, absents de
+`BOUTIQUE`, donc `achete()` est vrai pour eux dès le premier jour. Ce qui
+coûte 20 shells, c'est la capacité `compagnon`, c'est-à-dire le fait d'en
+avoir un qui te suit.
+
+Rien à corriger dans le code, donc, et tout à corriger dans ce qui se lit :
+
+- le bloc **Compagnon** passe **au-dessus du sac** dans l'onglet Toi : il
+  était sous un inventaire, à un écran de défilement du haut ;
+- la description de la Boutique **nomme les trois bestioles** et dit
+  qu'elles sont déjà à toi — « Compagnon, 20 shells » ne disait pas ce
+  qu'on achetait ;
+- la note affichée sans l'achat **donne le prix et le chemin**.
+
+La leçon est celle de la boutique du 16/09, transposée : ce qui existe
+mais ne se nomme nulle part n'existe pas. Ne pas le « réparer » en
+baissant le prix ou en offrant la capacité : rien n'était cassé.
+
+### « Permet d'agrandir l'île » — mesuré, et ce qui a été fait à la place
+
+Demandé, mesuré avant de coder, et **la géométrie dit non** :
+
+    rayon  terre   +anneau de marée   mer au creux   eau restante
+    7,0    305 px  345 px             403 px          59 px
+    8,3    357 px  396 px             403 px           7 px
+    9,0    384 px  424 px             403 px         -21 px
+
+`RAYON_MAX` vaut 8,3 parce qu'au-delà l'**anneau de marée sort de la
+mer**. Agrandir la mer demande `MER_RX > 438`, or la tache fait déjà
+945 px de large (bosses comprises) dans les 985 px que le cadre montre à
+`ZMIN`. Baisser `ZMIN` ne rend rien : sur un cadre de 768 px c'est
+`CASE_MIN` qui borne déjà le zoom automatique à 0,786, pas `ZMIN`. Et la
+demi-grille 18x18 plafonne de toute façon à 8,5.
+
+Élargir la grille reste possible, mais c'est un chantier et pas un
+réglage : les `tiles` changent de longueur (et `normaliserMonde()` les
+**réinitialise** si elle ne tombe pas juste — c'est-à-dire efface le
+relief peint de toutes les îles), les `objects` se décalent, et les mots
+se décalent en SQL par une migration non idempotente, comme celle du
+16/09. À ne lancer que sur décision explicite, et avec une sauvegarde.
+
+Ce qui a été fait à la place répond au vrai manque : **la croissance
+existait et ne se voyait pas.** Elle se disait en quatorzième note grise
+tout en bas du panneau Île, après Ctrl+Z. Elle a maintenant son bloc
+**Ta terre** en tête du panneau, juste sous le nom de l'île : une jauge,
+le nombre de crans gagnés sur dix, le nombre de mots reçus, et la seule
+chose à faire pour en gagner — envoyer sa carte postale. Et
+`faireGrandir()` dit, au moment où ça arrive, combien de mots il reste.
+
+Deux choses à tenir :
+
+1. **La jauge part de `RAYON0`, pas de zéro.** Une île neuve n'a pas une
+   terre vide : ce qui se remplit est ce qu'on *gagne*, et une jauge à
+   moitié pleine dès le premier jour ne dirait rien.
+2. **Le compte est en crans, pas en pixels** (`(r-RAYON0)/PAS_RAYON`).
+   Si `RAYON_MAX` ou `PAS_RAYON` bougent, le total suit tout seul et il
+   n'y a pas de dix écrit en dur à retrouver.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

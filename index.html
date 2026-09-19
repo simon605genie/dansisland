@@ -444,6 +444,15 @@ textarea{
 .btn:disabled{opacity:.45; cursor:default}
 .row{display:flex; gap:7px; flex-wrap:wrap}
 .hint{font-size:13px; color:var(--ink-3); line-height:1.5; margin:0}
+/* La jauge de la terre gagnée. Elle ne se règle pas, elle se lit : c'est
+   pour ça qu'elle n'est pas un <progress>, dont l'apparence se discute
+   avec chaque navigateur et qu'on finit de toute façon par repeindre. */
+.jauge{height:10px; border-radius:99px; background:var(--sunk); overflow:hidden;
+  border:1px solid var(--line)}
+.jauge i{display:block; height:100%; border-radius:99px; background:var(--accent);
+  transition:width .6s ease}
+.chiffre{font-size:13px; color:var(--ink-2); line-height:1.5; margin:0}
+.chiffre b{color:var(--ink)}
 /* Au doigt, les cibles grandissent. Trente pixels de haut, c'est un chip
    qu'on rate une fois sur trois ; les recommandations disent quarante-quatre. */
 @media (pointer:coarse){
@@ -928,7 +937,12 @@ function faireGrandir(){
   const r=rayonPour((mine.mots||[]).length);
   if(r<=(mine.rayon||RAYON0)+0.001) return false;
   mine.rayon=r; saveMine(); son('grandir');
-  say('<b>Ton \u00eele s\u2019agrandit.</b> La mer a recul\u00e9 d\u2019un cran, il y a de la place \u00e0 b\u00e2tir.');
+  // Dire ce qui reste, ici, au moment o\u00f9 \u00e7a arrive : c'est la seule fois
+  // o\u00f9 la r\u00e8gle \u00ab l'\u00eele grandit parce que des gens sont pass\u00e9s \u00bb se voit.
+  const reste=Math.max(0, Math.round((RAYON_MAX-r)/PAS_RAYON));
+  say('<b>Ton \u00eele s\u2019agrandit.</b> La mer a recul\u00e9 d\u2019un cran, il y a de la place \u00e0 b\u00e2tir. '+
+      (reste ? 'Encore <b>'+reste+' mot'+(reste>1?'s':'')+'</b> et elle aura tout gagn\u00e9.'
+             : 'Elle a gagn\u00e9 toute la terre qu\u2019il y avait \u00e0 gagner.'), 0, 3400);
   return true;
 }
 function dansLeRayon(x,y,w){ w=w||world;
@@ -1360,7 +1374,7 @@ const BOUTIQUE=[
   {ou:'toi',   k:'bottes',      n:'Bottes',            prix:25, c:'#B44C6C', d:'Tu marches un tiers plus vite, dehors comme dedans.'},
   {ou:'toi',   k:'moteur',      n:'Tondeuse à moteur', prix:45, c:'#2E7D5B', d:'Elle tond les quatre cases voisines en passant.'},
   {ou:'toi',   k:'appareil',    n:'Appareil photo',    prix:28, c:'#3F4A52', d:'Un viseur, un déclencheur, et l’album qui va avec.'},
-  {ou:'toi',   k:'compagnon',   n:'Compagnon',         prix:20, c:'#E4A95C', d:'Une bestiole que tu as déjà te suit partout. Elle se choisit dans l’onglet Toi.'}
+  {ou:'toi',   k:'compagnon',   n:'Compagnon',         prix:20, c:'#E4A95C', d:'Le chien, le crabe ou la mouette te suit partout, même chez les voisins. Ils sont déjà à toi ; ça se choisit dans l’onglet Toi.'}
 ];
 // Le rayon « Pour toi » ne vend pas des objets à poser mais ce que le
 // bonhomme sait faire. Rien n'entre dans `objects` ni dans les meubles :
@@ -2088,6 +2102,19 @@ const DRAW={
     c.fillStyle=shade(g,-26);
     [[-5,-7],[0,-9],[5,-7]].forEach(d=>{c.beginPath();c.arc(d[0],d[1],2.4,0,Math.PI*2);c.fill();});
     c.fillStyle=NAVY; c.beginPath(); c.arc(10,-5,0.9,0,Math.PI*2); c.fill();
+  },
+  /* Ce que le chien laisse. Trois boules qui décroissent, une mouche qui
+     tourne — assez pour qu'on le reconnaisse de loin et qu'on aille le
+     nettoyer, pas assez pour que ça salisse l'île. Il n'est dans aucun
+     rayon de l'atelier : il n'y a rien à poser, il arrive tout seul. */
+  crotte(c){
+    shadowDiamond(c,0,0,9);
+    const B='#7A5C3E';
+    [[0,-2.4,4.6],[ -1.6,-5.6,3.5],[1.1,-8.2,2.6]].forEach(([x,y,r],i)=>{
+      c.fillStyle=shade(B,i*7); c.beginPath(); c.ellipse(x,y,r,r*0.78,0,0,Math.PI*2); c.fill();
+    });
+    c.fillStyle='rgba(255,255,255,.22)';
+    c.beginPath(); c.ellipse(-1.2,-9,1.1,0.7,-0.5,0,Math.PI*2); c.fill();
   },
   crabe(c,C){
     const r=C||'#F0736E';
@@ -4663,8 +4690,15 @@ function chienProche(){
 function sortirLeChien(o){
   const pts=tourDeLIle(o);
   if(pts.length<3){ say('Ton île est encore trop petite pour un vrai tour. Fais-la grandir d’abord.'); return; }
+  // `crotteA` est l'étape où le chien s'arrêtera. Elle est tirée **ici**,
+  // une fois pour le tour : une chance par étape en donnerait trois ou
+  // quatre sur un grand tour et aucune sur un petit, et le joueur ne saurait
+  // jamais à quoi s'attendre. Jamais la première ni la dernière — au départ
+  // on n'a pas encore marché, à l'arrivée le tour se finit dans la foulée et
+  // on la verrait à peine.
   balade={o, x:o.x+0.5, y:o.y+0.5, face:'bas', pts, i:0,
-          attend:false, fige:0, px:o.x+0.5, py:o.y+0.5};
+          attend:false, fige:0, px:o.x+0.5, py:o.y+0.5,
+          crotteA: 1+Math.floor(Math.random()*Math.max(1,pts.length-2))};
   son('chien'); hudSync();
   const du=PLAFOND.promenade-(mine.bourse.faits.promenade||0);
   // Le verrou `chien` est celui de la bulle de proximité : sans lui, elle
@@ -4694,7 +4728,46 @@ function finBalade(bouclee){
 function etapeSuivante(){
   balade.i++; balade.fige=0;
   if(balade.i>=balade.pts.length){ finBalade(true); return; }
+  if(balade.i===balade.crotteA) leChienSarrete();
   hudSync();
+}
+/* Le chien s'arrête une fois par tour, et il laisse quelque chose.
+
+   C'est un **objet d'île** ordinaire, dans `mine.objects` : rien de plus
+   dans `mondeNu()`, aucune migration, et il survit au rechargement parce
+   que les objets y survivent déjà. C'était le seul moyen de le garder sans
+   inventer une clé — et le garder compte, sinon « on peut le nettoyer » ne
+   veut rien dire : on ne nettoie que ce qui attend.
+
+   Il ne rapporte rien et ne coûte rien. Pas de plafond, rien dans `faits`,
+   aucun appel au serveur : c'est un geste, pas une corvée de plus — le jeu
+   en a déjà trois, et une quatrième qui paierait demanderait du SQL pour
+   une chose qui n'a pas besoin d'être payée. Le laisser là ne fâche
+   personne et ne fait rien perdre : c'est la règle du chien qui s'assied. */
+function leChienSarrete(){
+  const x=Math.round(balade.x-0.5), y=Math.round(balade.y-0.5);
+  if(!dansLeRayon(x,y)||!terre(x,y)) return;
+  // Jamais deux au même endroit, et jamais sur un objet déjà posé : une
+  // crotte sous un buisson ne se voit pas, donc ne se nettoie pas.
+  if((mine.objects||[]).some(o=>o.x===x&&o.y===y)) return;
+  mine.objects.push({t:'crotte', x, y});
+  saveMine(); son('chien');
+  say('Le chien s’arrête un instant. <b>Il faudra nettoyer</b> — marche dessus et appuie sur <b>E</b>.', 0, 3400);
+}
+function crotteProche(){
+  if(visiting||dedans) return null;
+  return (mine.objects||[]).find(o=>o.t==='crotte' &&
+    Math.hypot(o.x+0.5-hero.x, o.y+0.5-hero.y)<0.95) || null;
+}
+function nettoyer(o){
+  memoriser();
+  const i=(mine.objects||[]).indexOf(o);
+  if(i<0) return;
+  mine.objects.splice(i,1);
+  saveMine(); son('gomme'); buildAll();
+  // Rien à gagner, et c'est dit gentiment : ce jeu n'a pas besoin qu'on y
+  // gagne quelque chose à chaque geste.
+  say('C’est propre. Le chien fait comme s’il n’y était pour rien.');
 }
 function avancerLaBalade(dt){
   if(!balade) return;
@@ -4993,6 +5066,10 @@ function say(msg,lock,duree){
 // Le nom lisible de chaque objet, pris dans les mêmes listes que les boutons :
 // deux listes qui divergent, c'est un objet qui n'a pas le même nom selon l'endroit.
 const NOM_OBJ={}; OBJ_GROUPS.forEach(g=>g[1].forEach(o=>{ NOM_OBJ[o[0]]=o[1].toLowerCase(); }));
+// Ce que le chien laisse n'est dans aucun rayon de l'atelier — il n'y a rien
+// à poser, il arrive tout seul — mais les messages ont besoin de son nom,
+// sinon la maison dit « il y a un objet sous la maison ».
+NOM_OBJ.crotte='crotte';
 let souvenirProche=null;
 // Le bouton rose du cadre et la touche E sont le même geste. Il ne dit pas
 // toujours la même chose : ce qui est sous la main décide.
@@ -5029,6 +5106,11 @@ function agir(){
     } else {
       const c=chienProche(); if(c){ sortirLeChien(c); return true; }
     }
+    // Ce que le chien a laissé, juste après le chien : c'est le même animal,
+    // et `proximity()` le met au même rang. Les deux doivent rester
+    // d'accord, sinon la plaque annonce un geste et la touche en fait un
+    // autre — la règle déjà écrite pour le chien et pour le coffre.
+    const cr=crotteProche(); if(cr){ nettoyer(cr); return true; }
     // Un coffre vide n'est pas un refus : il n'a simplement rien à donner
     // aujourd'hui, et la bulle le dit déjà. Le bouton rose ne s'affiche pas.
     if(coffreProche()&&cadeauDispo()){ son('coffre'); ouvrirCadeau(); return true; }
@@ -5059,7 +5141,10 @@ function proximity(){
     if(Math.hypot(o.x+0.5-hero.x,o.y+0.5-hero.y)>=0.95) return;
     if(o.t==='panneau'){ if(o.txt) panneau=o; } else objet=o;
   });
-  souvenirProche = (visiting && objet) ? objet : null;
+  // Une crotte n'est pas un souvenir. Chez un voisin, tout objet sous les
+  // pieds en devient un — celle-là ferait un cadeau qu'on ne veut pas, et
+  // elle n'a de toute façon pas de nom dans `NOM_OBJ`.
+  souvenirProche = (visiting && objet && objet.t!=='crotte') ? objet : null;
   const bulle=(k,html)=>{ if(wLock!==k) say(html,k); };
   // Ces deux branches sortent avant le ménage de la fin : elles doivent
   // donc dire elles-mêmes ce que porte la plaque rose. Sans ça, elle garde
@@ -5084,6 +5169,11 @@ function proximity(){
     } else if(objet&&objet.t==='chien'){
       boutonRose('Sortir le chien');
       bulle('chien','Ton chien. <b>E</b> pour le sortir : il fait le tour de l’île, et tu restes près de lui.'); return; }
+    // Au même rang que dans `agir()`.
+    if(objet&&objet.t==='crotte'){
+      boutonRose('Nettoyer');
+      bulle('crotte'+objet.x+'-'+objet.y,
+        'Ton chien est passé par là. <b>E</b> ou le bouton rose, et c’est propre.'); return; }
   }
   // Le coffre du jour. Il passe avant « souvenir rapporté » : un coffre
   // ramené de chez un voisin est un coffre comme un autre, et ce qu'il a
@@ -5225,6 +5315,39 @@ function buildToi(){
     le.appendChild(li); });
   fe.appendChild(le); p.appendChild(fe);
 
+  // Le compagnon. Il ne s'achète pas à l'unité : la Boutique ouvre le
+  // rayon, et on choisit ensuite **parmi les bestioles qu'on a déjà**.
+  // C'est ce qui empêche d'obtenir un renard gratuitement par cette porte,
+  // et ce qui donne un second usage au chat qu'on a payé.
+  //
+  // Il est **juste après l'avatar**, et plus en bas de panneau : c'est de
+  // qui marche avec toi qu'il s'agit. Sous le sac et sous l'album, il
+  // fallait défiler pour le trouver, et les joueurs le disaient
+  // « pas visible ».
+  p.appendChild(rule());
+  if(achete('compagnon')){
+    const dispo=COMPAGNONS.filter(c=>achete(c[0]));
+    p.appendChild(chipsLibre('Ton compagnon',
+      [['','Aucun']].concat(dispo.map(c=>[c[0],c[1]])),
+      compagnonChoisi(), k=>{ mine.me.compagnon=k; saveMine(); majCompagnon(); buildAll();
+        say(k ? ('Ton <b>'+esc(NOM_OBJ[k]||k)+'</b> te suit maintenant partout, même chez les voisins.')
+              : 'Tu marches seul.'); }));
+    const manque=COMPAGNONS.filter(c=>!achete(c[0]));
+    p.appendChild(hint(manque.length
+      ? ('Une bestiole que tu as déjà. Il t’en manque '+manque.length+' : '+
+         manque.map(c=>'<b>'+esc(c[1])+'</b>').join(', ')+'. Elles s’achètent à la Boutique, et elles deviennent alors des compagnons possibles.')
+      : 'Tu as toutes les bestioles. Change de compagnon quand tu veux, ça ne coûte rien.'));
+  }else{
+    p.appendChild(field('Ton compagnon'));
+    // Nommer les trois bestioles **gratuites** est tout ce qui manquait.
+    // « une de celles que tu as déjà » se lisait comme « il t'en faut une
+    // d'abord », donc comme deux achats — alors que le chien, le crabe et
+    // la mouette n'ont jamais rien coûté et suffisent.
+    p.appendChild(hint('Tu marches seul. Le <b>Compagnon</b> s’achète à la Boutique, au rayon '+
+      '<b>Pour toi</b>, pour <b>'+VERROU.compagnon+' shells</b> — et le <b>chien</b>, le <b>crabe</b> '+
+      'et la <b>mouette</b> sont déjà à toi : l’un d’eux te suivra partout, même chez les voisins.'));
+  }
+
   // Le sac. Il est ici et pas dans un septième onglet : c'est ce que le
   // bonhomme porte, comme les bottes, et la barre d'onglets est déjà à six
   // On a vérifié à 360 px qu'une plaque de plus passe à la ligne, et la
@@ -5250,28 +5373,6 @@ function buildToi(){
   p.appendChild(hint(sacPlein()
     ? 'Le sac te suit d’un appareil à l’autre et chez les voisins : il est à <b>toi</b>, pas à ton île. Il se remplit sur le sable mouillé, à marée basse, tant que la marée paie encore aujourd’hui.'
     : 'Ton sac est vide. À marée basse, va marcher sur le sable mouillé au bord de ton île : ce que la mer y laisse y tombe. C’est avec ça qu’on remplit la <b>commande du jour</b>, dans l’onglet Voisins.'));
-
-  // Le compagnon. Il ne s'achète pas à l'unité : la Boutique ouvre le
-  // rayon, et on choisit ensuite **parmi les bestioles qu'on a déjà**.
-  // C'est ce qui empêche d'obtenir un renard gratuitement par cette porte,
-  // et ce qui donne un second usage au chat qu'on a payé.
-  p.appendChild(rule());
-  if(achete('compagnon')){
-    const dispo=COMPAGNONS.filter(c=>achete(c[0]));
-    p.appendChild(chipsLibre('Ton compagnon',
-      [['','Aucun']].concat(dispo.map(c=>[c[0],c[1]])),
-      compagnonChoisi(), k=>{ mine.me.compagnon=k; saveMine(); majCompagnon(); buildAll();
-        say(k ? ('Ton <b>'+esc(NOM_OBJ[k]||k)+'</b> te suit maintenant partout, même chez les voisins.')
-              : 'Tu marches seul.'); }));
-    const manque=COMPAGNONS.filter(c=>!achete(c[0]));
-    p.appendChild(hint(manque.length
-      ? ('Une bestiole que tu as déjà. Il t’en manque '+manque.length+' : '+
-         manque.map(c=>'<b>'+esc(c[1])+'</b>').join(', ')+'. Elles s’achètent à la Boutique, et elles deviennent alors des compagnons possibles.')
-      : 'Tu as toutes les bestioles. Change de compagnon quand tu veux, ça ne coûte rien.'));
-  }else{
-    p.appendChild(field('Ton compagnon'));
-    p.appendChild(hint('Tu marches seul. Le <b>Compagnon</b> est à la Boutique, au rayon <b>Pour toi</b> : il ne donne pas de bestiole, il fait suivre partout une de celles que tu as déjà.'));
-  }
 
   // L'album. Il vit dans ce navigateur et pas en base, et il le dit :
   // une photo, ce sont des pixels, et des pixels n'ont rien à faire dans
@@ -5401,6 +5502,47 @@ function fermerEnVisite(f){
   return f;
 }
 
+/* Ta terre, et ce qui la fait grandir.
+   Ça se disait déjà, mais tout en bas du panneau Île, après Ctrl+Z, dans
+   la dernière des quatorze notes grises : personne ne l'a jamais lu, et le
+   « ton île s'agrandit » du murmure tombait donc sans qu'on sache de quoi
+   il parlait. La règle centrale du jeu — **l'île grandit parce que des
+   gens sont passés** — mérite mieux qu'une note en bas de page.
+
+   La jauge part de RAYON0 et non de zéro : une île neuve n'a pas une terre
+   vide, elle a déjà la sienne. Ce qui se remplit, c'est ce qu'on gagne. */
+function fieldTerre(){
+  const f=field('Ta terre');
+  const mots=(mine.mots||[]).length;
+  const r=mine.rayon||RAYON0;
+  const gagne=Math.max(0, Math.round((r-RAYON0)/PAS_RAYON));
+  const total=Math.round((RAYON_MAX-RAYON0)/PAS_RAYON);
+  const reste=Math.max(0, total-gagne);
+  const part=Math.max(0, Math.min(1, gagne/total));
+
+  const j=document.createElement('div'); j.className='jauge';
+  const i=document.createElement('i'); i.style.width=(part*100).toFixed(1)+'%';
+  j.appendChild(i); f.appendChild(j);
+
+  const c=document.createElement('p'); c.className='chiffre';
+  c.innerHTML=reste
+    ? '<b>'+gagne+' cran'+(gagne>1?'s':'')+' sur '+total+'</b> · '+
+      mots+' mot'+(mots>1?'s':'')+' dans ton livre d’or'
+    : '<b>Ton île est au bout de sa terre</b> · '+
+      mots+' mot'+(mots>1?'s':'')+' dans ton livre d’or';
+  f.appendChild(c);
+
+  f.appendChild(hint(reste
+    ? 'La mer recule d’un cran à chaque mot qu’on te laisse — c’est la seule '+
+      'façon de gagner du terrain. <b>Encore '+reste+' mot'+(reste>1?'s':'')+'</b>, et elle '+
+      'aura reculé autant qu’elle le peut. '+
+      'Pour qu’on passe, envoie ta <b>carte postale</b> — elle est dans l’onglet Voisins.'
+    : 'Tu as gagné toute la terre qu’il y avait à gagner : au-delà, c’est le large, '+
+      'et la mer a besoin de sa place pour la marée. Il ne reste plus qu’à la remplir — '+
+      'et les gens qui passent continuent de te laisser des mots, et des shells.'));
+  return f;
+}
+
 function buildIle(){
   const p=document.getElementById('p-ile'); p.innerHTML='';
   if(visiting){
@@ -5411,6 +5553,7 @@ function buildIle(){
   }
   const fn=textField('Nom de l\'île','name',"L'île de Dan");
   p.appendChild(visiting?fermerEnVisite(fn):fn);
+  p.appendChild(fieldTerre());
   const fs=field('Heure'), bs=document.createElement('div'); bs.className='chips';
   [['jour','Jour'],['crépuscule','Crépuscule'],['nuit','Nuit']].forEach(([v,n])=>{
     const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=n;
@@ -5497,10 +5640,9 @@ function buildIle(){
     mine.tiles=baseTiles((mine.rayon||RAYON0)*(0.92+Math.random()*0.08),0.76+Math.random()*0.10); saveMine(); buildAll(); };
   row.appendChild(un); row.appendChild(rst); row.appendChild(nw); p.appendChild(row);
   p.appendChild(hint('Le curseur suit la grille isométrique : le losange rose montre la case visée. <b>Ctrl+Z</b> revient en arrière, jusqu\u2019\u00e0 '+HISTO_MAX+' fois.'));
-  const reste=Math.max(0,Math.ceil((RAYON_MAX-(mine.rayon||RAYON0))/PAS_RAYON));
-  p.appendChild(hint(reste
-    ? 'Ton \u00eele s\u2019agrandit d\u2019un cran \u00e0 chaque mot qu\u2019on te laisse. Encore <b>'+reste+' mot'+(reste>1?'s':'')+'</b> avant qu\u2019elle atteigne sa taille maximale.'
-    : 'Ton \u00eele a atteint sa taille maximale. Il ne reste plus qu\u2019\u00e0 la remplir.'));
+  // Ce qui se disait ici de la croissance est monté en haut du panneau,
+  // dans « Ta terre » : la règle centrale du jeu ne se dit pas dans la
+  // dernière note grise d'un panneau qui en compte quatorze.
   // La marée n'a pas de plaque dans le bandeau : à quatre plaques et
   // 360 px, le bouton Son passe à la ligne et se pose sur les boutons de
   // zoom. Elle se dit donc ici, et dans le murmure quand elle tourne.

@@ -1202,6 +1202,49 @@ Rien n'en part en base sinon le choix lui-même, qui tient dans
 `me.compagnon` : l'avatar voyage avec l'île, le compagnon voyage avec
 l'avatar. Sa position ne se sauvegarde pas du tout.
 
+Des joueurs ont signalé que « les animaux ne sont pas accessibles ». Ils
+l'étaient, et rien n'était cassé : le bloc **Compagnon** vivait sous le
+sac, à un écran de défilement du haut de l'onglet Toi, et « Compagnon,
+20 shells » ne disait pas qu'on achetait la capacité, ni que trois
+bestioles étaient déjà à soi. Le bloc est remonté au-dessus du sac, et les
+deux textes nomment le prix, le chemin et les trois gratuites.
+
+## Ce que le chien laisse
+
+Une fois par balade, à un point tiré au hasard, le chien s'arrête et pose
+une crotte sur sa case. Elle se nettoie comme tout le reste se fait ici :
+on marche dessus, puis `E` ou le bouton rose, qui affiche **Nettoyer**.
+
+Elle ne paie rien et ne coûte rien. Ne pas la nettoyer n'a aucune
+conséquence : c'est la même règle que le chien qui s'assied quand on va
+trop loin. Elle n'est ni dans l'atelier ni à la Boutique — c'est le chien
+qui la met, comme la tondeuse est un dessin que le moteur sort quand une
+touffe est sous les pieds.
+
+Elle est exclue des souvenirs : on n'en rapporte pas de chez un voisin.
+`Ctrl+Z` la fait revenir, puisque la nettoyer passe par la même mémoire
+que la gomme.
+
+## Ta terre, et pourquoi elle s'arrête à 8,3
+
+L'île grandit d'un cran (`PAS_RAYON`, 0,13) à chaque mot laissé dans le
+livre d'or, de `RAYON0` = 7,0 à `RAYON_MAX` = 8,3 : **dix mots**, et c'est
+la seule façon de gagner du terrain.
+
+Le maximum n'est pas un réglage de confort, c'est la place disponible. Au
+rayon 8,3 l'anneau de sable mouillé de la marée mesure 396 px de demi-
+largeur à l'écran, et la mer, au plus serré de son contour ondulant,
+403 px : il reste 7 px d'eau. Au rayon 9 l'anneau sortirait de la mer de
+21 px. Et agrandir la mer n'est pas possible non plus : elle fait déjà
+945 px de large, bosses comprises, dans les 985 px que le cadre montre au
+zoom le plus large.
+
+Ce qui manquait n'était donc pas de la terre, c'était de **voir** qu'on en
+gagne. Le bloc **Ta terre**, en tête du panneau Île sous le nom, porte une
+jauge, les crans gagnés sur dix, les mots reçus, et la seule chose à faire
+pour en gagner : envoyer sa carte postale. Le murmure de `faireGrandir()`
+dit au passage combien de mots il reste.
+
 ## Les souvenirs
 
 Chez un voisin, s'arrêter à côté d'un objet propose de le ramener.
