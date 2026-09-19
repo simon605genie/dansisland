@@ -1441,9 +1441,9 @@ Cinq choses à ne pas défaire :
    c'est la ligne déjà écrite pour le chien qui s'assied.
 2. **Le rang dans `agir()` est le même que dans `proximity()`** —
    souvenir, chien, **crotte**, coffre, porte — et les deux passent par
-   `crotteProche()`. C'est la règle déjà écrite pour le chien et pour le
-   coffre : un bouton qui annonce un geste et une touche qui en fait un
-   autre.
+   `crotteProche()`. *(Ce n'était pas vrai quand cette ligne a été
+   écrite : `proximity()` testait `objet.t` en ligne. Corrigé le 19/09,
+   voir « les sept rangs ».)*
 3. **Elle est exclue des souvenirs.** `souvenirProche()` ignore
    `t==='crotte'` : sans ça on en rapporterait une de chez un voisin, et
    ce n'est pas un cadeau.
@@ -1784,6 +1784,71 @@ tout ce qu'il prétend voir.** Ici, la preuve tenait en une ligne — compter
 ce qu'il a lu (`31` articles, `5` thèmes, `16` types posés à la main) et
 refuser un compte qui sent le vide. Les trois `c.dit()` de comptage sont
 là pour ça, pas pour décorer.
+
+## Les sept rangs, et les listes qui doivent rester d'accord — 19/09/2026
+
+### `proximity()` ne passait pas par les sondes qu'elle prétendait utiliser
+
+Ce fichier écrit depuis le 16/09 que `agir()` et `proximity()` doivent
+lister les mêmes choses dans le même ordre, et il l'a répété pour le
+chien, pour le coffre, pour la crotte — « les deux passent par
+`crotteProche()` ». **C'était faux.** `proximity()` testait
+`objet && objet.t === 'chien'` et `objet && objet.t === 'crotte'` en
+ligne, où `objet` est le **dernier** objet trouvé sous les pieds par la
+boucle du haut.
+
+Les deux branches faisaient bien la même chose, parce qu'aucune case ne
+porte deux objets — la pose refuse une case prise, `leChienSarrete()`
+aussi, et un souvenir va sur « une case libre ». Mais rien ne le
+garantissait, et une case à deux objets aurait donné exactement ce que
+l'accord existe pour empêcher : la plaque annonce un geste, la touche en
+fait un autre.
+
+Les deux branches passent maintenant par `chienProche()` et
+`crotteProche()`. La règle n'est plus une consigne, c'est la structure.
+
+### Le contrôle qui couvre les sept rangs sans faire un pas
+
+Les contrôles 2 à 8 de `test/objets.mjs` éprouvent **trois rangs sur
+sept** : il faudrait amener le bonhomme devant chaque chose, et un chien
+se promène. Le contrôle 10 prend le problème par la source — il extrait
+le corps des deux fonctions, retire les commentaires (qui citent les
+sondes sans les appeler), et compare les deux séquences :
+
+    agir()      : souvenir → chien → crotte → coffre → boîte → girouette → porte
+    proximity() : souvenir → chien → crotte → coffre → boîte → girouette → porte
+
+Il compte aussi les sondes : un rang oublié ou dupliqué se voit avant
+l'ordre. Éprouvé en inversant vraiment deux rangs — un premier essai
+déplaçait seulement une garde, l'ordre ne changeait pas, et le contrôle
+passait à juste titre. **Une fausse panne qui ne change pas ce qu'on
+mesure ne prouve rien.**
+
+### Les trois listes qui doivent rester d'accord
+
+Le contrôle 11 croise, dans la source :
+
+    la vitrine (BOUTIQUE)     avec   les lignes de `catalogue` des .sql
+    GAMMES                    avec   les valeurs de `sky`
+    faux-store.js             avec   les appels à `store.*` d'index.html
+
+Les trois étaient d'accord quand elles ont été écrites — vérifié avant,
+aucune ne corrigeait quoi que ce soit. Elles sont là pour le jour où
+elles ne le seront plus, et elles répondent en une seconde plutôt
+qu'après un achat refusé chez un joueur.
+
+Deux choses apprises en les écrivant :
+
+1. **Un faux positif use un contrôle aussi sûrement qu'un faux
+   négatif.** Le premier essai comptait `store.js` — le nom de fichier du
+   chemin d'import — comme un export manquant, et rendait le contrôle
+   rouge pour rien. Un `(?<![/\w])` suffit ; sans lui, on finit par ne
+   plus lire ce que le contrôle dit.
+2. **Auditer avant d'écrire le garde-fou.** Les trois croisements ont été
+   mesurés d'abord, hors harnais : 31 articles contre 31 lignes SQL,
+   3 gammes contre 3 heures, 33 appels tous exportés. Écrire un contrôle
+   en espérant qu'il trouve quelque chose, c'est ne pas savoir s'il
+   marche quand il passe.
 
 ## Reste du contexte
 

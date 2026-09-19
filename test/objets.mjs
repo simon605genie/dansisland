@@ -11,7 +11,7 @@
    Il éprouve aussi ce que chacun apporte, puisque c'est leur seule raison
    d'être : sans fonction, ce sont des décorations à 50 shells. */
 import { navigateur, servir, onglet, compteur, attendre } from './aide.mjs';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 
 const s = await servir(8155);
 const nav = await navigateur();
@@ -306,6 +306,113 @@ c.titre('9. les îles de démonstration ne portent rien de payant');
   if (durs.length) console.log('     ' + durs.join(', '));
   c.dit(durs.length === 0,
         'aucune île écrite à la main ne porte un objet payant' + (durs.length ? ' → ' + durs.join(', ') : ''));
+}
+
+c.titre('10. `agir()` et `proximity()` listent les mêmes sondes, dans le même ordre');
+{
+  /* Le piège que ce dépôt nomme le plus souvent, et le seul que les
+     contrôles 2 à 8 n'éprouvent que **trois rangs sur sept** : il faudrait
+     amener le bonhomme devant chaque chose, et un chien se promène.
+
+     Celui-ci le prend par la source. Les deux fonctions doivent appeler
+     les mêmes sondes dans le même ordre — souvenir, chien, crotte, coffre,
+     boîte, girouette, porte. C'est exactement ce que veut dire « les deux
+     doivent rester d'accord », et ça se lit sans faire un pas.
+
+     Trouvé en l'écrivant : `proximity()` **ne passait pas** par
+     `chienProche()` ni `crotteProche()`, elle testait `objet.t` en ligne,
+     où `objet` est le *dernier* objet sous les pieds. `CLAUDE.md`
+     affirmait pourtant que les deux passaient par la même fonction. Les
+     deux branches faisaient bien la même chose — parce qu'aucune case ne
+     porte deux objets — mais rien ne le garantissait. */
+  const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+
+  const corps = nom => {
+    const i = src.indexOf('function ' + nom + '(');
+    let prof = 0, ouvert = false;
+    for (let j = i; j < src.length; j++) {
+      if (src[j] === '{') { prof++; ouvert = true; }
+      else if (src[j] === '}' && --prof === 0 && ouvert) return src.slice(i, j + 1);
+    }
+    return '';
+  };
+  // Les commentaires citent les sondes sans les appeler : les retirer,
+  // sinon c'est la prose qu'on éprouve et pas le code.
+  const sansNotes = t => t.replace(/\/\*[^]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const SONDES = ['souvenirProche', 'chienProche', 'crotteProche', 'coffreProche',
+                  'boiteProche', 'girouetteProche', 'devantLaPorte'];
+  const ordre = nom => {
+    const b = sansNotes(corps(nom)), vus = [];
+    for (const m of b.matchAll(new RegExp('\\b(' + SONDES.join('|') + ')\\b', 'g')))
+      if (vus[vus.length - 1] !== m[1]) vus.push(m[1]);
+    return vus;
+  };
+  const a = ordre('agir'), p = ordre('proximity');
+  console.log('     agir()      : ' + a.join(' → '));
+  console.log('     proximity() : ' + p.join(' → '));
+  c.dit(a.length === SONDES.length, 'agir() appelle les ' + SONDES.length + ' sondes (' + a.length + ')');
+  c.dit(p.length === SONDES.length, 'proximity() appelle les ' + SONDES.length + ' sondes (' + p.length + ')');
+  c.dit(a.join() === p.join(), 'les deux listes sont dans le même ordre');
+}
+
+c.titre('11. les listes qui doivent rester d’accord');
+{
+  /* « Deux listes qui divergent » est le piège que `CLAUDE.md` nomme le
+     plus souvent — pour `slug_libre()` et les contraintes, pour
+     `functions/_commun.js` et `src/config.js`, pour `TROUVAILLES` et le
+     tableau SQL, pour la vitrine et le catalogue. Chaque fois, la
+     consigne écrite était « si l'une change, l'autre doit suivre », et
+     chaque fois c'est une consigne que personne ne relit.
+
+     Les trois ci-dessous sont d'accord aujourd'hui — vérifié avant de les
+     écrire, aucune ne corrigeait quoi que ce soit. Elles sont là pour le
+     jour où elles ne le seront plus, et elles répondent en une seconde
+     plutôt qu'après un achat refusé chez un joueur. */
+  const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+
+  // a) la vitrine et le catalogue SQL. Un article absent du SQL s'affiche
+  //    et l'achat le refuse : « la vitrine annonce un prix que l'achat
+  //    refuse », mot pour mot ce qui est écrit depuis le 16/09.
+  const vitrine = new Map([...src.matchAll(
+    /\{ou:'(ile|dedans|toi)',\s*k:'([a-z]+)',\s*n:'[^']*',\s*prix:(\d+)/g)]
+    .map(m => [m[2], m[1] + ':' + m[3]]));
+  const sql = new Map();
+  for (const f of readdirSync(new URL('../supabase/', import.meta.url)).filter(f => f.endsWith('.sql')))
+    for (const m of readFileSync(new URL('../supabase/' + f, import.meta.url), 'utf8')
+                      .matchAll(/\('([a-z_]+)'\s*,\s*'(ile|dedans|toi)'\s*,\s*(\d+)\)/g))
+      sql.set(m[1], m[2] + ':' + m[3]);
+  c.dit(vitrine.size > 25, 'la vitrine a été lue (' + vitrine.size + ' articles)');
+  const ecarts = [...vitrine].filter(([k, v]) => sql.get(k) !== v)
+    .map(([k, v]) => k + ' (vitrine ' + v + ', SQL ' + (sql.get(k) || 'absent') + ')');
+  if (ecarts.length) console.log('     ' + ecarts.join(', '));
+  c.dit(ecarts.length === 0,
+        'chaque article de la vitrine a sa ligne SQL, au même rayon et au même prix');
+
+  // b) GAMMES doit avoir les mêmes clés que `sky`, sinon une heure
+  //    nouvelle retombe sur `jour` en silence. C'est écrit le 19/09.
+  const gam = new Set([...(src.match(/const GAMMES=\{[^]*?\n\};/) || [''])[0]
+    .matchAll(/^\s*'([^']+)':/gm)].map(m => m[1]));
+  const ciels = new Set([...src.matchAll(/\[\['jour','Jour'\],\['([^']+)'[^\]]*\],\['([^']+)'/g)]
+    .flatMap(m => [m[1], m[2]]).concat(['jour']));
+  console.log('     GAMMES : ' + [...gam].join(' ') + '   |   sky : ' + [...ciels].join(' '));
+  c.dit(gam.size >= 3 && ciels.size >= 3, 'les deux listes ont été lues');
+  c.dit([...ciels].every(k => gam.has(k)), 'chaque heure du ciel a sa gamme');
+
+  // c) faux-store.js doit exporter tout ce qu'index.html lui demande.
+  //    Un export qui manque, et la page ne démarre pas du tout : module
+  //    refusé, écran vide, une ligne dans la console.
+  const faux = readFileSync(new URL('./faux-store.js', import.meta.url), 'utf8');
+  const fournis = new Set([...faux.matchAll(/export\s+(?:async\s+)?(?:function|const)\s+([a-zA-Z]+)/g)]
+    .map(m => m[1]));
+  // Le `(?<![/\w])` écarte le `store.js` du chemin d'import, qui n'est pas
+  // un appel — mon premier essai le comptait comme un export manquant et
+  // rendait ce contrôle rouge pour rien. Un faux positif use un contrôle
+  // aussi sûrement qu'un faux négatif : on finit par ne plus le lire.
+  const demandes = [...new Set([...src.matchAll(/(?<![/\w])store\.([a-zA-Z]+)/g)].map(m => m[1]))];
+  const absents = demandes.filter(k => !fournis.has(k));
+  if (absents.length) console.log('     ' + absents.join(', '));
+  c.dit(demandes.length > 15, 'les appels à store.* ont été lus (' + demandes.length + ')');
+  c.dit(absents.length === 0, 'faux-store.js exporte tout ce qu’index.html demande');
 }
 
 await nav.close(); s.fermer();

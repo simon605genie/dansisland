@@ -5311,19 +5311,34 @@ function proximity(){
     bulle('souv'+objet.x+'-'+objet.y,
     'Un<span></span> <b>'+(NOM_OBJ[objet.t]||'objet')+'</b> de chez '+esc(world.owner)+
     '. Appuie sur <b>E</b> ou touche le bouton rose pour en ramener un souvenir.'); return; }
-  // Le chien : le sortir, ou le ramener quand on renonce en cours de route.
+  /* Le chien, puis ce qu'il a laissé.
+
+     **Ces deux branches passent par `chienProche()` et `crotteProche()`**,
+     les mêmes fonctions qu'`agir()`, et pas par un test recopié sur
+     `objet`. Elles ne le faisaient pas — elles lisaient
+     `objet && objet.t === 'chien'`, où `objet` est le **dernier** objet
+     trouvé sous les pieds. Une case qui en porterait deux, et la plaque
+     annonçait un geste pendant que `E` en faisait un autre : exactement ce
+     que l'accord entre les deux listes existe pour empêcher.
+
+     Ce fichier affirmait déjà que les deux passaient par la même fonction.
+     C'était faux, et c'est le genre d'écart qu'une relecture ne voit pas :
+     les deux branches *font* la même chose aujourd'hui, parce qu'aucune
+     case ne porte deux objets. Elles le font maintenant **par
+     construction**, et `test/objets.mjs` le vérifie sur la source. */
   if(!visiting){
     if(balade){
       if(Math.hypot(balade.x-hero.x, balade.y-hero.y)<1.15){
         boutonRose('Ramener');
         bulle('chien','Tu promènes ton chien. <b>E</b> si tu veux le ramener tout de suite.'); return; }
-    } else if(objet&&objet.t==='chien'){
+    } else if(chienProche()){
       boutonRose('Sortir le chien');
       bulle('chien','Ton chien. <b>E</b> pour le sortir : il fait le tour de l’île, et tu restes près de lui.'); return; }
-    // Au même rang que dans `agir()`.
-    if(objet&&objet.t==='crotte'){
+    // Au même rang que dans `agir()`, et par la même fonction.
+    const cr=crotteProche();
+    if(cr){
       boutonRose('Nettoyer');
-      bulle('crotte'+objet.x+'-'+objet.y,
+      bulle('crotte'+cr.x+'-'+cr.y,
         'Ton chien est passé par là. <b>E</b> ou le bouton rose, et c’est propre.'); return; }
   }
   // Le coffre du jour. Il passe avant « souvenir rapporté » : un coffre
