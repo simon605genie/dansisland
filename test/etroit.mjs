@@ -345,5 +345,67 @@ c.titre('chez un voisin, le panneau Île est fermé en entier');
   await t.ctx.close();
 }
 
+c.titre('chez un voisin, le cadeau du jour dit où il est');
+{
+  /* Le bloc parlait comme si on était chez soi : « va marcher jusqu'à lui »,
+     à propos d'un coffre qui est sur une autre île — et `coffrePlein()` est
+     faux quand `visiting`, c'est la règle du 17/09.
+
+     Pire dans la branche **sans coffre** : il offrait « Poser un coffre »,
+     qui arme le pinceau et ouvre l'onglet Île. Depuis que cet onglet se
+     ferme en visite, ce bouton menait droit dans un panneau tout gris.
+
+     On éprouve une île **sans aucun coffre**, parce que c'est la branche
+     qui portait les boutons — celle qu'on n'aurait pas vue en regardant
+     une île ordinaire. */
+  const { ctx, page, erreurs } = await onglet(nav, {
+    taille: { width: 1280, height: 900 },
+    memoire: { 'test:objets': JSON.stringify([{ t: 'palmier', x: 8, y: 8, o: 'se', c: '#2E7D5B' }]) },
+  });
+  await page.goto(s.url, { waitUntil: 'load' });
+  await attendre(2400);
+  const ouvrir = async k => {
+    await page.evaluate(t => {
+      const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === t);
+      if (b) b.click();
+    }, k);
+    await attendre(600);
+  };
+  const cadeau = () => page.evaluate(() => {
+    const p = document.getElementById('p-boutique');
+    const f = [...p.querySelectorAll('.field')].find(x => /cadeau du jour/i.test(x.innerText));
+    if (!f) return null;
+    return { txt: f.innerText.replace(/\s+/g, ' ').trim(),
+             boutons: [...f.querySelectorAll('button')].map(b => b.textContent.trim()) };
+  });
+
+  await ouvrir('boutique');
+  const ch = await cadeau();
+  console.log('     chez moi  : ' + (ch ? ch.boutons.length + ' bouton(s) — ' + ch.txt.slice(0, 58) : '(pas de bloc)'));
+  // Sans coffre, les deux boutons restent chez soi : une gomme passée sur le
+  // dernier coffre ne doit pas rendre le cadeau injoignable (règle du 17/09).
+  c.dit(!!ch, 'chez moi, le bloc du cadeau est là');
+  c.dit(ch && ch.boutons.length === 2, 'sans coffre, il garde ses deux boutons (' +
+        (ch ? ch.boutons.join(' / ') : '?') + ')');
+
+  await ouvrir('voisins');
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.neighbor button')].find(x => /Visiter/.test(x.textContent));
+    if (b) b.click();
+  });
+  await attendre(1800);
+  await ouvrir('boutique');
+  const cv = await cadeau();
+  console.log('     en visite : ' + (cv ? cv.boutons.length + ' bouton(s) — ' + cv.txt.slice(0, 58) : '(pas de bloc)'));
+  c.dit(!!cv, 'en visite, le bloc est toujours là — le cadeau existe, il est ailleurs');
+  c.dit(cv && cv.boutons.length === 0, 'mais il n’offre aucun geste qu’on ne peut pas faire d’ici');
+  c.dit(cv && /chez toi/.test(cv.txt), 'et il dit où il est');
+  // Sans coffre, ne pas en promettre un : la phrase enverrait chercher un
+  // objet qui n'existe pas sur l'île du joueur.
+  c.dit(cv && !/dans ton coffre/.test(cv.txt), 'sans coffre, il n’en promet pas un');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
 await nav.close(); s.fermer();
 process.exit(c.fin() ? 1 : 0);

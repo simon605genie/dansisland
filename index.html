@@ -6351,7 +6351,22 @@ function buildBoutique(){
   if(cadeauDispo()){
     const coffres=(mine.objects||[]).filter(o=>o.t==='coffre').length;
     const fc=field('Le cadeau du jour');
-    if(coffres){
+    /* Chez un voisin, ce bloc parlait comme si on était chez soi : « va
+       marcher jusqu'à lui », à propos d'un coffre qui est sur une autre île
+       — et `coffrePlein()` est faux quand `visiting`, c'est la règle du
+       17/09. Sans coffre, il offrait même « Poser un coffre », qui arme le
+       pinceau et ouvre l'onglet Île : depuis que cet onglet se ferme en
+       visite, ce bouton menait droit dans un panneau tout gris.
+
+       Il dit donc où est le cadeau, et il n'offre aucun geste qu'on ne peut
+       pas faire d'ici. Même forme que la note du panneau Maison. */
+    if(visiting){
+      // Et il ne promet un coffre que s'il y en a un : sans ça, la phrase
+      // enverrait chercher un objet qui n'existe pas sur l'île du joueur.
+      fc.appendChild(hint(coffres
+        ? '🎁 <b>Ton cadeau t’attend chez toi</b>, pas ici : il est dans ton coffre, sur ton île. Rentre, et va marcher jusqu’à lui.'
+        : '🎁 <b>Ton cadeau t’attend chez toi</b>, pas ici. Rentre sur ton île, et tu pourras l’ouvrir.'));
+    }else if(coffres){
       fc.appendChild(hint('🎁 <b>Ton cadeau t’attend dans ton coffre</b>, sur ton île, il scintille. '+
         'Va marcher jusqu’à lui, puis appuie sur <b>E</b> ou touche le bouton rose du cadre.'));
     }else{
