@@ -1662,11 +1662,18 @@ pour qu'on ne les reprenne pas :
    l'une lisant `secrets.CLOUDFLARE_API_TOKEN` et l'autre non : les deux
    démarrent et réussissent. **Faux.**
 4. **`toJSON(secrets)`**, qui sérialisait tout le contexte des secrets
-   pour en lister les noms. C'est la seule chose qui restait pour
-   distinguer ce fichier des sondes qui démarrent. Retiré. **Non
-   vérifié** — si le prochain push le débloque, c'était ça ; sinon, la
-   question est encore ouverte et il faudra regarder *Settings → Actions*
-   dans le navigateur, ce qui ne se fait pas depuis ici.
+   pour en lister les noms. **C'était ça — vérifié.** Retiré, le run
+   suivant est passé en `queued`, a tourné, et a échoué à son premier pas
+   comme prévu faute de secret Cloudflare. GitHub refuse de planifier un
+   workflow qui sérialise le contexte `secrets` en entier ; il ne le dit
+   nulle part et le bloque **avant** le job, donc sans aucun log.
+
+**Ne jamais remettre `toJSON(secrets)` dans un workflow de ce dépôt.**
+Lister les noms des secrets — une commodité que j'avais ajoutée pour
+rendre le diagnostic plus clair — a coûté treize exécutions muettes, et
+c'est précisément le genre de panne que ce workflow existait pour
+supprimer. Les deux `[ -z ... ]` du premier pas disent ce qui manque, et
+c'est assez.
 
 La leçon est celle déjà écrite pour l'aller-retour du 18/09, et je l'ai
 rappris à mes dépens : **mesurer d'abord.** J'ai retiré l'action tierce

@@ -54,9 +54,17 @@
 #       run #1 bloqué pareil. FAUX.
 #    3. la lecture d'un secret → une sonde qui en lit un démarre et
 #       réussit. FAUX.
-#    4. `toJSON(secrets)`, qui sérialisait tout le contexte des secrets →
-#       c'est la seule chose qui restait pour distinguer ce fichier des
-#       sondes qui démarrent. Retirée par ce commit. **Non vérifiée.**
+#    4. `toJSON(secrets)`, qui sérialisait tout le contexte des secrets.
+#       **C'ÉTAIT ÇA — vérifié.** Retiré, le run suivant est passé en
+#       `queued` puis a tourné, et il a échoué à son premier pas comme
+#       prévu, faute de secret. GitHub refuse de planifier un workflow qui
+#       sérialise le contexte `secrets` en entier ; il ne le dit nulle
+#       part, il le bloque avant le job, donc sans aucun log.
+#
+#  **Ne jamais remettre `toJSON(secrets)` ici, ni ailleurs dans ce dépôt.**
+#  Lister les noms des secrets ne valait pas une panne muette de treize
+#  exécutions. Les deux `[ -z ... ]` du premier pas disent ce qui manque,
+#  et c'est assez.
 #
 #  La voie qui marche, en attendant et quoi qu'il arrive :
 #
