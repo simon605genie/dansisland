@@ -2367,6 +2367,57 @@ la rangée et qu'il donne toutes les couleurs : « Les pastilles sont des
 couleurs toutes prêtes. La pipette, au bout de chaque rangée, ouvre toutes
 les autres — la couleur exacte de tes cheveux, si tu veux. »
 
+## « La porte de Adam est fermée » — 19/09/2026
+
+Troisième fois dans la journée, et la dernière de cette famille : un mot
+grammatical collé devant une valeur qui change. Sept phrases disaient
+« La porte de <b>X</b> est fermée », et c'est ce qu'on rencontre à **chaque
+porte de voisin** — devenue la seule chose qu'on vient y faire depuis la
+commande du jour.
+
+Sur les vingt prénoms que le jeu livre, **cinq commencent par une
+voyelle** : Inès, Ilan, Alba, Elias, Adam. Et un prénom est du texte libre,
+donc ça ne se réglait pas en renommant les bots.
+
+`deQui(nom)` rend « de <b>Lila</b> » ou « d'<b>Inès</b> ». Deux choix à ne
+pas défaire :
+
+1. **Le `h` est laissé tel quel**, délibérément. « d'Hugo » est juste,
+   « d'Hans » ne l'est pas, et rien dans un prénom ne dit lequel des deux
+   `h` on a. Élider sur les voyelles est vrai à tous les coups ; élider sur
+   le `h` serait juste plus souvent, faux parfois, et invérifiable.
+2. **Le `y` n'est pas une voyelle ici.** Un `y` initial se comporte comme
+   une consonne en français — le yaourt, **de Yann**.
+
+### Le `y` a été trouvé par l'impression, pas par l'assertion
+
+Je l'avais mis dans la liste des voyelles, et **tous les contrôles
+passaient** : la règle mordait, au moins un prénom s'élidait, au moins un
+ne s'élidait pas. Ce qui a dit la vérité, c'est la ligne que le contrôle
+**imprime** — `de Lila · de Nour · d'Yann · …` — où « d'Yann » saute aux
+yeux.
+
+C'est la même idée que les deux relevés de genres imprimés une heure plus
+tôt : quand un contrôle ne peut pas juger, qu'il **montre**. Une assertion
+qui passe ne prouve que ce qu'elle demande ; une ligne imprimée se relit.
+
+Et le contrôle applique la règle **telle qu'elle est écrite dans le
+fichier** aux prénoms que le jeu **livre vraiment** — la liste de voyelles
+est extraite de `deQui()`, les prénoms des deux sources. Ce n'est donc pas
+ma table comparée à ma table.
+
+### Les prénoms venaient de deux endroits, et je n'en lisais qu'un
+
+Premier jet : **3 prénoms au lieu de 20**. Les îles écrites à la main
+(`mkN`) et la liste des bots (`NOMS_GENS`) sont deux sources, et je n'avais
+branché que la première. C'est **exactement** le défaut des îles de
+démonstration du matin, où le contrôle ne lisait que `THEMES` et ratait les
+îles écrites à la main.
+
+Les deux fois, c'est l'assertion de comptage qui l'a rattrapé. Elle n'est
+pas là pour décorer : un contrôle qui ne dit pas **combien** il a lu peut
+passer au vert en ne regardant presque rien.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
