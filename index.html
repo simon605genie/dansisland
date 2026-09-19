@@ -3680,7 +3680,14 @@ function paroi(def,murC,cote){
   // cote 'ne' : la paroi y=0, en haut à droite, face tournée vers +y (la sombre).
   // cote 'nw' : la paroi x=0, en haut à gauche, face tournée vers +x (la claire).
   const n = cote==='ne' ? def.w : def.h;
-  const face = shade(murC, cote==='ne' ? -18 : -2);
+  // Seize valeurs d'écart entre les deux parois, ça ne se voyait pas : les
+  // deux murs se lisaient comme un seul plan replié, et la pièce n'avait
+  // plus de volume. Trente-quatre suffisent — c'est encore doux, et ça
+  // suffit pour que l'œil sépare les deux plans. Les quatre couleurs de mur
+  // sont toutes claires (crème, menthe, sable, rose), donc retrancher 30 ne
+  // peut rien écraser vers le noir ; si un mur sombre apparaît un jour,
+  // c'est ici qu'il faudra un écart relatif et non plat.
+  const face = shade(murC, cote==='ne' ? -30 : 4);
   for(let i=0;i<n;i++){
     const A = cote==='ne' ? iso(i,0)   : iso(0,i+1);
     const B = cote==='ne' ? iso(i+1,0) : iso(0,i);
@@ -3796,6 +3803,34 @@ function drawInterieur(t){
   const murC=couleurMur(d.mur);
   paroi(def,murC,'nw'); paroi(def,murC,'ne');
   solPiece(def,d);
+
+  /* La lumière qui tombe des fenêtres. Les fenêtres montraient le ciel
+     depuis le début, mais elles n'éclairaient rien : une pièce dont les
+     fenêtres ne posent aucune tache de jour sur le plancher se lit comme
+     un décor, pas comme un endroit.
+
+     Elle est **écrasée au rapport de la case** (`th/tw`), sinon c'est un
+     rond posé sur le sol et non une flaque couchée dans le plan
+     isométrique. Et elle passe **après le sol et avant les meubles** :
+     une tache de lumière par-dessus une commode l'aurait traversée.
+
+     La nuit, rien : c'est le halo du lampadaire, plus bas, qui éclaire, et
+     deux sources qui s'ajoutent feraient une pièce plus claire de nuit que
+     de jour. */
+  if(world.sky!=='nuit'){
+    const col = world.sky==='jour' ? '255,242,200' : '255,198,152';
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    (def.fen||[]).forEach(f=>{
+      const p = f.mur==='ne' ? iso(f.i+0.5,1.1) : iso(1.1,f.i+0.5);
+      const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,84);
+      g.addColorStop(0,'rgba('+col+',.22)'); g.addColorStop(1,'rgba('+col+',0)');
+      ctx.save();
+      ctx.translate(p.x,p.y); ctx.scale(1,vue.th/vue.tw); ctx.translate(-p.x,-p.y);
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,84,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    });
+    ctx.restore();
+  }
 
   if(tool.mode!=='marche' && hover.x>=0 && hover.x<def.w && hover.y>=0 && hover.y<def.h){
     const q=iso(hover.x,hover.y), cy=q.y+vue.th/2;

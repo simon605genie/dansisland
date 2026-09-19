@@ -1327,6 +1327,25 @@ Ils vivent dans l'anneau qui va du bord de l'île à 97 % du rayon. Tout
 contre le contour ils déborderaient sur le papier une fois sur trois, là où
 `wMer()` rentre.
 
+### La pièce n'avait pas de volume
+
+Les deux parois étaient séparées de **seize valeurs** (`-18` contre `-2`) :
+à l'écran, elles se lisaient comme un seul plan replié. Trente-quatre
+suffisent à ce que l'œil les sépare, et c'est encore doux. Les quatre
+couleurs de mur sont toutes claires, donc un écart **plat** ne peut rien
+écraser vers le noir ; le jour où un mur sombre apparaît, il faudra un
+écart relatif, et c'est ici qu'il faudra le mettre.
+
+Et les fenêtres montraient le ciel sans rien éclairer. Une pièce dont les
+fenêtres ne posent aucune tache de jour sur le plancher se lit comme un
+décor, pas comme un endroit. La flaque est **écrasée au rapport de la
+case** (`th/tw`) — un rond y serait posé sur le sol au lieu d'être couché
+dans le plan — et elle passe **après le sol et avant les meubles**, sinon
+elle traverserait une commode.
+
+**La nuit, rien.** C'est le halo du lampadaire qui éclaire, et deux sources
+qui s'ajoutent feraient une pièce plus claire de nuit que de jour.
+
 ### Le voile laissait enfin passer l'île
 
 `#accueil` promettait de laisser voir le jeu derrière — c'est écrit plus
