@@ -383,6 +383,25 @@ la page entière, 368 ko, pour que l'écrivain n'ait pas fini à temps. Un
 défaut qui ne se montre que sur le gros fichier est un défaut qu'on croit
 corrigé. D'où `contient`, en bash pur, sans tuyau ni processus.
 
+### Le SMTP intégré ne tient pas une ouverture au public
+
+Rencontré pour de vrai le 19/09 : `email rate limit exceeded` sur le
+service d'e-mail **intégré** de Supabase. Ce n'est pas la minute d'attente
+par adresse, c'est la limite **du projet**, globale et horaire, et elle se
+compte en poignée de mails. Elle est faite pour développer.
+
+Conséquence à ne pas découvrir le jour du partage : **tout le jeu passe par
+le lien magique.** Plus de mail, plus de compte, donc plus d'île — et le
+joueur ne voit qu'un message d'erreur. Avant d'envoyer des cartes postales
+à plus de deux ou trois personnes, il faut brancher un vrai SMTP dans
+**Authentication → Emails / SMTP** du projet (Resend, Brevo, Postmark : les
+trois ont un palier gratuit largement suffisant ici). Les limites par heure
+se règlent juste à côté, dans **Auth → Rate Limits**.
+
+Côté client, `refusLisible()` ne promet **aucun délai** pour ce refus-là :
+on ne le connaît pas. Il dit la seule chose utile — un lien est
+probablement déjà parti, va le chercher dans les indésirables.
+
 Après le déploiement, dans **Auth → URL Configuration** : Site URL sur
 `https://dansisland.app`, et `https://dansisland.app/**` dans les Redirect
 URLs. Le `/**` est nécessaire pour revenir sur une adresse d'île.
