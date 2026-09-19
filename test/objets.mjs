@@ -607,6 +607,42 @@ c.titre('14. personne ne colle « un » devant un nom d’objet');
         'la phrase du Sens se lit dans PIVOT_ILE, elle ne la recopie pas');
   c.dit(!/suit un axe : <b>banc<\/b>/.test(code),
         'et la liste écrite à la main n’est pas revenue');
+
+  /* « La porte de Adam est fermée. » Même faute, sur la phrase qu'on
+     rencontre à chaque porte de voisin — sept endroits. Cinq des vingt
+     prénoms de démonstration commencent par une voyelle, et un prénom est
+     du texte libre : ça ne se réglait pas en renommant les bots.
+
+     Le contrôle applique la règle **telle qu'elle est écrite dans le
+     fichier** aux prénoms que le jeu **livre vraiment**, et imprime le
+     résultat. Ce n'est donc pas ma table comparée à ma table : la règle
+     vient de `deQui()`, les prénoms du bloc des îles de démonstration. */
+  c.dit(/function deQui\(nom\)/.test(code), 'deQui() est là');
+  c.dit(!/porte de <b>'\+esc\(world\.owner\)/.test(code),
+        'plus une phrase ne colle « de » devant le nom de l’hôte');
+  const voy = (code.match(/return \(\/\^\[([^\]]*)\]\/i\.test\(n\)/) || [])[1];
+  c.dit(!!voy, 'sa liste de voyelles a été lue');
+  /* Les prénoms viennent de **deux** endroits — les quelques îles écrites à
+     la main (`mkN`) et la liste des bots (`NOMS_GENS`) — et mon premier jet
+     n'en lisait qu'un : 3 prénoms au lieu de 20. C'est le défaut exact des
+     îles de démonstration du matin, où le contrôle ne lisait que `THEMES`
+     et ratait les îles écrites à la main. L'assertion de comptage est ce
+     qui l'a rattrapé les deux fois. */
+  const prenoms = [...new Set([
+    ...[...src.matchAll(/mkN\('[a-z]+','[^']*','([^']+)'/g)].map(m => m[1]),
+    ...((src.match(/const NOMS_GENS=\[([\s\S]*?)\];/) || [])[1] || '')
+       .split(',').map(x => x.trim().replace(/^'|'$/g, '')).filter(Boolean),
+  ])];
+  c.dit(prenoms.length >= 18, 'les prénoms des deux sources ont été lus (' + prenoms.length + ')');
+  if (voy) {
+    const re = new RegExp('^[' + voy.replace(/\\u([0-9a-f]{4})/gi, (_, h) => String.fromCharCode(parseInt(h, 16))) + ']', 'i');
+    const rendu = prenoms.map(n => (re.test(n) ? 'd’' : 'de ') + n);
+    console.log('     ' + rendu.join(' · '));
+    // Un prénom à voyelle au moins, sinon le contrôle ne prouve rien : il
+    // dirait « de » partout et aurait l'air content.
+    c.dit(rendu.some(x => x.startsWith('d’')), 'au moins un prénom s’élide — la règle mord');
+    c.dit(rendu.some(x => x.startsWith('de ')), 'et au moins un ne s’élide pas');
+  }
 }
 
 await nav.close(); s.fermer();

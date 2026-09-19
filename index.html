@@ -1186,6 +1186,27 @@ function rr(c,x,y,w,h,r){
   c.arcTo(x,y+h,x,y,k);c.arcTo(x,y,x+w,y,k);c.closePath();
 }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+/* « La porte de <b>Adam</b> est fermée » — la même faute que « Un fleur »,
+   sur la phrase qu'on rencontre à chaque porte de voisin. Sur les vingt
+   îles de démonstration, cinq prénoms commencent par une voyelle : Ana,
+   Inès, Ilan, Alba, Elias. Et un prénom est du texte libre, donc ça ne se
+   règle pas en renommant les bots.
+
+   Le `h` est **laissé tel quel**, délibérément : « d'Hugo » est juste et
+   « d'Hans » ne l'est pas, et rien dans un prénom ne dit lequel des deux
+   `h` on a. Élider sur les voyelles est vrai à tous les coups ; élider sur
+   le `h` serait juste plus souvent, faux parfois, et invérifiable.
+
+   Le `y` **n'est pas** dans la liste, et il y était : « d\u2019Yann » est
+   faux, un `y` initial se comporte comme une consonne en français (le
+   yaourt, de Yann). Trouvé parce que le contrôle **imprime** ce que la
+   règle donne sur les vrais prénoms du jeu, au lieu de se contenter de
+   dire oui. */
+function deQui(nom){
+  const n=String(nom==null?'quelqu\u2019un':nom);
+  return (/^[aeiou\u00e0\u00e2\u00e4\u00e9\u00e8\u00ea\u00eb\u00ee\u00ef\u00f4\u00f6\u00f9\u00fb\u00fc]/i.test(n)
+          ? 'd\u2019' : 'de ')+'<b>'+esc(n)+'</b>';
+}
 
 /* volumes isométriques ------------------------------------------------ */
 function isoTop(c,cx,cy,a,col){
@@ -3837,7 +3858,7 @@ function porteSousLesPieds(){
 function aCoteDeLaPorte(p){ return p.mur==='nw' ? {x:1,y:p.i} : {x:p.i,y:1}; }
 
 function entrer(k){
-  if(visiting){ say('La porte de <b>'+esc(world.owner)+'</b> est fermée. Pour l’instant, on ne visite que le dehors.'); return; }
+  if(visiting){ say('La porte '+deQui(world.owner)+' est fermée. Pour l’instant, on ne visite que le dehors.'); return; }
   finBalade(false);                      // on n'emmène pas le chien au salon
   fermerLeViseur();                      // un viseur oublié, c'est une pièce vue à travers deux bandes noires
   posIle={x:hero.x,y:hero.y};
@@ -4737,7 +4758,7 @@ async function porterLaCommande(){
     // Verrouillée sous la clé de l'état « déjà porté » : sans ça,
     // `proximity()` recouvre le message au battement suivant, et le seul
     // moment où l'enfant regarde le compteur dure une image.
-    say('Tu déposes le panier devant la porte de <b>'+esc(world.owner)+'</b>. '+
+    say('Tu déposes le panier devant la porte '+deQui(world.owner)+'. '+
         '<b>+'+GAIN_COMMANDE+' shells</b> · et <b>'+GAIN_COMMANDE_RECUE+'</b> pour '+esc(world.owner)+
         ', qui les trouvera en rentrant.', 'porte:livre');
   }catch(e){
@@ -5538,16 +5559,16 @@ function proximity(){
       // l'envers. `porterLaCommande()` pose `porte:livre` lui-même.
       if(commandeAPorter()){
         boutonRose('Déposer la commande');
-        bulle('porte:pret','La porte de <b>'+esc(world.owner)+'</b> est fermée, mais ton sac est prêt. '+
+        bulle('porte:pret','La porte '+deQui(world.owner)+' est fermée, mais ton sac est prêt. '+
           '<b>E</b> pour déposer la commande du jour sur le pas de la porte.'); return; }
       boutonRose(null);
       if(store.configure&&moi&&bourseServeur&&commandePortee())
-        bulle('porte:livre','La porte de <b>'+esc(world.owner)+'</b> est fermée. Tu as déjà porté la commande aujourd’hui ; elle revient demain.');
+        bulle('porte:livre','La porte '+deQui(world.owner)+' est fermée. Tu as déjà porté la commande aujourd’hui ; elle revient demain.');
       else if(store.configure&&moi&&bourseServeur)
-        bulle('porte:manque','La porte de <b>'+esc(world.owner)+'</b> est fermée. C’est ici qu’on dépose la commande du jour, et il te manque <b>'+
+        bulle('porte:manque','La porte '+deQui(world.owner)+' est fermée. C’est ici qu’on dépose la commande du jour, et il te manque <b>'+
           commandeManque().map(esc).join('</b> et <b>')+'</b> dans ton sac.');
       else
-        bulle('porte:ferme','La porte de <b>'+esc(world.owner)+'</b> est fermée. Pour l’instant, on ne visite que le dehors.');
+        bulle('porte:ferme','La porte '+deQui(world.owner)+' est fermée. Pour l’instant, on ne visite que le dehors.');
       return; }
     // Le seuil fait entrer tout seul ; la case d'à côté se contente
     // d'inviter. Une balade en cours désarme le seuil : passer devant chez
@@ -5833,7 +5854,7 @@ function buildMaison(){
   be2.onclick=()=>entrer('salon');
   re2.appendChild(be2); fe2.appendChild(re2); p.appendChild(fe2);
   p.appendChild(hint(visiting
-    ? 'La porte de <b>'+esc(world.owner)+'</b> est ferm\u00e9e : on ne visite que le dehors. Rentre chez toi pour ouvrir la tienne.'
+    ? 'La porte '+deQui(world.owner)+' est ferm\u00e9e : on ne visite que le dehors. Rentre chez toi pour ouvrir la tienne.'
     : 'Trois pi\u00e8ces, et personne d\u2019autre n\u2019y entre. Tu peux aussi <b>marcher sur le seuil</b> de ta porte : c\u2019est la m\u00eame chose, sans passer par un bouton. Une fois dedans, ce panneau devient l\u2019atelier des pi\u00e8ces.'));
   peindreMaison();
 }
