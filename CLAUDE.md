@@ -1670,6 +1670,28 @@ pour qu'on ne les reprenne pas :
    workflow qui sérialise le contexte `secrets` en entier ; il ne le dit
    nulle part et le bloque **avant** le job, donc sans aucun log.
 
+### Où en est le déploiement, mesuré le 19/09 au soir
+
+Repris et vérifié en fin de journée, plutôt que supposé depuis le matin :
+le workflow **n'est plus bloqué**. Les douze derniers runs se planifient,
+tournent, passent le `checkout`, et s'arrêtent tous au même pas — « Les
+secrets sont-ils là ? » — avec les quatre suivants en `skipped`.
+
+    1 success  Set up job
+    2 success  Run actions/checkout@v4
+    3 failure  Les secrets sont-ils là ?
+    4 skipped  Préparer dist/
+    5 skipped  Publier sur Cloudflare Pages
+
+Donc : **il ne manque que les deux secrets Cloudflare.** Les ajouter suffit,
+et le prochain push sur `main` publie. C'est la seule chose qui sépare le
+dépôt de la production, et ce n'est plus une hypothèse.
+
+Le contrôle « Le site répond, et il est complet » reste rouge tant que
+personne n'a déployé, et il a raison : il compare l'empreinte du dépôt à
+celle de la page servie. Il est rouge sur `main` comme sur les branches —
+ce n'est pas un défaut de la branche qu'on relit.
+
 **Ne jamais remettre `toJSON(secrets)` dans un workflow de ce dépôt.**
 Lister les noms des secrets — une commodité que j'avais ajoutée pour
 rendre le diagnostic plus clair — a coûté treize exécutions muettes, et
