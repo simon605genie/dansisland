@@ -1327,6 +1327,33 @@ Ils vivent dans l'anneau qui va du bord de l'île à 97 % du rayon. Tout
 contre le contour ils déborderaient sur le papier une fois sur trois, là où
 `wMer()` rentre.
 
+### Le voile laissait enfin passer l'île
+
+`#accueil` promettait de laisser voir le jeu derrière — c'est écrit plus
+haut, et c'est la raison même de n'en pas faire une page. Il ne le faisait
+pas : les bords étaient à **86 %** d'opacité, et l'île n'y était plus
+qu'une tache.
+
+Le piège est arithmétique et il vaut d'être écrit : la couche plate et le
+dégradé **se composent**. Lire `.66` dans le dégradé et `.58` dessous ne
+donne pas 66 %, ça donne `1-(1-,66)(1-,58) = 86 %`. Les valeurs avaient
+l'air modérées et ne l'étaient pas.
+
+Le halo garde ce qui compte — 95 % au centre, 85 % encore sous la carte,
+donc le texte ne perd rien — et les bords descendent à 54 %. La mer, le
+soleil et les mouettes reviennent.
+
+Les **trois** déclarations doivent rester d'accord : la claire, celle du
+`@media (prefers-color-scheme: dark)` et celle de `:root[data-theme="dark"]`.
+Vérifié dans les deux thèmes, en large et à 390 px.
+
+*(Au passage, une mesure à ne pas refaire comme moi : j'ai d'abord calculé
+le contraste du titre contre une luminance de voile **écrite en dur**, en
+supposant le voile crème dans les deux thèmes. Il rendait 1,05 en sombre et
+j'ai cru à un titre invisible. Le voile est bleu nuit en sombre, et tout
+allait bien. Un contraste se mesure contre le fond réellement calculé, pas
+contre celui qu'on croit.)*
+
 **Ces trois choses ne se vérifient pas dans un navigateur piloté**, et
 c'est la limite déjà notée pour le requin : le `rAF` y est bridé, le canvas
 garde la dernière image peinte, et seize mesures rendent seize fois la même

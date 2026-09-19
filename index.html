@@ -490,19 +490,30 @@ textarea{
      là — et ça dit ce qu'est le jeu mieux qu'un paragraphe. Le flou tient
      la lisibilité du texte par-dessus, et le halo central l'assure au
      centre, là où il y a le plus à lire. */
+  /* Les bords étaient à 86 % d'opacité — les deux couches se composent —
+     et l'île n'était plus qu'une tache. Le voile promettait de la laisser
+     voir et ne la laissait pas voir. Le halo central garde ce qui compte,
+     la lisibilité du texte (95 % au centre, 85 % encore sous la carte), et
+     les bords descendent à 54 % : la mer, le soleil et les mouettes
+     reviennent. Ne pas remonter ces valeurs sans regarder les deux thèmes,
+     et sans se rappeler que le chiffre lu n'est pas celui qu'on croit : la
+     couche plate et le dégradé s'ajoutent. */
   background:
-    radial-gradient(62% 48% at 50% 46%, rgba(250,246,234,.93), rgba(250,246,234,.66) 74%),
-    rgba(250,246,234,.58);
+    radial-gradient(58% 60% at 50% 50%, rgba(250,246,234,.94), rgba(250,246,234,.80) 58%,
+                    rgba(250,246,234,.40) 100%),
+    rgba(250,246,234,.24);
   -webkit-backdrop-filter:blur(7px); backdrop-filter:blur(7px);
   animation:accueilentre .5s ease both;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]) .accueil{
-    background:radial-gradient(62% 48% at 50% 46%, rgba(6,36,52,.93), rgba(6,36,52,.66) 74%), rgba(6,36,52,.58);
+    background:radial-gradient(58% 60% at 50% 50%, rgba(6,36,52,.94), rgba(6,36,52,.80) 58%,
+                             rgba(6,36,52,.40) 100%), rgba(6,36,52,.24);
   }
 }
 :root[data-theme="dark"] .accueil{
-  background:radial-gradient(62% 48% at 50% 46%, rgba(6,36,52,.93), rgba(6,36,52,.66) 74%), rgba(6,36,52,.58);
+  background:radial-gradient(58% 60% at 50% 50%, rgba(6,36,52,.94), rgba(6,36,52,.80) 58%,
+                             rgba(6,36,52,.40) 100%), rgba(6,36,52,.24);
 }
 .accueil[hidden]{display:none}
 @keyframes accueilentre{from{opacity:0}to{opacity:1}}
