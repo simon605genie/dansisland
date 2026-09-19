@@ -2532,6 +2532,94 @@ vraiment si l'île a changé. Et une sonde qui ne pose rien ne prouve pas
 qu'on ne peut pas poser : il a fallu la faire tourner sur les deux versions
 pour savoir que « rien posé » venait du clic, pas du changement.)*
 
+## Fille ou garçon, et six bâtiments — 19/09/2026 au soir
+
+`supabase/2026-09-19_batiments.sql`, **rejouable** : un seul
+`insert ... on conflict do update`. Six lignes de catalogue, rien d'autre —
+pas de table, pas de fonction, **aucune clé de plus dans `mondeNu()`**.
+
+### Fille ou garçon, et c'est la jupe qui le dit
+
+`me.genre`, et `me` est déjà dans `mondeNu()` : l'avatar voyage avec l'île,
+donc **aucune migration**.
+
+**C'est la jupe, et rien d'autre.** Pas un rose contre un bleu, pas des
+cils : la tenue, les cheveux, le teint et l'accessoire se choisissent déjà
+librement juste à côté, et un enfant qui veut une couronne et des cheveux
+longs sur un garçon doit pouvoir. Une seule forme de plus, et tout le reste
+reste au choix.
+
+**`genre` absent vaut garçon**, ce qui est exactement la silhouette d'avant :
+aucune île déjà faite ne change d'allure le jour du déploiement. Les îles
+bot en tirent un au hasard (`pick(22)`), sinon l'archipel n'en montrerait
+qu'une.
+
+Mesuré, parce qu'un choix qui ne change rien à l'écran n'est pas un choix :
+la tenue peinte passe de **8 141 à 10 238 pixels**, et le bas de la
+silhouette de 174 à 226 px de large.
+
+### Les six bâtiments
+
+    ferme          34   une grange, un silo, une porte à planches croisées
+    ecole          36   deux rangées de trois fenêtres, une cloche
+    coiffeur       44   une vitrine, et l'enseigne à spirale
+    supermarche    48   un auvent rayé, une grande vitrine
+    restaurant     52   un parasol de terrasse, deux fenêtres allumées
+    culte          58   un clocher qui domine tout
+
+Cinq choses à tenir :
+
+1. **Un bâtiment tient sur une case.** La maison est le seul objet 2x2 du
+   jeu, et elle l'est parce qu'on y **entre**. Ceux-ci se posent comme
+   l'échoppe et le phare.
+2. **Ils décorent, et c'est tout.** Aucun n'entre dans `FONCTIONNEL` :
+   aucun gain, aucun plafond, rien à faire — donc un souvenir rapporté de
+   chez un ami en vaut un vrai, et c'est très bien. C'est la règle du 16/09
+   (vendre un plafond revient à vendre de la monnaie) et celle du 19/09 (ce
+   qui *fait* quelque chose ne se ramène pas gratuitement d'une visite).
+3. **Ils tournent sans une ligne de dessin de plus.** `dessinDe()` retourne
+   le canevas pour `sw`, donc un bâtiment dessiné asymétrique change de
+   façade tout seul — il suffit d'entrer dans `PIVOT_ILE`. Et la phrase du
+   Sens, qui **lit** `PIVOT_ILE` depuis cet après-midi, les a nommés toute
+   seule.
+4. **Ils ont leur propre rayon**, « Bâtiments » : « Village » était déjà à
+   quatorze articles.
+5. **Rien sur les îles bot**, comme tout ce qui est payant.
+
+### Ce que le premier jet a raté, et ce que la capture a dit
+
+Écrits une première fois avec des murs bas et de gros toits, trois d'entre
+eux — école, coiffeur, supermarché — étaient **la même boîte crème sous le
+même toit sombre** en vignette. Les détails y étaient : ils étaient trop
+petits pour se lire.
+
+Six bâtiments qui se ressemblent ne sont pas six bâtiments. Refaits avec
+des **murs plus hauts que les toits**, et une signature franche qui sort du
+volume quand il le faut — l'enseigne à spirale du coiffeur, le parasol du
+restaurant, le silo de la ferme, le clocher du lieu de culte. Les deux
+signes repris du vocabulaire du jeu sont l'auvent rayé de l'échoppe (pour
+le supermarché) et les rangées de fenêtres (pour l'école).
+
+Ça ne se voit que rendu : c'est la règle de la journée, et ici il a fallu
+capturer les vignettes à trois fois la résolution pour juger.
+
+### Les garde-fous du matin ont rattrapé le travail du soir
+
+Sans qu'on y pense, et c'est ce pour quoi ils existent :
+
+    contrôle 11   les six lignes SQL croisées avec la vitrine      ✅
+    contrôle 13   les prix restent croissants dans chaque rayon    ✅
+    contrôle 14   « une ferme », « une école » dans les féminins   ✅
+
+Le contrôle 14 bis n'ajoute donc que ce que les autres ne couvrent pas :
+que les six sont branchés partout (dessin, atelier, vitrine, orientation),
+et que le choix fille/garçon **change vraiment le dessin**.
+
+*(Un piège de sonde de plus : compter les pixels **opaques** de l'aperçu du
+bonhomme rend le même nombre dans les deux réglages — 660 contre 660 — car
+il est peint sur un mur rayé, donc tout y est opaque. C'est la couleur de
+la tenue qu'il faut compter.)*
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

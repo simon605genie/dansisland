@@ -645,6 +645,84 @@ c.titre('14. personne ne colle « un » devant un nom d’objet');
   }
 }
 
+c.titre('14 bis. fille ou garçon, et les six bâtiments');
+{
+  /* Deux ajouts demandés le 19/09 au soir. Ce qu'on vérifie ici est ce qui
+     se voit : que le choix **change le dessin**, et que les six bâtiments
+     sont branchés partout où un objet d'île doit l'être.
+
+     Le reste est déjà couvert, et ça n'est pas un hasard : le contrôle 11
+     a crois é leurs six lignes SQL avec la vitrine, le 13 a vérifié qu'ils
+     ne cassaient pas l'ordre des prix, et le 14 a lu « une ferme » et
+     « une école » dans les féminins. Un garde-fou écrit le matin qui
+     rattrape le travail du soir sans qu'on y pense, c'est ce pour quoi ils
+     existent. */
+  const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const BAT = ['ferme', 'ecole', 'coiffeur', 'supermarche', 'restaurant', 'culte'];
+  for (const [quoi, test] of [
+    ['un dessin', k => new RegExp('\\n  ' + k + '\\(c,C\\)\\{').test(src)],
+    ['une entrée d’atelier', k => new RegExp("\\['" + k + "','").test(src)],
+    ['une ligne de vitrine', k => new RegExp("k:'" + k + "',").test(src)],
+    ['une orientation', k => new RegExp('\\b' + k + ':1').test(src)],
+  ]) {
+    const manque = BAT.filter(k => !test(k));
+    c.dit(manque.length === 0, 'les six bâtiments ont ' + quoi +
+          (manque.length ? ' — il manque ' + manque.join(', ') : ''));
+  }
+  // Le rayon est à part : « Village » était déjà à quatorze articles.
+  c.dit(/\['Bâtiments',\[/.test(src), 'ils ont leur propre rayon dans l’atelier');
+
+  /* Et le dessin. Un choix qui ne change rien à l'écran n'est pas un choix :
+     on lit les pixels de l'aperçu du bonhomme dans les deux réglages. */
+  const { ctx, page, erreurs } = await onglet(nav, { taille: { width: 1000, height: 1000 } });
+  await page.goto(s.url, { waitUntil: 'load' });
+  await attendre(2400);
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'toi');
+    if (b) b.click();
+  });
+  await attendre(700);
+  const choix = () => page.evaluate(() => {
+    const p = document.getElementById('p-toi');
+    const f = [...p.querySelectorAll('.field')].find(x => /Fille ou gar/i.test(x.innerText));
+    return f ? [...f.querySelectorAll('.chip')].map(b => b.textContent.trim()) : null;
+  });
+  const dessin = async n => {
+    await page.evaluate(q => {
+      const p = document.getElementById('p-toi');
+      const f = [...p.querySelectorAll('.field')].find(x => /Fille ou gar/i.test(x.innerText));
+      const b = [...f.querySelectorAll('.chip')].find(x => x.textContent.trim() === q);
+      if (b) b.click();
+    }, n);
+    await attendre(800);
+    return page.evaluate(() => {
+      const cv = document.querySelector('#p-toi canvas');
+      const g = cv.getContext('2d'), d = g.getImageData(0, 0, cv.width, cv.height).data;
+      const W = cv.width, H = cv.height;
+      /* On compte les pixels de **la tenue**, pas les pixels opaques :
+         l'aperçu est peint sur un mur rayé, donc tout y est opaque et une
+         mesure d'alpha rend le même nombre dans les deux cas — mesuré,
+         660 contre 660. La jupe est de la couleur de la tenue, et c'est
+         elle qu'on cherche. */
+      const tenue = (i) => Math.abs(d[i] - 0x14) + Math.abs(d[i + 1] - 0x8A) + Math.abs(d[i + 2] - 0x9C) < 60;
+      let n = 0, bas = 0;
+      for (let y = 0; y < H; y++) { let l = 0;
+        for (let x = 0; x < W; x++) if (tenue((y * W + x) * 4)) { n++; l++; }
+        if (y > H * 0.62 && l > bas) bas = l; }
+      return { n, bas };
+    });
+  };
+  const ch = await choix();
+  c.dit(!!ch && ch.length === 2, 'le choix est là, avec deux réponses (' + (ch || []).join(' / ') + ')');
+  const g = await dessin('Garçon'), f = await dessin('Fille');
+  console.log('     tenue peinte — garçon : ' + g.n + ' px, dont ' + g.bas + ' de large en bas · '+
+              'fille : ' + f.n + ' px, dont ' + f.bas);
+  c.dit(f.bas > g.bas + 8, 'la fille a une jupe — le bas s’évase (' + g.bas + ' → ' + f.bas + ' px)');
+  c.dit(f.n > g.n, 'et elle couvre plus de surface (' + g.n + ' → ' + f.n + ' px)');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
 c.titre('15. le livre d’or affiche le texte des autres, il ne l’exécute pas');
 {
   /* C'est le seul endroit du jeu où le texte d'un **inconnu** arrive sur la
