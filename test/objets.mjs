@@ -308,6 +308,59 @@ c.titre('9. les îles de démonstration ne portent rien de payant');
         'aucune île écrite à la main ne porte un objet payant' + (durs.length ? ' → ' + durs.join(', ') : ''));
 }
 
+c.titre('9 bis. un souvenir décore, il ne fonctionne pas');
+{
+  /* Les trois objets chers du 19/09 ont créé un trou que les objets
+     décoratifs n'avaient pas : n'importe quel objet se ramène en souvenir
+     de chez un ami, donc une visite suffisait à obtenir gratuitement les
+     trois articles les plus chers de la Boutique. C'est la règle des îles
+     bot — « on en ramène un souvenir gratuitement, et la boutique ne sert
+     plus à rien » — qui revenait par les vrais voisins.
+
+     Un souvenir porte `o.de`. Il reste posé, il se regarde, il se
+     déplace ; il ne fait simplement pas le travail. */
+  const SOUVENIR = (t, c) => [{ t, x: 8, y: 10, c, de: 'Lise' }];
+
+  for (const [t, nom, prix] of [['boitelettres', 'Boîte aux lettres', 55],
+                                ['girouette', 'Girouette', 42]]) {
+    const { ctx, page, erreurs } = await ouvrir(SOUVENIR(t, '#B44C6C'), MOTS);
+    await attendre(900);
+    const v = await etat(page);
+    console.log('     ' + t + ' : ' + (v.murmure || '(rien)'));
+    c.dit(v.plaque === null, t + ' — pas de plaque rose : le souvenir n’agit pas');
+    c.dit(/[Ss]ouvenir/.test(v.murmure), t + ' — la bulle dit que c’est un souvenir');
+    c.dit(/Lise/.test(v.murmure), t + ' — elle nomme de chez qui il vient');
+    c.dit(v.murmure.includes(String(prix)), t + ' — et elle donne le prix du vrai (' + prix + ')');
+
+    /* La touche ne doit pas agir non plus : elle tombe au rang suivant.
+       Mon premier essai cherchait l'absence de « shell » — mais la bulle
+       du souvenir **porte le prix**, donc elle contient ce mot et
+       l'assertion tombait sur son propre texte. On regarde ce que le vrai
+       objet aurait produit : les mots reçus, ou l'état de la mer. */
+    await page.keyboard.press('e');
+    await attendre(400);
+    const b = await etat(page);
+    c.dit(!/Lise\s*:/.test(b.murmure) && !/[Ll]a mer est/.test(b.murmure),
+          t + ' — E ne relève rien et ne lit pas la marée');
+    c.dit(erreurs.length === 0, t + ' — aucune erreur de console');
+    await ctx.close();
+  }
+
+  /* Le carillon n'a pas de bulle : il se dit par le son, et un son absent
+     ne s'explique pas au pied de l'objet. C'est donc au **ramassage** que
+     la phrase tombe — vérifié ici sur la source, faute de pouvoir visiter
+     un voisin dans ce harnais. */
+  const src0 = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  c.dit(/FONCTIONNEL=\{girouette:1, carillon:1, boitelettres:1\}/.test(src0),
+        'les trois objets fonctionnels sont déclarés ensemble');
+  c.dit(/aUnCarillon\(\)\{[^}]*!estSouvenir\(o\)/.test(src0),
+        'un carillon souvenir ne sonne pas');
+  // Le fichier porte l'apostrophe en **échappement** `\u2019`, pas en
+  // caractère : chercher le caractère ne trouve rien. Mesuré, pas deviné.
+  c.dit(/ramasserSouvenir[^]*?est un souvenir/.test(src0),
+        'le ramassage dit lui-même qu’un souvenir ne fait pas le travail');
+}
+
 c.titre('10. `agir()` et `proximity()` listent les mêmes sondes, dans le même ordre');
 {
   /* Le piège que ce dépôt nomme le plus souvent, et le seul que les

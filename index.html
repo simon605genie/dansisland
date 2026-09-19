@@ -1387,6 +1387,11 @@ const BOUTIQUE=[
 // bonhomme sait faire. Rien n'entre dans `objects` ni dans les meubles :
 // `achats` suffit, et le moteur lit la liste au moment d'agir.
 const EQUIPEMENT={bottes:1, moteur:1, appareil:1, compagnon:1};
+// Les objets d'île dont la **fonction** est ce qu'on achète. Un souvenir
+// de ceux-là décore sans fonctionner : voir `estSouvenir()`. Tout nouvel
+// objet payant qui fait quelque chose doit entrer ici, sinon une visite
+// chez un ami le donne gratuitement.
+const FONCTIONNEL={girouette:1, carillon:1, boitelettres:1};
 const VERROU={}; BOUTIQUE.forEach(a=>{ VERROU[a.k]=a.prix; });
 // La date du joueur, pas celle d'un serveur : voir l'avertissement plus haut.
 function aujourdhui(){ const d=new Date();
@@ -5102,7 +5107,7 @@ function boucleMusique(){
       au-dessus, la moitié du volume : un carillon qui sonnerait dans le
       grave se confondrait avec la musique, et on paierait 50 shells pour
       quelque chose qu'on n'entend pas. */
-function aUnCarillon(){ return (world.objects||[]).some(o=>o.t==='carillon'); }
+function aUnCarillon(){ return (world.objects||[]).some(o=>o.t==='carillon' && !estSouvenir(o)); }
 function boucleCarillon(){
   if(aUnCarillon()){
     const G=GAMMES[world.sky]||GAMMES.jour;
@@ -5383,8 +5388,14 @@ function proximity(){
   // Même cas, chez soi : un souvenir rapporté se regarde, il ne se ramasse
   // pas. Rien à faire, donc pas de plaque — et surtout pas celle d'avant.
   if(objet&&objet.de){ boutonRose(null);
+    // Pour les trois objets qui *font* quelque chose, le souvenir ne le
+    // fait pas — et il faut le dire ici, au pied de l'objet, pas dans un
+    // panneau : c'est la leçon de la boutique d'avant le 16/09.
+    const a=BOUTIQUE.find(x=>x.k===objet.t && FONCTIONNEL[x.k]);
     bulle('souv'+objet.x+'-'+objet.y,
-    'Souvenir rapporté de chez <b>'+esc(objet.de)+'</b>.'); return; }
+    'Souvenir rapporté de chez <b>'+esc(objet.de)+'</b>.'+(a
+      ? ' Il décore, mais il ne marche pas : <b>'+esc(a.n)+'</b> est à la Boutique, '+a.prix+' shells.'
+      : '')); return; }
   // La porte de la maison. Elle n'ouvre que chez soi : c'est une règle de
   // jeu, pas un secret : `interieur` voyage dans le même jsonb que le reste.
   if(devantLaPorte()){
@@ -5452,8 +5463,15 @@ function ramasserSouvenir(){
   if(!spot){ say('Plus une case libre chez toi pour poser un souvenir.'); return; }
   mine.objects.push({t:o.t,x:spot.x,y:spot.y,c:o.c,de:world.owner});
   saveMine(); son('poser'); buildAll();
+  // Le moment du ramassage est le seul où le doigt est sur l'objet : c'est
+  // là qu'il faut dire qu'un souvenir de carillon ne sonnera pas, sinon on
+  // le pose chez soi et on attend un son qui ne vient jamais.
+  const art=BOUTIQUE.find(x=>x.k===o.t && FONCTIONNEL[x.k]);
   say('Tu ramènes <b>'+(NOM_OBJ[o.t]||'un objet')+'</b> de chez '+esc(world.owner)+
-      '. Il t\u2019attend sur ton île.');
+      '. Il t\u2019attend sur ton île.'+(art
+        ? ' <b>C\u2019est un souvenir</b> : il décore, il ne fait pas ce que fait le vrai. '+
+          'Le tien est à la Boutique, '+art.prix+' shells.'
+        : ''), 0, art?5200:2200);
 }
 
 /* ================= panneaux ================= */
@@ -6418,10 +6436,29 @@ function etatObjet(o,t){
 
    Chez un voisin elle reste baissée : c'est **son** courrier, et c'est la
    même règle que sa porte et que son coffre. */
-function boitePleine(o){ return !visiting && o.t==='boitelettres' && motsNouveaux>0; }
+/* **Un souvenir décore, il ne fonctionne pas.**
+
+   Le souvenir est une copie signée `o.de`, et jusqu'au 19/09 tous les
+   objets de la boutique étaient décoratifs : en ramener un de chez un ami
+   coûtait au vendeur une décoration, rien de plus. Les trois objets chers
+   du 19/09 ont changé ça sans que je le pèse — une visite chez quelqu'un
+   qui possède un carillon, et on l'a. Les trois articles les plus chers
+   de la Boutique devenaient gratuits pour qui a un ami.
+
+   C'est la règle déjà écrite pour les îles bot — « on en ramène un
+   souvenir gratuitement, et la boutique ne sert plus à rien » — qui
+   revenait par les vrais voisins. Et c'est la double vérification du
+   compagnon, transposée : posséder le dessin ne suffit pas.
+
+   **On ne reprend rien** : le souvenir reste posé, il se regarde, il se
+   déplace, il se donne à voir. Il ne fait simplement pas le travail de
+   celui qu'on achète. La branche « souvenir rapporté » de `proximity()`
+   le dit, avec le prix, là où est le doigt. */
+function estSouvenir(o){ return !!(o && o.de); }
+function boitePleine(o){ return !visiting && o.t==='boitelettres' && !estSouvenir(o) && motsNouveaux>0; }
 function boiteProche(){
   if(visiting||dedans) return null;
-  return (mine.objects||[]).find(o=>o.t==='boitelettres' &&
+  return (mine.objects||[]).find(o=>o.t==='boitelettres' && !estSouvenir(o) &&
     Math.hypot(o.x+0.5-hero.x, o.y+0.5-hero.y)<0.95) || null;
 }
 // Les derniers mots reçus, les plus récents d'abord. On en lit trois : le
@@ -6464,7 +6501,7 @@ function releverLaBoite(){
    exactement ce que dit le commentaire de MAREE_SEUIL. */
 function girouetteProche(){
   if(dedans) return null;
-  return (world.objects||[]).find(o=>o.t==='girouette' &&
+  return (world.objects||[]).find(o=>o.t==='girouette' && !estSouvenir(o) &&
     Math.hypot(o.x+0.5-hero.x, o.y+0.5-hero.y)<0.95) || null;
 }
 function prochaineMaree(){
