@@ -6008,7 +6008,15 @@ function refusLisible(e){
   const s=m.match(/after (\d+) seconds?/i);
   if(s) return 'Un lien vient d’être envoyé. Attends encore '+s[1]+
                ' s avant d’en redemander un.';
-  if(/rate limit|too many/i.test(m)) return 'Trop de demandes d’un coup. Réessaie dans une minute.';
+  // Celle-ci n'est **pas** l'attente d'une minute par adresse : c'est la
+  // limite d'envoi du projet, globale et horaire. Promettre « une minute »
+  // était faux, et rencontré pour de vrai le 19/09. On ne donne donc aucun
+  // délai — on ne le connaît pas — et on dit la seule chose utile : un lien
+  // est probablement déjà parti, va le chercher.
+  if(/rate limit|too many|over_email_send/i.test(m))
+    return 'Le service d’e-mail est saturé pour le moment. Un lien t’a peut-être '+
+           'déjà été envoyé : regarde ta boîte et tes indésirables. '+
+           'Sinon, réessaie un peu plus tard.';
   return 'Envoi impossible : '+m;
 }
 
