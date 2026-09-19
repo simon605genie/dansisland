@@ -1382,7 +1382,9 @@ audio ici, et le jugement musical revient à l'oreille de quelqu'un.
 
 ## Les épreuves entrent dans le dépôt — 19/09/2026
 
-`npm test`, quatre harnais dans `test/`. Ils font tourner **la vraie page
+`npm test`, **six** harnais dans `test/` (quatre le matin du 19/09, six
+le soir : `objets.mjs` et `dedans.mjs` sont venus après). Ils font tourner
+**la vraie page
 dans un vrai navigateur** contre `test/faux-store.js`, copié sous le nom
 `src/store.js` dans un dossier jetable : sans réseau, sans compte, et sans
 toucher à la base de production.
@@ -1393,6 +1395,8 @@ Ils ont chacun un défaut réel derrière eux, trouvé à l'œil et tard :
     etroit.mjs      une vignette qui sortait de l'écran en paysage court
     parrainage.mjs  les trois branches de reglerLeParrainage()
     lien.mjs        dix appuis qui donnaient neuf erreurs
+    objets.mjs      un « +5 shells » recouvert avant d'avoir été lu
+    dedans.mjs      « Te voilà dans **le** chambre », et une pièce à 51 %
 
 Quatre choses à ne pas défaire :
 
@@ -1963,6 +1967,125 @@ faut demander.
 or ce fichier n'a pas de balise `<body>`, donc `slice(-1)`. Elle
 déclarait l'invariant tenu sur un caractère. C'est l'assertion de
 comptage qui l'a rattrapée.)*
+
+## On entre enfin chez soi, et on y lit du français — 19/09/2026
+
+Aucune migration, **aucune clé de plus dans `mondeNu()`** : c'est du zoom et
+des articles. Deux défauts trouvés en **entrant** dans la maison et en
+regardant, pas en relisant le code — et c'est tout ce qui les distingue des
+quinze relectures qui ne les avaient pas vus.
+
+### La pièce ne remplissait pas le cadre
+
+Mesuré à l'entrée : le salon occupait **65 %** de la largeur du cadre, la
+chambre et l'atelier **51 %**, et quatre cinquièmes des pixels étaient du
+papier vide. On entrait chez soi et il n'y avait presque rien à voir.
+
+`fitDedans()` calculait pourtant le bon zoom **depuis le début**. Il
+n'était branché qu'en **plafond** (`zPlafond()`), jamais en zoom visé :
+dedans, `zoomAuto()` rendait `zPlancher()`, c'est-à-dire 1, et le plafond
+ne mord que par le haut. Une fonction juste, appelée au mauvais endroit,
+ne se voit pas à la lecture — les deux lignes ont l'air de coopérer.
+
+    function zoomAuto(){
+      if(dedans) return zPlafond();
+      return Math.max(zPlancher(), CASE_MIN/(TW*(echelleEcran||1)));
+    }
+
+Remesuré : **salon 86 %, chambre et atelier 78 %**, et rien ne touche le
+bord. Les marges de `fitDedans()` (28 px en largeur, 44 en hauteur) sont ce
+qui permet d'en faire le zoom visé sans couper un mur : **ne pas les
+réduire pour gagner quelques pour cent**, elles sont la différence entre
+« ça remplit » et « ça déborde ».
+
+Et `zoomVoulu()` garde `zPlafond()` en borne haute, ce qui est une vraie
+protection et pas une redite : une panne posée exprès — `zoomAuto()`
+multiplié par 1,35 dedans — n'a **rien changé à l'image**, parce que le
+clamp l'a absorbée. Pour faire sortir un mur du cadre, il a fallu attaquer
+`fitDedans()` lui-même.
+
+Dehors, rien ne bouge : la branche est gardée par `dedans`.
+
+### « Te voilà dans le chambre »
+
+Vu sur une capture, pas dans le code. Quatre phrases collaient un article
+**en dur** devant un nom de pièce variable :
+
+    Te voilà dans **le** chambre        Passer **au** chambre
+    Une porte vers **le** atelier       **Le** chambre fait 6x5 cases
+
+Il y a trois pièces et trois genres — masculin, féminin, et masculin devant
+voyelle, qui élide. L'article est donc une **propriété de la pièce**, au
+même titre que son nom et sa taille, et il vit dans `PIECES` :
+
+    {k:'salon',   n:'Salon',   art:'le ', a:'au '   }
+    {k:'chambre', n:'Chambre', art:'la ', a:'à la ' }
+    {k:'atelier', n:'Atelier', art:'l’',  a:'à l’'  }
+
+Une quatrième pièce ajoutée un jour porte son `art` et son `a`, et c'est
+tout ce qu'elle a à porter.
+
+### Ce que la fausse panne a révélé, et qui était le vrai défaut
+
+`laPiece()` et `aLaPiece()` existaient. En posant la panne — `laPiece()`
+rendant « le » pour tout le monde — **deux des quatre phrases ont continué
+de dire juste**. Elles ne passaient pas par la fonction du tout : elles
+recollaient `pieceDef(k).art` devant `'<b>'+nom+'</b>'`, chacune à sa
+façon, et la troisième rattrapait le gras après coup avec un `.replace()`.
+
+Trois orthographes d'une même idée, donc **trois endroits à tenir
+d'accord** le jour où une quatrième pièce arrive — exactement ce que ce
+fichier interdit partout ailleurs. Et rien ne le signalait, puisque les
+trois rendaient le bon texte.
+
+`laPiece(k, maj, gras)` a donc gagné un troisième paramètre qui met le
+**nom** en gras, jamais l'article — c'est ce dont les trois phrases avaient
+besoin, et c'est pour l'avoir écrit à la main qu'elles avaient divergé.
+C'est le même choix que le `saut` de `drawChar()` et l'`ouvert` de
+`DRAW.coffre` : un argument optionnel coûte moins qu'une seconde fonction.
+
+**L'invariant tenu est donc `art` et `a` ne se lisent que dans leurs deux
+fonctions**, et c'est ça que le harnais mesure — pas la phrase telle
+qu'elle est écrite, qui ne prouverait que ma capacité à la recopier.
+
+### `test/dedans.mjs`, sixième harnais
+
+Quatre sections, et **les quatre ont été éprouvées en remettant une vraie
+panne**, une par une :
+
+    zoomAuto sans sa branche dedans   → 65 % / 51 %, les chiffres d'avant
+    les marges de fitDedans mangées   → 100 %, « ça touche le bord »
+    laPiece rendant « le » partout    → six rouges là où il y en avait trois
+    une phrase qui recolle l'article  → la section 3 la nomme
+    « Chez toi · » remis dans dedans  → écart vertical 42 px, à 360 px seul
+
+Trois choses apprises, et les trois sont des erreurs de **mesure**, pas de
+jeu :
+
+1. **Une panne absorbée par un clamp ne prouve rien.** La première
+   tentative de faire déborder la pièce multipliait `zoomAuto()` ; le
+   `Math.min(zPlafond(), …)` de `zoomVoulu()` la rendait invisible. Le
+   contrôle passait à juste titre, et je n'avais rien éprouvé. C'est la
+   leçon déjà écrite le 19/09 pour l'inversion de deux rangs qui ne
+   changeait pas l'ordre.
+2. **Trois tours qui rendent trois fois le même nombre ne mesurent
+   peut-être qu'une chose.** Ma section 4 entrait dans les trois pièces et
+   lisait « 22 px de marge » à chaque fois — parce que la plaque Son est
+   poussée au bord et n'y bouge jamais. Ce qui se resserre quand le nom
+   s'allonge, c'est le **trou juste avant elle**. Depuis, la section lit ce
+   trou, **et** vérifie sur la plaque dans quelle pièce elle est : sans ça,
+   elle aurait mesuré trois fois le salon en ayant l'air de prouver
+   quelque chose.
+3. **Le salon est le nom le plus court des trois**, donc le cas le plus
+   favorable, et c'était le seul que je mesurais.
+
+Mesuré au passage, et c'est le cas que l'avertissement des 360 px vise
+depuis le 16/09 : **dedans, on est à quatre plaques** — retour, pièce,
+bourse, son. Ça tient, avec 8 px entre voisines et 22 de marge, dans les
+trois pièces et aux deux tailles. « Chez toi » remis devant le nom de la
+pièce fait repasser la quatrième à la ligne, **à 360 px seulement** : la
+règle du 16/09 est juste, et elle a maintenant sa mesure plutôt que sa
+consigne.
 
 ## Reste du contexte
 

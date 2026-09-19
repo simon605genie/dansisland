@@ -289,7 +289,7 @@ lu que par Cloudflare Pages. Seule la racine est testable ainsi.
     npx playwright install chromium
     npm test
 
-Quatre harnais, dans `test/`, qui font tourner **la vraie page dans un vrai
+Six harnais, dans `test/`, qui font tourner **la vraie page dans un vrai
 navigateur** contre un serveur simulé (`test/faux-store.js` remplace
 `src/store.js` dans une copie jetable — le dépôt n'est jamais modifié, et
 rien ne touche la base de production).
@@ -298,8 +298,10 @@ rien ne touche la base de production).
     etroit.mjs      360 px et 780x360 : rien ne déborde, rien n'est coupé
     parrainage.mjs  les trois branches de reglerLeParrainage()
     lien.mjs        le lien de connexion, et l'invite de rotation
+    objets.mjs      les sept rangs, les bulles, les listes qui s'accordent
+    dedans.mjs      l'intérieur : le cadre rempli, les articles, les plaques
 
-Ils existent parce que les quatre défauts qu'ils surveillent ont tous été
+Ils existent parce que les défauts qu'ils surveillent ont tous été
 trouvés à l'œil, tard, et qu'aucun n'aurait survécu à un contrôle : des
 `</b>` affichés en clair au milieu d'une phrase, dix appuis qui donnaient
 neuf erreurs, une invite qui battait trop vite, une vignette qui sortait de

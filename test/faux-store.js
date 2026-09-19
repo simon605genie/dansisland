@@ -56,8 +56,13 @@ const lu = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } 
 
 export async function monIle() {
   const objets = lu('test:objets', null);
+  // `test:interieur` sème une maison meublée, comme `test:objets` sème
+  // l'île : par le vrai chemin de chargement, donc à travers
+  // `normaliserInterieur()` — c'est là que les meubles hors des murs sont
+  // écartés et que les cadres se raccrochent.
+  const interieur = lu('test:interieur', undefined);
   return { id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', slug: 'filleul', nom: 'L’île du filleul',
-           monde: objets ? { objects: objets } : null,
+           monde: (objets || interieur) ? { objects: objets || [], interieur } : null,
            maj_le: new Date().toISOString(),
            // `vu_le` à l'époque zéro : tous les mots semés comptent comme
            // reçus pendant l'absence, donc le drapeau de la boîte se lève.
