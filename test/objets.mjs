@@ -645,5 +645,49 @@ c.titre('14. personne ne colle « un » devant un nom d’objet');
   }
 }
 
+c.titre('15. le livre d’or affiche le texte des autres, il ne l’exécute pas');
+{
+  /* C'est le seul endroit du jeu où le texte d'un **inconnu** arrive sur la
+     page de quelqu'un d'autre : on plante un mot chez un voisin, et l'hôte
+     le lit chez lui. Un `<img onerror=…>` qui s'exécuterait là tournerait
+     dans la session de l'hôte, avec son compte.
+
+     La discipline est tenue — `esc()` partout sur `panneau.txt`,
+     `panneau.by`, `auteur_nom` — mais une discipline ne se relit pas, et il
+     suffit d'un `+` oublié. On ne vérifie donc pas la source : **on envoie
+     une vraie tentative et on demande au navigateur ce qu'il en a fait.**
+     C'est la leçon du contrôle 12 — quand un navigateur peut répondre,
+     c'est à lui qu'il faut demander. */
+  const { ctx, page, erreurs } = await onglet(nav, {
+    taille: { width: 1280, height: 900 },
+    memoire: { 'test:mots': JSON.stringify([
+      ['Zoé', '<b>gras ?</b>'],
+      ['<i>Ana</i>', 'coucou'],
+      ['Ilan', '<img src=x onerror="document.title=\'PERCÉ\'">'],
+    ]) },
+  });
+  await page.goto(s.url, { waitUntil: 'load' });
+  await attendre(2600);
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'ile');
+    if (b) b.click();
+  });
+  await attendre(800);
+
+  const v = await page.evaluate(() => {
+    const p = document.getElementById('p-ile');
+    const t = (p.innerText || '').replace(/\s+/g, ' ');
+    return { titre: document.title, img: p.querySelectorAll('img').length,
+             mots: ['<b>gras ?</b>', '<i>Ana</i>', '<img src=x'].filter(x => t.includes(x)).length };
+  });
+  console.log('     titre de la page : « ' + v.titre +' », <img> dans le panneau : ' + v.img +
+              ', balises lues en clair : ' + v.mots + '/3');
+  c.dit(v.titre !== 'PERCÉ', 'le onerror n’a pas tourné — le titre de la page est intact');
+  c.dit(v.img === 0, 'aucune <img> n’a été créée depuis un mot');
+  c.dit(v.mots === 3, 'les trois mots s’affichent tels qu’ils ont été écrits');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
 await nav.close(); s.fermer();
 process.exit(c.fin() ? 1 : 0);
