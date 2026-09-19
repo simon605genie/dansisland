@@ -5966,7 +5966,7 @@ function buildIle(){
     const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=n;
     b.setAttribute('aria-pressed',String(tool.mode===m&&tool.kind===k));
     b.onclick=()=>{tool.mode=m;tool.kind=k;buildAll();}; bt.appendChild(b); });
-  ft.appendChild(bt); p.appendChild(ft);
+  ft.appendChild(bt); p.appendChild(visiting?fermerEnVisite(ft):ft);
 
   OBJ_GROUPS.forEach(([title,items0])=>{
     // Un objet de la boutique n'apparaît ici qu'une fois acheté : un bouton
@@ -5983,7 +5983,7 @@ function buildIle(){
       const l=document.createElement('span'); l.textContent=n;
       b.appendChild(c); b.appendChild(l);
       b.onclick=()=>{tool.mode='objet';tool.kind=v;buildAll();}; bo.appendChild(b); });
-    fo.appendChild(bo); p.appendChild(fo);
+    fo.appendChild(bo); p.appendChild(visiting?fermerEnVisite(fo):fo);
   });
   // Ce qui manque ici est à la boutique, et on le dit : un atelier plus court
   // qu'hier sans explication ressemble à une panne.
@@ -5997,9 +5997,10 @@ function buildIle(){
   const tr=document.createElement('button'); tr.className='chip'; tr.type='button'; tr.textContent='\u27f3 Tourner';
   tr.setAttribute('aria-pressed',String(tool.mode==='tourner'));
   tr.onclick=()=>{tool.mode='tourner';tool.kind=null;buildAll();};
-  be.appendChild(e); be.appendChild(tr); fe.appendChild(be); p.appendChild(fe);
-  p.appendChild(chipsLibre('Sens',[['se','\u2198 Vers la droite'],['sw','\u2199 Vers la gauche']],tool.orient,
-    v=>{ tool.orient=v; buildAll(); }));
+  be.appendChild(e); be.appendChild(tr); fe.appendChild(be); p.appendChild(visiting?fermerEnVisite(fe):fe);
+  const fSens=chipsLibre('Sens',[['se','\u2198 Vers la droite'],['sw','\u2199 Vers la gauche']],tool.orient,
+    v=>{ tool.orient=v; buildAll(); });
+  p.appendChild(visiting?fermerEnVisite(fSens):fSens);
   /* La liste se **lit** dans `PIVOT_ILE`, elle ne se recopie pas. Elle était
      écrite à la main juste ici, et elle disait exactement la bonne chose —
      jusqu'au jour où un objet orientable serait ajouté sans que personne ne
@@ -6018,7 +6019,7 @@ function buildIle(){
     b.onclick=()=>{tool.color=c;buildAll();}; bc.appendChild(b); });
   const pk=document.createElement('input'); pk.type='color'; pk.value=tool.color;
   pk.oninput=ev=>{tool.color=ev.target.value;}; pk.onchange=()=>buildAll();
-  bc.appendChild(pk); fc.appendChild(bc); p.appendChild(fc);
+  bc.appendChild(pk); fc.appendChild(bc); p.appendChild(visiting?fermerEnVisite(fc):fc);
 
   const row=document.createElement('div'); row.className='row';
   const un=document.createElement('button'); un.className='btn'; un.textContent='\u21b6 Annuler';

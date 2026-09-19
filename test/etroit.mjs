@@ -247,5 +247,63 @@ c.titre('la carte de connexion couchée, et ce qu’elle ne doit pas perdre');
   await t.ctx.close();
 }
 
+/* Chez un voisin, le panneau Île se ferme — en entier.
+
+   Il se fermait à moitié : le nom de l'île, l'Heure, l'Ambiance et la
+   Palette étaient éteints par `fermerEnVisite()`, mais **les dix-sept
+   vignettes de l'atelier restaient cliquables**. On armait donc un pinceau
+   chez quelqu'un, on cliquait, et il ne se passait rien.
+
+   Rien n'était perdu — mesuré, le code de sauvegarde ne bougeait pas d'un
+   octet — mais c'est le défaut nommé le 16/09 : « un pinceau armé au mauvais
+   endroit doit le dire ; le clic ne faisait rien et rien ne l'expliquait ».
+   Et l'explication existait, tout en haut du panneau, à un écran de
+   défilement des vignettes. */
+c.titre('chez un voisin, le panneau Île est fermé en entier');
+{
+  const { ctx, page, erreurs } = await onglet(nav, { taille: { width: 1280, height: 900 } });
+  await page.goto(s.url, { waitUntil: 'load' });
+  await attendre(2400);
+  const ouvrir = async k => {
+    await page.evaluate(t => {
+      const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === t);
+      if (b) b.click();
+    }, k);
+    await attendre(600);
+  };
+  const lire = () => page.evaluate(() => {
+    const p = document.getElementById('p-ile');
+    const objs = [...p.querySelectorAll('.obj')], chips = [...p.querySelectorAll('.chip')];
+    return { objs: objs.length, objsOff: objs.filter(b => b.disabled).length,
+             chips: chips.length, chipsOff: chips.filter(b => b.disabled).length };
+  });
+
+  await ouvrir('ile');
+  const chez = await lire();
+  console.log('     chez moi : ' + chez.objsOff + '/' + chez.objs + ' vignettes éteintes, ' +
+              chez.chipsOff + '/' + chez.chips + ' puces éteintes');
+  // L'ordre compte : si l'atelier était fermé chez soi, le jeu n'aurait plus
+  // d'atelier du tout — c'est la première chose à refuser.
+  c.dit(chez.objs > 10, 'chez moi, l’atelier a ses vignettes (' + chez.objs + ')');
+  c.dit(chez.objsOff === 0, 'chez moi, aucune n’est éteinte');
+  c.dit(chez.chipsOff === 0, 'chez moi, aucune puce n’est éteinte');
+
+  await ouvrir('voisins');
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.neighbor button')].find(x => /Visiter/.test(x.textContent));
+    if (b) b.click();
+  });
+  await attendre(1800);
+  await ouvrir('ile');
+  const chez2 = await lire();
+  console.log('     en visite : ' + chez2.objsOff + '/' + chez2.objs + ' vignettes éteintes, ' +
+              chez2.chipsOff + '/' + chez2.chips + ' puces éteintes');
+  c.dit(chez2.objs > 10, 'en visite, les vignettes sont toujours là (on voit ce qu’on aura chez soi)');
+  c.dit(chez2.objsOff === chez2.objs, 'mais toutes éteintes — aucun pinceau ne s’arme chez les autres');
+  c.dit(chez2.chipsOff === chez2.chips, 'et toutes les puces aussi');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
 await nav.close(); s.fermer();
 process.exit(c.fin() ? 1 : 0);

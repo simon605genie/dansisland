@@ -2470,6 +2470,48 @@ dans la source ne verrait ni les fonctions qui échappent pour vous — comme
 `deQui()`, qui a fait sonner trois faux positifs dans mon relevé — ni un
 chemin de rendu qu'elle n'aurait pas pensé à regarder.
 
+## Le panneau Île ne se fermait qu'à moitié chez les voisins — 19/09/2026
+
+`fermerEnVisite()` existe depuis longtemps et éteint les commandes qui ne
+servent à rien chez quelqu'un d'autre. Il était appliqué à quatre champs —
+le nom de l'île, l'Heure, l'Ambiance, la Palette — et **pas à l'atelier**.
+Mesuré chez un voisin : **23 puces éteintes sur 23, et 0 vignette éteinte
+sur 17**.
+
+On pouvait donc armer un pinceau chez quelqu'un, cliquer, et il ne se
+passait rien. **Rien n'était perdu** — vérifié en armant un pinceau de force
+et en cliquant quatre fois : le code de sauvegarde ne bougeait pas d'un
+octet, ni mon île ni la sienne. Mais c'est mot pour mot le défaut nommé le
+16/09 : « un pinceau armé au mauvais endroit doit le dire ; le clic ne
+faisait rien et rien ne l'expliquait ». L'explication existait, tout en haut
+du panneau, à un écran de défilement des vignettes.
+
+Cinq sections de plus passent par `fermerEnVisite()` : le pinceau de
+terrain, chaque rayon de l'atelier, Corriger, Sens, la couleur de l'objet.
+
+Deux choses à tenir :
+
+1. **Les vignettes restent visibles, seulement éteintes.** On voit ce qu'on
+   aura chez soi ; les faire disparaître donnerait un atelier plus court
+   sans explication, et c'est ce que la note « ce qui manque est à la
+   Boutique » existe déjà pour éviter.
+2. **Le contrôle vérifie d'abord que rien n'est éteint chez soi.** Un
+   `fermerEnVisite()` mal branché fermerait l'atelier pour tout le monde, et
+   le jeu n'aurait plus d'atelier du tout : c'est la première chose à
+   refuser, avant même de vérifier la visite.
+
+Vérifié aussi que le changement est **neutre chez soi**, en faisant tourner
+la même sonde sur la version d'avant et sur la nouvelle : 52 boutons, un
+seul éteint (« ↶ Annuler », faute d'historique), identique des deux côtés.
+
+*(Au passage, deux pièges de sonde. `world` dans une page de test n'est pas
+le monde du jeu mais le **canvas** : un élément à `id` devient une globale,
+donc `world.objects` vaut `undefined` et compte zéro sans rien prouver.
+C'est le code de sauvegarde, lisible dans le panneau Voisins, qui dit
+vraiment si l'île a changé. Et une sonde qui ne pose rien ne prouve pas
+qu'on ne peut pas poser : il a fallu la faire tourner sur les deux versions
+pour savoir que « rien posé » venait du clic, pas du changement.)*
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
