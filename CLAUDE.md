@@ -2418,6 +2418,36 @@ Les deux fois, c'est l'assertion de comptage qui l'a rattrapé. Elle n'est
 pas là pour décorer : un contrôle qui ne dit pas **combien** il a lu peut
 passer au vert en ne regardant presque rien.
 
+## Le livre d'or éprouvé pour de bon — 19/09/2026
+
+C'est le **seul endroit du jeu où le texte d'un inconnu arrive sur la page
+de quelqu'un d'autre** : on plante un mot chez un voisin, l'hôte le lit
+chez lui. Un `<img onerror=…>` qui s'exécuterait là tournerait dans la
+session de l'hôte, avec son compte.
+
+**La discipline était tenue** — `esc()` partout sur `auteur_nom` et
+`texte`, vérifié champ par champ sur les quinze chemins de texte libre du
+jeu, et rien n'a eu à être corrigé. Mais une discipline ne se relit pas, et
+il suffit d'un `+` oublié un jour de fatigue.
+
+Le contrôle 15 ne lit donc pas la source : il **envoie une vraie tentative**
+— `<b>gras ?</b>`, `<i>Ana</i>`, `<img src=x onerror="document.title='PERCÉ'">`
+— et demande au navigateur ce qu'il en a fait. Trois questions :
+
+    le titre de la page a-t-il changé ?          non
+    une <img> a-t-elle été créée ?               aucune
+    les trois mots s'affichent-ils en clair ?    3/3
+
+Éprouvé en retirant les deux `esc()` de la ligne du livre d'or : le titre
+devient **PERCÉ**, une `<img>` apparaît, et les trois mots cessent de
+s'afficher. Le garde-fou mord.
+
+C'est la leçon du contrôle 12, transposée : **quand un navigateur peut
+répondre, c'est à lui qu'il faut demander.** Une regex qui cherche `esc(`
+dans la source ne verrait ni les fonctions qui échappent pour vous — comme
+`deQui()`, qui a fait sonner trois faux positifs dans mon relevé — ni un
+chemin de rendu qu'elle n'aurait pas pensé à regarder.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
