@@ -701,6 +701,23 @@ textarea{
      de la hauteur et les onglets commencent au milieu de l'écran. */
   #compte input{min-width:0; flex:1 1 70px; padding:5px 8px; font-size:12px}
   #compte .btn{font-size:11.5px; padding:5px 9px; white-space:nowrap}
+  /* Et une fois qu'il n'y a plus rien à saisir, elle se pose sur une seule
+     rangée. Mesuré à 780x360 : elle prenait **156 px des 360** de l'écran,
+     six enfants empilés par `#compte>span{flex:1 1 100%}` — deux fois ce
+     qui restait au panneau, qui n'avait plus que 73 px. On voyait trois
+     lignes d'atelier sous une carte qui ne sert qu'à dire qui on est.
+
+     Ce qui part est ce qui existe ailleurs : l'adresse de l'île et son
+     bouton de copie sont dans l'onglet Voisins, sous « 🔗 Copier mon
+     lien ». Ce qui reste est ce qui n'est nulle part ailleurs — le nom, la
+     pastille d'état et « Se déconnecter ».
+
+     Rien de tout ça ne touche l'état « il reste à saisir » : la carte s'y
+     étale comme avant, et **on se connecte toujours en paysage**, ce qui
+     est la raison d'être du `display:contents` sur `.stage`. */
+  #compte.pose{padding:4px 10px}
+  #compte.pose>span{flex:0 1 auto}
+  #compte.pose .redite{display:none}
   .viewport{
     grid-column:1; grid-row:1 / span 2; align-self:center;
     width:min(calc(100svh * 1.536), calc(100vw - 236px));
@@ -6814,7 +6831,22 @@ function refusLisible(e){
   return 'Envoi impossible : '+m;
 }
 
-function peindreCompte(){
+/* La carte de connexion a deux états, et un seul des deux a besoin de
+   place : **tant qu'il reste quelque chose à saisir**, elle demande une
+   adresse e-mail ou l'adresse de l'île, et elle doit s'étaler. Une fois
+   tout réglé, elle ne fait plus que dire qui on est.
+
+   `pose` marque le second, et il se déduit — la carte porte-t-elle encore
+   un champ ? — plutôt que de se recopier à chaque branche de
+   `peindreCompte()`, qui en a quatre et qui sort par `return` au milieu.
+   Un drapeau posé à la main dans quatre branches, c'est une branche qui
+   l'oubliera. */
+function peindreCompte(){ peindreCarteCompte(); formeDuCompte(); }
+function formeDuCompte(){
+  const box=document.getElementById('compte'); if(!box) return;
+  box.classList.toggle('pose', !box.querySelector('input'));
+}
+function peindreCarteCompte(){
   const box=document.getElementById('compte'); if(!box) return;
   box.innerHTML='';
   // La carte se refait entière à chaque passage : le compte à rebours du
@@ -6901,8 +6933,12 @@ function peindreCompte(){
     ajout(sl); ajout(cr);
   } else {
     const url=location.host+'/'+monSlug;
-    ajout(txt('\u00b7 ton \u00eele : <span class="lien">'+esc(url)+'</span>'));
-    const cp=document.createElement('button'); cp.className='btn'; cp.textContent='Copier le lien';
+    // `redite` marque ce qui existe **ailleurs** : l'adresse et son bouton
+    // de copie sont aussi dans l'onglet Voisins, sous \u00ab \ud83d\udd17 Copier mon
+    // lien \u00bb. C'est ce qui permet \u00e0 l'\u00e9cran couch\u00e9 de s'en passer sans rien
+    // perdre. Ne pas en marquer un dont ce serait le seul endroit.
+    ajout(txt('\u00b7 ton \u00eele : <span class="lien">'+esc(url)+'</span>','redite'));
+    const cp=document.createElement('button'); cp.className='btn redite'; cp.textContent='Copier le lien';
     cp.onclick=()=>{ const full=location.origin+'/'+monSlug;
       if(navigator.clipboard) navigator.clipboard.writeText(full).then(()=>say('Lien copi\u00e9.'),()=>say('Copie \u00e0 la main : '+esc(full)));
       else say('Copie \u00e0 la main : '+esc(full)); };

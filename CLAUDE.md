@@ -2199,6 +2199,46 @@ vérifié aux quatre tailles, la **visibilité sans défiler** seulement là où
 le panneau a la place. Affirmer la seconde en paysage court, ce serait
 demander au test de mentir.
 
+### La carte de connexion prenait la place du jeu
+
+Corrigé dans la foulée, puisque c'est ce que la mesure précédente avait
+mis au jour. À 780x360, `#compte` faisait **156 px des 360** de l'écran :
+six enfants empilés par `#compte>span{flex:1 1 100%}`, deux fois ce qui
+restait au panneau.
+
+Elle a deux états, et un seul a besoin de place. **Tant qu'il reste
+quelque chose à saisir** — une adresse e-mail pour se connecter, ou
+l'adresse de l'île à choisir — elle doit s'étaler. Une fois tout réglé,
+elle ne fait plus que dire qui on est.
+
+`pose` marque le second, et **il se déduit** : la carte porte-t-elle encore
+un `input` ? `peindreCompte()` a quatre branches et sort par `return` au
+milieu de trois d'entre elles — un drapeau posé à la main dans quatre
+branches, c'est une branche qui l'oubliera. D'où le découpage en
+`peindreCarteCompte()` + `formeDuCompte()`.
+
+Ce qui part en paysage est marqué `redite` : **ce qui existe ailleurs.**
+L'adresse de l'île et son bouton de copie sont dans l'onglet Voisins, sous
+« 🔗 Copier mon lien ». Ce qui reste est ce qui n'est nulle part ailleurs —
+le nom, la pastille d'état, « Se déconnecter ». Ne pas marquer `redite` un
+élément dont ce serait le seul endroit.
+
+    carte de connexion   156 px  →   61 px
+    panneau               73 px  →  168 px
+
+**On se connecte toujours en paysage**, et c'est la raison d'être du
+`display:contents` sur `.stage` : rien de tout ceci ne touche l'état « il
+reste à saisir ». Le contrôle l'éprouve pour de bon — le faux serveur rend
+toujours un compte complet, donc il **remet un champ à la main** et vérifie
+que l'état « posé » tombe, que le champ est large, et que ce qui avait été
+caché revient. Un harnais qui ne sait pas produire un état doit le
+fabriquer et le dire, pas faire comme si.
+
+Ce que ça ne règle pas : la première île reste hors de vue en paysage
+court, parce que le bloc de la commande y fait 322 px à lui seul, soit plus
+que les 168 px du panneau. Le panneau a plus que doublé, ce n'est pas la
+même chose que d'avoir de la place.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

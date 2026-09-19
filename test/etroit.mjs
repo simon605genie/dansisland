@@ -160,5 +160,59 @@ for (const [nom, width, height, tactile, voitSansDefiler] of [
   await ctx.close();
 }
 
+/* La carte de connexion, couchée.
+
+   Mesuré à 780x360 : elle prenait **156 px des 360** de l'écran — six
+   enfants empilés — et il ne restait que 73 px au panneau. Deux fois plus
+   de place pour dire qui on est que pour jouer.
+
+   Elle se pose maintenant sur une rangée dès qu'il n'y a plus rien à
+   saisir, et ce qui disparaît est ce qui existe ailleurs (l'adresse et son
+   bouton de copie sont dans Voisins). Ce qui ne doit **jamais** disparaître,
+   c'est la carte quand elle a encore un champ : c'est là qu'on se connecte
+   et qu'on nomme son île, et c'est la raison d'être du `display:contents`
+   sur `.stage`. */
+c.titre('la carte de connexion couchée, et ce qu’elle ne doit pas perdre');
+{
+  const { ctx, page, erreurs } = await onglet(nav, { taille: { width: 780, height: 360 }, tactile: true });
+  await page.goto(s.url, { waitUntil: 'load' });
+  await attendre(2200);
+
+  const v = await page.evaluate(() => {
+    const c = document.getElementById('compte');
+    const p = [...document.querySelectorAll('.panel')].find(e => e.offsetParent !== null);
+    return { haut: Math.round(c.getBoundingClientRect().height),
+             pose: c.classList.contains('pose'), champ: !!c.querySelector('input'),
+             deco: !![...c.querySelectorAll('button')].some(b => /connecter/i.test(b.textContent) &&
+                                                                b.offsetParent !== null),
+             panel: p ? Math.round(p.getBoundingClientRect().height) : 0 };
+  });
+  console.log('     carte ' + v.haut + ' px (pose=' + v.pose + ', champ=' + v.champ + '), panneau ' + v.panel + ' px');
+  c.dit(!v.champ && v.pose, 'tout est réglé, donc la carte est « posée »');
+  c.dit(v.haut <= 80, 'elle tient sur une rangée ou deux (' + v.haut + ' px, contre 156 avant)');
+  c.dit(v.deco, 'ce qui n’est nulle part ailleurs reste : « Se déconnecter »');
+  c.dit(v.panel >= 150, 'le panneau récupère la place (' + v.panel + ' px, contre 73 avant)');
+
+  /* Et l'état que le faux serveur ne sait pas produire — il rend toujours
+     un compte complet, avec son île et son adresse. On remet donc un champ
+     à la main, et `formeDuCompte()` doit le voir : c'est exactement ce
+     qu'elle fait, elle ne lit rien d'autre que la présence d'un `input`. */
+  const w = await page.evaluate(() => {
+    const c = document.getElementById('compte');
+    const i = document.createElement('input'); i.type = 'email'; c.appendChild(i);
+    c.classList.toggle('pose', !c.querySelector('input'));   // la ligne de formeDuCompte()
+    const st = getComputedStyle([...c.querySelectorAll('.redite')][0] || document.body);
+    return { pose: c.classList.contains('pose'), haut: Math.round(c.getBoundingClientRect().height),
+             champVisible: i.offsetParent !== null && i.getBoundingClientRect().width > 20,
+             rediteRevenue: st.display !== 'none' };
+  });
+  console.log('     avec un champ à remplir : carte ' + w.haut + ' px, pose=' + w.pose);
+  c.dit(!w.pose, 'un champ à remplir défait tout de suite l’état « posé »');
+  c.dit(w.champVisible, 'et le champ est bien visible et large (on peut se connecter couché)');
+  c.dit(w.rediteRevenue, 'ce qui avait été caché revient avec lui');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
 await nav.close(); s.fermer();
 process.exit(c.fin() ? 1 : 0);
