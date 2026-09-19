@@ -57,6 +57,13 @@ jobs:
       #     `.pages.dev` est à jour et le domaine public ne l'est pas.
       #
       # Deux minutes de log ici valent une demi-heure d'hypothèses.
+      # Le dépôt est cloné pour que le pas suivant puisse comparer ce qui
+      # est **servi** à ce que le dépôt **contient**. Sans ça, la seule
+      # fraîcheur vérifiable est une phrase écrite en dur une fois pour
+      # toutes, et elle reste vraie des semaines après le dernier
+      # déploiement.
+      - uses: actions/checkout@v4
+
       - name: Ce que sert chaque adresse
         continue-on-error: true
         run: |
@@ -129,6 +136,35 @@ jobs:
           else
             echos "❌ Six minutes plus tard, le site sert toujours l'ancienne page."
             resume "❌ **Pas déployé** — le site sert encore l'ancienne page six minutes après. Regarde les Deployments du projet Pages : le build a échoué, ou il n'a pas été déclenché."
+            duro=1
+          fi
+
+          # --- 1 bis. La version servie est-elle celle du dépôt ? --------
+          #
+          # La phrase de l'accueil dit « un déploiement a eu lieu un jour »,
+          # pas « le dernier commit est en ligne » : elle est écrite en dur
+          # et ne change plus. Le 19/09, elle répondait ✅ alors que trois
+          # objets fusionnés le matin même n'étaient pas servis.
+          #
+          # Le témoin qui ne vieillit pas : **chaque clé d'article du
+          # catalogue présente dans le dépôt doit se retrouver dans la page
+          # servie.** Un objet ajouté et pas encore déployé manque, et se
+          # nomme. Rien à mettre à jour à la main quand la boutique
+          # s'agrandit — c'est le dépôt lui-même qui fournit la liste.
+          cles=$(grep -o "k:'[a-z]*'" index.html | sed "s/k:'//;s/'//" | sort -u)
+          absents=""
+          for k in $cles; do
+            contient "'$k'" "$page" || absents="$absents $k"
+          done
+          if [ -z "$absents" ]; then
+            n=$(printf '%s\n' $cles | wc -l | tr -d ' ')
+            echos "✅ Les $n clés d'article du dépôt sont toutes dans la page servie."
+            resume "✅ **À jour** — les $n clés d'article du dépôt sont servies."
+          else
+            echos "❌ La page servie est plus ancienne que le dépôt. Manquent :$absents"
+            resume "❌ **En retard** — la page servie ne contient pas :$absents"
+            resume ""
+            resume "Redéploie : \`./build.sh && npx wrangler pages deploy dist --project-name dansisland --branch main\`"
             duro=1
           fi
 
