@@ -1260,7 +1260,8 @@ function shadowDiamond(c,cx,cy,a){
 // c'est tout ce que « tourner » veut dire ici : pas un dessin de plus.
 // Déclaré ici et pas près des dessins : mkBot() le lit au chargement.
 const PIVOT_ILE={banc:1,barriere:1,cloture:1,ponton:1,boutique:1,balancoire:1,
-                 hamac:1,toboggan:1,tente:1};
+                 hamac:1,toboggan:1,tente:1,
+                 ferme:1,ecole:1,coiffeur:1,supermarche:1,restaurant:1,culte:1};
 // Ce qui éclaire la nuit, et la hauteur de la flamme. Le phare, lui, porte
 // sa lumière dans son propre dessin.
 const LUEUR={lampe:34, feudecamp:16};
@@ -1483,14 +1484,20 @@ const BOUTIQUE=[
   {ou:'ile',   k:'mare',        n:'Mare aux canards',  prix:30, c:'#45CFE8', d:'Un canard, deux nénuphars, de l’eau qui ne va nulle part.'},
   {ou:'ile',   k:'phare',       n:'Phare',             prix:30, c:'#FDFBF2', d:'Le repère qu’on voit depuis l’archipel.'},
   {ou:'ile',   k:'renard',      n:'Renard',            prix:32, c:'#E08A4B', d:'Il vient, il regarde, il ne demande rien.'},
+  {ou:'ile',   k:'ferme',       n:'Ferme',             prix:34, c:'#C4553F', d:'Une grange, une grande porte, une botte de paille contre le mur.'},
   {ou:'ile',   k:'boutique',    n:'Échoppe',           prix:35, c:'#FDFBF2', d:'Un auvent rayé, et l’île a un centre.'},
+  {ou:'ile',   k:'ecole',       n:'École',            prix:36, c:'#FDFBF2', d:'Trois fenêtres en rang et une cloche sous le pignon.'},
   {ou:'ile',   k:'toboggan',    n:'Toboggan',          prix:38, c:'#45CFE8', d:'Une échelle, une glissade, on recommence.'},
   {ou:'ile',   k:'moulin',      n:'Moulin',            prix:40, c:'#FDFBF2', d:'On le voit de loin. C’est tout l’intérêt.'},
   {ou:'ile',   k:'girouette',   n:'Girouette',         prix:42, c:'#8F98A6', d:'Elle tourne avec la mer. Va la voir, et elle te dit où en est la marée et dans combien de temps elle change.'},
+  {ou:'ile',   k:'coiffeur',    n:'Coiffeur',          prix:44, c:'#FDFBF2', d:'Une vitrine, et l’enseigne à spirale qu’on reconnaît sans savoir lire.'},
   {ou:'ile',   k:'cabane',      n:'Cabane perchée',    prix:45, c:'#A9764A', d:'Une échelle, un plancher dans l’arbre, une fenêtre allumée.'},
+  {ou:'ile',   k:'supermarche', n:'Supermarché',      prix:48, c:'#FDFBF2', d:'Une vitrine, un auvent, et un caddie sur l’enseigne.'},
   {ou:'ile',   k:'statue',      n:'Statue',            prix:50, c:'#D9CDB4', d:'En pierre, le bras levé, pour longtemps.'},
   {ou:'ile',   k:'carillon',    n:'Carillon',          prix:50, c:'#D9CDB4', d:'Cinq tubes et un peu de vent. Il sonne tout seul, de loin en loin — et tes visiteurs l’entendent aussi.'},
+  {ou:'ile',   k:'restaurant',  n:'Restaurant',        prix:52, c:'#FDFBF2', d:'Une fenêtre allumée, et deux couverts pour enseigne.'},
   {ou:'ile',   k:'boitelettres',n:'Boîte aux lettres', prix:55, c:'#B44C6C', d:'Le drapeau se lève quand on t’a laissé un mot. Va la relever, et tu lis ce qu’on t’a écrit sans ouvrir un panneau.'},
+  {ou:'ile',   k:'culte',       n:'Lieu de culte',     prix:58, c:'#FDFBF2', d:'Un clocher plus haut que tout le reste : c’est ce qu’on voit de loin.'},
   {ou:'ile',   k:'montgolfiere',n:'Montgolfière',      prix:60, c:'#F48CA8', d:'Amarrée au sol, mais elle y pense.'},
   {ou:'dedans',k:'tapisrond',   n:'Tapis rond',        prix:12, c:'#F48CA8', d:'Deux cases au sol, sous tout le reste.'},
   {ou:'dedans',k:'guirlande',   n:'Guirlande',         prix:14, c:'#F4D6A0', d:'Cinq ampoules le long du mur.'},
@@ -1760,7 +1767,7 @@ function defaultWorld(){
       {t:'crabe',x:2,y:8,c:'#F0736E'},{t:'mouette',x:10,y:5,c:'#FDFBF2'},
       {t:'ponton',x:6,y:10,c:'#A9764A'},{t:'coffre',x:3,y:4,c:'#8B5E3C'}
     ],
-    me:{name:'Dan',body:'rond',skin:'#F4D6A0',hair:'vague',hairC:'#1F1A18',eyes:'joyeux',outfit:'#148A9C',acc:'aucun'}
+    me:{name:'Dan',genre:'garcon',body:'rond',skin:'#F4D6A0',hair:'vague',hairC:'#1F1A18',eyes:'joyeux',outfit:'#148A9C',acc:'aucun'}
   },RAYON0,0.80);
 }
 function mkN(id,name,owner,pal,sky,objects,me,house){
@@ -1850,7 +1857,7 @@ function mkBot(i){
       roofShape:pick(12,['pointu','pointu','dome','plat']),
       volets:pick(13,['aucun','creme','bois','toit','porte']),
       cheminee:d(14)>0.35, sign:'Chez '+qui},
-    me:{name:qui,body:pick(15,['rond','élancé','costaud']),skin:pick(16,SKINS),
+    me:{name:qui,genre:pick(22,['garcon','fille']),body:pick(15,['rond','élancé','costaud']),skin:pick(16,SKINS),
       hair:pick(17,['aucun','vague','chignon','piquants','longs']),hairC:pick(18,HAIRS),
       eyes:pick(19,['rond','joyeux','malin','calme','endormi']),outfit:pick(20,CLOTH),
       acc:pick(21,['aucun','chapeau','lunettes','couronne','cape'])},
@@ -1977,7 +1984,21 @@ function drawChar(c,px,py,a,s,face,t,saut){
     c.moveTo(-W-1,-H+3); c.quadraticCurveTo(0,-H*0.2,W+1,-H+3); c.lineTo(W+5,1); c.lineTo(-W-5,1); c.closePath(); c.fill();
   }
   rr(c,-W,-H,W*2,H,[W*0.85,W*0.85,5,5]); c.fillStyle=a.outfit; c.fill(); c.stroke();
-  c.fillStyle=shade(a.outfit,-30); c.fillRect(-W*0.35,-4,W*0.7,4);
+  /* Fille ou gar\u00e7on, et c'est **la jupe** qui le dit — rien d'autre.
+     Pas un rose contre un bleu, pas des cils : la tenue et les cheveux se
+     choisissent d\u00e9j\u00e0 librement juste \u00e0 c\u00f4t\u00e9, et un enfant qui veut une
+     couronne et des cheveux longs sur un gar\u00e7on doit pouvoir. Une seule
+     forme de plus, donc, et tout le reste reste au choix.
+
+     `genre` absent vaut gar\u00e7on : c'est exactement la silhouette d'avant, et
+     aucune \u00eele d\u00e9j\u00e0 faite ne change d'allure le jour du d\u00e9ploiement. */
+  const jupe = a.genre==='fille', ceint = jupe ? -H*0.42-2 : -4;
+  if(jupe){
+    c.beginPath(); c.moveTo(-W*0.94,-H*0.42); c.lineTo(W*0.94,-H*0.42);
+    c.lineTo(W*1.8,1.5); c.lineTo(-W*1.8,1.5); c.closePath();
+    c.fillStyle=a.outfit; c.fill(); c.stroke();
+  }
+  c.fillStyle=shade(a.outfit,-30); c.fillRect(-W*0.35,ceint,W*0.7,4);
   c.beginPath(); c.arc(0,hy,10.5,0,Math.PI*2); c.fillStyle=a.skin; c.fill(); c.stroke();
   const fx = face==='gauche'?-2.6 : face==='droite'?2.6 : 0;
   const fy = face==='haut'?-2 : 0;
@@ -2301,6 +2322,111 @@ const DRAW={
     c.moveTo(-4,6.5-10); c.lineTo(-11,3-10); c.lineTo(-11,3-24); c.lineTo(-4,6.5-24); c.closePath(); c.fill();
     isoBox(c,0,-WALL,A+2,4,ROOF);
   },
+  /* ---- les six bâtiments du village ----
+     Un bâtiment tient sur **une case**, comme l'échoppe et le phare : la
+     maison est le seul objet 2x2 du jeu, et elle est à part parce qu'on y
+     entre. Chacun est un `isoBox` pour le volume, un toit, et une façade
+     qui porte ce qui le fait reconnaître — c'est l'enseigne qu'on lit de
+     loin, pas la forme.
+
+     Ils prennent tous la couleur du pinceau (`C`), d'où le fait qu'aucun ne
+     l'écrit en dur pour ses murs : c'est ça, « personnaliser ». Ce qui reste
+     fixe est ce qui les nomme — la croix verte de la pharmacie ne serait
+     plus une croix verte en violet.
+
+     Et ils sont asymétriques : `dessinDe()` retourne le canevas pour `sw`,
+     donc la façade change de côté toute seule. C'est pour ça qu'ils entrent
+     dans `PIVOT_ILE` sans une ligne de dessin de plus. */
+  supermarche(c,C){
+    const w=C||CREAM, A=16, WALL=26;
+    isoBox(c,0,0,A,WALL,w);
+    isoBox(c,0,-WALL,A+1,3,ROOF);
+    facePoly(c,0,0,A,'se',0.08,0.92,4,17,'#BCD9E2');          // la grande vitrine
+    facePoly(c,0,0,A,'se',0.08,0.92,4,5.5,shade(w,-40));
+    // L'auvent rayé, repris de l'échoppe : dans ce jeu c'est **le** signe
+    // d'un commerce, et il se lit à la taille d'une vignette.
+    const S={x:0,y:A/2}, E={x:A,y:0}, u=18, seg=5;
+    for(let i=0;i<seg;i++){
+      const t0=i/seg, t1=(i+1)/seg;
+      const a0={x:S.x+(E.x-S.x)*t0, y:S.y+(E.y-S.y)*t0-u};
+      const a1={x:S.x+(E.x-S.x)*t1, y:S.y+(E.y-S.y)*t1-u};
+      c.fillStyle = i%2 ? '#F2A93B' : CREAM;
+      c.beginPath(); c.moveTo(a0.x,a0.y); c.lineTo(a1.x,a1.y);
+      c.lineTo(a1.x+4,a1.y+7); c.lineTo(a0.x+4,a0.y+7); c.closePath(); c.fill();
+    }
+  },
+  restaurant(c,C){
+    const w=C||CREAM, A=15, WALL=26;
+    isoBox(c,0,0,A,WALL,w);
+    isoPyr(c,0,-WALL,A+1,8,ROOF);
+    facePoly(c,0,0,A,'se',0.30,0.70,3,15,shade(w,-44));       // la porte
+    facePoly(c,0,0,A,'se',0.74,0.95,9,18,'#F4D6A0');          // la fenêtre allumée
+    facePoly(c,0,0,A,'se',0.05,0.26,9,18,'#F4D6A0');
+    // Le parasol de terrasse : c'est lui qui dit « on mange dehors », et il
+    // sort du volume, donc il se lit même petit.
+    c.strokeStyle=shade(w,-50); c.lineWidth=1.4;
+    c.beginPath(); c.moveTo(-15,4); c.lineTo(-15,-14); c.stroke();
+    c.fillStyle=PINK; c.beginPath(); c.ellipse(-15,-14,9,4.4,0,Math.PI,Math.PI*2); c.fill();
+    c.fillStyle=shade(PINK,-22); c.beginPath(); c.ellipse(-15,-14,9,4.4,0,0,Math.PI*0.35); c.fill();
+  },
+  coiffeur(c,C){
+    const w=C||CREAM, A=15, WALL=25;
+    isoBox(c,0,0,A,WALL,w);
+    isoBox(c,0,-WALL,A+1,3,ROOF);
+    facePoly(c,0,0,A,'se',0.10,0.74,5,18,'#BCD9E2');          // la vitrine
+    facePoly(c,0,0,A,'se',0.10,0.74,5,6.5,shade(w,-40));
+    // L'enseigne à spirale, **hors du volume** et haute : c'est le seul signe
+    // qu'un enfant reconnaît sans savoir lire, donc il doit être gros.
+    c.fillStyle=CREAM; rr(c,12,-26,6,19,3); c.fill();
+    c.strokeStyle=PINK; c.lineWidth=2.2; c.lineCap='round';
+    for(let i=0;i<4;i++){ c.beginPath();
+      c.moveTo(12,-24+i*4.6); c.lineTo(18,-27+i*4.6); c.stroke(); }
+    c.fillStyle=shade(w,-40); rr(c,11.4,-28.5,7.2,3,1.5); c.fill();
+  },
+  ecole(c,C){
+    const w=C||CREAM, A=18, WALL=28;
+    isoBox(c,0,0,A,WALL,w);
+    isoBox(c,0,-WALL,A+1,3,ROOF);
+    // Deux rangées de trois fenêtres : c'est ça qu'on reconnaît d'une école,
+    // pas sa porte.
+    for(let i=0;i<3;i++){
+      facePoly(c,0,0,A,'se',0.10+i*0.28,0.30+i*0.28,15,23,'#BCD9E2');
+      facePoly(c,0,0,A,'se',0.10+i*0.28,0.30+i*0.28,4,12,'#BCD9E2');
+    }
+    facePoly(c,0,0,A,'sw',0.40,0.62,3,13,shade(w,-44));
+    // Le petit clocher à cloche, sur le faîte
+    isoBox(c,0,-WALL-3,4,7,shade(w,10));
+    isoPyr(c,0,-WALL-10,5,6,ROOF);
+    c.fillStyle='#F2A93B'; c.beginPath(); c.arc(0,-WALL-7,1.9,0,Math.PI*2); c.fill();
+  },
+  culte(c,C){
+    const w=C||CREAM, A=15, WALL=24;
+    isoBox(c,0,0,A,WALL,w);
+    isoPyr(c,0,-WALL,A+1,7,ROOF);
+    facePoly(c,0,0,A,'se',0.34,0.66,3,15,shade(w,-44));
+    const r=facePt(0,0,A,'se',0.5,19);
+    c.fillStyle='#BCD9E2'; c.beginPath(); c.arc(r.x,r.y,3.6,0,Math.PI*2); c.fill();
+    // Le clocher domine tout : c'est ce qu'on voit de loin, donc il doit
+    // dépasser nettement le toit et non le frôler.
+    isoBox(c,-11,-2,6,42,shade(w,8));
+    isoPyr(c,-11,-44,7,15,ROOF);
+    facePoly(c,-11,-2,6,'se',0.25,0.75,26,34,shade(w,-40));
+  },
+  ferme(c,C){
+    const w=C||'#C4553F', A=17, WALL=23;
+    isoBox(c,0,0,A,WALL,w);
+    isoPyr(c,0,-WALL,A+1,10,shade(w,-40));
+    facePoly(c,0,0,A,'se',0.24,0.76,2,16,shade(w,30));        // la grande porte
+    const d0=facePt(0,0,A,'se',0.26,3), d1=facePt(0,0,A,'se',0.74,15);
+    c.strokeStyle=shade(w,-28); c.lineWidth=1.5;
+    c.beginPath(); c.moveTo(d0.x,d0.y); c.lineTo(d1.x,d1.y); c.stroke();
+    c.beginPath(); c.moveTo(d0.x,d1.y); c.lineTo(d1.x,d0.y); c.stroke();
+    // Le silo, contre le pignon : c'est lui qui dit « ferme » et pas « maison »
+    isoBox(c,-13,-3,5,26,shade(w,34));
+    isoDome(c,-13,-29,5.6,5,shade(w,-30));
+    c.fillStyle='#F4D6A0'; const h=facePt(0,0,A,'se',0.95,2);
+    rr(c,h.x-3,h.y-6,6,6,2); c.fill();
+  },
   chien(c,C){
     const f=C||'#C89A63';
     c.fillStyle=shade(f,-34); c.fillRect(-7,-4,2.6,4); c.fillRect(-2,-4,2.6,4); c.fillRect(3,-4,2.6,4);
@@ -2584,6 +2710,7 @@ function dessinDe(g,t,col,o,etat){
 const OBJ_GROUPS=[
   ['Nature',[['arbre','Arbre à fleurs'],['palmier','Palmier'],['sapin','Sapin'],['buisson','Buisson'],['cactus','Cactus'],['fleur','Fleur','f'],['rocher','Rocher'],['mare','Mare aux canards','f'],['puits','Puits']]],
   ['Village',[['boutique','Échoppe','f'],['phare','Phare'],['ponton','Ponton'],['lampe','Lampadaire'],['banc','Banc'],['barriere','Barrière','f'],['cloture','Clôture','f'],['coffre','Coffre'],['fontaine','Fontaine','f'],['moulin','Moulin'],['statue','Statue','f'],['girouette','Girouette','f'],['carillon','Carillon'],['boitelettres','Boîte aux lettres','f']]],
+  ['Bâtiments',[['ferme','Ferme','f'],['ecole','École','f'],['coiffeur','Coiffeur'],['supermarche','Supermarché'],['restaurant','Restaurant'],['culte','Lieu de culte']]],
   ['Dehors',[['feudecamp','Feu de camp'],['hamac','Hamac'],['tente','Tente','f'],['balancoire','Balançoire','f'],['toboggan','Toboggan'],['cabane','Cabane perchée','f'],['montgolfiere','Montgolfière','f']]],
   ['Bestioles',[['chien','Chien'],['tortue','Tortue','f'],['crabe','Crabe'],['mouette','Mouette','f'],['chat','Chat'],['herisson','Hérisson'],['renard','Renard']]]
 ];
@@ -5669,6 +5796,7 @@ function buildToi(){
   const p=document.getElementById('p-toi'); p.innerHTML='';
   const c=document.createElement('canvas'); c.id='preview'; c.width=660; c.height=304; p.appendChild(c);
   p.appendChild(textField('Prénom','me.name','Dan'));
+  p.appendChild(chips('Fille ou gar\u00e7on','me.genre',[['fille','Fille'],['garcon','Gar\u00e7on']]));
   p.appendChild(chips('Silhouette','me.body',[['rond','Rond'],['élancé','Élancé'],['costaud','Costaud']]));
   p.appendChild(swatches('Teint','me.skin',SKINS));
   p.appendChild(chips('Cheveux','me.hair',[['aucun','Rasé'],['vague','Vague'],['chignon','Chignon'],['piquants','Piquants'],['longs','Longs']]));
@@ -6351,7 +6479,22 @@ function buildBoutique(){
   if(cadeauDispo()){
     const coffres=(mine.objects||[]).filter(o=>o.t==='coffre').length;
     const fc=field('Le cadeau du jour');
-    if(coffres){
+    /* Chez un voisin, ce bloc parlait comme si on était chez soi : « va
+       marcher jusqu'à lui », à propos d'un coffre qui est sur une autre île
+       — et `coffrePlein()` est faux quand `visiting`, c'est la règle du
+       17/09. Sans coffre, il offrait même « Poser un coffre », qui arme le
+       pinceau et ouvre l'onglet Île : depuis que cet onglet se ferme en
+       visite, ce bouton menait droit dans un panneau tout gris.
+
+       Il dit donc où est le cadeau, et il n'offre aucun geste qu'on ne peut
+       pas faire d'ici. Même forme que la note du panneau Maison. */
+    if(visiting){
+      // Et il ne promet un coffre que s'il y en a un : sans ça, la phrase
+      // enverrait chercher un objet qui n'existe pas sur l'île du joueur.
+      fc.appendChild(hint(coffres
+        ? '🎁 <b>Ton cadeau t’attend chez toi</b>, pas ici : il est dans ton coffre, sur ton île. Rentre, et va marcher jusqu’à lui.'
+        : '🎁 <b>Ton cadeau t’attend chez toi</b>, pas ici. Rentre sur ton île, et tu pourras l’ouvrir.'));
+    }else if(coffres){
       fc.appendChild(hint('🎁 <b>Ton cadeau t’attend dans ton coffre</b>, sur ton île, il scintille. '+
         'Va marcher jusqu’à lui, puis appuie sur <b>E</b> ou touche le bouton rose du cadre.'));
     }else{
