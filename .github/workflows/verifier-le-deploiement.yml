@@ -168,6 +168,40 @@ jobs:
             duro=1
           fi
 
+          # --- 1 ter. Le témoin qui ne peut pas mentir : l'empreinte -----
+          #
+          # Le contrôle des clés d'article ci-dessus a un angle mort, trouvé
+          # le 19/09 : il ne voit **que** ce que la boutique ajoute. Une
+          # correction qui ne touche pas au catalogue — les îles de
+          # démonstration, un verrou de bulle, une couleur — le laisse vert
+          # sur une page vieille de trois jours.
+          #
+          # `dist/index.html` **est** ce qu'on publie, et Cloudflare Pages le
+          # sert tel quel. Comparer son empreinte à celle de la page servie
+          # répond donc à « le dernier commit est-il en ligne ? » sans rien
+          # savoir de ce qu'il contient, et sans jamais se périmer.
+          #
+          # `build.sh` ne copie pas `.github/`, donc un commit qui ne touche
+          # qu'un workflow ne change pas l'empreinte : ce contrôle ne vire
+          # pas au rouge pour rien.
+          bash build.sh > /dev/null
+          ici=$(sha256sum dist/index.html | cut -c1-16)
+          # Sans --compressed : on veut les octets tels quels, pas décodés.
+          curl -sS --max-time 25 -o /tmp/servi.html "$SITE/" || true
+          la=$(sha256sum /tmp/servi.html | cut -c1-16)
+          echos "   empreinte du dépôt : $ici   ($(wc -c < dist/index.html) octets)"
+          echos "   empreinte servie   : $la   ($(wc -c < /tmp/servi.html) octets)"
+          if [ "$ici" = "$la" ]; then
+            echos "✅ La page servie est **exactement** celle du dépôt."
+            resume "✅ **À jour** — la page servie est exactement \`dist/index.html\` du dépôt."
+          else
+            echos "❌ La page servie n'est pas celle du dépôt : il reste un déploiement à faire."
+            resume "❌ **En retard** — la page servie diffère de \`dist/index.html\` (dépôt \`$ici\`, servi \`$la\`)."
+            resume ""
+            resume "Redéploie : \`./build.sh && npx wrangler pages deploy dist --project-name dansisland --branch main\`"
+            duro=1
+          fi
+
           # --- 2. Les fichiers qui n'existaient pas avant ----------------
           # Même piège : on lit le contenu et le type, jamais le code.
           rt=$(curl -sS --max-time 20 "$SITE/robots.txt" || true)
