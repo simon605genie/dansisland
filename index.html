@@ -444,6 +444,15 @@ textarea{
 .btn:disabled{opacity:.45; cursor:default}
 .row{display:flex; gap:7px; flex-wrap:wrap}
 .hint{font-size:13px; color:var(--ink-3); line-height:1.5; margin:0}
+/* La jauge de la terre gagnée. Elle ne se règle pas, elle se lit : c'est
+   pour ça qu'elle n'est pas un <progress>, dont l'apparence se discute
+   avec chaque navigateur et qu'on finit de toute façon par repeindre. */
+.jauge{height:10px; border-radius:99px; background:var(--sunk); overflow:hidden;
+  border:1px solid var(--line)}
+.jauge i{display:block; height:100%; border-radius:99px; background:var(--accent);
+  transition:width .6s ease}
+.chiffre{font-size:13px; color:var(--ink-2); line-height:1.5; margin:0}
+.chiffre b{color:var(--ink)}
 /* Au doigt, les cibles grandissent. Trente pixels de haut, c'est un chip
    qu'on rate une fois sur trois ; les recommandations disent quarante-quatre. */
 @media (pointer:coarse){
@@ -928,7 +937,12 @@ function faireGrandir(){
   const r=rayonPour((mine.mots||[]).length);
   if(r<=(mine.rayon||RAYON0)+0.001) return false;
   mine.rayon=r; saveMine(); son('grandir');
-  say('<b>Ton \u00eele s\u2019agrandit.</b> La mer a recul\u00e9 d\u2019un cran, il y a de la place \u00e0 b\u00e2tir.');
+  // Dire ce qui reste, ici, au moment o\u00f9 \u00e7a arrive : c'est la seule fois
+  // o\u00f9 la r\u00e8gle \u00ab l'\u00eele grandit parce que des gens sont pass\u00e9s \u00bb se voit.
+  const reste=Math.max(0, Math.round((RAYON_MAX-r)/PAS_RAYON));
+  say('<b>Ton \u00eele s\u2019agrandit.</b> La mer a recul\u00e9 d\u2019un cran, il y a de la place \u00e0 b\u00e2tir. '+
+      (reste ? 'Encore <b>'+reste+' mot'+(reste>1?'s':'')+'</b> et elle aura tout gagn\u00e9.'
+             : 'Elle a gagn\u00e9 toute la terre qu\u2019il y avait \u00e0 gagner.'), 0, 3400);
   return true;
 }
 function dansLeRayon(x,y,w){ w=w||world;
@@ -1350,6 +1364,13 @@ const BOUTIQUE=[
   {ou:'ile',   k:'cabane',      n:'Cabane perchée',    prix:45, c:'#A9764A', d:'Une échelle, un plancher dans l’arbre, une fenêtre allumée.'},
   {ou:'ile',   k:'statue',      n:'Statue',            prix:50, c:'#D9CDB4', d:'En pierre, le bras levé, pour longtemps.'},
   {ou:'ile',   k:'montgolfiere',n:'Montgolfière',      prix:60, c:'#F48CA8', d:'Amarrée au sol, mais elle y pense.'},
+  // Les trois chers. Ils ne décorent pas : ils font quelque chose, et ce
+  // qu'ils font était jusqu'ici enfermé dans un panneau. Aucun ne rapporte
+  // un shell et aucun ne touche à un plafond — faire monter un gain avec un
+  // achat revient à vendre de la monnaie, c'est écrit depuis le 16/09.
+  {ou:'ile',   k:'girouette',   n:'Girouette',         prix:42, c:'#8F98A6', d:'Elle tourne avec la mer. Va la voir, et elle te dit où en est la marée et dans combien de temps elle change.'},
+  {ou:'ile',   k:'carillon',    n:'Carillon',          prix:50, c:'#D9CDB4', d:'Cinq tubes et un peu de vent. Il sonne tout seul, de loin en loin — et tes visiteurs l’entendent aussi.'},
+  {ou:'ile',   k:'boitelettres',n:'Boîte aux lettres', prix:55, c:'#B44C6C', d:'Le drapeau se lève quand on t’a laissé un mot. Va la relever, et tu lis ce qu’on t’a écrit sans ouvrir un panneau.'},
   {ou:'dedans',k:'tapisrond',   n:'Tapis rond',        prix:12, c:'#F48CA8', d:'Deux cases au sol, sous tout le reste.'},
   {ou:'dedans',k:'guirlande',   n:'Guirlande',         prix:14, c:'#F4D6A0', d:'Cinq ampoules le long du mur.'},
   {ou:'dedans',k:'bibliotheque',n:'Bibliothèque',      prix:20, c:'#8B5E3C', d:'Trois rangs de livres, et personne pour les ranger.'},
@@ -1360,7 +1381,7 @@ const BOUTIQUE=[
   {ou:'toi',   k:'bottes',      n:'Bottes',            prix:25, c:'#B44C6C', d:'Tu marches un tiers plus vite, dehors comme dedans.'},
   {ou:'toi',   k:'moteur',      n:'Tondeuse à moteur', prix:45, c:'#2E7D5B', d:'Elle tond les quatre cases voisines en passant.'},
   {ou:'toi',   k:'appareil',    n:'Appareil photo',    prix:28, c:'#3F4A52', d:'Un viseur, un déclencheur, et l’album qui va avec.'},
-  {ou:'toi',   k:'compagnon',   n:'Compagnon',         prix:20, c:'#E4A95C', d:'Une bestiole que tu as déjà te suit partout. Elle se choisit dans l’onglet Toi.'}
+  {ou:'toi',   k:'compagnon',   n:'Compagnon',         prix:20, c:'#E4A95C', d:'Le chien, le crabe ou la mouette te suit partout, même chez les voisins. Ils sont déjà à toi ; ça se choisit dans l’onglet Toi.'}
 ];
 // Le rayon « Pour toi » ne vend pas des objets à poser mais ce que le
 // bonhomme sait faire. Rien n'entre dans `objects` ni dans les meubles :
@@ -1993,6 +2014,75 @@ const DRAW={
     isoBox(c,0,-10,14,5,shade(C,16));
     c.fillStyle=SAND; c.fillRect(-2.5,-13,5,7);
   },
+  /* Les trois objets qui font quelque chose. Leur troisième paramètre est
+     l'état, comme `ouvert` pour le coffre : la girouette et le carillon y
+     lisent l'horloge `t`, la boîte aux lettres un booléen. Un argument
+     optionnel de plus coûte moins qu'une seconde fonction de dessin — le
+     choix déjà fait pour `saut` dans `drawChar()`.
+     Attention : ils sont aussi dessinés en vignette dans l'atelier et dans
+     la vitrine, sans état. Un `etat` absent doit donc rendre une image
+     posée, pas une image vide : d'où les `||0` et le drapeau baissé par
+     défaut. */
+  girouette(c,C,t){
+    // Le mât monte jusqu'au poisson, sinon celui-ci flotte au-dessus de
+    // rien : mesuré sur la vignette, huit pixels de vide entre les deux.
+    isoBox(c,0,0,3,40,BROWN);
+    // La croix des points cardinaux, à mi-hauteur. Elle ne tourne pas.
+    c.strokeStyle=shade(C,-24); c.lineWidth=1.6;
+    c.beginPath(); c.moveTo(-8,-30); c.lineTo(8,-26); c.moveTo(8,-30); c.lineTo(-8,-26); c.stroke();
+    // Le poisson-girouette. Sa rotation est lente et jamais complète : une
+    // girouette qui fait des tours est un moulin, et il y en a déjà un.
+    const a=Math.sin((t||0)/2300)*0.9+Math.sin((t||0)/5300)*0.35;
+    c.save(); c.translate(0,-42); c.scale(Math.cos(a),1);
+    c.fillStyle=C; c.beginPath();
+    c.moveTo(11,0); c.quadraticCurveTo(2,-6,-5,0); c.quadraticCurveTo(2,6,11,0); c.fill();
+    c.beginPath(); c.moveTo(-5,0); c.lineTo(-12,-5); c.lineTo(-12,5); c.closePath(); c.fill();
+    c.fillStyle=shade(C,-34); c.beginPath(); c.arc(7,-1,1.2,0,Math.PI*2); c.fill();
+    c.restore();
+  },
+  carillon(c,C,t){
+    isoBox(c,0,0,3,26,BROWN);
+    // La potence, et les cinq tubes pendus dessous. Ils balancent tous au
+    // même vent mais pas en même temps : un décalage par tube, sinon les
+    // cinq forment un seul bloc qui se lit comme une erreur de dessin.
+    c.fillStyle=BROWN; c.fillRect(-13,-28,26,3);
+    const T=[[-10,13],[-5,17],[0,20],[5,16],[10,12]];
+    T.forEach(([x,h],i)=>{
+      const b=Math.sin((t||0)/900+i*0.8)*1.8;
+      c.strokeStyle='rgba(11,60,93,.30)'; c.lineWidth=0.8;
+      c.beginPath(); c.moveTo(x,-25); c.lineTo(x+b,-20); c.stroke();
+      c.fillStyle=C; c.fillRect(x+b-1.5,-20,3,h);
+      c.fillStyle=shade(C,-26); c.fillRect(x+b+0.6,-20,0.9,h);
+      c.fillStyle=shade(C,26); c.fillRect(x+b-1.5,-20,3,1.4);
+    });
+    // Le battant, au milieu, et la petite voile qui prend le vent dessous.
+    const b=Math.sin((t||0)/900+2.1)*2.4;
+    c.fillStyle=shade(C,-14); c.beginPath(); c.arc(b,-6,2.6,0,Math.PI*2); c.fill();
+    c.fillStyle=PINK; c.beginPath();
+    c.moveTo(b,-3); c.lineTo(b-4,4); c.lineTo(b+4,4); c.closePath(); c.fill();
+  },
+  boitelettres(c,C,leve){
+    isoBox(c,0,0,3,16,BROWN);
+    // Le caisson, puis le demi-cylindre du couvercle **posé sur son toit**
+    // et non quatre pixels au-dessus : sur la vignette, les deux se lisaient
+    // comme deux objets, et le couvercle passait pour un second drapeau.
+    isoBox(c,0,-16,9,9,C);
+    c.fillStyle=shade(C,26); c.beginPath();
+    c.ellipse(0,-25,9,4.6,0,Math.PI,Math.PI*2); c.fill();
+    c.fillStyle=shade(C,10); c.fillRect(-9,-25.6,18,1.2);
+    // La fente, sur la face qu'on voit.
+    c.fillStyle=shade(C,-46); c.fillRect(-4.5,-21,9,1.8);
+    /* Le drapeau, et c'est tout ce que cet objet a à dire : levé, on t'a
+       écrit ; baissé, tu as lu. Il est décalé à droite du caisson, jamais
+       devant : posé dessus, il se confondait avec le couvercle, et un
+       signal qui ne se distingue pas de son support n'est pas un signal. */
+    const X=12.5;
+    c.strokeStyle=shade(C,-46); c.lineWidth=1.8;
+    c.beginPath(); c.moveTo(X,-12); c.lineTo(X,leve?-34:-22); c.stroke();
+    c.fillStyle=leve?'#E8453C':shade(C,-34);
+    const y=leve?-34:-22;
+    c.beginPath(); c.moveTo(X,y); c.lineTo(X+9,y+2.6); c.lineTo(X,y+5.2); c.closePath(); c.fill();
+  },
   cloture(c,C){
     isoBox(c,-9,4.5,2.5,11,C); isoBox(c,0,0,2.5,11,C); isoBox(c,9,-4.5,2.5,11,C);
     c.strokeStyle=shade(C,-8); c.lineWidth=3;
@@ -2088,6 +2178,19 @@ const DRAW={
     c.fillStyle=shade(g,-26);
     [[-5,-7],[0,-9],[5,-7]].forEach(d=>{c.beginPath();c.arc(d[0],d[1],2.4,0,Math.PI*2);c.fill();});
     c.fillStyle=NAVY; c.beginPath(); c.arc(10,-5,0.9,0,Math.PI*2); c.fill();
+  },
+  /* Ce que le chien laisse. Trois boules qui décroissent, une mouche qui
+     tourne — assez pour qu'on le reconnaisse de loin et qu'on aille le
+     nettoyer, pas assez pour que ça salisse l'île. Il n'est dans aucun
+     rayon de l'atelier : il n'y a rien à poser, il arrive tout seul. */
+  crotte(c){
+    shadowDiamond(c,0,0,9);
+    const B='#7A5C3E';
+    [[0,-2.4,4.6],[ -1.6,-5.6,3.5],[1.1,-8.2,2.6]].forEach(([x,y,r],i)=>{
+      c.fillStyle=shade(B,i*7); c.beginPath(); c.ellipse(x,y,r,r*0.78,0,0,Math.PI*2); c.fill();
+    });
+    c.fillStyle='rgba(255,255,255,.22)';
+    c.beginPath(); c.ellipse(-1.2,-9,1.1,0.7,-0.5,0,Math.PI*2); c.fill();
   },
   crabe(c,C){
     const r=C||'#F0736E';
@@ -2338,7 +2441,7 @@ function dessinDe(g,t,col,o,etat){
 }
 const OBJ_GROUPS=[
   ['Nature',[['arbre','Arbre à fleurs'],['palmier','Palmier'],['sapin','Sapin'],['buisson','Buisson'],['cactus','Cactus'],['fleur','Fleur'],['rocher','Rocher'],['mare','Mare aux canards'],['puits','Puits']]],
-  ['Village',[['boutique','Échoppe'],['phare','Phare'],['ponton','Ponton'],['lampe','Lampadaire'],['banc','Banc'],['barriere','Barrière'],['cloture','Clôture'],['coffre','Coffre'],['fontaine','Fontaine'],['moulin','Moulin'],['statue','Statue']]],
+  ['Village',[['boutique','Échoppe'],['phare','Phare'],['ponton','Ponton'],['lampe','Lampadaire'],['banc','Banc'],['barriere','Barrière'],['cloture','Clôture'],['coffre','Coffre'],['fontaine','Fontaine'],['moulin','Moulin'],['statue','Statue'],['girouette','Girouette'],['carillon','Carillon'],['boitelettres','Boîte aux lettres']]],
   ['Dehors',[['feudecamp','Feu de camp'],['hamac','Hamac'],['tente','Tente'],['balancoire','Balançoire'],['toboggan','Toboggan'],['cabane','Cabane perchée'],['montgolfiere','Montgolfière']]],
   ['Bestioles',[['chien','Chien'],['tortue','Tortue'],['crabe','Crabe'],['mouette','Mouette'],['chat','Chat'],['herisson','Hérisson'],['renard','Renard']]]
 ];
@@ -3079,11 +3182,16 @@ function drawWorld(t){
     // Fermé et scintillant, il dit qu'il a quelque chose ; ouvert et vide,
     // qu'on est déjà passé. Chez un voisin, il reste fermé : ce serait ta
     // bourse qu'il lirait, pas la sienne.
-    const plein = coffrePlein(o);
+    // Quatre objets lisent un état, et `etatObjet()` est le seul endroit
+    // qui le dit. Sans lui il faudrait un `if` par objet ici, et le
+    // prochain en ajouterait un cinquième.
+    const plein = coffrePlein(o) || boitePleine(o);
     items.push({d:o.x+o.y+1, f:()=>{
       ctx.save(); ctx.translate(c0.x,c0.y-LIFT);
       shadowDiamond(ctx,0,0,12);
-      dessinDe(ctx,o.t,o.c||'#8AA3B2',o.o,coffreOuvert(o));
+      dessinDe(ctx,o.t,o.c||'#8AA3B2',o.o,etatObjet(o,t));
+      // Dans ce jeu, une chose qui brille est une chose à prendre : le
+      // coffre du jour, et la boîte où un mot attend d'être lu.
       if(plein) etincelle(ctx,t); ctx.restore();
     }});
   });
@@ -4663,8 +4771,15 @@ function chienProche(){
 function sortirLeChien(o){
   const pts=tourDeLIle(o);
   if(pts.length<3){ say('Ton île est encore trop petite pour un vrai tour. Fais-la grandir d’abord.'); return; }
+  // `crotteA` est l'étape où le chien s'arrêtera. Elle est tirée **ici**,
+  // une fois pour le tour : une chance par étape en donnerait trois ou
+  // quatre sur un grand tour et aucune sur un petit, et le joueur ne saurait
+  // jamais à quoi s'attendre. Jamais la première ni la dernière — au départ
+  // on n'a pas encore marché, à l'arrivée le tour se finit dans la foulée et
+  // on la verrait à peine.
   balade={o, x:o.x+0.5, y:o.y+0.5, face:'bas', pts, i:0,
-          attend:false, fige:0, px:o.x+0.5, py:o.y+0.5};
+          attend:false, fige:0, px:o.x+0.5, py:o.y+0.5,
+          crotteA: 1+Math.floor(Math.random()*Math.max(1,pts.length-2))};
   son('chien'); hudSync();
   const du=PLAFOND.promenade-(mine.bourse.faits.promenade||0);
   // Le verrou `chien` est celui de la bulle de proximité : sans lui, elle
@@ -4694,7 +4809,46 @@ function finBalade(bouclee){
 function etapeSuivante(){
   balade.i++; balade.fige=0;
   if(balade.i>=balade.pts.length){ finBalade(true); return; }
+  if(balade.i===balade.crotteA) leChienSarrete();
   hudSync();
+}
+/* Le chien s'arrête une fois par tour, et il laisse quelque chose.
+
+   C'est un **objet d'île** ordinaire, dans `mine.objects` : rien de plus
+   dans `mondeNu()`, aucune migration, et il survit au rechargement parce
+   que les objets y survivent déjà. C'était le seul moyen de le garder sans
+   inventer une clé — et le garder compte, sinon « on peut le nettoyer » ne
+   veut rien dire : on ne nettoie que ce qui attend.
+
+   Il ne rapporte rien et ne coûte rien. Pas de plafond, rien dans `faits`,
+   aucun appel au serveur : c'est un geste, pas une corvée de plus — le jeu
+   en a déjà trois, et une quatrième qui paierait demanderait du SQL pour
+   une chose qui n'a pas besoin d'être payée. Le laisser là ne fâche
+   personne et ne fait rien perdre : c'est la règle du chien qui s'assied. */
+function leChienSarrete(){
+  const x=Math.round(balade.x-0.5), y=Math.round(balade.y-0.5);
+  if(!dansLeRayon(x,y)||!terre(x,y)) return;
+  // Jamais deux au même endroit, et jamais sur un objet déjà posé : une
+  // crotte sous un buisson ne se voit pas, donc ne se nettoie pas.
+  if((mine.objects||[]).some(o=>o.x===x&&o.y===y)) return;
+  mine.objects.push({t:'crotte', x, y});
+  saveMine(); son('chien');
+  say('Le chien s’arrête un instant. <b>Il faudra nettoyer</b> — marche dessus et appuie sur <b>E</b>.', 0, 3400);
+}
+function crotteProche(){
+  if(visiting||dedans) return null;
+  return (mine.objects||[]).find(o=>o.t==='crotte' &&
+    Math.hypot(o.x+0.5-hero.x, o.y+0.5-hero.y)<0.95) || null;
+}
+function nettoyer(o){
+  memoriser();
+  const i=(mine.objects||[]).indexOf(o);
+  if(i<0) return;
+  mine.objects.splice(i,1);
+  saveMine(); son('gomme'); buildAll();
+  // Rien à gagner, et c'est dit gentiment : ce jeu n'a pas besoin qu'on y
+  // gagne quelque chose à chaque geste.
+  say('C’est propre. Le chien fait comme s’il n’y était pour rien.');
 }
 function avancerLaBalade(dt){
   if(!balade) return;
@@ -4735,7 +4889,7 @@ function avancerLaBalade(dt){
 const AMBIANCES=[['silence','Silence'],['vagues','Vagues'],['oiseaux','Oiseaux'],['nuit','Nuit'],
                  ['musique','Musique']];
 let ac=null, maitre=null, ambiance=null, ambianceEnCours='', minuteurOiseaux=null;
-let minuteurNotes=null, echo=null, noeudsEcho=[];
+let minuteurNotes=null, echo=null, noeudsEcho=[], minuteurCarillon=null;
 let sonCoupe = localStorage.getItem('dansisland:muet')==='1';
 
 function ctxAudio(){
@@ -4910,6 +5064,44 @@ function boucleMusique(){
   minuteurNotes=setTimeout(boucleMusique,(a+Math.random()*(b-a))*1000);
 }
 
+/* ---- le carillon ----
+   Le seul objet de l'île qui s'entend. Il sonne de loin en loin, trois ou
+   quatre tubes d'affilée, dans la même pentatonique que la musique : il n'y
+   a pas de note fausse dans une pentatonique, donc rien à accorder et
+   jamais de fausse note, quelle que soit l'ambiance qui tourne dessous.
+
+   Quatre choses à ne pas défaire :
+
+   1. **La boucle tourne tant qu'il y a une ambiance, et regarde l'île à
+      chaque tour.** On entre chez un voisin, on ressort, on efface le
+      carillon : il n'y a rien à rebrancher ni à remettre à zéro. Un
+      minuteur par objet posé, et la gomme laisserait sonner un fantôme.
+   2. **Il appartient à l'île, pas au joueur** — comme l'ambiance elle-même.
+      Chez un voisin, c'est **son** carillon qu'on entend, et c'est ce qui
+      en fait un objet qu'on a envie de payer.
+   3. **Il ne sonne pas en `silence`.** `ambiance` n'existe pas alors, et
+      `cloche()` sort tout de suite. Quelqu'un qui coupe l'ambiance a coupé
+      l'île, pas seulement la nappe.
+   4. **Il est plus haut et plus court que la musique.** Deux octaves
+      au-dessus, la moitié du volume : un carillon qui sonnerait dans le
+      grave se confondrait avec la musique, et on paierait 50 shells pour
+      quelque chose qu'on n'entend pas. */
+function aUnCarillon(){ return (world.objects||[]).some(o=>o.t==='carillon'); }
+function boucleCarillon(){
+  if(aUnCarillon()){
+    const G=GAMMES[world.sky]||GAMMES.jour;
+    const n=2+Math.floor(Math.random()*3);
+    for(let i=0;i<n;i++) setTimeout(()=>{
+      const d=G.deg[Math.floor(Math.random()*G.deg.length)];
+      cloche(G.racine*Math.pow(2,2+d/12), 1.6+Math.random()*1.4, G.vol*0.45);
+    }, i*(110+Math.random()*180));
+  }
+  // Le tour suivant se replanifie même sans carillon : c'est ce qui le fait
+  // repartir tout seul quand on en pose un, ou quand on arrive chez
+  // quelqu'un qui en a un.
+  minuteurCarillon=setTimeout(boucleCarillon, 7000+Math.random()*13000);
+}
+
 function arreterAmbiance(){
   clearTimeout(minuteurOiseaux); minuteurOiseaux=null;
   // Le minuteur des notes et la boucle de l'écho s'arrêtent ensemble. Une
@@ -4917,6 +5109,7 @@ function arreterAmbiance(){
   // vide : elle finit par s'éteindre, mais elle n'a plus aucune raison
   // d'exister.
   clearTimeout(minuteurNotes); minuteurNotes=null;
+  clearTimeout(minuteurCarillon); minuteurCarillon=null;
   noeudsEcho.forEach(n=>{ try{ n.disconnect(); }catch(e){} });
   noeudsEcho=[]; echo=null;
   if(ambiance){ try{ ambiance.disconnect(); }catch(e){} ambiance=null; }
@@ -4931,6 +5124,8 @@ function jouerAmbiance(nom){
   ambiance=c.createGain(); ambiance.gain.value=0.0001;
   ambiance.connect(maitre);
   ambiance.gain.exponentialRampToValueAtTime(0.9,c.currentTime+2.5);   // on entre en douceur
+  // Sous toutes les ambiances sauf le silence, qui n'arrive jamais ici.
+  minuteurCarillon=setTimeout(boucleCarillon, 3000+Math.random()*6000);
   if(nom==='vagues'){ nappe(430,0.075,9,0.6); nappe(1500,0.022,13,0.9); }
   if(nom==='oiseaux'){
     nappe(320,0.045,17,0.5);                                           // le vent dans les feuilles
@@ -4993,6 +5188,10 @@ function say(msg,lock,duree){
 // Le nom lisible de chaque objet, pris dans les mêmes listes que les boutons :
 // deux listes qui divergent, c'est un objet qui n'a pas le même nom selon l'endroit.
 const NOM_OBJ={}; OBJ_GROUPS.forEach(g=>g[1].forEach(o=>{ NOM_OBJ[o[0]]=o[1].toLowerCase(); }));
+// Ce que le chien laisse n'est dans aucun rayon de l'atelier — il n'y a rien
+// à poser, il arrive tout seul — mais les messages ont besoin de son nom,
+// sinon la maison dit « il y a un objet sous la maison ».
+NOM_OBJ.crotte='crotte';
 let souvenirProche=null;
 // Le bouton rose du cadre et la touche E sont le même geste. Il ne dit pas
 // toujours la même chose : ce qui est sous la main décide.
@@ -5029,10 +5228,22 @@ function agir(){
     } else {
       const c=chienProche(); if(c){ sortirLeChien(c); return true; }
     }
+    // Ce que le chien a laissé, juste après le chien : c'est le même animal,
+    // et `proximity()` le met au même rang. Les deux doivent rester
+    // d'accord, sinon la plaque annonce un geste et la touche en fait un
+    // autre — la règle déjà écrite pour le chien et pour le coffre.
+    const cr=crotteProche(); if(cr){ nettoyer(cr); return true; }
     // Un coffre vide n'est pas un refus : il n'a simplement rien à donner
     // aujourd'hui, et la bulle le dit déjà. Le bouton rose ne s'affiche pas.
     if(coffreProche()&&cadeauDispo()){ son('coffre'); ouvrirCadeau(); return true; }
+    // La boîte aux lettres, juste après le coffre : les deux sont des
+    // choses qui attendent d'être relevées, et une boîte vide n'est pas
+    // plus un refus qu'un coffre vide.
+    if(boiteProche()){ releverLaBoite(); return true; }
   }
+  // La girouette marche aussi chez un voisin : la marée est la même pour
+  // tout l'archipel, et c'est justement ce qui permet d'en parler.
+  if(!dedans&&girouetteProche()){ lireLaGirouette(); return true; }
   if(visiting&&!dedans&&devantLaPorte()&&commandeAPorter()){ porterLaCommande(); return true; }
   if(dedans||devantLaPorte()){ actionPorte(); return true; }
   return false;
@@ -5059,7 +5270,10 @@ function proximity(){
     if(Math.hypot(o.x+0.5-hero.x,o.y+0.5-hero.y)>=0.95) return;
     if(o.t==='panneau'){ if(o.txt) panneau=o; } else objet=o;
   });
-  souvenirProche = (visiting && objet) ? objet : null;
+  // Une crotte n'est pas un souvenir. Chez un voisin, tout objet sous les
+  // pieds en devient un — celle-là ferait un cadeau qu'on ne veut pas, et
+  // elle n'a de toute façon pas de nom dans `NOM_OBJ`.
+  souvenirProche = (visiting && objet && objet.t!=='crotte') ? objet : null;
   const bulle=(k,html)=>{ if(wLock!==k) say(html,k); };
   // Ces deux branches sortent avant le ménage de la fin : elles doivent
   // donc dire elles-mêmes ce que porte la plaque rose. Sans ça, elle garde
@@ -5084,6 +5298,11 @@ function proximity(){
     } else if(objet&&objet.t==='chien'){
       boutonRose('Sortir le chien');
       bulle('chien','Ton chien. <b>E</b> pour le sortir : il fait le tour de l’île, et tu restes près de lui.'); return; }
+    // Au même rang que dans `agir()`.
+    if(objet&&objet.t==='crotte'){
+      boutonRose('Nettoyer');
+      bulle('crotte'+objet.x+'-'+objet.y,
+        'Ton chien est passé par là. <b>E</b> ou le bouton rose, et c’est propre.'); return; }
   }
   // Le coffre du jour. Il passe avant « souvenir rapporté » : un coffre
   // ramené de chez un voisin est un coffre comme un autre, et ce qu'il a
@@ -5096,6 +5315,32 @@ function proximity(){
       boutonRose(null);
       bulle('coffre','Ton coffre est vide : tu l’as déjà ouvert aujourd’hui. Il se remplit demain.');
     }
+    return;
+  }
+  // La boîte aux lettres, au même rang que dans `agir()`. Les deux listes
+  // doivent rester d'accord, sinon la plaque annonce un geste et la touche
+  // en fait un autre : la règle déjà écrite pour le chien et pour le coffre.
+  if(!visiting){
+    const bl=boiteProche();
+    if(bl){
+      if(motsNouveaux){
+        boutonRose('Relever la boîte');
+        bulle(BOITE_PLEIN,'<b>Le drapeau est lev\u00e9.</b> '+motsNouveaux+' mot'+(motsNouveaux>1?'s':'')+
+          ' t\u2019attend'+(motsNouveaux>1?'ent':'')+'. <b>E</b> pour les lire.');
+      }else{
+        boutonRose(null);
+        bulle(BOITE_VIDE,'Ta bo\u00eete aux lettres est vide. Le drapeau se l\u00e8vera quand quelqu\u2019un sera pass\u00e9.');
+      }
+      return;
+    }
+  }
+  // La girouette, chez soi comme chez les autres : la mer est la même pour
+  // tout le monde.
+  if(girouetteProche()){
+    boutonRose('Lire la girouette');
+    bulle(GIROUETTE_CLE, mareeBasse
+      ? 'La girouette pointe vers le large. <b>E</b> pour savoir combien de temps la mer reste basse.'
+      : 'La girouette pointe vers la terre. <b>E</b> pour savoir quand la mer redescend.');
     return;
   }
   // Même cas, chez soi : un souvenir rapporté se regarde, il ne se ramasse
@@ -5225,6 +5470,39 @@ function buildToi(){
     le.appendChild(li); });
   fe.appendChild(le); p.appendChild(fe);
 
+  // Le compagnon. Il ne s'achète pas à l'unité : la Boutique ouvre le
+  // rayon, et on choisit ensuite **parmi les bestioles qu'on a déjà**.
+  // C'est ce qui empêche d'obtenir un renard gratuitement par cette porte,
+  // et ce qui donne un second usage au chat qu'on a payé.
+  //
+  // Il est **juste après l'avatar**, et plus en bas de panneau : c'est de
+  // qui marche avec toi qu'il s'agit. Sous le sac et sous l'album, il
+  // fallait défiler pour le trouver, et les joueurs le disaient
+  // « pas visible ».
+  p.appendChild(rule());
+  if(achete('compagnon')){
+    const dispo=COMPAGNONS.filter(c=>achete(c[0]));
+    p.appendChild(chipsLibre('Ton compagnon',
+      [['','Aucun']].concat(dispo.map(c=>[c[0],c[1]])),
+      compagnonChoisi(), k=>{ mine.me.compagnon=k; saveMine(); majCompagnon(); buildAll();
+        say(k ? ('Ton <b>'+esc(NOM_OBJ[k]||k)+'</b> te suit maintenant partout, même chez les voisins.')
+              : 'Tu marches seul.'); }));
+    const manque=COMPAGNONS.filter(c=>!achete(c[0]));
+    p.appendChild(hint(manque.length
+      ? ('Une bestiole que tu as déjà. Il t’en manque '+manque.length+' : '+
+         manque.map(c=>'<b>'+esc(c[1])+'</b>').join(', ')+'. Elles s’achètent à la Boutique, et elles deviennent alors des compagnons possibles.')
+      : 'Tu as toutes les bestioles. Change de compagnon quand tu veux, ça ne coûte rien.'));
+  }else{
+    p.appendChild(field('Ton compagnon'));
+    // Nommer les trois bestioles **gratuites** est tout ce qui manquait.
+    // « une de celles que tu as déjà » se lisait comme « il t'en faut une
+    // d'abord », donc comme deux achats — alors que le chien, le crabe et
+    // la mouette n'ont jamais rien coûté et suffisent.
+    p.appendChild(hint('Tu marches seul. Le <b>Compagnon</b> s’achète à la Boutique, au rayon '+
+      '<b>Pour toi</b>, pour <b>'+VERROU.compagnon+' shells</b> — et le <b>chien</b>, le <b>crabe</b> '+
+      'et la <b>mouette</b> sont déjà à toi : l’un d’eux te suivra partout, même chez les voisins.'));
+  }
+
   // Le sac. Il est ici et pas dans un septième onglet : c'est ce que le
   // bonhomme porte, comme les bottes, et la barre d'onglets est déjà à six
   // On a vérifié à 360 px qu'une plaque de plus passe à la ligne, et la
@@ -5250,28 +5528,6 @@ function buildToi(){
   p.appendChild(hint(sacPlein()
     ? 'Le sac te suit d’un appareil à l’autre et chez les voisins : il est à <b>toi</b>, pas à ton île. Il se remplit sur le sable mouillé, à marée basse, tant que la marée paie encore aujourd’hui.'
     : 'Ton sac est vide. À marée basse, va marcher sur le sable mouillé au bord de ton île : ce que la mer y laisse y tombe. C’est avec ça qu’on remplit la <b>commande du jour</b>, dans l’onglet Voisins.'));
-
-  // Le compagnon. Il ne s'achète pas à l'unité : la Boutique ouvre le
-  // rayon, et on choisit ensuite **parmi les bestioles qu'on a déjà**.
-  // C'est ce qui empêche d'obtenir un renard gratuitement par cette porte,
-  // et ce qui donne un second usage au chat qu'on a payé.
-  p.appendChild(rule());
-  if(achete('compagnon')){
-    const dispo=COMPAGNONS.filter(c=>achete(c[0]));
-    p.appendChild(chipsLibre('Ton compagnon',
-      [['','Aucun']].concat(dispo.map(c=>[c[0],c[1]])),
-      compagnonChoisi(), k=>{ mine.me.compagnon=k; saveMine(); majCompagnon(); buildAll();
-        say(k ? ('Ton <b>'+esc(NOM_OBJ[k]||k)+'</b> te suit maintenant partout, même chez les voisins.')
-              : 'Tu marches seul.'); }));
-    const manque=COMPAGNONS.filter(c=>!achete(c[0]));
-    p.appendChild(hint(manque.length
-      ? ('Une bestiole que tu as déjà. Il t’en manque '+manque.length+' : '+
-         manque.map(c=>'<b>'+esc(c[1])+'</b>').join(', ')+'. Elles s’achètent à la Boutique, et elles deviennent alors des compagnons possibles.')
-      : 'Tu as toutes les bestioles. Change de compagnon quand tu veux, ça ne coûte rien.'));
-  }else{
-    p.appendChild(field('Ton compagnon'));
-    p.appendChild(hint('Tu marches seul. Le <b>Compagnon</b> est à la Boutique, au rayon <b>Pour toi</b> : il ne donne pas de bestiole, il fait suivre partout une de celles que tu as déjà.'));
-  }
 
   // L'album. Il vit dans ce navigateur et pas en base, et il le dit :
   // une photo, ce sont des pixels, et des pixels n'ont rien à faire dans
@@ -5401,6 +5657,47 @@ function fermerEnVisite(f){
   return f;
 }
 
+/* Ta terre, et ce qui la fait grandir.
+   Ça se disait déjà, mais tout en bas du panneau Île, après Ctrl+Z, dans
+   la dernière des quatorze notes grises : personne ne l'a jamais lu, et le
+   « ton île s'agrandit » du murmure tombait donc sans qu'on sache de quoi
+   il parlait. La règle centrale du jeu — **l'île grandit parce que des
+   gens sont passés** — mérite mieux qu'une note en bas de page.
+
+   La jauge part de RAYON0 et non de zéro : une île neuve n'a pas une terre
+   vide, elle a déjà la sienne. Ce qui se remplit, c'est ce qu'on gagne. */
+function fieldTerre(){
+  const f=field('Ta terre');
+  const mots=(mine.mots||[]).length;
+  const r=mine.rayon||RAYON0;
+  const gagne=Math.max(0, Math.round((r-RAYON0)/PAS_RAYON));
+  const total=Math.round((RAYON_MAX-RAYON0)/PAS_RAYON);
+  const reste=Math.max(0, total-gagne);
+  const part=Math.max(0, Math.min(1, gagne/total));
+
+  const j=document.createElement('div'); j.className='jauge';
+  const i=document.createElement('i'); i.style.width=(part*100).toFixed(1)+'%';
+  j.appendChild(i); f.appendChild(j);
+
+  const c=document.createElement('p'); c.className='chiffre';
+  c.innerHTML=reste
+    ? '<b>'+gagne+' cran'+(gagne>1?'s':'')+' sur '+total+'</b> · '+
+      mots+' mot'+(mots>1?'s':'')+' dans ton livre d’or'
+    : '<b>Ton île est au bout de sa terre</b> · '+
+      mots+' mot'+(mots>1?'s':'')+' dans ton livre d’or';
+  f.appendChild(c);
+
+  f.appendChild(hint(reste
+    ? 'La mer recule d’un cran à chaque mot qu’on te laisse — c’est la seule '+
+      'façon de gagner du terrain. <b>Encore '+reste+' mot'+(reste>1?'s':'')+'</b>, et elle '+
+      'aura reculé autant qu’elle le peut. '+
+      'Pour qu’on passe, envoie ta <b>carte postale</b> — elle est dans l’onglet Voisins.'
+    : 'Tu as gagné toute la terre qu’il y avait à gagner : au-delà, c’est le large, '+
+      'et la mer a besoin de sa place pour la marée. Il ne reste plus qu’à la remplir — '+
+      'et les gens qui passent continuent de te laisser des mots, et des shells.'));
+  return f;
+}
+
 function buildIle(){
   const p=document.getElementById('p-ile'); p.innerHTML='';
   if(visiting){
@@ -5411,6 +5708,7 @@ function buildIle(){
   }
   const fn=textField('Nom de l\'île','name',"L'île de Dan");
   p.appendChild(visiting?fermerEnVisite(fn):fn);
+  p.appendChild(fieldTerre());
   const fs=field('Heure'), bs=document.createElement('div'); bs.className='chips';
   [['jour','Jour'],['crépuscule','Crépuscule'],['nuit','Nuit']].forEach(([v,n])=>{
     const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=n;
@@ -5497,10 +5795,9 @@ function buildIle(){
     mine.tiles=baseTiles((mine.rayon||RAYON0)*(0.92+Math.random()*0.08),0.76+Math.random()*0.10); saveMine(); buildAll(); };
   row.appendChild(un); row.appendChild(rst); row.appendChild(nw); p.appendChild(row);
   p.appendChild(hint('Le curseur suit la grille isométrique : le losange rose montre la case visée. <b>Ctrl+Z</b> revient en arrière, jusqu\u2019\u00e0 '+HISTO_MAX+' fois.'));
-  const reste=Math.max(0,Math.ceil((RAYON_MAX-(mine.rayon||RAYON0))/PAS_RAYON));
-  p.appendChild(hint(reste
-    ? 'Ton \u00eele s\u2019agrandit d\u2019un cran \u00e0 chaque mot qu\u2019on te laisse. Encore <b>'+reste+' mot'+(reste>1?'s':'')+'</b> avant qu\u2019elle atteigne sa taille maximale.'
-    : 'Ton \u00eele a atteint sa taille maximale. Il ne reste plus qu\u2019\u00e0 la remplir.'));
+  // Ce qui se disait ici de la croissance est monté en haut du panneau,
+  // dans « Ta terre » : la règle centrale du jeu ne se dit pas dans la
+  // dernière note grise d'un panneau qui en compte quatorze.
   // La marée n'a pas de plaque dans le bandeau : à quatre plaques et
   // 360 px, le bouton Son passe à la ligne et se pose sur les boutons de
   // zoom. Elle se dit donc ici, et dans le murmure quand elle tourne.
@@ -5902,7 +6199,10 @@ function buildBoutique(){
 function comptoir(a){
   const w=document.createElement('div'); w.className='comptoir';
   const h=document.createElement('p'); h.className='hint';
-  h.innerHTML='<b>'+esc(a.n)+'</b> — '+esc(a.d);
+  // Le prix, ici aussi et pas seulement sur la vignette : quand on ne peut
+  // pas encore payer, le bouton dit ce qui manque et plus ce que ça coûte,
+  // et « il te manque 45 shells » ne dit pas si l'objet en vaut 50 ou 500.
+  h.innerHTML='<b>'+esc(a.n)+'</b> \u00b7 '+a.prix+' shells — '+esc(a.d);
   const r=document.createElement('div'); r.className='row';
   const ok=document.createElement('button'); ok.className='btn primary';
   const manque=a.prix-mine.bourse.shells;
@@ -6027,6 +6327,103 @@ function coffreProche(){
   if(visiting||dedans) return null;
   return (mine.objects||[]).find(o=>o.t==='coffre' &&
     Math.hypot(o.x+0.5-hero.x, o.y+0.5-hero.y)<0.95) || null;
+}
+
+/* Ce que le dessin d'un objet lit du jeu. Quatre le font, et pas un de
+   plus : le reste est une image fixe. La girouette et le carillon lisent
+   l'horloge, le coffre et la boîte lisent un état du jeu. */
+function etatObjet(o,t){
+  if(o.t==='girouette'||o.t==='carillon') return t;
+  if(o.t==='boitelettres') return boitePleine(o);
+  return coffreOuvert(o);
+}
+
+/* ---- la boîte aux lettres ----
+   Le nombre de mots reçus pendant ton absence existait déjà (`motsNouveaux`),
+   et il ne se disait qu'une fois, dans un murmure au chargement, avec « va
+   les lire dans l'onglet Île ». Deux écrans plus loin, et 2,2 s pour le
+   comprendre. La boîte est ce chiffre posé quelque part : le drapeau se
+   voit de l'autre bout de l'île, et on va le relever à pied.
+
+   Rien n'en part en base : `motsNouveaux` est déjà calculé au chargement
+   et `marquerVu()` est déjà appelé là-bas. La boîte ne fait que **montrer**
+   un état qui existe, et le relever ne fait que le remettre à zéro pour la
+   session. Pas une clé de plus dans `mondeNu()`, rien pour Ctrl+Z.
+
+   Chez un voisin elle reste baissée : c'est **son** courrier, et c'est la
+   même règle que sa porte et que son coffre. */
+function boitePleine(o){ return !visiting && o.t==='boitelettres' && motsNouveaux>0; }
+function boiteProche(){
+  if(visiting||dedans) return null;
+  return (mine.objects||[]).find(o=>o.t==='boitelettres' &&
+    Math.hypot(o.x+0.5-hero.x, o.y+0.5-hero.y)<0.95) || null;
+}
+// Les derniers mots reçus, les plus récents d'abord. On en lit trois : le
+// murmure tient une ligne ou deux, et la suite est dans le livre d'or.
+/* Les deux clés de bulle de la boîte, et pourquoi il en faut deux.
+
+   `proximity()` repasse à l'image suivante. Si ce qu'on écrit ici ne porte
+   pas **exactement** la clé qu'elle posera dans l'état d'après, elle le
+   recouvre aussitôt : le premier essai affichait « ta boîte est vide » à
+   la place des mots qu'on venait de lire, et rien ne le signalait. C'est
+   le défaut déjà écrit pour la porte du voisin — `porterLaCommande()` pose
+   `porte:livre` lui-même, pour la même raison — et c'est celui que le
+   coffre a encore.
+
+   Relever vide la boîte, donc l'état d'après est `boite:vide`, et c'est
+   sous cette clé que les mots lus s'affichent. Ils restent tant qu'on est
+   dessus, et le ménage du bas de `proximity()` les lève quand on s'en va. */
+const BOITE_VIDE='boite:vide', BOITE_PLEIN='boite:plein';
+function releverLaBoite(){
+  const n=motsNouveaux;
+  const recus=(mine.mots||[]).filter(m=>!moi||m.auteur!==moi.id).slice(-n||0);
+  motsNouveaux=0; son('coffre'); buildAll();
+  if(!n){ say('Ta bo\u00eete aux lettres est vide. Le drapeau se l\u00e8vera quand quelqu\u2019un sera pass\u00e9.',
+              BOITE_VIDE); return; }
+  const lus=recus.slice(-3).reverse()
+    .map(m=>'<b>'+esc(m.auteur_nom)+'</b> : \u00ab\u00a0'+esc(m.texte)+'\u00a0\u00bb').join(' \u00b7 ');
+  say(lus + (n>3 ? ' \u2014 et '+(n-3)+' autre'+(n-3>1?'s':'')+', dans le livre d\u2019or.' : ''), BOITE_VIDE);
+}
+
+/* ---- la girouette ----
+   La marée ne se disait que dans le panneau Île et, quand elle tourne, dans
+   le murmure. Passé ce battement, plus rien : on regarde la mer et on ne
+   sait pas si elle monte ou si elle descend, ni pour combien de temps. La
+   girouette est cette phrase-là, posée sur l'île.
+
+   Le calcul est celui d'`etatMaree()`, à l'envers : `niveau` vaut 0,25 —
+   le seuil du sable découvert — quand cos(2\u03c0\u03c6) vaut 0,5, donc en
+   \u03c6 = 1/6 et \u03c6 = 5/6. Le tiers du cycle passé sous le seuil, c'est
+   exactement ce que dit le commentaire de MAREE_SEUIL. */
+function girouetteProche(){
+  if(dedans) return null;
+  return (world.objects||[]).find(o=>o.t==='girouette' &&
+    Math.hypot(o.x+0.5-hero.x, o.y+0.5-hero.y)<0.95) || null;
+}
+function prochaineMaree(){
+  const e=etatMaree(), f=e.phase;
+  const cible = e.basse ? (f<1/6 ? 1/6 : 1+1/6) : 5/6;
+  return {basse:e.basse, secondes:Math.max(0,(cible-f)*MAREE_CYCLE)};
+}
+function dureeLisible(sec){
+  const m=Math.round(sec/60);
+  if(m<1) return 'moins d\u2019une minute';
+  if(m<60) return m+' minute'+(m>1?'s':'');
+  const h=Math.floor(m/60), r=m%60;
+  return h+' heure'+(h>1?'s':'')+(r?' et '+r+' minute'+(r>1?'s':''):'');
+}
+// Même clé que la bulle d'invitation de `proximity()`, et pour la même
+// raison que la boîte : sous une clé différente, la réponse serait
+// recouverte par l'invitation à l'image suivante. `say()` écrit toujours,
+// lui, donc réappuyer sur E rafraîchit bien le délai.
+const GIROUETTE_CLE='girouette';
+function lireLaGirouette(){
+  const p=prochaineMaree(); son('piece');
+  say(p.basse
+    ? '<b>La mer est basse.</b> Le sable mouill\u00e9 se marche encore pendant '+
+      dureeLisible(p.secondes)+', et il y a des choses \u00e0 y ramasser.'
+    : '<b>La mer est haute.</b> Elle redescendra dans '+dureeLisible(p.secondes)+
+      ', et elle laissera de quoi remplir ton sac.', GIROUETTE_CLE);
 }
 // Ce que le dessin lit. Les deux sont l'inverse l'un de l'autre chez soi,
 // et tous les deux faux chez un voisin : là-bas le coffre est un meuble.
