@@ -117,19 +117,21 @@ jobs:
           echo "Pages Functions présentes à la racine :"
           find functions -type f 2>/dev/null | sort || echo "  (aucune)"
 
-      # `npx wrangler` et non `cloudflare/wrangler-action@v3`, et ce n'est
-      # pas une préférence : **mesuré le 19/09/2026.** Toutes les exécutions
-      # de ce workflow finissaient en `action_required` en deux secondes,
-      # avec *zéro job créé* — donc bloquées avant d'être planifiées, ce qui
-      # n'est pas un échec de secret ni un échec de build. Au même moment,
-      # `epreuves.yml` passait sur les mêmes commits. La seule différence
-      # entre les deux fichiers était l'action tierce : les réglages Actions
-      # du dépôt n'autorisent que les actions de GitHub.
+      # `npx wrangler` et non `cloudflare/wrangler-action@v3`.
       #
-      # Un job qui ne démarre pas ne laisse aucun log, et c'est ce qui rend
-      # cette panne muette — exactement le défaut que ce workflow existait
-      # pour corriger. En passant par `npx`, il ne reste que
-      # `actions/checkout`, qui est de GitHub.
+      # L'honnêteté du 19/09/2026 : j'ai d'abord cru que l'action tierce
+      # **était** la cause du blocage, je l'ai retirée pour ça, et **ça n'a
+      # rien changé** — le run suivant est reparti en `action_required`
+      # avec zéro job. L'hypothèse était fausse. Ce pas reste en `npx`
+      # parce qu'il est plus simple ainsi, pas parce qu'il répare quoi que
+      # ce soit : une dépendance de moins, et le même comportement.
+      #
+      # Ce que la mesure dit vraiment, et c'est tout ce qu'elle dit : sur le
+      # même push, à la même seconde, `epreuves.yml` et
+      # `verifier-le-deploiement.yml` passent, et celui-ci est bloqué avant
+      # d'être planifié. Le blocage ne vient donc pas des Actions en
+      # général. Reste à savoir s'il tient au **contenu** du fichier ou à
+      # son **identité** — et c'est pour ça que ce fichier a changé de nom.
       - name: Publier sur Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
