@@ -1026,6 +1026,16 @@ function boiteIle(){
 }
 // Dedans, la pièce est petite et tient tout entière : la caméra ne suit
 // personne, elle grossit jusqu'à ce que les murs touchent les bords.
+/* Le zoom auquel la pièce **remplit** le cadre, marges comprises : 28 px
+   de part et d'autre en largeur, et de quoi loger la hauteur des murs en
+   plus des 44 px du haut et du bas.
+
+   Il n'était branché que comme **plafond**, jamais comme zoom visé : dedans
+   `zoomAuto()` rendait toujours 1, donc la pièce se dessinait à sa taille
+   d'origine quelle que soit la place. Mesuré le 19/09 : le salon occupait
+   65 % de la largeur du cadre, la chambre et l'atelier **51 %**, et quatre
+   cinquièmes des pixels étaient du papier vide. On entrait chez soi et il
+   n'y avait presque rien à voir. */
 function fitDedans(){
   const p=pieceDef(piece);
   const w=(p.w+p.h)*TWI/2+28, h=(p.w+p.h)*THI/2+MURH+44;
@@ -1038,7 +1048,15 @@ function fitDedans(){
 // déjà pile à 1.
 function zPlancher(){ return dedans ? 1 : ZMIN; }
 function zPlafond(){ return dedans ? Math.min(ZMAX, fitDedans()) : ZMAX; }
-function zoomAuto(){ return Math.max(zPlancher(), CASE_MIN/(TW*(echelleEcran||1))); }
+/* Dehors, le zoom automatique vise une case confortable au doigt
+   (`CASE_MIN`). Dedans, il n'y a pas de case à viser : il y a une pièce, et
+   ce qu'on veut d'elle c'est qu'elle **tienne dans le cadre sans le
+   laisser vide**. C'est exactement ce que calcule `fitDedans()`, et c'est
+   pour ça qu'il est ici et plus seulement en plafond. */
+function zoomAuto(){
+  if(dedans) return zPlafond();
+  return Math.max(zPlancher(), CASE_MIN/(TW*(echelleEcran||1)));
+}
 function zoomVoulu(){ return Math.max(zPlancher(), Math.min(zPlafond(), zoomAuto()*cam.main)); }
 // Le zoom demandé à la main se garde en facteur de l'automatique : la
 // même pincée donne le même effet sur un téléphone et sur un écran large,
@@ -1185,18 +1203,46 @@ const TWI=72, THI=36, HX=TWI/2, HY=THI/2, MURH=86;
 // `mur:'ne'` = la paroi du fond à droite (y=0), l'index porte sur x.
 // Les deux parois près de la caméra ne sont pas dessinées : on regarde
 // dans une boîte ouverte, sinon la pièce est un mur.
+/* L'article est une propriété de la pièce, au même titre que son nom.
+
+   Sans lui, quatre phrases du jeu disaient « Te voilà dans **le**
+   chambre », « Passer **au** chambre », « Une porte vers **le** atelier ».
+   Un article collé en dur devant un nom variable ne peut pas être juste :
+   il y a trois pièces et trois genres — masculin, féminin, et masculin
+   devant voyelle, qui élide. C'est du français, pas un cas particulier.
+
+   `laPiece(k)` rend « le salon », « la chambre », « l'atelier » ;
+   `aLaPiece(k)` rend « au salon », « à la chambre », « à l'atelier ». Une
+   quatrième pièce ajoutée un jour devra porter son `art` et son `a`, et
+   c'est tout ce qu'elle aura à porter. */
 const PIECES=[
-  {k:'salon',   n:'Salon',   w:8, h:6,
+  {k:'salon',   n:'Salon',   art:'le ', a:'au ',    w:8, h:6,
    portes:[{mur:'nw',i:4,vers:'dehors'},{mur:'ne',i:6,vers:'chambre'}],
    fen:[{mur:'ne',i:2},{mur:'nw',i:1}]},
-  {k:'chambre', n:'Chambre', w:6, h:5,
+  {k:'chambre', n:'Chambre', art:'la ', a:'à la ', w:6, h:5,
    portes:[{mur:'nw',i:1,vers:'salon'},{mur:'ne',i:4,vers:'atelier'}],
    fen:[{mur:'ne',i:1},{mur:'nw',i:3}]},
-  {k:'atelier', n:'Atelier', w:6, h:5,
+  {k:'atelier', n:'Atelier', art:'l’',  a:'à l’',  w:6, h:5,
    portes:[{mur:'nw',i:1,vers:'chambre'}],
    fen:[{mur:'ne',i:2},{mur:'ne',i:4},{mur:'nw',i:3}]}
 ];
 function pieceDef(k){ return PIECES.find(p=>p.k===k) || PIECES[0]; }
+/* « le salon », « la chambre », « l'atelier » — et la même chose après un
+   « dans » ou un « vers ».
+
+   `maj` met la première lettre en capitale, pour les phrases qui
+   commencent par là. `gras` met le **nom** en gras, jamais l'article :
+   c'est ce dont les trois phrases du jeu avaient besoin, et c'est faute
+   de l'avoir ici que deux d'entre elles recollaient `pieceDef(k).art`
+   à la main et ne passaient pas par cette fonction du tout. Un paramètre
+   optionnel coûte moins qu'une seconde orthographe, comme le `saut` de
+   `drawChar()` et l'`ouvert` de `DRAW.coffre`. */
+function laPiece(k,maj,gras){ const d=pieceDef(k);
+  const n=gras ? '<b>'+d.n.toLowerCase()+'</b>' : d.n.toLowerCase();
+  const a=maj ? d.art.charAt(0).toUpperCase()+d.art.slice(1) : d.art;
+  return a+n; }
+// « au salon », « à la chambre », « à l'atelier ».
+function aLaPiece(k){ const d=pieceDef(k); return d.a+d.n.toLowerCase(); }
 // La case devant une porte, celle sur laquelle on se met pour passer.
 function casePorte(p){ return p.mur==='nw' ? {x:0,y:p.i} : {x:p.i,y:0}; }
 function estPorte(def,x,y){ return def.portes.some(p=>{ const c=casePorte(p); return c.x===x&&c.y===y; }); }
@@ -3769,7 +3815,7 @@ function allerPiece(k,depuis){
   const c=retour?aCoteDeLaPorte(retour):{x:Math.floor(p.w/2),y:Math.floor(p.h/2)};
   hero.x=c.x+0.5; hero.y=c.y+0.5; target=null; sasArme=false;
   majVue(); degager(); son('arrivee'); hudSync(); buildAll();
-  say('Te voilà dans le <b>'+p.n.toLowerCase()+'</b>.');
+  say('Te voilà dans '+laPiece(p.k,false,true)+'.');
 }
 function franchir(){
   const p=porteSousLesPieds(); if(!p) return false;
@@ -5285,10 +5331,10 @@ function proximiteDedans(){
     return; }
   if(sasArme){ franchir(); return; }
   const cle='porte'+piece+p.mur+p.i;
-  boutonRose(p.vers==='dehors' ? 'Sortir' : ('Passer au '+pieceDef(p.vers).n.toLowerCase()));
+  boutonRose(p.vers==='dehors' ? 'Sortir' : ('Passer '+aLaPiece(p.vers)));
   if(wLock!==cle) say(p.vers==='dehors'
     ? 'Le paillasson. <b>E</b> pour ressortir.'
-    : 'Une porte vers le <b>'+pieceDef(p.vers).n.toLowerCase()+'</b>. <b>E</b> pour passer.', cle);
+    : 'Une porte vers '+laPiece(p.vers,false,true)+'. <b>E</b> pour passer.', cle);
 }
 function proximity(){
   if(dedans){ proximiteDedans(); return; }
@@ -6135,8 +6181,9 @@ function buildDedans(p){
   bc.appendChild(pk); fc.appendChild(bc); p.appendChild(fc);
 
   const nb=(d.meubles||[]).length;
-  p.appendChild(hint('Trois pi\u00e8ces, et personne d\u2019autre que toi n\u2019y entre. Le <b>'+def.n.toLowerCase()+
-    '</b> fait '+def.w+'x'+def.h+' cases et porte <b>'+nb+' meuble'+(nb>1?'s':'')+'</b>. '+
+  p.appendChild(hint('Trois pi\u00e8ces, et personne d\u2019autre que toi n\u2019y entre. '+
+    laPiece(def.k,true,true)+
+    ' fait '+def.w+'x'+def.h+' cases et porte <b>'+nb+' meuble'+(nb>1?'s':'')+'</b>. '+
     '<b>Ctrl+Z</b> annule ici comme dehors.'));
   // Le bas du panneau disait « un meuble ne se pose pas sur un autre ; le
   // tapis, si ». Ce n'est plus vrai depuis les niveaux, et le reste de la
