@@ -254,5 +254,44 @@ c.titre('4. dedans, les quatre plaques tiennent sur une rangée');
   }
 }
 
+c.titre('5. le zoom part du haut, et aucun bouton n’est mort');
+{
+  /* Conséquence de la section 1, et il fallait la regarder plutôt que la
+     supposer : dedans, le zoom d'arrivée **est** le plafond, donc « voir
+     de plus près » n'a plus rien à donner. Un bouton qui ne fait rien est
+     exactement ce que ce jeu s'interdit — c'est la règle du bouton photo
+     avant l'achat, et celle des objets verrouillés de l'atelier.
+
+     Mesuré : il arrive **déjà désactivé**, et il se rallume dès qu'on a
+     reculé. La plage n'a pas changé — elle va toujours de 1 à
+     `fitDedans()` — seul le point de départ est passé d'un bout à
+     l'autre. On peut donc encore reculer jusqu'à la vue d'avant. */
+  const { ctx, page, erreurs } = await entrer({ width: 1100, height: 820 });
+  const zoom = () => page.evaluate(() => [...document.querySelectorAll('.zoom button')]
+    .filter(e => e.offsetParent !== null)
+    .map(e => ({ n: (e.getAttribute('aria-label') || e.textContent).trim(), off: !!e.disabled })));
+  const clic = async n => { await page.evaluate(k => {
+    const b = [...document.querySelectorAll('.zoom button')].filter(e => e.offsetParent !== null)
+      .find(e => ((e.getAttribute('aria-label') || '') + e.textContent).includes(k));
+    if (b && !b.disabled) b.click();
+  }, n); await attendre(500); };
+
+  const arrivee = await zoom();
+  const pres = arrivee.find(b => /plus près/.test(b.n));
+  console.log('     ' + arrivee.map(b => b.n + (b.off ? ' [désactivé]' : '')).join(' · '));
+  c.dit(!!pres, 'le bouton « voir de plus près » est là');
+  c.dit(pres && pres.off, 'il arrive désactivé — on est déjà au plafond, et ça se dit');
+
+  const large0 = (await occupation(page)).large;
+  await clic('−'); await clic('−');
+  const large1 = (await occupation(page)).large;
+  console.log('     en arrivant ' + large0 + ' %, après deux reculs ' + large1 + ' %');
+  c.dit(large1 < large0 - 8, 'reculer marche encore (' + large0 + ' % → ' + large1 + ' %)');
+  const recule = (await zoom()).find(b => /plus près/.test(b.n));
+  c.dit(recule && !recule.off, 'et « de plus près » se rallume une fois qu’il a de quoi faire');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
 await nav.close(); s.fermer();
 process.exit(c.fin() ? 1 : 0);
