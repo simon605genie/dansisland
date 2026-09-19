@@ -853,10 +853,10 @@ deux mégaoctets.
 visible et cliquable avant tout achat. `basculerViseur()` refusait bien, donc
 rien ne fuyait, mais c'est exactement le bouton mort que la règle ci-dessus
 interdit, et rien ne le signalait. D'où `.zoom button[hidden]{display:none}`.
-Les quatre autres éléments à attribut `hidden` du cadre (`rose-btn`,
-`hud-balade`, `pad`, `tourne`) n'ont pas de `display` d'auteur et sont
-indemnes : vérifié sur les cinq. Toute nouvelle règle qui donne un `display`
-à un élément qu'on cache par `hidden` doit prévoir son `[hidden]`.
+*(Formulation corrigée le 19/09 : `.tourne` **a** un `display` d'auteur,
+mais il est gardé par `:not([hidden])`, ce qui est l'autre forme
+acceptable. Les huit éléments à attribut `hidden` sont sains, et ce n'est
+plus une relecture qui le dit : voir le contrôle 12 plus bas.)*
 
 ## Le compagnon, 17/09/2026 au soir
 
@@ -1904,6 +1904,65 @@ Le contrôle « 9 bis » a échoué trois fois avant de passer, et **les trois
 La leçon est la même que pour `store.js` compté comme export manquant :
 **une assertion se vérifie contre ce que le fichier contient vraiment**,
 pas contre ce qu'on croit y avoir écrit.
+
+## L'audit des invariants, et le contrôle qui avait l'angle mort du bug — 19/09/2026
+
+Plutôt que de chercher au hasard, j'ai relu les **affirmations** de ce
+fichier contre le code. C'est ce qui avait payé deux fois dans la journée
+— la crotte qui ne passait pas par sa sonde, le phare sur les îles bot.
+
+### Ce qui tient, et qui n'a donc rien coûté à vérifier
+
+    TROUVAILLES         l'ordre du client == celui du tableau SQL      ✅
+    mondeNu()           ni bourse, ni achats, ni sac, ni album         ✅
+    valeurs de tuile    toutes sur un chiffre (encode/decode)          ✅
+    #hud-name.retour    l'emporte par spécificité sur le portrait      ✅
+    le voile d'accueil  mêmes alphas dans les trois déclarations       ✅
+
+Deux remarques sur la méthode. La première : mon contrôle du voile a
+d'abord dit « pas d'accord » — les trois déclarations **n'ont pas** la
+même couleur, et c'est normal, l'une est crème et les deux autres bleu
+nuit. Ce sont les **alphas** qui doivent s'accorder, et ils s'accordent.
+Un contrôle mal posé accuse à tort aussi facilement qu'il absout à tort.
+
+La seconde : `.tourne` porte bien un `display` d'auteur, contrairement à
+ce que ce fichier disait — mais il est gardé par `:not([hidden])`. La
+règle tenait ; c'est sa formulation qui était fausse, et elle est
+corrigée plus haut.
+
+### Le contrôle 12, et pourquoi sa première version ne valait rien
+
+Le défaut du 17/09 — `.zoom button{display:grid}` qui l'emportait sur le
+`[hidden]` du navigateur, et un bouton d'appareil photo visible avant
+tout achat — avait laissé une **consigne** : « toute nouvelle règle qui
+donne un `display` à un élément qu'on cache par `hidden` doit prévoir son
+`[hidden]` ». Une consigne, donc quelque chose que personne ne relit.
+
+Ma première mesure était une regex : pour chaque élément caché,
+construire ses sélecteurs depuis son `id` et ses classes, et chercher une
+règle qui lui donne un `display` sans garde. **Elle ne trouvait pas le
+bug d'origine**, parce que la règle fautive vise un **ancêtre**
+(`.zoom button`) et non l'élément. Elle avait donc exactement l'angle
+mort du défaut qu'elle visait — et elle passait au vert en le disant.
+
+La version qui compte demande au **navigateur** : elle cache chaque
+élément, lit `getComputedStyle().display`, et remet l'état d'avant.
+Le navigateur résout toute la cascade — spécificité, ordre, media
+queries — et ne peut pas se tromper sur ce que voit l'œil. Deux tailles,
+parce qu'une règle peut ne mordre que sous media query. Éprouvée en
+retirant la garde : elle rend `photo-btn:grid`, aux deux tailles.
+
+**La leçon, et c'est la troisième fois de la journée :** quand une mesure
+et son objet raisonnent de la même façon, la mesure hérite de ses angles
+morts. Une regex qui cherche des sélecteurs ne verra jamais ce qu'un
+moteur CSS calcule. Quand un navigateur peut répondre, c'est à lui qu'il
+faut demander.
+
+*(Et un rappel du comptage : la première version trouvait **zéro**
+élément caché, parce qu'elle découpait la source à `indexOf('<body')` —
+or ce fichier n'a pas de balise `<body>`, donc `slice(-1)`. Elle
+déclarait l'invariant tenu sur un caractère. C'est l'assertion de
+comptage qui l'a rattrapée.)*
 
 ## Reste du contexte
 
