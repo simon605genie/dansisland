@@ -174,6 +174,23 @@ Les règles à ne pas défaire :
 1. **`bourses` n'a aucune policy d'écriture.** Pas une policy restrictive :
    pas de policy du tout. RLS refuse par défaut, et ce vide *est* la
    protection. Ne pas « réparer » en ajoutant une policy `update`.
+
+   **Et ce vide ne se vérifie pas depuis l'éditeur SQL du dashboard**, qui
+   tourne en rôle `postgres` et **contourne la RLS** : un insert lancé tel
+   quel y passe la policy sans la voir, et ce qu'on lit ensuite est une
+   autre erreur — le 19/09, un `23503` de clé étrangère, pris un instant
+   pour une preuve alors qu'il n'en était pas une. Il faut prendre le rôle
+   du client :
+
+       begin;
+       set local role anon;
+       insert into public.parrainages (filleul, parrain, code)
+       values (gen_random_uuid(), gen_random_uuid(), 'x');
+       rollback;
+
+   Rendu attendu : `42501`. Le `rollback` couvre le cas où l'insert
+   passerait. Vaut pour les quatre tables sans policy d'écriture —
+   `bourses`, `livraisons`, `visites`, `parrainages`.
 2. **`bourse_crediter(joueur, quoi, n)` n'est jamais exposée.** Elle prend
    un joueur en paramètre parce que les visites créditent l'hôte ; exposée,
    elle laisserait n'importe qui créditer n'importe qui. Elle est révoquée

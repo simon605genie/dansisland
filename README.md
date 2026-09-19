@@ -85,28 +85,43 @@ contre le projet, sans compte, par les fonctions ouvertes à `anon` :
   « new row violates row-level security policy »). Le vide de policy fait
   bien ce qu'on attend de lui, mesuré et pas supposé.
 
-`supabase/2026-09-18_parrainage.sql` **n'est pas encore joué** : il a été
-écrit sans Postgres ni réseau sous la main. Il est rejouable, et tout ce
-qu'il apporte dégrade proprement tant qu'il n'est pas passé —
-`parrainer()` et `parrainage()` n'existent pas, le client attrape
-l'erreur, **garde le code de parrainage pour la prochaine fois** et
-affiche les récompenses portées en dur (25 / 15). Rien ne se perd, rien ne
-se paie deux fois : le serveur refuse le second appel.
-
-À jouer dans l'éditeur SQL du projet **dansisland** (vérifier que l'en-tête
-affiche « dansisland » et pas « mamash's project ») :
+`supabase/2026-09-18_parrainage.sql` **est joué** (19/09/2026 au matin),
+dans l'éditeur SQL du projet **dansisland** — en vérifiant que l'en-tête
+affiche « dansisland » et pas « mamash's project » :
 <https://supabase.com/dashboard/project/cgputbitzfgokpwbbind/sql/new>
 
-Ce qu'il faut vérifier après coup, comme pour les précédentes :
+Les cinq vérifications, et ce qu'elles ont rendu :
 
 ```sql
-select public.parrainage();                    -- {"parrain":25,"filleul":15}
-select public.economie() -> 'gains';           -- doit porter parrainage et bienvenue
-select * from public.reglages order by k;      -- trois lignes
-select public.parrainer('dan');                -- « connecte-toi » en anon, pas « does not exist »
-insert into public.parrainages (filleul,parrain,code) values (gen_random_uuid(),gen_random_uuid(),'x');
-                                               -- doit être refusé en 42501
+select public.parrainage();               -- {"filleul":15,"parrain":25}     ✅
+select public.economie() -> 'gains';      -- porte bienvenue 15 et parrainage 25  ✅
+select * from public.reglages order by k; -- 3 lignes : 15 / 5 / 25          ✅
+select public.parrainer('dan');           -- P0001 « connecte-toi »          ✅
 ```
+
+**Et le test du vide de policy, qui ne se fait pas comme les autres.**
+L'éditeur SQL tourne en rôle `postgres`, qui **contourne la RLS** : un
+insert lancé tel quel n'y rencontre jamais la policy. Le premier essai a
+d'ailleurs rendu `23503` — la clé étrangère vers `auth.users` refusant un
+UUID inventé, ce qui prouve autre chose et pas ce qu'on cherchait. Il faut
+prendre le rôle du client :
+
+```sql
+begin;
+set local role anon;
+insert into public.parrainages (filleul, parrain, code)
+values (gen_random_uuid(), gen_random_uuid(), 'x');
+rollback;
+```
+
+Rendu : **`42501 — new row violates row-level security policy for table
+"parrainages"`**. C'est ça, la mesure du vide de policy. Le `rollback` est
+là pour le cas où l'insert passerait : rien ne resterait en base.
+
+La même précaution vaut pour `bourses`, `livraisons` et `visites`. Leur
+refus à elles a été mesuré autrement — depuis le client, avec la clé
+publishable, donc en rôle `anon` pour de vrai — ce qui est équivalent et
+reste valable.
 
 `supabase/2026-09-16_bourse_serveur.sql` **est joué**. Il n'a pas pu
 l'être le jour où il a été écrit, faute de Postgres sous la main, et le
@@ -123,8 +138,9 @@ Pas encore éprouvé :
   livraison, il demande deux comptes : un qui invite, un qui crée son île
   depuis le lien. Le crédit du filleul se voit tout de suite (la note
   « +15 shells de bienvenue » au-dessus des onglets) ; celui du parrain ne
-  se vérifie qu'en se reconnectant avec l'autre compte. Et il demande
-  d'abord que `2026-09-18_parrainage.sql` soit joué.
+  se vérifie qu'en se reconnectant avec l'autre compte. La migration, elle,
+  est jouée depuis le 19/09 : ce qui reste à éprouver est le geste, pas le
+  serveur.
 - ~~**Les pages publiques servies par Cloudflare.**~~ **Éprouvées en vrai
   le 18/09 au soir**, et c'est la première fois. Le run de vérification qui
   a suivi la mise en ligne l'a mesuré : `/island/dan` et `/carte/dan`
