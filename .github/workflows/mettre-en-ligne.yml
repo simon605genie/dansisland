@@ -30,6 +30,40 @@
 #  les logs, et ils ne sont pas dans ce dépôt. Sans eux, le job s'arrête
 #  au premier pas en disant exactement ce qui manque — plutôt que d'aller
 #  échouer plus loin sur une erreur d'authentification illisible.
+#
+#  ------------------------------------------------------------------
+#  LE 19/09/2026 : CE QUI EST MESURÉ, ET CE QUI RESTE OUVERT
+#
+#  **Le fait qui compte, et il est établi :** `CLOUDFLARE_API_TOKEN`
+#  **n'existe pas dans ce dépôt.** Une sonde jetable l'a lu dans un job
+#  qui, lui, a bien tourné : la variable est arrivée vide. Donc même si ce
+#  workflow démarrait, il s'arrêterait à son premier pas. **Tant que le
+#  secret n'est pas ajouté, aucun déploiement ne peut partir d'ici**, quoi
+#  qu'on fasse d'autre à ce fichier.
+#
+#  À côté de ça, un second défaut, non résolu : les treize exécutions de
+#  ce workflow finissent en `action_required` en deux secondes, avec zéro
+#  job créé — donc bloquées avant d'être planifiées. Quatre hypothèses ont
+#  été éprouvées, trois sont **fausses**, et c'est écrit ici pour qu'on ne
+#  les reprenne pas :
+#
+#    1. l'action tierce `cloudflare/wrangler-action@v3` → retirée, aucun
+#       changement. FAUX.
+#    2. l'identité du fichier (son chemin, donc son workflow id) →
+#       renommé `deployer.yml` → `mettre-en-ligne.yml`, workflow id neuf,
+#       run #1 bloqué pareil. FAUX.
+#    3. la lecture d'un secret → une sonde qui en lit un démarre et
+#       réussit. FAUX.
+#    4. `toJSON(secrets)`, qui sérialisait tout le contexte des secrets →
+#       c'est la seule chose qui restait pour distinguer ce fichier des
+#       sondes qui démarrent. Retirée par ce commit. **Non vérifiée.**
+#
+#  La voie qui marche, en attendant et quoi qu'il arrive :
+#
+#      ./build.sh && npx wrangler pages deploy dist \
+#        --project-name dansisland --branch main
+#
+#  ------------------------------------------------------------------
 # ============================================================
 name: Déployer
 
@@ -56,12 +90,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Ce pas ne se contente pas de dire « il manque un secret » : il dit
-      # **quels secrets existent**, par leur nom. C'est la différence entre
-      # « va voir dans les réglages » et « tu l'as déjà, il s'appelle
-      # autrement ». `toJSON(secrets)` rend l'objet complet ; on n'en sort
-      # que les clés, jamais les valeurs — et GitHub masque les valeurs dans
-      # les logs de toute façon, mais on ne s'appuie pas là-dessus.
+      # **`toJSON(secrets)` a été retiré ici**, et c'est la dernière
+      # hypothèse debout sur le blocage `action_required` : il listait les
+      # noms des secrets du dépôt, et c'est le seul trait qui restait pour
+      # distinguer ce fichier des sondes qui, elles, démarrent. Voir le
+      # journal en tête de fichier.
       #
       # Les deux noms de rechange (`CF_*`) ne sont pas une invention : c'est
       # la forme courte que beaucoup d'exemples Cloudflare emploient, et un
@@ -69,15 +102,9 @@ jobs:
       # l'un ou l'autre avec `||`.
       - name: Les secrets sont-ils là ?
         env:
-          TOUS: ${{ toJSON(secrets) }}
           JETON: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
           COMPTE: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
         run: |
-          echo "Secrets disponibles pour ce dépôt (noms seulement) :"
-          printf '%s' "${TOUS:-{\}}" | jq -r 'keys[]' | grep -v '^github_token$' | sed 's/^/  · /' \
-            || echo "  (aucun)"
-          echo ""
-
           manque=0
           [ -z "${JETON:-}" ]  && { echo "❌ Aucun jeton : ni CLOUDFLARE_API_TOKEN ni CF_API_TOKEN";  manque=1; }
           [ -z "${COMPTE:-}" ] && { echo "❌ Aucun compte : ni CLOUDFLARE_ACCOUNT_ID ni CF_ACCOUNT_ID"; manque=1; }
@@ -88,10 +115,6 @@ jobs:
             echo "L'identifiant de compte se lit dans l'URL du tableau de bord."
             {
               echo "❌ **Déploiement impossible** — il manque un secret."
-              echo ""
-              echo "Noms de secrets vus dans ce dépôt :"
-              printf '%s' "${TOUS:-{\}}" | jq -r 'keys[]' | grep -v '^github_token$' | sed 's/^/- `/;s/$/`/' \
-                || echo "- (aucun)"
               echo ""
               echo "À ajouter dans *Settings → Secrets and variables → Actions* :"
               echo "- \`CLOUDFLARE_API_TOKEN\` (permission « Cloudflare Pages: Edit »)"

@@ -1625,6 +1625,57 @@ Deux choses à savoir sur `faux-store.js`, qui a gagné deux crochets :
   donc le panneau gagnait partout et recouvrait la bulle de l'objet visé.
   Une heure perdue là-dessus.
 
+## Pourquoi le site n'est pas en ligne — 19/09/2026
+
+**Le fait établi, et c'est le seul qui compte pour déployer :
+`CLOUDFLARE_API_TOKEN` n'existe pas dans ce dépôt.** Mesuré, pas déduit :
+une sonde jetable l'a lu dans un job qui, lui, a bien tourné, et la
+variable est arrivée vide. Tant que le secret n'est pas ajouté dans
+*Settings → Secrets and variables → Actions*, **aucun déploiement ne peut
+partir de GitHub**, quoi qu'on fasse d'autre au workflow.
+
+La voie qui marche, et elle a déjà servi :
+
+    ./build.sh && npx wrangler pages deploy dist \
+      --project-name dansisland --branch main
+
+C'est un projet Pages en **upload direct**, pas une intégration Git : ce
+n'est pas un contournement, c'est le chemin normal de ce projet.
+
+### Le second défaut, non résolu, et les trois fausses pistes
+
+À côté de ça, le workflow de déploiement finit en `action_required` en
+deux secondes, **avec zéro job créé** — donc bloqué avant d'être planifié.
+Ce n'est ni un secret manquant (le premier pas l'aurait écrit), ni un
+échec de build : rien ne démarre. Sur le même push, à la même seconde,
+`epreuves.yml` et `verifier-le-deploiement.yml` passent.
+
+Quatre hypothèses éprouvées, **trois fausses**, et elles sont écrites ici
+pour qu'on ne les reprenne pas :
+
+1. **L'action tierce `cloudflare/wrangler-action@v3.** Retirée au profit
+   de `npx wrangler`. Aucun changement. **Faux.**
+2. **L'identité du fichier** — son chemin, donc son workflow id. Renommé
+   `deployer.yml` → `mettre-en-ligne.yml`, id neuf, run #1 bloqué pareil.
+   **Faux.**
+3. **La lecture d'un secret.** Deux sondes identiques à une ligne près,
+   l'une lisant `secrets.CLOUDFLARE_API_TOKEN` et l'autre non : les deux
+   démarrent et réussissent. **Faux.**
+4. **`toJSON(secrets)`**, qui sérialisait tout le contexte des secrets
+   pour en lister les noms. C'est la seule chose qui restait pour
+   distinguer ce fichier des sondes qui démarrent. Retiré. **Non
+   vérifié** — si le prochain push le débloque, c'était ça ; sinon, la
+   question est encore ouverte et il faudra regarder *Settings → Actions*
+   dans le navigateur, ce qui ne se fait pas depuis ici.
+
+La leçon est celle déjà écrite pour l'aller-retour du 18/09, et je l'ai
+rappris à mes dépens : **mesurer d'abord.** J'ai retiré l'action tierce
+sur une hypothèse plausible et non vérifiée, exactement comme le dossier
+`functions/` avait été sorti la veille — et, comme la veille, ça n'a rien
+changé. Ce qui a fait avancer, c'est la paire de sondes : deux fichiers
+identiques à une ligne près. Une comparaison qui isole **une** variable
+vaut dix relectures.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
