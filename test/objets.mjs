@@ -178,5 +178,88 @@ c.titre('5. les trois posés ensemble — l’île tient, et rien ne part en bas
   await ctx.close();
 }
 
+c.titre('6. s’éloigner efface la bulle — le verrou ne survit pas à son état');
+{
+  /* « Un verrou de bulle qui survit à son état, c'est un message qui reste
+     à l'écran pour toujours » — la règle est écrite depuis le chien. Le
+     ménage du bas de `proximity()` ne lève que les clés dont il connaît le
+     préfixe, et c'est une liste en dur : toute clé nouvelle doit y entrer.
+
+     Ce contrôle s'en assure sans connaître la liste : il marche jusqu'à ce
+     que le bonhomme quitte la case, et regarde si la bulle est partie. */
+  const { ctx, page, erreurs } = await ouvrir(GIROUETTE);
+  await attendre(900);
+  c.dit(/girouette/i.test((await etat(page)).murmure), 'la bulle est là quand on est dessus');
+
+  /* On marche vers le sud — vers l'est, le bonhomme monte sur son seuil et
+     entre dans la maison, ce qui change d'état au lieu de s'éloigner.
+
+     Puis on **attend 2,8 s**, et c'est ce qui rend ce contrôle sûr : en
+     chemin on tond une touffe, et ce message-là recouvre la bulle sans rien
+     prouver. Mais un message de tonte n'a pas de verrou, donc il s'efface
+     tout seul au bout de 2,2 s ; un verrou survivant, lui, ne s'efface
+     jamais. Après l'attente, un murmure encore allumé **est** le défaut. */
+  await page.keyboard.down('ArrowDown');
+  await attendre(1300);
+  await page.keyboard.up('ArrowDown');
+  await attendre(2800);
+
+  const v = await etat(page);
+  console.log('     après avoir marché : ' + (v.murmure || '(rien)'));
+  c.dit(v.murmure === '', 'la bulle a disparu quand on s’éloigne');
+  c.dit(v.plaque === null, 'la plaque rose est retombée aussi');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
+c.titre('7. la crotte — même règle, et elle a sa propre clé');
+{
+  const { ctx, page, erreurs } = await ouvrir(SOUS('crotte', '#8B6F4E'));
+  await attendre(900);
+  const a = await etat(page);
+  console.log('     plaque  : ' + a.plaque);
+  c.dit(a.plaque === 'Nettoyer', 'la plaque rose annonce « Nettoyer »');
+
+  await page.keyboard.down('ArrowDown');
+  await attendre(1300);
+  await page.keyboard.up('ArrowDown');
+  await attendre(2800);
+  const v = await etat(page);
+  console.log('     après avoir marché : ' + (v.murmure || '(rien)'));
+  c.dit(v.murmure === '', 'la bulle a disparu quand on s’éloigne');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
+c.titre('8. le coffre — le « +shells » ne doit plus être recouvert');
+{
+  /* Le défaut était écrit dans CLAUDE.md depuis le 17/09 — « le coffre a
+     encore ce défaut-là, lui » — et personne ne l'avait repris : à l'image
+     suivante, `proximity()` voyait un coffre désormais vide et recouvrait
+     le gain par « tu l'as déjà ouvert aujourd'hui », avant qu'on ait pu le
+     lire. C'est ce contrôle qui empêche qu'il revienne. */
+  const { ctx, page, erreurs } = await ouvrir(SOUS('coffre', '#8AA3B2'));
+  await attendre(900);
+  const a = await etat(page);
+  console.log('     plaque  : ' + a.plaque);
+  c.dit(a.plaque === 'Ouvrir le coffre', 'la plaque rose annonce « Ouvrir le coffre »');
+
+  await page.keyboard.press('e');
+  await attendre(500);
+  const b = await etat(page);
+  console.log('     après E : ' + b.murmure);
+  c.dit(/shell/.test(b.murmure), 'E annonce ce que le coffre donne');
+  c.dit(!/déjà ouvert/.test(b.murmure), 'et ce n’est pas « tu l’as déjà ouvert »');
+
+  // Le vrai contrôle : plusieurs images plus tard, le gain est encore lu.
+  await attendre(1600);
+  const d = await etat(page);
+  console.log('     1,6 s plus tard : ' + d.murmure);
+  c.dit(/shell/.test(d.murmure), 'le gain tient à l’écran, il n’est pas recouvert');
+  c.dit(d.plaque === null, 'la plaque est retombée : il n’y a plus rien à ouvrir');
+  c.dit(erreurs.length === 0, 'aucune erreur de console' + (erreurs.length ? ' → ' + erreurs[0] : ''));
+  await ctx.close();
+}
+
 await nav.close(); s.fermer();
 process.exit(c.fin() ? 1 : 0);

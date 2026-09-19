@@ -108,7 +108,20 @@ let bourse = JSON.parse(JSON.stringify(BOURSE0));
 export async function bourseDuJour() { return JSON.parse(JSON.stringify(bourse)); }
 export async function bourseGagner() { return JSON.parse(JSON.stringify(bourse)); }
 export async function bourseAcheter() { return JSON.parse(JSON.stringify(bourse)); }
-export async function bourseCadeau() { return JSON.parse(JSON.stringify(bourse)); }
+/* Le cadeau du jour **débite vraiment**, sinon le harnais n'éprouve rien.
+
+   Un faux qui rend la bourse inchangée laisse `cadeauDispo()` vrai, donc
+   `proximity()` réaffiche « il y a quelque chose dedans » à l'image
+   suivante — et le contrôle qui vise le recouvrement du gain passe alors
+   pour la mauvaise raison. Le faux doit tenir le contrat du serveur :
+   marquer le jour, et rendre `gain`, `serie`, ou `deja`. */
+export async function bourseCadeau() {
+  if (bourse.cadeau === bourse.jour) return { ...JSON.parse(JSON.stringify(bourse)), deja: true };
+  bourse.cadeau = bourse.jour;
+  bourse.serie = (bourse.serie | 0) + 1;
+  bourse.shells += 5;
+  return { ...JSON.parse(JSON.stringify(bourse)), gain: 5, serie: bourse.serie };
+}
 export async function bourseRepousse() { return JSON.parse(JSON.stringify(bourse)); }
 export async function bourseRamasser() { return JSON.parse(JSON.stringify(bourse)); }
 
