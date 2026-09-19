@@ -1202,6 +1202,58 @@ Elle **arrive à 2,6 s**, après que le murmure du chargement s'est effacé
 colonne de six mots qui couvrait l'île : c'est le temps qui les sépare,
 pas la largeur.
 
+## Le lien de connexion, et l'invite qui clignotait — 19/09/2026
+
+Deux défauts trouvés en éprouvant le parrainage sur un vrai téléphone. Ils
+n'ont rien en commun sauf l'essentiel : **l'écran ne répondait pas au
+geste.**
+
+### « Recevoir mon lien » ne disait pas que le lien était parti
+
+Le bouton repassait à son texte d'origine et la confirmation tombait dans
+le **murmure** — en bas du cadre, 2,2 s. La carte de connexion, elle, est
+hors du cadre : en portrait elle est au-dessus, sur un autre écran que le
+doigt. Donc « je clique et rien ne se passe », et on appuie dix fois.
+
+C'est exactement le défaut de la boutique d'avant le 16/09, et la règle est
+la même : **la réponse tombe là où est le doigt.** Elle a maintenant sa
+place dans la carte (`.envoye`, `.souci`), et elle y reste.
+
+Quatre choses à ne pas défaire :
+
+1. **Le champ disparaît quand le lien est parti.** Un champ vide et un
+   bouton actif n'invitent qu'à réappuyer. À la place : ce qui est envoyé,
+   à qui, d'où l'ouvrir, et où chercher s'il tarde.
+2. **Le renvoi attend une minute et l'annonce** (`RENVOI`, le compte à
+   rebours sur le bouton). Ce n'est pas de la prudence : Supabase refuse
+   tout second envoi avant une minute, donc dix appuis ne donnaient pas dix
+   mails, ils donnaient neuf erreurs. Mesuré : dix appuis, **un** appel.
+3. **L'adresse tapée survit au refus** (`lienSaisi`). La retaper après une
+   erreur est la deuxième chose qui fait abandonner.
+4. **Le bouton du compte à rebours porte `aria-live="off"`.** `#compte` est
+   une région `aria-live="polite"` : sans ça, un lecteur d'écran énoncerait
+   la carte entière une fois par seconde pendant une minute.
+
+`refusLisible()` traduit le refus de Supabase, qui arrive en anglais et dont
+le cas le plus fréquent est justement celui de la minute d'attente — celui
+qu'on rencontrait en appuyant plusieurs fois. « For security purposes » dans
+un jeu français pour enfants, non.
+
+### L'invite de rotation battait trop vite
+
+`tournepivot` faisait un cycle de 3,2 s dont la bascule tenait 0,58 s, et il
+tournait **à l'infini**. Sur un téléphone, à 19 px, ça ne se lit plus comme
+un geste : ça se lit comme un clignotement, et on referme l'invite pour
+faire cesser le mouvement — pas parce qu'on a compris.
+
+Cycle à 5,5 s, bascule à 0,83 s, maintien à 1,4 s, et **trois tours
+seulement**, avec `both` pour rester à plat ensuite. Un indice de geste qui
+se répète indéfiniment n'est plus un indice, c'est une insistance.
+
+Toute accélération future de ces valeurs se regarde **sur un vrai
+téléphone**, pas sur un cadre de 19 px dans un navigateur de bureau : c'est
+là que la différence se voit, et c'est de là qu'est venu le signalement.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

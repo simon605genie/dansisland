@@ -140,6 +140,15 @@ a{color:var(--link)}
 .compte .qui{font-family:"Baloo 2",sans-serif; font-weight:700}
 .compte input[type=text],.compte input[type=email]{width:auto; min-width:200px; flex:1 1 200px}
 .compte .sep{flex:1}
+/* Le lien parti, et le refus : ils se disent **dans la carte**, là où est le
+   doigt, et ils restent. Le murmure est en bas du cadre et dure 2,2 s — à
+   trois écrans du bouton en portrait. C'est la leçon de la boutique, et elle
+   vaut ici aussi. Les deux jetons employés sont thémés : rien à revérifier
+   en sombre. */
+.compte .envoye,.compte .souci{
+  flex:1 1 100%; background:var(--sunk); border-radius:12px;
+  padding:9px 12px; line-height:1.4;
+}
 .etat{
   font-family:"Baloo 2",sans-serif; font-size:13px; font-weight:700; padding:3px 11px;
   border-radius:999px; background:var(--sunk); color:var(--ink-3); white-space:nowrap;
@@ -724,12 +733,33 @@ textarea{
 }
 @keyframes tournearrive{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
 /* Le téléphone bascule, puis revient : c'est le geste demandé, joué en
-   petit. Le `prefers-reduced-motion` global, tout en haut, le fige. */
-@keyframes tournepivot{0%,52%,100%{transform:rotate(0)}70%,88%{transform:rotate(-82deg)}}
+   petit. Le `prefers-reduced-motion` global, tout en haut, le fige.
+
+   **Il tournait trop vite, et sans jamais s'arrêter.** Un cycle de 3,2 s
+   dont la bascule tenait 0,58 s, rejoué à l'infini : sur un téléphone, à
+   cette taille, ça ne se lit plus comme un geste, ça se lit comme un
+   clignotement — et on referme l'invite pour faire cesser le mouvement,
+   pas parce qu'on a compris.
+
+   Deux changements, et ils vont ensemble. Le cycle passe à 5,5 s, la
+   bascule à 0,83 s et le maintien à 1,4 s : on a le temps de voir quel
+   geste est demandé. Et il **ne joue que trois fois** — un indice de geste
+   qui se répète indéfiniment n'est plus un indice, c'est une insistance.
+   Le `both` le laisse à plat après le troisième tour, donc l'invite finit
+   immobile et lisible.
+
+   Toute accélération future de ces valeurs doit se regarder sur un vrai
+   téléphone, pas sur un cadre de 19 px dans un navigateur de bureau : c'est
+   là que la différence se voit, et c'est là qu'elle a été signalée. */
+@keyframes tournepivot{
+  0%,40%  {transform:rotate(0)}
+  55%,80% {transform:rotate(-82deg)}
+  95%,100%{transform:rotate(0)}
+}
 .tourne span{
   flex:none; display:grid; place-items:center; width:19px; height:27px;
   border:2px solid #FDFBF0; border-radius:4px; font-size:0; margin-bottom:1px;
-  animation:tournepivot 3.2s ease-in-out infinite;
+  animation:tournepivot 5.5s ease-in-out 3 both;
 }
 .tourne span::after{content:''; width:9px; height:1.5px; background:#FDFBF0; border-radius:1px}
 .tourne .mieux{display:block; color:var(--sand); font-weight:800}
@@ -5943,9 +5973,51 @@ function buildVoisins(){
 }
 
 /* ================= bandeau compte ================= */
+/* ---- le lien de connexion ----
+   Il partait sans rien dire. Le bouton repassait à « Recevoir mon lien » et
+   la confirmation tombait dans le **murmure**, en bas du cadre, 2,2 s : sur
+   téléphone c'est à trois écrans du doigt qui vient d'appuyer, donc « je
+   clique et rien ne se passe ». C'est exactement le défaut que la boutique a
+   déjà coûté une fois, et la règle est la même — la réponse tombe là où est
+   le doigt, et elle reste.
+   Le renvoi attend, et il le dit : Supabase refuse tout second envoi avant
+   une minute. Appuyer dix fois ne donnait pas dix mails, ça donnait neuf
+   erreurs. */
+let lienA='', lienLe=0, lienMinuteur=0, lienErr='', lienSaisi='', lienEnvoi=false;
+const RENVOI=60000;
+async function envoyerLien(v){
+  if(lienEnvoi) return;
+  v=String(v||'').trim();
+  // `indexOf('@')<1` et pas `<0` : une adresse qui commence par @ n'en est
+  // pas une, et le refus doit venir d'ici, pas du serveur une seconde plus tard.
+  if(!v || v.indexOf('@')<1 || v.indexOf('.', v.indexOf('@'))<0){
+    lienA=''; lienErr='Il me faut une adresse e-mail valide.'; peindreCompte(); return;
+  }
+  lienEnvoi=true; lienErr=''; lienSaisi=v; peindreCompte();
+  try{ await store.envoyerLienDeConnexion(v); lienA=v; lienLe=Date.now(); }
+  catch(e){ lienA=''; lienErr=refusLisible(e); }
+  lienEnvoi=false; peindreCompte();
+}
+/* Supabase répond en anglais, et son refus le plus fréquent est justement
+   celui de la minute d'attente — c'est-à-dire celui qu'on rencontre en
+   appuyant plusieurs fois, la raison même de ce correctif. Le laisser passer
+   tel quel, ce serait finir sur « For security purposes » dans un jeu en
+   français pour des enfants. */
+function refusLisible(e){
+  const m=String((e&&e.message)||e||'');
+  const s=m.match(/after (\d+) seconds?/i);
+  if(s) return 'Un lien vient d’être envoyé. Attends encore '+s[1]+
+               ' s avant d’en redemander un.';
+  if(/rate limit|too many/i.test(m)) return 'Trop de demandes d’un coup. Réessaie dans une minute.';
+  return 'Envoi impossible : '+m;
+}
+
 function peindreCompte(){
   const box=document.getElementById('compte'); if(!box) return;
   box.innerHTML='';
+  // La carte se refait entière à chaque passage : le compte à rebours du
+  // renvoi ne doit pas survivre au bouton qu'il met à jour.
+  clearInterval(lienMinuteur);
   const ajout=(el)=>box.appendChild(el);
   const txt=(t,cls)=>{const e=document.createElement('span'); if(cls)e.className=cls; e.innerHTML=t; return e;};
 
@@ -5962,16 +6034,44 @@ function peindreCompte(){
     return;
   }
   if(!moi){
+    // Le lien est parti : la carte le dit **\u00e0 la place** du formulaire. Tant
+    // qu'il n'y a rien d'autre \u00e0 faire qu'ouvrir sa bo\u00eete mail, un champ
+    // vide et un bouton actif n'invitent qu'\u00e0 r\u00e9appuyer.
+    if(lienA){
+      ajout(txt('\ud83d\udcec <b>Lien envoy\u00e9 \u00e0 '+esc(lienA)+'.</b> Ouvre-le <b>depuis cet appareil</b> : '+
+                'il ne marche pas ailleurs. S\u2019il tarde, regarde dans les ind\u00e9sirables.','envoye'));
+      const re=document.createElement('button'); re.className='btn';
+      // Le compte \u00e0 rebours est le seul texte qui change chaque seconde, et
+      // `#compte` porte `aria-live="polite"` : sans ce `off`, un lecteur
+      // d'\u00e9cran \u00e9noncerait la carte enti\u00e8re soixante fois de suite.
+      re.setAttribute('aria-live','off');
+      re.onclick=()=>envoyerLien(lienA);
+      const autre=document.createElement('button'); autre.className='btn';
+      autre.textContent='Changer d\u2019adresse';
+      autre.onclick=()=>{ lienA=''; lienErr=''; peindreCompte(); };
+      ajout(re); ajout(autre);
+      const majRenvoi=()=>{
+        const r=Math.max(0, Math.ceil((RENVOI-(Date.now()-lienLe))/1000));
+        re.disabled = lienEnvoi || r>0;
+        re.textContent = lienEnvoi ? 'Envoi\u2026'
+                       : (r ? 'Renvoyer dans '+r+'\u00a0s' : 'Renvoyer le lien');
+        if(!r) clearInterval(lienMinuteur);
+      };
+      majRenvoi();
+      if(!lienEnvoi) lienMinuteur=setInterval(majRenvoi, 1000);
+      return;
+    }
     ajout(txt('Re\u00e7ois un lien de connexion par e-mail, pas de mot de passe \u00e0 retenir.'));
+    if(lienErr) ajout(txt('\u26a0\ufe0f '+esc(lienErr),'souci'));
     const mail=document.createElement('input'); mail.type='email'; mail.placeholder='toi@exemple.be';
-    const go2=document.createElement('button'); go2.className='btn primary'; go2.textContent='Recevoir mon lien';
-    go2.onclick=async()=>{
-      const v=mail.value.trim(); if(!v||v.indexOf('@')<0){ say('Il me faut une adresse e-mail valide.'); return; }
-      go2.disabled=true; go2.textContent='Envoi\u2026';
-      try{ await store.envoyerLienDeConnexion(v); say('Lien envoy\u00e9 \u00e0 <b>'+esc(v)+'</b>. Ouvre-le depuis cet appareil.'); }
-      catch(e){ say('Envoi impossible : '+esc(e.message||e)); }
-      go2.disabled=false; go2.textContent='Recevoir mon lien';
-    };
+    // L'adresse tap\u00e9e survit au refus : la retaper apr\u00e8s une erreur, c'est
+    // la deuxi\u00e8me chose qui fait abandonner.
+    mail.value=lienSaisi;
+    mail.oninput=()=>{ lienSaisi=mail.value; };
+    mail.onkeydown=(e)=>{ if(e.key==='Enter') envoyerLien(mail.value); };
+    const go2=document.createElement('button'); go2.className='btn primary';
+    go2.disabled=lienEnvoi; go2.textContent=lienEnvoi?'Envoi\u2026':'Recevoir mon lien';
+    go2.onclick=()=>envoyerLien(mail.value);
     ajout(mail); ajout(go2); return;
   }
   ajout(txt((monPseudo?esc(monPseudo):'Connect\u00e9')+'','qui'));
