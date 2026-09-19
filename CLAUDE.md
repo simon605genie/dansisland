@@ -1850,6 +1850,61 @@ Deux choses apprises en les écrivant :
    en espérant qu'il trouve quelque chose, c'est ne pas savoir s'il
    marche quand il passe.
 
+## Un souvenir décore, il ne fonctionne pas — 19/09/2026
+
+Trou ouvert le matin même par les trois objets chers, et que je n'avais
+pas pesé en les écrivant.
+
+Le souvenir est une copie signée `o.de`, posée sur une case libre de sa
+propre île. Jusqu'au 19/09, **tous** les objets de la boutique étaient
+décoratifs : en ramener un de chez un ami coûtait au vendeur une
+décoration, rien de plus. Une girouette, un carillon et une boîte aux
+lettres, eux, *font* quelque chose — donc une seule visite chez quelqu'un
+qui en possède un suffisait à obtenir gratuitement les trois articles les
+plus chers de la Boutique.
+
+C'est exactement la règle des îles bot — « on en ramène un souvenir
+gratuitement, et la boutique ne sert plus à rien » — qui revenait par la
+porte des vrais voisins. Et c'est la double vérification du compagnon,
+transposée : **posséder le dessin ne suffit pas.**
+
+Quatre choses à ne pas défaire :
+
+1. **On ne reprend rien.** Le souvenir reste posé, se regarde, se
+   déplace, se montre. Il ne fait simplement pas le travail de celui
+   qu'on achète. C'est la même règle que le cadre glissé contre le mur
+   plutôt qu'effacé : on ne reprend pas ce qui a été posé.
+2. **`FONCTIONNEL` vit à côté d'`EQUIPEMENT`**, et pour la même raison :
+   c'est une propriété du type, dans le catalogue. **Tout nouvel objet
+   payant qui fait quelque chose doit y entrer**, sinon une visite chez
+   un ami le donne gratuitement.
+3. **`estSouvenir(o)` est le seul test**, et les trois sondes le lisent —
+   `boiteProche()`, `girouetteProche()`, `aUnCarillon()`. Pas de cas
+   particulier pour la visite : un objet qui porte `o.de` ne fonctionne
+   nulle part, y compris celui que l'hôte a lui-même rapporté d'ailleurs.
+4. **Le refus tombe là où est le doigt**, deux fois. La bulle de la
+   branche « souvenir rapporté » de `proximity()` — qui existait déjà —
+   nomme l'article et **donne son prix**. Et `ramasserSouvenir()` le dit
+   au moment du ramassage, le seul instant où le doigt est sur l'objet :
+   un carillon n'a pas de bulle, et un son qui ne vient jamais ne
+   s'explique pas au pied de l'objet.
+
+### Trois assertions fausses, et ce qu'elles apprennent
+
+Le contrôle « 9 bis » a échoué trois fois avant de passer, et **les trois
+échecs venaient du harnais, pas du jeu** :
+
+- il cherchait l'absence du mot « shell » après `E` — mais la bulle du
+  souvenir **porte le prix**, donc elle contient ce mot. L'assertion
+  tombait sur son propre texte. Elle regarde maintenant ce que le *vrai*
+  objet aurait produit : les mots reçus, ou l'état de la mer ;
+- il cherchait `C’est un souvenir` avec l'apostrophe en caractère, alors
+  que le fichier la porte en **échappement** `\u2019`. Mesuré, pas deviné.
+
+La leçon est la même que pour `store.js` compté comme export manquant :
+**une assertion se vérifie contre ce que le fichier contient vraiment**,
+pas contre ce qu'on croit y avoir écrit.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
