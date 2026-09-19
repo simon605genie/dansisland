@@ -2239,6 +2239,40 @@ court, parce que le bloc de la commande y fait 322 px à lui seul, soit plus
 que les 168 px du panneau. Le panneau a plus que doublé, ce n'est pas la
 même chose que d'avoir de la place.
 
+**Debout aussi**, et c'était la même cause. `.compte>span{flex:1 1 100%}`
+existe, à 430 px, pour faire de la place au **champ** — mais quand il n'y a
+plus de champ, il empilait cinq rangées : nom, adresse, Copier, état, Se
+déconnecter, soit **167 px**, sur un téléphone où le cadre du jeu n'en fait
+que 234. La carte faisait les trois quarts de la taille du jeu, pour dire au
+joueur sa propre adresse.
+
+Pas le même remède, en revanche : en portrait **rien ne disparaît**, les
+rangées se remettent simplement à la file. Il y a la place pour deux, et
+l'adresse de l'île est ce qu'on partage. C'est l'écran couché, et lui seul,
+qui doit en plus cacher les `redite` : sa colonne ne fait que 235 px.
+
+    carte, portrait 375x667   167 px  →  77 px
+    cadre du jeu              y=240   →  y=150
+
+### Un seuil calibré sur une machine tombe sur une autre
+
+Le contrôle de la carte couchée est passé ici et a **échoué en CI**, sur la
+seule ligne qui exigeait `panneau >= 150` : le runner rend le texte un peu
+plus large, la carte y fait 67 px au lieu de 61 et le panneau 143 au lieu de
+168. Le gain était pourtant bien là — 73 → 143.
+
+Le défaut tenait en une phrase, « deux fois plus de place pour dire qui on
+est que pour jouer », et c'est donc un **rapport** qu'il fallait vérifier :
+`panneau > carte`. Vrai à 168/61 comme à 143/67, faux à 73/156. L'écart
+entre deux mesures du même écran ne dépend pas de la police ; un nombre
+absolu, si. Un plancher large (120 px) reste à côté, pour le cas où tout
+rétrécirait en gardant le rapport.
+
+C'est la troisième fois de la journée qu'une mesure raisonne comme son
+objet : la regex qui cherchait des sélecteurs, le harnais qui ne mesurait
+que des fenêtres étroites, et maintenant le seuil qui ne connaissait qu'une
+police.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

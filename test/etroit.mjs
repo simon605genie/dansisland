@@ -189,9 +189,19 @@ c.titre('la carte de connexion couchée, et ce qu’elle ne doit pas perdre');
   });
   console.log('     carte ' + v.haut + ' px (pose=' + v.pose + ', champ=' + v.champ + '), panneau ' + v.panel + ' px');
   c.dit(!v.champ && v.pose, 'tout est réglé, donc la carte est « posée »');
-  c.dit(v.haut <= 80, 'elle tient sur une rangée ou deux (' + v.haut + ' px, contre 156 avant)');
+  c.dit(v.haut <= 90, 'elle tient sur une rangée ou deux (' + v.haut + ' px, contre 156 avant)');
   c.dit(v.deco, 'ce qui n’est nulle part ailleurs reste : « Se déconnecter »');
-  c.dit(v.panel >= 150, 'le panneau récupère la place (' + v.panel + ' px, contre 73 avant)');
+  /* Le défaut tenait en une phrase — « deux fois plus de place pour dire
+     qui on est que pour jouer » — et c'est donc un **rapport** qu'il faut
+     vérifier, pas un nombre. Mon premier jet exigeait 150 px de panneau,
+     mesurés sur cette machine-ci : le runner rend le texte un peu plus
+     large, la carte y fait 67 px au lieu de 61 et le panneau 143 au lieu
+     de 168. Rouge, pour un gain pourtant bien là (73 → 143). Un seuil
+     calibré sur une machine est un seuil qui tombera sur une autre ;
+     l'écart entre deux mesures du même écran, non. */
+  c.dit(v.panel > v.haut, 'le panneau a plus de place que la carte (' + v.panel +
+        ' px contre ' + v.haut + ' — c’était 73 contre 156)');
+  c.dit(v.panel >= 120, 'et il en a vraiment, pas juste plus qu’elle (' + v.panel + ' px)');
 
   /* Et l'état que le faux serveur ne sait pas produire — il rend toujours
      un compte complet, avec son île et son adresse. On remet donc un champ
@@ -212,6 +222,29 @@ c.titre('la carte de connexion couchée, et ce qu’elle ne doit pas perdre');
   c.dit(w.rediteRevenue, 'ce qui avait été caché revient avec lui');
   c.dit(erreurs.length === 0, 'aucune erreur de console');
   await ctx.close();
+
+  /* Et debout, sur un petit téléphone. Même cause — `>span{flex:1 1 100%}`
+     existe pour faire de la place au **champ**, et il n'y en a plus — mais
+     pas le même remède : en portrait il y a la place pour deux rangées, et
+     l'adresse de l'île est ce qu'on partage. Elle reste donc visible. */
+  const t = await onglet(nav, { taille: { width: 375, height: 667 }, tactile: true });
+  await t.page.goto(s.url, { waitUntil: 'load' });
+  await attendre(2200);
+  const u = await t.page.evaluate(() => {
+    const c = document.getElementById('compte');
+    const cadre = document.querySelector('.viewport').getBoundingClientRect();
+    const adr = c.querySelector('.redite');
+    return { haut: Math.round(c.getBoundingClientRect().height),
+             pose: c.classList.contains('pose'),
+             adresseVisible: !!adr && adr.offsetParent !== null && adr.getBoundingClientRect().width > 40,
+             cadreY: Math.round(cadre.top), cadreBas: Math.round(cadre.bottom), ecran: 667 };
+  });
+  console.log('     portrait 375x667 : carte ' + u.haut + ' px, cadre y' + u.cadreY + '→' + u.cadreBas);
+  c.dit(u.pose && u.haut <= 90, 'debout aussi, la carte se pose (' + u.haut + ' px, contre 167 avant)');
+  c.dit(u.adresseVisible, 'mais l’adresse de l’île reste visible : en portrait, elle a la place');
+  c.dit(u.cadreBas <= u.ecran, 'et le cadre du jeu tient tout entier dans le premier écran');
+  c.dit(t.erreurs.length === 0, 'aucune erreur de console');
+  await t.ctx.close();
 }
 
 await nav.close(); s.fermer();

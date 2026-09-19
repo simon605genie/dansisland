@@ -201,6 +201,17 @@ a{color:var(--link)}
      partagent une ligne. */
   .compte{font-size:12px; gap:6px}
   .compte>span{flex:1 1 100%; line-height:1.35}
+  /* …mais une fois qu'il n'y a plus de champ, cette pleine largeur n'a plus
+     de raison d'être : elle empilait cinq rangées — nom, adresse, Copier,
+     état, Se déconnecter — soit **167 px**, sur un téléphone où le cadre du
+     jeu n'en fait que 234. La carte faisait les trois quarts de la taille
+     du jeu, pour dire au joueur sa propre adresse.
+
+     Elles se remettent donc à la file, et rien ne disparaît : en portrait
+     il y a la place pour deux rangées, et l'adresse de l'île est ce qu'on
+     partage. C'est l'écran couché, et lui seul, qui doit en plus cacher ce
+     qui existe ailleurs — sa colonne ne fait que 235 px. */
+  .compte.pose>span{flex:0 1 auto}
   .compte input[type=text],.compte input[type=email]{min-width:0; flex:1 1 110px; font-size:13.5px; padding:8px 10px}
   .compte .btn{font-size:13px; padding:8px 11px}
   .tabs button{font-size:10.5px; padding:12px 0; letter-spacing:-.01em}
