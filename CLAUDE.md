@@ -1518,6 +1518,113 @@ Deux choses à tenir :
    Si `RAYON_MAX` ou `PAS_RAYON` bougent, le total suit tout seul et il
    n'y a pas de dix écrit en dur à retrouver.
 
+## Trois objets chers, et qui font quelque chose — 19/09/2026
+
+`supabase/2026-09-19_objets_chers.sql`, **rejouable** : un seul
+`insert ... on conflict do update`. Trois lignes de catalogue, rien
+d'autre — pas de table, pas de fonction, **aucune clé de plus dans
+`mondeNu()`**. Un objet posé est un objet posé.
+
+    girouette      42   dit où en est la marée, et dans combien de temps
+    carillon       50   sonne tout seul, et les visiteurs l'entendent
+    boitelettres   55   lève son drapeau quand on t'a laissé un mot
+
+La question tranchée avant d'écrire une ligne : **qu'est-ce qu'un objet
+cher a le droit de faire ?** Pas rapporter de shells — ce serait une
+quatrième corvée, et le revenu solitaire est tenu à 19 par jour contre 65
+pour « quelqu'un est passé ». Pas monter un plafond — « ça revient à
+vendre de la monnaie », c'est écrit depuis le 16/09. Pas donner un
+avantage sur quelqu'un — il n'y a personne contre qui gagner.
+
+Reste une chose, et c'est celle que le jeu fait déjà partout : **sortir
+une information d'un panneau et la poser quelque part où l'on va à pied.**
+Le coffre a fait ça au cadeau du jour, l'appareil à la carte postale, le
+pas de la porte à la commande. Les trois objets chers font ça à la marée,
+aux mots reçus, et au son de l'île.
+
+Sept choses à ne pas défaire.
+
+1. **Le prix est en SQL, et la vitrine n'est qu'un affichage de secours.**
+   Tant que la migration n'est pas jouée, les trois s'affichent et l'achat
+   répond que l'article n'existe pas. C'est le piège déjà écrit pour
+   `slug_libre()` et les contraintes : deux listes qui divergent.
+2. **Aucun n'est sur les îles bot** (`THEMES`). On en ramènerait un
+   souvenir gratuitement, et la Boutique ne servirait plus à rien.
+   *(Au passage : `phare` et `boutique`, eux, y sont, et c'est contraire à
+   cette règle. Un souvenir porte `o.de`, donc `normaliserEconomie()` ne
+   crédite pas le pinceau — le mal est borné à l'objet. Corriger ça
+   changerait l'aspect des vingt îles de démonstration, et ça se décide.)*
+3. **`etatObjet(o,t)` est le seul endroit qui dit ce qu'un dessin lit du
+   jeu.** Quatre objets le font — coffre, boîte, girouette, carillon — et
+   le cinquième passera par là aussi. Avant, `drawWorld()` appelait
+   `coffreOuvert(o)` pour tous les objets du monde, et le prochain état
+   aurait ajouté un `if` sur place.
+4. **Les vignettes appellent le dessin sans état.** Un `etat` absent doit
+   rendre une image posée, pas une image vide : d'où les `||0` de la
+   girouette et du carillon, et le drapeau baissé par défaut.
+5. **Chaque geste pose lui-même la clé de bulle de l'état d'après.** C'est
+   la règle déjà écrite pour `porterLaCommande()` et `porte:livre`, et
+   c'est le défaut que ce chantier a rouvert deux fois avant de la
+   relire : le premier essai affichait « ta boîte est vide » à la place des
+   mots qu'on venait de lire, parce que `proximity()` repassait à l'image
+   suivante et recouvrait tout sous une clé différente. `releverLaBoite()`
+   écrit sous `boite:vide`, qui est l'état d'après ; `lireLaGirouette()`
+   sous `girouette`, la même clé que son invitation. Les deux ont été
+   trouvés par `test/objets.mjs`, pas à la relecture.
+6. **Le rang de la boîte et de la girouette est le même dans `agir()` et
+   dans `proximity()`** — souvenir, chien, crotte, coffre, **boîte**,
+   **girouette**, porte — et les deux passent par `boiteProche()` et
+   `girouetteProche()`. La règle déjà écrite pour le chien et le coffre,
+   et c'est elle que `test/objets.mjs` éprouve en premier : il lit ce que
+   la plaque annonce, appuie sur `E`, et compare.
+7. **La girouette marche chez les voisins, la boîte non.** La marée est la
+   même pour tout l'archipel — c'est ce qui permet d'en parler — et le
+   courrier est personnel, comme la porte et comme le coffre.
+
+### Le carillon, et pourquoi il n'a pas de minuteur à lui
+
+Une seule boucle, démarrée avec l'ambiance, qui regarde `world.objects` à
+chaque tour et ne sonne que s'il y a un carillon. On pose, on efface, on
+entre chez un voisin, on ressort : il n'y a rien à rebrancher ni à remettre
+à zéro. **Un minuteur par objet posé, et la gomme laisserait sonner un
+fantôme.**
+
+Il sonne dans la pentatonique de `GAMMES[world.sky]`, deux octaves plus
+haut et à moitié moins fort que la musique : plus bas, il se confondrait
+avec elle et on aurait payé 50 shells pour quelque chose qu'on n'entend
+pas. Il ne sonne pas en ambiance `silence` — `ambiance` n'existe pas
+alors, et `cloche()` sort tout de suite. Et il appartient à **l'île**, pas
+au joueur, comme l'ambiance elle-même : c'est ce qui en fait un objet
+qu'on a envie de payer.
+
+### Le comptoir porte le prix
+
+Il ne le portait que dans le bouton, qui dit « il te manque 45 shells »
+quand on ne peut pas encore payer — et « il te manque 45 » ne dit pas si
+l'objet en vaut 50 ou 500. Le prix est maintenant dans la ligne du titre,
+toujours.
+
+### `test/objets.mjs`, et ce qu'il a trouvé
+
+Cinquième harnais. Il pose l'objet **sous les pieds du bonhomme** plutôt
+que de le faire marcher : viser une case demanderait de refaire la caméra,
+et `pt()` est seul à avoir le droit de défaire cette transformation. La
+case de départ, **(8,10)**, est mesurée et non déduite — le bonhomme
+démarre devant sa porte, pas au `9,5 ; 11,5` de la déclaration de `hero`,
+qui n'est que le repli.
+
+Deux choses à savoir sur `faux-store.js`, qui a gagné deux crochets :
+
+- `test:objets` sème des objets d'île, et `test:mots` des mots reçus. Les
+  deux passent par le **vrai** chemin de chargement : un harnais qui
+  écrirait directement dans `mine` n'éprouverait pas `normaliserMonde()`,
+  et c'est là que se perdent les clés absentes de `mondeNu()`.
+- Un mot semé **doit** porter `case_x`/`case_y`. `replanter()` en fait un
+  panneau sur l'île, `proximity()` fait passer un panneau avant tout le
+  reste, et sans case la distance vaut `NaN` : `NaN >= 0.95` est faux,
+  donc le panneau gagnait partout et recouvrait la bulle de l'objet visé.
+  Une heure perdue là-dessus.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

@@ -42,9 +42,26 @@ export async function envoyerLienDeConnexion(v) {
 }
 export async function pseudo() { return 'Filleul'; }
 
+/* Une île semée par le harnais.
+
+   `test:objets` est un tableau d'objets d'île ({t,x,y}) à poser, et
+   `test:mots` une liste de mots reçus. Les deux sont vides par défaut,
+   donc rien ne change pour les harnais qui ne s'en servent pas.
+
+   Ils passent par le monde et par `motsDe()`, c'est-à-dire par le vrai
+   chemin de chargement : un harnais qui écrirait directement dans `mine`
+   n'éprouverait pas `normaliserMonde()`, et c'est précisément là que se
+   perdent les clés absentes de `mondeNu()`. */
+const lu = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
+
 export async function monIle() {
+  const objets = lu('test:objets', null);
   return { id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', slug: 'filleul', nom: 'L’île du filleul',
-           monde: null, maj_le: new Date().toISOString(), vu_le: new Date().toISOString() };
+           monde: objets ? { objects: objets } : null,
+           maj_le: new Date().toISOString(),
+           // `vu_le` à l'époque zéro : tous les mots semés comptent comme
+           // reçus pendant l'absence, donc le drapeau de la boîte se lève.
+           vu_le: new Date(0).toISOString() };
 }
 export async function chargerIle() { return null; }
 export async function creerIle() { return null; }
@@ -53,7 +70,18 @@ export function brouillonLocal() { return null; }
 export function planifierSauvegarde() {}
 export async function marquerVu() {}
 
-export async function motsDe() { return []; }
+export async function motsDe() {
+  return lu('test:mots', []).map((m, i) => ({
+    id: 'm' + i, auteur: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    auteur_nom: m[0], texte: m[1], masque: false,
+    // `replanter()` plante chaque mot sur l'île sous forme de panneau, et
+    // `proximity()` fait passer un panneau avant tout le reste. Sans case,
+    // la distance vaut NaN, `NaN >= 0.95` est faux, et le panneau gagne
+    // partout : la bulle d'un mot recouvrait celle de l'objet visé.
+    case_x: 2 + i, case_y: 2,
+    cree_le: new Date(Date.now() - (10 - i) * 1000).toISOString(),
+  }));
+}
 export async function planterMot() { return null; }
 export async function supprimerMot() {}
 export async function masquerMot() {}

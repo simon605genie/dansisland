@@ -1245,6 +1245,40 @@ jauge, les crans gagnés sur dix, les mots reçus, et la seule chose à faire
 pour en gagner : envoyer sa carte postale. Le murmure de `faireGrandir()`
 dit au passage combien de mots il reste.
 
+## Les trois objets chers
+
+Ils ne décorent pas : ils font quelque chose, et ce qu'ils font était
+jusqu'ici enfermé dans un panneau. C'est le geste que le jeu répète
+partout — le coffre pour le cadeau du jour, l'appareil pour la photo, le
+pas de la porte pour la commande : sortir une information d'un panneau et
+la poser là où l'on va à pied.
+
+    Girouette          42   marche sur elle : elle dit si la mer est haute
+                            ou basse, et dans combien de temps elle change.
+                            Marche aussi chez les voisins — la marée est la
+                            même pour tout l'archipel.
+    Carillon           50   sonne tout seul, de loin en loin, dans la gamme
+                            de l'heure de l'île. Il appartient à l'île :
+                            tes visiteurs l'entendent.
+    Boîte aux lettres  55   son drapeau se lève quand on t'a laissé un mot,
+                            et ça se voit de l'autre bout de l'île. Marche
+                            dessus et appuie sur E pour lire. Chez un
+                            voisin, elle reste baissée : c'est son courrier.
+
+**Aucun des trois ne rapporte un shell et aucun ne touche à un plafond.**
+Un achat qui ferait monter un gain reviendrait à vendre de la monnaie, et
+une quatrième corvée déséquilibrerait le rapport entre ce qu'on gagne seul
+(19 shells par jour) et ce qu'on gagne parce que quelqu'un est passé (65).
+
+Leurs prix sont dans la table `catalogue`, comme tout le reste : tant que
+`supabase/2026-09-19_objets_chers.sql` n'est pas joué, ils s'affichent dans
+la Boutique et l'achat les refuse. La vitrine du client n'est qu'un
+affichage de secours.
+
+Rien n'en part en base au-delà de l'objet posé lui-même : pas une clé de
+plus dans `mondeNu()`, rien pour Ctrl+Z, aucune table. Ce qu'ils lisent —
+la marée, les mots reçus — se calcule déjà ailleurs.
+
 ## Les souvenirs
 
 Chez un voisin, s'arrêter à côté d'un objet propose de le ramener.
