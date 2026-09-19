@@ -2530,15 +2530,73 @@ function mer(t){
   const tone=skyTone();
   seaPath(t);
   ctx.fillStyle=world.pal.water; ctx.fill();
+
+  /* Le haut-fond. La mer était un aplat d'une seule couleur, et une île
+     posée sur un aplat flotte : rien ne dit que l'eau est peu profonde
+     contre la plage et profonde au large. Un dégradé le dit en trois
+     lignes, et c'est ce qui donne d'un coup son volume à toute la scène.
+
+     Il part exactement du bord de l'île — `kPlage()`, déjà calculé pour le
+     requin — et pas du centre : sous l'île il n'y a rien à voir, et un
+     dégradé qui commencerait au milieu éclaircirait une eau qu'on ne voit
+     pas, pour s'assombrir trop tôt là où on la voit.
+
+     Le dégradé est **elliptique**, pas circulaire, et c'est pour ça qu'on
+     passe dans un repère mis à l'échelle : la mer fait 438x240, donc un
+     dégradé rond y atteindrait le large bien plus tôt au nord et au sud
+     qu'à l'est et à l'ouest — soit exactement l'inverse de la vérité,
+     puisque c'est au nord et au sud que la bande d'eau est la plus mince.
+     Le `clip` est posé **avant** la mise à l'échelle : la découpe reste
+     dans le repère du monde, seul le dégradé s'étire. */
+  ctx.save();
+  seaPath(t); ctx.clip();
+  const c=merCentre(), ky=MER_RY/MER_RX;
+  ctx.translate(c.x,c.y); ctx.scale(1,ky); ctx.translate(-c.x,-c.y);
+  const deg=ctx.createRadialGradient(c.x,c.y,MER_RX*kPlage()*0.94, c.x,c.y,MER_RX*1.04);
+  deg.addColorStop(0,   shade(world.pal.water, 30));   // le lagon, contre le sable
+  deg.addColorStop(0.45,shade(world.pal.water,  6));
+  deg.addColorStop(1,   shade(world.pal.water,-26));   // le large
+  ctx.fillStyle=deg;
+  ctx.fillRect(c.x-MER_RX*1.3, c.y-MER_RX*1.3, MER_RX*2.6, MER_RX*2.6);
+  ctx.restore();
+
+  seaPath(t);
   ctx.strokeStyle=tone.paper; ctx.lineWidth=7; ctx.stroke();
   ctx.save(); seaPath(t); ctx.clip();
   ctx.strokeStyle='rgba(255,255,255,.4)'; ctx.lineWidth=2.6; ctx.lineCap='round';
   for(let i=0;i<11;i++){
-    const c=merCentre();
     const wx=c.x+Math.sin(i*2.1)*MER_RX*0.85, wy=c.y+Math.cos(i*1.7)*MER_RY*0.85+Math.sin(t/1500+i)*2.5;
     ctx.beginPath(); ctx.moveTo(wx-11,wy); ctx.quadraticCurveTo(wx-5,wy-4,wx,wy);
     ctx.quadraticCurveTo(wx+5,wy+4,wx+11,wy); ctx.stroke();
   }
+  /* Les éclats de lumière sur l'eau. Tout se déduit de `t` et de `h2()` :
+     aucun état à tenir, rien à remettre à zéro en changeant d'île, rien
+     dans `mondeNu()`. C'est la ligne déjà écrite pour les mouettes et le
+     requin.
+
+     Chacun a **sa** période, tirée de sa position : des éclats qui
+     battraient ensemble se liraient comme un clignotement de l'écran, pas
+     comme de l'eau. Et ils ne s'allument que dans l'anneau qui va du bord
+     de l'île au large — sous l'île il n'y a pas d'eau, et tout contre le
+     contour ils déborderaient sur le papier une fois sur trois, là où
+     `wMer()` rentre. */
+  for(let i=0;i<22;i++){
+    const a=h2(i*3.7,1.3)*Math.PI*2;
+    const k=kPlage()+ (0.97-kPlage())*h2(i*1.9,5.1);
+    const per=2600+h2(i*2.3,9.7)*4200, ph=h2(i*5.1,2.7)*per;
+    // Une pointe brève et un long repos : un éclat qui dure est un reflet,
+    // un éclat qui passe est de l'eau qui bouge.
+    const u=((t+ph)%per)/per;
+    const v=u<0.14 ? Math.sin(u/0.14*Math.PI) : 0;
+    if(v<=0.02) continue;
+    const p=pointMer(a,k,t), r=1.6+2.3*h2(i*7.3,4.9);
+    ctx.globalAlpha=0.55*v;
+    ctx.fillStyle='#FFFFFF';
+    ctx.beginPath();
+    ctx.ellipse(p.x,p.y,r*2.1,r*0.5,0,0,Math.PI*2);   // couché, comme la houle
+    ctx.fill();
+  }
+  ctx.globalAlpha=1;
   ctx.restore();
 }
 /* ================= ce qui vit dans l'eau =================
@@ -4628,8 +4686,10 @@ function avancerLaBalade(dt){
 
    Un navigateur refuse de faire du bruit avant que l'utilisateur ait
    touché la page : le contexte ne démarre donc qu'au premier clic. */
-const AMBIANCES=[['silence','Silence'],['vagues','Vagues'],['oiseaux','Oiseaux'],['nuit','Nuit']];
+const AMBIANCES=[['silence','Silence'],['vagues','Vagues'],['oiseaux','Oiseaux'],['nuit','Nuit'],
+                 ['musique','Musique']];
 let ac=null, maitre=null, ambiance=null, ambianceEnCours='', minuteurOiseaux=null;
+let minuteurNotes=null, echo=null, noeudsEcho=[];
 let sonCoupe = localStorage.getItem('dansisland:muet')==='1';
 
 function ctxAudio(){
@@ -4729,8 +4789,90 @@ function grillon(){
   const f=ac.createBiquadFilter(); f.type='bandpass'; f.frequency.value=4500; f.Q.value=7;
   o.connect(f).connect(g).connect(ambiance); o.start(); o.stop(t+0.22);
 }
+/* ---- la musique ----
+   Il y avait des nappes, des oiseaux et des grillons ; il n'y avait pas une
+   note. Elle est **générative**, pas enregistrée, pour la raison déjà écrite
+   en haut de cette section : pas de fichier à héberger, pas de licence à
+   vérifier, pas un octet à charger avant de jouer. Et elle ne se répète
+   jamais, ce qu'aucune boucle de trois minutes ne sait faire — or c'est une
+   île où l'on reste.
+
+   Elle est une **ambiance parmi les autres**, donc `mine.ambiance` la porte
+   déjà : aucune clé de plus dans `mondeNu()`, aucune migration. Elle
+   appartient à l'île comme les vagues, et les visiteurs l'entendent.
+   Personne ne l'a subie : la valeur par défaut reste `vagues`. */
+
+/* Cinq degrés, jamais plus. Une gamme pentatonique n'a pas de note fausse :
+   un tirage au hasard n'y peut pas sonner comme une erreur, et c'est ce qui
+   permet à la musique de ne jamais se répéter sans jamais déraper. Le mode
+   suit **le ciel de l'île** et se relit à chaque note, donc passer le ciel
+   en nuit assombrit la musique sans rien redémarrer. */
+const GAMMES={
+  'jour':       {racine:261.63, deg:[0,2,4,7,9],  oct:[0,1,2], repos:[2.4,5.4], tenue:[2.2,3.6], vol:0.055},
+  'crépuscule': {racine:220.00, deg:[0,3,5,7,10], oct:[0,1,2], repos:[3.0,6.5], tenue:[3.0,4.8], vol:0.050},
+  'nuit':       {racine:220.00, deg:[0,3,5,7,10], oct:[0,1],   repos:[4.0,9.0], tenue:[4.0,6.5], vol:0.042}
+};
+/* Une cloche douce : le fondamental, l'octave à peine désaccordée qui lui
+   donne son grain, et une harmonique lointaine. Trois sinus. L'attaque est
+   en 50 ms et non en 8 comme les bruits d'objets : c'est toute la
+   différence entre une note et un choc. */
+function cloche(f,tenue,vol){
+  if(sonCoupe || !ac || !ambiance) return;
+  const t=ac.currentTime, g=ac.createGain();
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(vol,t+0.05);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+tenue);
+  [[1,1],[2.004,0.34],[3.01,0.10]].forEach(([r,a])=>{
+    const o=ac.createOscillator(), h=ac.createGain();
+    o.type='sine'; o.frequency.value=f*r; h.gain.value=a;
+    o.connect(h).connect(g); o.start(t); o.stop(t+tenue+0.1);
+  });
+  g.connect(echo||ambiance);
+}
+/* L'écho n'est pas un effet, c'est la pièce. Sans lui chaque note tombe dans
+   le vide et s'arrête net, ce qui s'entend comme un bip ; avec, elle
+   s'éloigne. Le passe-bas **dans** la boucle mange les aigus à chaque tour,
+   comme le ferait de l'air : la reprise est plus sourde que la note, et
+   c'est ce qui la fait passer pour de la distance. */
+function ouvrirEcho(){
+  const e=ac.createGain(), d=ac.createDelay(2), f=ac.createBiquadFilter(), r=ac.createGain();
+  d.delayTime.value=0.62; r.gain.value=0.33;
+  f.type='lowpass'; f.frequency.value=1800;
+  e.connect(d); d.connect(f); f.connect(r); r.connect(d);   // la boucle
+  e.connect(ambiance); f.connect(ambiance);                 // le sec et le mouillé
+  noeudsEcho=[e,d,f,r];
+  return e;
+}
+function boucleMusique(){
+  const G=GAMMES[world.sky]||GAMMES.jour;
+  // Une phrase, pas une note : deux ou trois notes proches disent une
+  // intention, une note seule dit un bip. Mais une fois sur trois elle reste
+  // seule — dans une musique de ce genre, le silence fait autant que les
+  // notes, et une nappe de notes continue devient un tapis qu'on n'entend
+  // plus.
+  const n = Math.random()<0.34 ? 1 : (Math.random()<0.7 ? 2 : 3);
+  for(let i=0;i<n;i++) setTimeout(()=>{
+    const d=G.deg[Math.floor(Math.random()*G.deg.length)];
+    const o=G.oct[Math.floor(Math.random()*G.oct.length)];
+    const tenue=G.tenue[0]+Math.random()*(G.tenue[1]-G.tenue[0]);
+    cloche(G.racine*Math.pow(2,o+d/12), tenue, G.vol*(0.7+Math.random()*0.3));
+  }, i*(170+Math.random()*220));
+  // Et de loin en loin la fondamentale, une octave plus bas : c'est elle qui
+  // dit dans quel ton on est, et elle repose l'oreille.
+  if(Math.random()<0.18) setTimeout(()=>cloche(G.racine/2, G.tenue[1]*1.6, G.vol*0.8), 900);
+  const [a,b]=G.repos;
+  minuteurNotes=setTimeout(boucleMusique,(a+Math.random()*(b-a))*1000);
+}
+
 function arreterAmbiance(){
   clearTimeout(minuteurOiseaux); minuteurOiseaux=null;
+  // Le minuteur des notes et la boucle de l'écho s'arrêtent ensemble. Une
+  // boucle de délai laissée branchée sur elle-même continue de tourner à
+  // vide : elle finit par s'éteindre, mais elle n'a plus aucune raison
+  // d'exister.
+  clearTimeout(minuteurNotes); minuteurNotes=null;
+  noeudsEcho.forEach(n=>{ try{ n.disconnect(); }catch(e){} });
+  noeudsEcho=[]; echo=null;
   if(ambiance){ try{ ambiance.disconnect(); }catch(e){} ambiance=null; }
   ambianceEnCours='';
 }
@@ -4753,6 +4895,15 @@ function jouerAmbiance(nom){
     nappe(240,0.05,11,0.5);
     const boucle=()=>{ grillon(); minuteurOiseaux=setTimeout(boucle,500+Math.random()*1600); };
     minuteurOiseaux=setTimeout(boucle,600);
+  }
+  if(nom==='musique'){
+    // La mer reste dessous, très bas. Une musique posée sur rien se lit
+    // comme une bande-son ; posée sur la mer, elle appartient à l'île.
+    nappe(380,0.032,14,0.6);
+    echo=ouvrirEcho();
+    // Un temps avant la première note : on arrive sur une île, pas sur un
+    // générique.
+    minuteurNotes=setTimeout(boucleMusique,1600);
   }
 }
 // Dedans, on entend l'île à travers les murs : le même fond, deux fois plus bas.
@@ -5227,7 +5378,7 @@ function buildIle(){
     b.setAttribute('aria-pressed',String((mine.ambiance||'vagues')===v));
     b.onclick=()=>{ mine.ambiance=v; saveMine(); if(!visiting) majAmbiance(); buildAll(); }; ba.appendChild(b); });
   fa.appendChild(ba); p.appendChild(visiting?fermerEnVisite(fa):fa);
-  p.appendChild(hint('L\u2019ambiance appartient \u00e0 l\u2019\u00eele, pas au joueur : tes visiteurs entendront celle que tu choisis. Le bouton <b>Son</b>, en haut du cadre, coupe tout pour toi seul.'));
+  p.appendChild(hint('L\u2019ambiance appartient \u00e0 l\u2019\u00eele, pas au joueur : tes visiteurs entendront celle que tu choisis. Le bouton <b>Son</b>, en haut du cadre, coupe tout pour toi seul. La <b>Musique</b> n\u2019est jamais deux fois la m\u00eame, et elle suit le ciel : claire de jour, basse la nuit.'));
 
   const fg=field('Palette du terrain'), bg=document.createElement('div'); bg.className='chips';
   GROUNDS.forEach(g=>{

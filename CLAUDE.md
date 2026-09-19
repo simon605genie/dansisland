@@ -1254,6 +1254,86 @@ Toute accélération future de ces valeurs se regarde **sur un vrai
 téléphone**, pas sur un cadre de 19 px dans un navigateur de bureau : c'est
 là que la différence se voit, et c'est de là qu'est venu le signalement.
 
+## La musique, et la mer qui a enfin un fond — 19/09/2026
+
+Deux ajouts, aucune migration, **aucune clé de plus dans `mondeNu()`** : le
+choix d'ambiance y était déjà, et la mer est du dessin.
+
+### La musique est une ambiance de plus
+
+Il y avait des nappes, des oiseaux et des grillons ; il n'y avait pas une
+note. `AMBIANCES` gagne `musique`, et c'est tout ce que ça coûte en
+données — `mine.ambiance` est déjà dans `mondeNu()`, donc une valeur de
+plus dans un jsonb ne demande rien à personne. Le défaut reste `vagues` :
+personne ne se réveille avec de la musique qu'il n'a pas choisie.
+
+Cinq choses à ne pas défaire :
+
+1. **Elle est générative, jamais enregistrée.** C'est la règle déjà écrite
+   en tête de la section audio : pas de fichier à héberger, pas de licence
+   à vérifier, pas un octet à charger avant de jouer. Et une boucle de
+   trois minutes se reconnaît au bout d'un quart d'heure — or c'est une
+   île où l'on reste.
+2. **La gamme est pentatonique, cinq degrés et pas un de plus.** Il n'y a
+   pas de note fausse dans une pentatonique : c'est ce qui permet de tirer
+   les notes au hasard sans jamais déraper. Une gamme de sept degrés
+   demanderait des règles d'enchaînement, donc un moteur, donc un bug.
+3. **Le mode suit le ciel de l'île, et se relit à chaque note.** Passer en
+   nuit assombrit la musique sans rien redémarrer. `GAMMES` a donc les
+   mêmes clés que `sky` — si une quatrième heure apparaît un jour, elle
+   doit y entrer aussi, sinon on retombe sur `jour` en silence.
+4. **Une phrase sur trois reste une note seule.** Dans une musique de ce
+   genre le silence fait autant que les notes ; un tapis continu devient
+   un fond qu'on n'entend plus, et qu'on finit par couper.
+5. **L'écho n'est pas un effet, c'est la pièce.** Sans lui chaque note
+   s'arrête net et s'entend comme un bip. Le passe-bas est **dans** la
+   boucle : la reprise est plus sourde que la note, ce qui est exactement
+   ce que fait de l'air, et c'est ça qui se lit comme de la distance.
+
+`arreterAmbiance()` coupe le minuteur des notes **et** débranche la boucle
+de délai. Une boucle de délai laissée branchée sur elle-même continue de
+tourner à vide : elle s'éteint toute seule, mais elle n'a plus de raison
+d'exister.
+
+### La mer avait une couleur, pas un fond
+
+Un aplat d'une seule couleur, et une île posée dessus flotte. Le dégradé
+part **du bord de l'île** — `kPlage()`, déjà calculé pour le requin — et
+non du centre : sous l'île il n'y a rien à voir, et un dégradé parti du
+milieu s'assombrirait trop tôt là où on regarde.
+
+Il est **elliptique, pas circulaire**, d'où le passage dans un repère mis à
+l'échelle. La mer fait 438x240 : un dégradé rond atteindrait le large bien
+plus tôt au nord et au sud qu'à l'est et à l'ouest, soit l'inverse de la
+vérité, puisque c'est au nord et au sud que la bande d'eau est la plus
+mince. Le `clip` est posé **avant** la mise à l'échelle — la découpe reste
+dans le repère du monde, seul le dégradé s'étire.
+
+Mesuré sur les pixels : `(83,221,243)` contre la plage, `(63,201,226)` au
+large. Le haut-fond existe, il ne se devine pas.
+
+### Les éclats sur l'eau
+
+Vingt-deux, tirés de `h2()` et de `t` : aucun état, rien en base, rien pour
+Ctrl+Z. La ligne déjà écrite pour les mouettes et le requin.
+
+**Chacun a sa propre période.** Des éclats qui battraient ensemble se
+liraient comme un clignotement de l'écran, pas comme de l'eau. Vérifié en
+arithmétique pure, hors navigateur : 22 périodes distinctes sur 22, tous
+s'allument au moins une fois en vingt secondes, 2,7 allumés en moyenne,
+sept au plus — et parfois zéro, l'eau se repose.
+
+Ils vivent dans l'anneau qui va du bord de l'île à 97 % du rayon. Tout
+contre le contour ils déborderaient sur le papier une fois sur trois, là où
+`wMer()` rentre.
+
+**Ces trois choses ne se vérifient pas dans un navigateur piloté**, et
+c'est la limite déjà notée pour le requin : le `rAF` y est bridé, le canvas
+garde la dernière image peinte, et seize mesures rendent seize fois la même
+valeur — mesuré, pas supposé. On éprouve donc la formule, pas le rendu. Le
+son, lui, ne s'éprouve pas du tout de cette façon : il n'y a pas de sortie
+audio ici, et le jugement musical revient à l'oreille de quelqu'un.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
