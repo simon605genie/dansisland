@@ -2087,6 +2087,75 @@ pièce fait repasser la quatrième à la ligne, **à 360 px seulement** : la
 règle du 16/09 est juste, et elle a maintenant sa mesure plutôt que sa
 consigne.
 
+## La règle qui mesurait la mauvaise largeur — 19/09/2026
+
+Vu sur une capture d'écran large, pas dans le code : dans le bandeau du
+guide, « Passer » tombait **seul** sous « Suivant », et le bandeau montait
+à 105 px.
+
+Or la feuille de style porte, depuis le 18/09, une règle écrite exprès pour
+que les deux tiennent ensemble :
+
+    @media (max-width:520px){ .guide .pas{display:none} .guide .quoi{flex:1 1 100%} }
+
+Elle marchait — sur un téléphone. **Ce qui serre ce bandeau, c'est la
+largeur du panneau, pas celle de la fenêtre.** La colonne de droite fait
+360 px sur un écran de 1280 : la règle ne se déclenchait donc jamais là où
+elle servait. Mesuré aux quatre tailles : séparés de 47 px sur grand écran,
+ensemble partout ailleurs.
+
+C'est la même famille que `fitDedans()` branché en plafond et que les deux
+phrases qui ne passaient pas par `laPiece()` : **une règle juste, dont la
+condition ne porte pas sur ce qu'elle protège.** Aucune des trois ne se
+voit à la lecture, parce que chacune a l'air de faire son travail.
+
+La correction ne demande plus de largeur à personne. `--pasw` est la place
+que prend le numéro, gouttière comprise, et la phrase prend exactement le
+reste de sa rangée :
+
+    .guide{ --pasw:35px }                  /* 25 de pastille + 10 de gouttière */
+    .guide .quoi{ flex:1 1 calc(100% - var(--pasw)) }
+
+Les points et les deux boutons descendent donc ensemble **à n'importe
+quelle largeur**. Deux choses à tenir :
+
+1. **`--pasw` doit suivre `gap` et `.pas`**, et c'est pour ça que c'est une
+   variable redéclarée à chaque palier plutôt que le même nombre recopié
+   trois fois. À 700 px la pastille passe à 21 px et la gouttière à 7, donc
+   `--pasw:28px` ; à 520 px la pastille s'en va, donc `0`.
+2. **Le palier de 520 px ne s'occupe plus que de la pastille.** Il ne
+   reste plus rien de la mise en page dedans : elle est vraie partout, ou
+   elle est fausse partout.
+
+Gagné au passage : le bandeau perd 18 px sur grand écran (105 → 87) et
+16 px en paysage court (85 → 69).
+
+### Le harnais ne pouvait pas le voir, et c'est le vrai enseignement
+
+`etroit.mjs` éprouve 360 px et 780x360 — les deux tailles que ce dépôt
+exige. **Les deux étaient vertes**, et elles avaient raison de l'être : le
+défaut n'existait qu'au-dessus de 520 px.
+
+Un harnais qui n'éprouve que les tailles étroites raisonne comme la règle
+fautive : il regarde la fenêtre. Il hérite donc de son angle mort — c'est
+mot pour mot la leçon du contrôle 12 de `test/objets.mjs`, où une regex qui
+cherchait des sélecteurs ne pouvait pas voir ce qu'un moteur CSS calcule.
+
+La section ajoutée regarde donc **les deux bouts**, 1280 px compris. Et
+elle ouvre le bandeau pour de bon : `aide.mjs` sème `dansisland:guide = 4`
+par défaut, pour que l'accueil ne gêne pas les autres harnais, donc il faut
+le remettre à zéro et cliquer « créer mon île » — sans quoi on mesure un
+bandeau absent en croyant mesurer sa mise en page.
+
+*(Deux fausses pistes écartées avant celle-là, et toutes deux par la
+mesure. **Le guide n'avance pas tout seul** : je l'ai cru en le voyant au
+pas 4 sur une capture, c'était la graine d'`aide.mjs`. Et **la caméra ne
+dérive pas** : la boîte englobante de la mer est décentrée de 37 px, mais
+c'est la bosse de `wMer()`, pas le cadrage — le centroïde eau+herbe tombe à
+1,2 px du centre du cadre. Une boîte englobante mesure le contour le plus
+saillant ; un centroïde mesure où est la masse. Pour juger d'un centrage,
+c'est le second qu'il faut.)*
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
