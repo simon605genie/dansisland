@@ -5979,7 +5979,15 @@ function buildIle(){
   be.appendChild(e); be.appendChild(tr); fe.appendChild(be); p.appendChild(fe);
   p.appendChild(chipsLibre('Sens',[['se','\u2198 Vers la droite'],['sw','\u2199 Vers la gauche']],tool.orient,
     v=>{ tool.orient=v; buildAll(); }));
-  p.appendChild(hint('Le sens ne change que ce qui suit un axe : <b>banc</b>, <b>barrière</b>, <b>clôture</b>, <b>ponton</b>, <b>échoppe</b>, <b>balançoire</b>, <b>hamac</b>, <b>toboggan</b>, <b>tente</b>. Un arbre est pareil des deux côtés. <b>\u27f3 Tourner</b> retourne ce qui est déjà posé, sans l\'effacer.'));
+  /* La liste se **lit** dans `PIVOT_ILE`, elle ne se recopie pas. Elle était
+     écrite à la main juste ici, et elle disait exactement la bonne chose —
+     jusqu'au jour où un objet orientable serait ajouté sans que personne ne
+     pense à cette phrase. C'est le piège déjà nommé pour la vitrine et les
+     prix SQL : deux listes qui divergent, et le panneau annonce un geste que
+     l'objet ne fait pas. Ici il n'y en a plus qu'une. */
+  const axes=Object.keys(PIVOT_ILE).map(k=>'<b>'+(NOM_OBJ[k]||k)+'</b>').join(', ');
+  p.appendChild(hint('Le sens ne change que ce qui suit un axe : '+axes+
+    '. Un arbre est pareil des deux côtés. <b>\u27f3 Tourner</b> retourne ce qui est déjà posé, sans l\'effacer.'));
 
   const fc=field('Couleur de l\'objet'), bc=document.createElement('div'); bc.className='sw';
   OBJ_COLORS.forEach(c=>{

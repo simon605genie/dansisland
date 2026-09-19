@@ -598,6 +598,15 @@ c.titre('14. personne ne colle « un » devant un nom d’objet');
   // donc c'est exactement celui qu'on peut oublier.
   c.dit(/NOM_OBJ\.crotte='crotte'; FEM_OBJ\.crotte=1;/.test(code),
         'la crotte, hors catalogue, porte quand même son genre');
+
+  /* Et la phrase du Sens, qui recopiait `PIVOT_ILE` à la main. Elle disait
+     exactement la bonne chose — jusqu'au jour où un objet orientable
+     serait ajouté sans que personne ne pense à elle. Vérifié en ajoutant
+     `moulin` à `PIVOT_ILE` : la phrase le nomme toute seule. */
+  c.dit(/const axes=Object\.keys\(PIVOT_ILE\)\.map\(/.test(code),
+        'la phrase du Sens se lit dans PIVOT_ILE, elle ne la recopie pas');
+  c.dit(!/suit un axe : <b>banc<\/b>/.test(code),
+        'et la liste écrite à la main n’est pas revenue');
 }
 
 await nav.close(); s.fermer();
