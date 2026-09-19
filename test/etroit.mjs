@@ -102,5 +102,63 @@ for (const [nom, width, height, tactile] of [['grand écran 1280', 1280, 900, fa
   await ctx.close();
 }
 
+/* « Voisins » doit montrer des voisins.
+
+   Mesuré le 19/09 : la commande, la carte postale et l'invitation faisaient
+   ensemble plus de 500 px, et la première île tombait à y=670 dans un
+   panneau qui en montre 660 — hors de vue sur grand écran comme en
+   portrait. On ouvrait l'onglet et on n'y voyait aucune île, au moment
+   précis où le quatrième pas du guide dit « va marcher sur l'île d'un
+   autre ». C'est le défaut déjà corrigé pour le bloc Compagnon.
+
+   Deux mesures, et elles ne disent pas la même chose : **l'ordre** des
+   blocs vaut à toutes les tailles, la **visibilité sans défiler** dépend de
+   la place. En paysage court le panneau ne fait que 73 px de haut — rien
+   n'y tient, et ce n'est pas cet ordre-là qui le décidera. */
+c.titre('l’onglet Voisins montre des voisins');
+for (const [nom, width, height, tactile, voitSansDefiler] of [
+  ['grand écran 1280', 1280, 900, false, true],
+  ['portrait 390', 390, 844, true, true],
+  ['portrait 360', 360, 780, true, true],
+  ['paysage court 780x360', 780, 360, true, false]]) {
+  const { ctx, page, erreurs } = await onglet(nav, { taille: { width, height }, tactile });
+  await page.goto(s.url, { waitUntil: 'load' });
+  await attendre(2000);
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'voisins');
+    if (b) b.click();
+  });
+  await attendre(700);
+
+  const r = await page.evaluate(() => {
+    const p = document.getElementById('p-voisins');
+    if (!p) return null;
+    const y0 = p.getBoundingClientRect().top;
+    const rang = t => {
+      const e = [...p.children].find(x => new RegExp(t, 'i').test(x.textContent || ''));
+      return e ? Math.round(e.getBoundingClientRect().top - y0) : -1;
+    };
+    const nb = p.querySelector('.neighbor');
+    const b = nb ? nb.getBoundingClientRect() : null;
+    return { commande: rang('La commande du jour'), archipel: rang('archipel'),
+             carte: rang('Ta carte postale'), invite: rang('Inviter quelqu'),
+             ile: b ? Math.round(b.top - y0) : -1,
+             visible: b ? (b.top >= 0 && b.top < p.getBoundingClientRect().bottom) : false,
+             haut: Math.round(p.getBoundingClientRect().height) };
+  });
+  console.log('     ' + nom.padEnd(22) + ' panneau ' + (r ? r.haut + ' px · commande y' + r.commande +
+              ', archipel y' + r.archipel + ', carte y' + r.carte + ' · 1re île y' + r.ile : '(absent)'));
+  c.dit(!!r && r.ile >= 0, nom + ' — il y a au moins une île dans la liste');
+  c.dit(r && r.commande >= 0 && r.commande < r.archipel,
+        nom + ' — la commande du jour garde sa place, en tête');
+  c.dit(r && r.archipel > 0 && r.archipel < r.carte,
+        nom + ' — l’archipel passe avant la carte postale');
+  c.dit(r && r.carte < r.invite, nom + ' — la carte postale reste avant l’invitation');
+  if (voitSansDefiler)
+    c.dit(r && r.visible, nom + ' — la première île se voit sans défiler (y' + (r ? r.ile : '?') + ')');
+  c.dit(erreurs.length === 0, nom + ' — aucune erreur de console');
+  await ctx.close();
+}
+
 await nav.close(); s.fermer();
 process.exit(c.fin() ? 1 : 0);

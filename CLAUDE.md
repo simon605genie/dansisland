@@ -2156,6 +2156,49 @@ c'est la bosse de `wMer()`, pas le cadrage — le centroïde eau+herbe tombe à
 saillant ; un centroïde mesure où est la masse. Pour juger d'un centrage,
 c'est le second qu'il faut.)*
 
+## « Voisins » ne montrait aucun voisin — 19/09/2026
+
+L'onglet s'ouvrait sur la commande du jour, puis la carte postale, puis
+l'invitation : plus de 500 px de texte avant la première île. Mesuré, dans
+les trois mises en page :
+
+    grand écran     1re île à y=670   panneau de 660 px   hors de vue
+    portrait 390    1re île à y=656   panneau de 625 px   hors de vue
+    paysage court   1re île à y=833   panneau de  73 px   hors de vue
+
+Et au pire moment : le **quatrième pas du guide** dit « va marcher sur
+l'île d'un autre », et le moyen de le faire était sous un écran de
+défilement. Tant que le sac est vide — donc pour tout nouveau venu — la
+commande ne propose personne, elle explique.
+
+C'est le défaut déjà corrigé le 19/09 pour le bloc Compagnon, « à un écran
+de défilement du haut », et la règle est la même : **ce qu'un onglet est
+doit être en haut de cet onglet.**
+
+L'archipel passe donc en deuxième, juste après la commande. Ce que ça ne
+change pas, et qui reste raisonné comme le 18/09 :
+
+1. **La commande garde la tête.** C'est la raison d'y aller *aujourd'hui*,
+   et elle se périme à minuit.
+2. **La carte reste avant l'invitation.** Elle descend seulement sous les
+   îles : elle se construit toujours au même endroit dans `buildVoisins()`,
+   elle se **pose** plus bas — d'où le `DocumentFragment`.
+
+Résultat : la première île passe de y=670 à **y=333**, visible sans défiler
+sur grand écran comme en portrait.
+
+**En paysage court, non, et ce n'est pas cet ordre-là qui le décidera** :
+le panneau n'y fait que 73 px de haut. Mesuré à 780x360 — carte de
+connexion 156 px, bandeau du guide 69, onglets 62, et il reste 73 pour le
+panneau. La carte de connexion prend à elle seule 43 % de la hauteur de
+l'écran, deux fois ce que reçoit le panneau. C'est noté ici pour ce que
+c'est : un vrai défaut d'ergonomie, mesuré, pas encore corrigé.
+
+Le contrôle de `etroit.mjs` distingue les deux : **l'ordre** des blocs est
+vérifié aux quatre tailles, la **visibilité sans défiler** seulement là où
+le panneau a la place. Affirmer la seconde en paysage court, ce serait
+demander au test de mentir.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

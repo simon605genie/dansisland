@@ -6670,10 +6670,28 @@ function buildVoisins(){
   p.appendChild(carteCommande());
   p.appendChild(rule());
 
-  /* La carte postale. Elle vient juste après la commande du jour — la
-     commande reste en tête parce que c'est la raison d'aller chez les
-     voisins **aujourd'hui**, et elle se périme à minuit. La carte, elle,
-     est la raison pour laquelle il y a des voisins tout court. */
+  /* La carte postale. Elle se **construit** ici mais se **pose** plus bas,
+     après l'archipel — d'où le fragment.
+
+     Elle venait juste après la commande, et c'était raisonné : la commande
+     est la raison d'y aller aujourd'hui, la carte la raison pour laquelle
+     il y a des voisins tout court. Ce qui manquait à ce raisonnement, c'est
+     la mesure. La commande, la carte et l'invitation font ensemble plus de
+     500 px, et la **première île** tombait à y=670 dans un panneau qui en
+     montre 660 sur grand écran, 656 dans 625 en portrait, 833 dans 73 en
+     paysage court : hors de vue dans les trois mises en page. On ouvrait
+     « Voisins » et on n'y voyait aucun voisin.
+
+     Pire au moment où ça compte le plus : le quatrième pas du guide dit
+     « va marcher sur l'île d'un autre », et le moyen de le faire était sous
+     un écran de texte. Et tant que le sac est vide — donc pour tout
+     nouveau venu — la commande ne propose personne, elle explique.
+
+     C'est le défaut déjà corrigé le 19/09 pour le bloc Compagnon, « à un
+     écran de défilement du haut » : **ce qu'un onglet est doit être en
+     haut de cet onglet.** La commande garde sa place, elle ; ce sont la
+     carte et l'invitation qui passent après les îles. */
+  const apres=document.createDocumentFragment();
   const fc=field('Ta carte postale');
   if(carteOuverte && !visiting){
     fc.appendChild(carteComptoir());
@@ -6689,9 +6707,9 @@ function buildVoisins(){
       ? 'Une carte postale montre <b>ton</b> île, pas celle de l’hôte. Rentre chez toi, et elle t’attend ici.'
       : 'Une image de ton île, ton nom, ton adresse, et une phrase de toi. Elle part dans WhatsApp, dans un message, où tu veux — et qui la reçoit peut venir marcher chez toi.'));
   }
-  p.appendChild(fc);
-  p.appendChild(carteParrainage());
-  p.appendChild(rule());
+  apres.appendChild(fc);
+  apres.appendChild(carteParrainage());
+  apres.appendChild(rule());
 
   const f=field('L\u2019archipel'+(store.configure?'':' \u00b7 d\u00e9mo'));
   const list=document.createElement('div');
@@ -6725,6 +6743,7 @@ function buildVoisins(){
   cp0.onclick=()=>copierLien(lienIle(),'Ton lien est copi\u00e9. Qui cr\u00e9e son \u00eele en arrivant par l\u00e0 devient ton filleul.');
   r0.appendChild(alea); r0.appendChild(cp0); f.appendChild(r0);
   p.appendChild(f); p.appendChild(rule());
+  p.appendChild(apres);
 
   // ---- sauvegarde / restauration hors ligne ----
   const sf=field('Code de sauvegarde'), ta=document.createElement('textarea');
