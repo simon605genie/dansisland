@@ -1,8 +1,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B3C5D">
-<title>Dan's Island — ton petit endroit pour ralentir</title>
-<meta name="description" content="Un jeu de détente. Crée ton personnage, construis ta maison et ton île, puis va découvrir celles de tes voisins. Rien à gagner, rien à perdre : un endroit où ralentir.">
+<title>Dan's Island | Jeu relaxant de construction d'île</title>
+<meta name="description" content="Jeu relaxant de construction d’île, gratuit et sans installation. Construis ton île, ta maison et ton personnage, décore-la, puis va te promener chez les voisins et envoie-leur une carte postale. Pas de score, pas de minuteur.">
 <link rel="canonical" href="https://dansisland.app/">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <!-- L'aperçu partagé (WhatsApp, Messages, Slack, Signal). Ces robots ne
@@ -14,8 +14,8 @@
 <meta property="og:site_name" content="Dan's Island">
 <meta property="og:locale" content="fr_BE">
 <meta property="og:url" content="https://dansisland.app/">
-<meta property="og:title" content="Dan's Island — ton petit endroit pour ralentir">
-<meta property="og:description" content="Un jeu de détente. Crée ton personnage, construis ta maison et ton île, puis va découvrir celles de tes voisins.">
+<meta property="og:title" content="Dan's Island | Jeu relaxant de construction d'île">
+<meta property="og:description" content="Jeu relaxant de construction d’île. Construis ton île, ta maison et ton personnage, puis va te promener chez les voisins.">
 <meta property="og:image" content="https://dansisland.app/og.png?v=2">
 <meta property="og:image:secure_url" content="https://dansisland.app/og.png?v=2">
 <meta property="og:image:type" content="image/png">
@@ -23,8 +23,8 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Une île isométrique avec sa maison, son phare et ses palmiers.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Dan's Island — ton petit endroit pour ralentir">
-<meta name="twitter:description" content="Un jeu de détente. Crée ton personnage, construis ta maison et ton île, puis va découvrir celles de tes voisins.">
+<meta name="twitter:title" content="Dan's Island | Jeu relaxant de construction d'île">
+<meta name="twitter:description" content="Jeu relaxant de construction d’île. Construis ton île, ta maison et ton personnage, puis va te promener chez les voisins.">
 <meta name="twitter:image" content="https://dansisland.app/og.png?v=2">
 <!-- Données structurées. Un jeu de navigateur, gratuit, en français : c'est
      tout ce qu'un moteur peut en dire d'utile, et rien n'y est inventé. Les
@@ -35,7 +35,7 @@
  "url":"https://dansisland.app/","inLanguage":"fr",
  "applicationCategory":"Game","gamePlatform":"Navigateur web",
  "genre":["Jeu de détente","Construction","Bac à sable"],
- "description":"Un jeu de détente. Crée ton personnage, construis ta maison et ton île, puis va découvrir celles de tes voisins.",
+ "description":"Jeu relaxant de construction d’île. Construis ton île, ta maison et ton personnage, puis va te promener chez les voisins.",
  "image":"https://dansisland.app/og.png?v=2",
  "offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}
 </script>
@@ -125,9 +125,14 @@ a{color:var(--link)}
 .brand{display:flex; align-items:center; gap:15px}
 .mark{width:58px;height:58px;flex:none;border-radius:15px}
 .word{display:flex;flex-direction:column;gap:2px}
-.word h1{font-size:clamp(32px,5.2vw,48px); font-weight:800; letter-spacing:.005em}
+.word .marque-page{font-family:"Baloo 2","Nunito",system-ui,sans-serif; line-height:1.05;
+  margin:0; font-size:clamp(32px,5.2vw,48px); font-weight:800; letter-spacing:.005em}
 .word svg{display:block;width:100%;height:11px;overflow:visible}
-.tagline{color:var(--ink-2); max-width:46ch; font-size:15.5px; margin-left:auto}
+/* Le `h1` de la page, et le seul. Il porte la promesse ; la phrase qui
+   explique vient sous lui, en plus petit. */
+.tagline-h1{font-size:clamp(19px,2.5vw,26px); font-weight:800; color:var(--teal);
+  max-width:46ch; margin-left:auto; line-height:1.2}
+.tagline{color:var(--ink-2); max-width:46ch; font-size:15px; margin:4px 0 0; margin-left:auto}
 .tagline b{color:var(--ink); font-weight:700}
 
 /* ---------- compte ---------- */
@@ -174,10 +179,10 @@ a{color:var(--link)}
    connexion mangeaient le premier tiers de l'écran et il fallait défiler
    pour voir son île. On arrive sur un jeu, pas sur une page. */
 @media (max-width:640px){
-  .tagline{display:none}
+  .tagline,.tagline-h1{display:none}
   .mast{padding:14px 0 10px; gap:10px 18px}
   .mark{width:38px; height:38px; border-radius:10px}
-  .word h1{font-size:25px}
+  .word .marque-page{font-size:25px}
   .word svg{display:none}
   .compte{padding:9px 11px; margin-bottom:11px; font-size:13px; gap:7px 9px}
   .compte input[type=text],.compte input[type=email]{min-width:150px}
@@ -544,16 +549,29 @@ textarea{
 .accueil .mark{width:74px; height:74px; margin-bottom:10px;
   animation:accueilflotte 6s ease-in-out infinite}
 @keyframes accueilflotte{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-.accueil h2{font-size:clamp(34px,8vw,54px); font-weight:800; letter-spacing:.005em}
+/* La marque n'est plus un `h2` : le `h1` de la page est la **promesse**,
+   pas le nom du produit. « Dan's Island » est déjà dans le `<title>`, dans
+   l'adresse et sur le logo juste au-dessus ; en faire le seul titre de la
+   page, c'est n'y répondre à aucune recherche. */
+.accueil .marque{font-family:"Baloo 2","Nunito",system-ui,sans-serif; line-height:1.05;
+  margin:0; font-size:clamp(30px,7vw,46px); font-weight:800; letter-spacing:.005em}
 .accueil .trait{display:block; width:min(300px,78%); height:11px; overflow:visible; margin:1px 0 14px}
+/* Même phrase que le `h1` de l'en-tête, en paragraphe : un seul h1 par page. */
 .accueil .promesse{
-  font-family:"Baloo 2",sans-serif; font-weight:700; font-size:clamp(19px,4.4vw,25px);
-  color:var(--teal); margin:0 0 10px; line-height:1.25;
+  font-family:"Baloo 2",sans-serif; font-weight:800; font-size:clamp(21px,5vw,29px);
+  color:var(--teal); margin:0 0 10px; line-height:1.2; max-width:22ch;
 }
 .accueil .dit{color:var(--ink-2); font-size:16px; max-width:40ch; margin:0 0 22px; line-height:1.55}
 .accueil .portes{display:flex; flex-wrap:wrap; gap:10px; justify-content:center}
 .accueil .portes .btn{font-size:17px; padding:13px 22px; border-radius:14px}
 .accueil .portes .btn.primary{box-shadow:0 4px 0 rgba(180,76,108,.35)}
+/* Les quatre pages éditoriales. Discrètes — ce n'est pas ce qu'on vient
+   faire ici — mais présentes dans le HTML, donc suivies par un robot qui
+   ne rend pas le JavaScript. */
+.accueil .apages{display:flex; flex-wrap:wrap; justify-content:center; gap:4px 15px;
+  margin-top:14px; font-size:13px}
+.accueil .apages a{color:var(--ink-3); text-decoration:none; border-bottom:1px solid var(--line)}
+.accueil .apages a:hover{color:var(--teal)}
 /* Ce qui se lit sous les deux portes, et que les robots lisent aussi. Trois
    lignes, pas une brochure : la section de présentation d'avant a été
    retirée le 17/09 parce qu'elle parlait par-dessus le jeu, et il ne
@@ -578,12 +596,13 @@ textarea{
 @media (orientation:landscape) and (max-height:560px){
   .accueil{padding:12px 16px}
   .accueil .mark{width:44px; height:44px; margin-bottom:4px}
-  .accueil h2{font-size:30px}
+  .accueil .marque{font-size:27px}
   .accueil .trait{height:8px; margin-bottom:8px}
-  .accueil .promesse{font-size:17px; margin-bottom:5px}
+  .accueil .promesse{font-size:18px; margin-bottom:5px}
   .accueil .dit{font-size:13.5px; margin-bottom:13px}
   .accueil .portes .btn{font-size:14.5px; padding:9px 16px}
   .accueil .socle{display:none}
+  .accueil .apages{font-size:12px; gap:3px 11px; margin-top:10px}
   .accueil .bas{margin-top:9px}
 }
 
@@ -854,13 +873,19 @@ textarea{
         <rect x="42" y="32" width="8" height="18" rx="4" fill="#FAF6EA"/>
       </svg>
       <div class="word">
-        <h1>DAN'S ISLAND</h1>
+        <!-- La marque est un **logotype**, pas le titre de la page : le `h1`
+             est la promesse, juste en dessous. « Dan's Island » est déjà dans
+             le `<title>`, dans l'adresse et sur le dessin à côté ; en faire le
+             seul titre, c'est ne répondre à aucune recherche. -->
+        <p class="marque-page">DAN'S ISLAND</p>
         <svg viewBox="0 0 300 12" preserveAspectRatio="none" aria-hidden="true">
           <path d="M2 8C28 -1 50 11 78 6s44 -9 74 -1 44 10 72 3 50 -6 72 1" fill="none" stroke="#148A9C" stroke-width="7" stroke-linecap="round"/>
         </svg>
       </div>
     </div>
-    <p class="tagline"><b>Ton petit endroit pour ralentir.</b> Crée ton personnage, construis ta maison et ton île — puis va découvrir celles de tes voisins.</p>
+    <h1 class="tagline-h1">Construis ton île. Détends-toi. Partage-la.</h1>
+    <p class="tagline">Un jeu de détente&nbsp;: crée ton personnage, construis ta maison et ton île,
+      puis va découvrir celles de tes voisins. Gratuit, dans le navigateur, rien à installer.</p>
   </header>
 
   <section class="compte" id="compte" aria-live="polite"></section>
@@ -919,7 +944,18 @@ textarea{
      texte du site qu'un robot puisse lire, puisque tout le reste est peint
      dans un canvas. Le changer, c'est changer ce que Google raconte du jeu.
      ============================================================ -->
-<div class="accueil" id="accueil" hidden>
+<!-- **Pas de `hidden` dans le HTML, et c'est un choix de référencement.**
+     Ce bloc est le seul texte du site qu'un robot puisse lire : tout le reste
+     est peint dans un canvas. Servi avec l'attribut `hidden`, il l'était
+     aussi pour les robots qui ne rendent pas le JavaScript — WhatsApp,
+     Signal, la plupart des moteurs autres que Google — et une page dont le
+     seul contenu est caché n'a pas de contenu.
+
+     Il part donc visible, et le petit script juste en dessous le cache
+     **avant le premier affichage** quand il n'a rien à faire là. Il est en
+     ligne et non-module exprès : un module est différé, donc le voile
+     clignoterait chez tous ceux qui reviennent. -->
+<div class="accueil" id="accueil">
   <main class="carte">
     <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
       <rect width="64" height="64" rx="15" fill="#0B3C5D"/>
@@ -929,11 +965,11 @@ textarea{
       <circle cx="46" cy="20" r="7" fill="#F48CA8"/>
       <rect x="42" y="32" width="8" height="18" rx="4" fill="#FAF6EA"/>
     </svg>
-    <h2>DAN’S ISLAND</h2>
+    <p class="marque">DAN’S ISLAND</p>
     <svg class="trait" viewBox="0 0 300 12" preserveAspectRatio="none" aria-hidden="true">
       <path d="M2 8C28 -1 50 11 78 6s44 -9 74 -1 44 10 72 3 50 -6 72 1" fill="none" stroke="#148A9C" stroke-width="7" stroke-linecap="round"/>
     </svg>
-    <p class="promesse">Ton petit endroit pour ralentir.</p>
+    <p class="promesse">Construis ton île. Détends-toi. Partage-la.</p>
     <p class="dit">Crée ton personnage, construis ta maison et ton île,
       puis va découvrir celles de tes voisins.</p>
     <div class="portes">
@@ -946,8 +982,32 @@ textarea{
       <div><b>Des voisins</b>Ton île a son adresse. On s’y promène, on y laisse un mot, on rapporte un souvenir.</div>
     </div>
     <p class="bas">Gratuit, sans publicité, sans achat. Ça se joue dans le navigateur, au doigt ou au clavier.</p>
+    <!-- Quatre pages qui racontent le jeu en texte, pour les moteurs comme
+         pour qui veut lire avant de cliquer. Elles sont servies par
+         `functions/` : ce sont, avec cet accueil, les seules pages du site
+         qui s'indexent. Une île appartient à quelqu'un. -->
+    <nav class="apages" aria-label="En savoir plus">
+      <a href="/how-to-play">Comment jouer</a>
+      <a href="/features">Ce qu’on peut faire</a>
+      <a href="/build-your-island">Construire son île</a>
+      <a href="/postcards">Les cartes postales</a>
+    </nav>
   </main>
 </div>
+<script>
+/* Le voile part **visible** dans le HTML (voir le commentaire au-dessus) :
+   ce script le cache avant le premier affichage quand il n'a pas lieu
+   d'être. Il ne s'ouvre qu'à la racine, et une seule fois dans une vie.
+
+   `__accueilDu` est la **seule** réponse à « faut-il le montrer ? » : le
+   module la relit au lieu de recalculer la condition, sinon deux endroits
+   décident et le jour où l'un change, l'autre ment. */
+window.__accueilDu = (function(){
+  try{ if(localStorage.getItem('dansisland:entre')) return false; }catch(e){ return false; }
+  return location.pathname.replace(/\/+$/,'')==='';
+})();
+if(!window.__accueilDu){ var a=document.getElementById('accueil'); if(a) a.hidden=true; }
+</script>
 
 <script type="module">
 // Chemin **absolu**, et pour la même raison que le manifest et les icônes :
@@ -7527,7 +7587,11 @@ async function demarrer(){
   // sinon on voit une seconde d'interface complète, et c'est exactement ce
   // qu'on essaie d'éviter. Il ne s'ouvre qu'à la racine — qui arrive par le
   // lien d'une île vient voir cette île, pas une page de présentation.
-  if(!dejaEntre() && location.pathname.replace(/\/+$/,'')==='') ouvrirAccueil();
+  // La condition n'est **pas** recalculée ici : c'est le petit script en
+  // ligne, tout en haut, qui a tranché avant le premier affichage, et il
+  // a laissé sa réponse dans `__accueilDu`. Deux endroits qui décident,
+  // et le jour où l'un change, l'autre ment.
+  if(window.__accueilDu) ouvrirAccueil();
   peindreCompte();
   if(store.configure){
     store.surChangementDeCompte(async(u)=>{
@@ -8059,6 +8123,9 @@ function carteComptoir(){
    fois, et s'efface au quatrième. Le parrainage relie l'île qui naît à la
    carte postale qui l'a fait naître. */
 
+// Le titre de la page, écrit une fois. Il doit rester d'accord avec la
+// balise <title> du haut du fichier : deux endroits, une seule phrase.
+const TITRE_SITE="Dan's Island | Jeu relaxant de construction d'île";
 const ACC_VU='dansisland:entre';
 const GUIDE_OU='dansisland:guide';
 const PARRAIN='dansisland:parrain';
@@ -8071,7 +8138,6 @@ const inviteEl=document.getElementById('invite');
    Il ne bloque rien : le jeu tourne derrière, la mer bouge, les mouettes
    passent. C'est un voile, pas une page — et c'est ce qui dit ce qu'est le
    jeu mieux qu'un paragraphe. Il ne revient pas : `dansisland:entre`. */
-function dejaEntre(){ try{ return !!localStorage.getItem(ACC_VU); }catch(e){ return true; } }
 function ouvrirAccueil(){ if(accueilEl) accueilEl.hidden=false; }
 function fermerAccueil(){
   if(!accueilEl||accueilEl.hidden) return;
@@ -8307,7 +8373,13 @@ async function go(slug){
   // L'onglet du navigateur dit chez qui on est : c'est ce qu'on lit dans
   // ses favoris et dans l'historique, et « Dan's Island » partout ne
   // distingue rien.
-  document.title = visiting ? ((world.name||'Une île')+' · Dan’s Island') : 'Dan’s Island';
+  /* **Le titre complet quand on est chez soi.** Cette ligne écrivait
+     « Dan's Island » tout court, donc le `<title>` de la page — celui qui
+     porte les mots qu'on tape dans un moteur — était effacé dès que le jeu
+     démarrait. Googlebot rend le JavaScript : il lisait le titre court.
+     Chez un voisin, le nom de son île passe devant, et c'est voulu : c'est
+     ce qu'on lit dans ses favoris et dans son historique. */
+  document.title = visiting ? ((world.name||'Une île')+' · Dan’s Island') : TITRE_SITE;
   camSauter();                            // on débarque, on ne glisse pas
   // Le quatrième pas du guide, c'est **être** chez quelqu'un. Il se coche
   // ici, avant le message d'arrivée, pour que les deux tiennent dans une

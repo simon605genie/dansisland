@@ -10,7 +10,8 @@
 //  l'application. Celle-ci est l'entrée par la porte de devant : un lien
 //  trouvé dans une recherche, une carte postale relayée, un signet.
 // ============================================================
-import { ileParSlug, page, reponse, vignette, ech, SITE, SLUG } from '../_commun.js';
+import { ileParSlug, page, reponse, vignette, ech, SITE, SLUG,
+         ROBOTS_OUI, ROBOTS_NON, ILES_INDEXABLES } from '../_commun.js';
 
 export async function onRequestGet(context) {
   const { params, env, next } = context;
@@ -54,5 +55,16 @@ export async function onRequestGet(context) {
     </div>
   </main>`;
 
-  return reponse(page({ chemin: '/island/' + slug, titre, desc, ld, corps }));
+  /* **Noindex par défaut, et c'est le seul réglage qui compte ici.** Cette
+     page porte le prénom de quelqu'un, le nom qu'il a donné à son île et le
+     compte des mots qu'on lui a laissés — souvent ceux d'un enfant. Publier
+     son île pour qu'un ami la visite et la voir remonter dans Google sont
+     deux choses différentes, et il n'a consenti qu'à la première.
+
+     `follow` reste : les liens de la page mènent au jeu, et rien n'oblige à
+     couper ça en plus. Seule l'île de démonstration, qui n'appartient à
+     personne, est indexable — et elle l'est nommément. */
+  const indexable = ILES_INDEXABLES.indexOf(slug) >= 0;
+  return reponse(page({ chemin: '/island/' + slug, titre, desc, ld, corps,
+                        robots: indexable ? ROBOTS_OUI : ROBOTS_NON }));
 }

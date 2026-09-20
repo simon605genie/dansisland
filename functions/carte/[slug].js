@@ -14,7 +14,7 @@
 //  échappé comme tout le reste par `ech()`, coupé à 120 caractères, et il
 //  ne sort jamais du bloc qui lui est réservé.
 // ============================================================
-import { ileParSlug, page, reponse, vignette, ech, SITE, SLUG } from '../_commun.js';
+import { ileParSlug, page, reponse, vignette, ech, SITE, SLUG, ROBOTS_NON } from '../_commun.js';
 
 export async function onRequestGet(context) {
   const { params, request, env, next } = context;
@@ -33,7 +33,11 @@ export async function onRequestGet(context) {
     mot = (new URL(request.url).searchParams.get('m') || '').slice(0, 120).trim();
   } catch (e) { mot = ''; }
 
-  const titre = 'Une carte postale de ' + nom;
+  // Le titre nomme **l'expéditeur**, pas l'île : c'est ce qui s'affiche
+  // dans l'aperçu WhatsApp, et « Simon t'envoie une carte postale » se lit
+  // comme un message reçu. « Une carte postale de Sable-Rose » se lit comme
+  // une page de catalogue, et on ne l'ouvre pas.
+  const titre = qui + ' t\u2019envoie une carte postale de Dan\u2019s Island';
   const desc = qui + ' t’envoie une carte postale depuis son île sur Dan’s Island. ' +
                'Viens la visiter, et crée la tienne.';
 
@@ -47,8 +51,8 @@ export async function onRequestGet(context) {
   <main class="carte">
     ${vignette(ile.palette)}
     <div class="dedans">
-      <h1>Une carte postale de ${ech(nom)}</h1>
-      <p class="qui">Envoyée par <b>${ech(qui)}</b>
+      <h1>${ech(qui)} t’envoie une carte postale</h1>
+      <p class="qui">Depuis <b>${ech(nom)}</b>, son île sur Dan’s Island
         · <span class="mono">dansisland.app/${ech(slug)}</span></p>
       ${mot ? '<p class="mot">« ' + ech(mot) + ' »</p>' : ''}
       <p class="dit">Dan’s Island est un jeu de détente&nbsp;: on crée son personnage,
@@ -61,5 +65,9 @@ export async function onRequestGet(context) {
     </div>
   </main>`;
 
-  return reponse(page({ chemin: '/carte/' + slug, titre, desc, ld, corps }));
+  /* **Jamais indexée.** Elle porte un message personnel dans son adresse,
+     donc il n'y a pas de cas où elle devrait se retrouver dans un moteur.
+     C'est une lettre, pas une page. */
+  return reponse(page({ chemin: '/carte/' + slug, titre, desc, ld, corps,
+                        robots: ROBOTS_NON }));
 }

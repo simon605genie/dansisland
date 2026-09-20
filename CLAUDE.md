@@ -2860,6 +2860,130 @@ question à trancher avant d'écrire une ligne est celle de toujours — est-ce
 que ça rapporte, et si oui, dans la famille des corvées ou dans celle des
 visites ?
 
+## Ce qu'un robot lit, et ce qu'il n'a pas à lire — 20/09/2026
+
+Un audit de référencement, et **la moitié de ce qu'il décrit était déjà
+corrigé sans être déployé** : « Prototype jouable, en isométrique » n'existe
+nulle part dans le dépôt. Google montrait un instantané d'avant le 18/09.
+Premier réflexe à avoir devant un audit : vérifier que ce qu'il décrit est
+la version qu'on a, pas celle qui est indexée.
+
+L'autre moitié était vraie, et pire que ce qu'elle disait.
+
+### Rien n'est indexable par défaut, et c'est le point qui compte
+
+`page()` écrivait `index, follow` **en dur**, et `sitemap.xml.js` listait
+**toutes** les îles publiées. Une page d'île porte un prénom, le nom qu'un
+enfant a donné à son île, et le compte des mots que ses copains y ont
+laissés. Une carte postale porte en plus un message personnel dans son
+adresse.
+
+**Publier son île pour qu'un ami la visite n'est pas consentir à la
+retrouver dans Google.** Le joueur n'avait accepté que la première.
+
+Quatre choses à ne pas défaire :
+
+1. **`ROBOTS_NON` est le défaut de `page()`.** Une page qui ne demande rien
+   n'est pas indexée. Le jour où une cinquième sorte de page apparaît, elle
+   est protégée sans que personne y pense — c'est la leçon du registre
+   `VERROUS_PROX`, qui a remplacé une liste écrite à la main.
+2. **`ILES_INDEXABLES` est une liste écrite à la main**, et elle ne contient
+   que `dan`, l'île de démonstration, qui n'appartient à personne. Y ajouter
+   une île est une décision.
+3. **Une carte postale n'est jamais indexée**, sans exception. C'est une
+   lettre, pas une page.
+4. **Le plan du site ne liste que ce qui s'indexe.** Un plan qui annonce une
+   adresse que la page marque `noindex` dit deux choses contraires, et c'est
+   la première qu'un robot suit.
+
+### Le seul texte lisible du site était caché
+
+`#accueil` portait l'attribut `hidden` dans le HTML. Or c'est, par
+construction, **le seul texte qu'un robot puisse lire** : tout le reste est
+peint dans un canvas. Pour Googlebot, qui rend le JavaScript, ça passait ;
+pour WhatsApp, Signal, et tous les moteurs qui ne rendent pas, la page
+n'avait pas de contenu du tout.
+
+Il part donc **visible**, et un petit script en ligne le cache avant le
+premier affichage quand il n'a rien à faire là. En ligne et non-module
+exprès : un module est différé, donc le voile clignoterait chez tous ceux
+qui reviennent — vérifié, six relevés consécutifs après `domcontentloaded`,
+tous « caché ».
+
+`window.__accueilDu` est la **seule** réponse à « faut-il le montrer ? ».
+Le module la relit au lieu de recalculer la condition : deux endroits qui
+décident, et le jour où l'un change, l'autre ment. `dejaEntre()` a disparu
+avec.
+
+### Deux `<h1>`, et un titre écrasé au démarrage
+
+Il y en avait deux — la marque dans l'en-tête de page, la promesse dans le
+voile — et aucun ne disait de quoi parle la page. **« Dan's Island » comme
+seul titre ne répond à aucune recherche.** La marque est donc un logotype
+(`.marque-page`, `.marque`), et le `h1`, unique, est la promesse :
+*Construis ton île. Détends-toi. Partage-la.*
+
+Et `go()` faisait `document.title = 'Dan's Island'` au démarrage, donc **le
+`<title>` de la page était effacé par le jeu lui-même** — y compris pour
+Googlebot, qui rend. D'où `TITRE_SITE`, qui doit rester d'accord avec la
+balise `<title>` du haut du fichier. Chez un voisin, le nom de son île
+passe devant : c'est ce qu'on lit dans ses favoris.
+
+### Quatre pages éditoriales, et pas quarante
+
+`/how-to-play`, `/features`, `/build-your-island`, `/postcards`. Le contenu
+et la maquette vivent dans `functions/_pages.js` ; les quatre fichiers de
+route ne font qu'appeler `rendre()`.
+
+**Pourquoi quatre routes nommées et pas un `[page].js`.** Un attrape-tout à
+la racine intercepterait *toutes* les adresses d'un segment — donc `/simon`
+et chaque île de l'archipel. Son `next()` les rattraperait, mais ça met un
+aiguillage sur le chemin critique de tous les liens partagés du jeu, pour
+quatre pages dont on connaît les noms.
+
+Elles disent des choses vraies et vérifiables dans le jeu. **Ne pas en
+faire cinquante** : le moteur de ce jeu reste le partage, et une carte
+postale envoyée vaut mille mots-clés.
+
+### La carte postale nomme son expéditeur
+
+Le titre était « Une carte postale de Sable-Rose », qui se lit comme une
+page de catalogue. Il dit maintenant **« Untel t'envoie une carte postale de
+Dan's Island »**, qui se lit comme un message reçu — et c'est ce qui
+s'affiche dans l'aperçu WhatsApp.
+
+**Ce qui n'est pas fait, et qu'il ne faut pas prétendre :** l'image de
+partage reste `og.png`, la même pour toutes les cartes. Une image
+**engendrée par île** demande un rasteriseur dans le Worker (satori +
+resvg en wasm), donc un build et des dépendances — or ce dépôt n'en a
+aucun, et c'est un invariant tenu depuis le début. C'est une décision à
+prendre, pas quelque chose à glisser. À noter tout de même : sur téléphone,
+`navigator.share({files})` met déjà **la vraie image** dans la conversation
+WhatsApp ; l'`og:image` ne sert que l'aperçu du lien ailleurs.
+
+### `test/robots.mjs`, septième harnais
+
+Il prend la page **par le réseau, sans navigateur** : pas de JavaScript,
+pas de `localStorage`, exactement ce qu'un robot qui ne rend pas reçoit.
+C'est le seul harnais du dépôt qui n'ouvre pas Chromium, et c'est voulu —
+mesurer ce qu'on veut mesurer, pas ce qu'un moteur de rendu veut bien
+montrer. Mesuré : **212 mots lisibles** hors script, là où le voile caché
+n'en laissait qu'une poignée.
+
+Éprouvé en remettant les trois défauts de l'audit — `hidden` sur le voile,
+le titre court, `index, follow` en dur — et les trois lignes rougissent.
+
+Deux choses apprises :
+
+1. **`aide.mjs` ne savait pas dé-semer une clé.** `setItem(k, null)` écrit
+   la chaîne « null », qui est vraie, donc l'état le plus important du site
+   — celui de quelqu'un qui arrive pour la première fois — était le seul
+   qu'aucun harnais ne savait produire. `null` retire maintenant la clé.
+2. **Un faux positif use un contrôle autant qu'un faux négatif.** Compter
+   les `titre:` d'un fichier en comptait cinq : les quatre des pages, et
+   celui de l'appel à `page()`. La même leçon que `store.js` compté comme
+   export manquant.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
