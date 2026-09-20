@@ -6543,40 +6543,111 @@ function buildBoutique(){
   ];
   const fg=field('Ce qui rapporte aujourd’hui');
   const box=document.createElement('div'); box.className='gains';
+  let reste=0;
   gains.forEach(([nom,cle,quoi])=>{
     const p0=PLAFOND[cle]||0, fait=Math.min(f[cle]||0,p0), plein=p0&&fait>=p0;
+    if(!plein) reste+=p0-fait;
     const d=document.createElement('div'); d.className='gain'+(plein?' plein':'');
     d.innerHTML='<b>'+nom+'</b><span class="n">'+fait+' / '+p0+'</span>'+
       '<div class="bar"><i style="width:'+(p0?Math.round(fait/p0*100):0)+'%"></i></div>'+
       '<small>'+(plein?'C’est tout pour aujourd’hui. Ça repart demain.':quoi)+'</small>';
     box.appendChild(d);
   });
-  fg.appendChild(box); p.appendChild(fg);
+  fg.appendChild(box);
+  /* Ce bloc **descend sous la vitrine**, et ce n'est pas un détail de mise en
+     page. Mesuré : ses sept jauges font 816 px, donc le premier article de la
+     boutique tombait à y=1113 dans un panneau de 636 — presque deux écrans
+     sous le haut, et les six bâtiments à y=1762. Une boutique dont on ne voit
+     aucun article en l'ouvrant n'est pas une boutique.
+
+     C'est le défaut déjà corrigé pour Voisins, où plus de 500 px de texte
+     passaient avant la première île, et pour le bloc Compagnon « à un écran
+     de défilement du haut » : **ce qu'un onglet est doit être en haut de cet
+     onglet.** Ce qui reste en tête est ce qu'on vient lire à chaque fois et
+     qui tient en deux lignes — le cadeau, et ce qu'on a en poche.
+
+     Il n'est pas caché pour autant : la ligne ci-dessous y mène, le comptoir
+     dit déjà quoi faire quand il manque des shells, et le nombre annoncé
+     répond à la seule question qu'on se pose devant un prix trop cher —
+     « est-ce que je peux l'avoir aujourd'hui ? » */
+  const apres=document.createDocumentFragment();
+  apres.appendChild(rule()); apres.appendChild(fg);
+
+  p.appendChild(hint(reste
+    ? ('Il te reste <b>'+reste+' shell'+(reste>1?'s':'')+'</b> à gagner aujourd’hui. Ce qui les donne est <b>en bas de cet onglet</b>.'
+       )
+    : 'Tu as pris tout ce que l’île donnait aujourd’hui. Ça repart demain — le détail est <b>en bas de cet onglet</b>.'));
   p.appendChild(rule());
 
   const choisi = vitrine ? BOUTIQUE.find(a=>a.k===vitrine) : null;
-  [['toi','Pour toi'],['ile','Sur ton île'],['dedans','Dans ta maison']].forEach(([ou,titre])=>{
+  /* Une vignette de vitrine, sortie de la boucle : « Sur ton île » se découpe
+     maintenant en rayons, donc le même bouton se fabrique à deux endroits.
+     Deux copies, et elles divergent au premier changement — c'est le piège
+     déjà nommé pour les prix SQL et pour les trois phrases qui recollaient
+     leur article à la main. */
+  const vignette=(a,ou)=>{
+    const eu=achete(a.k), cher=!eu&&b.shells<a.prix;
+    const bt=document.createElement('button'); bt.type='button';
+    bt.className='obj'+(eu?' acquis':(cher?' cher':''));
+    bt.setAttribute('aria-pressed',String(vitrine===a.k));
+    bt.title=a.n+' — '+a.d;
+    const c=document.createElement('canvas'); c.width=120; c.height=120;
+    // La vitrine montre chaque objet à sa teinte naturelle, pas à celle du
+    // pinceau : vingt vignettes toutes vertes ne donnent envie de rien.
+    if(ou==='ile')         apercuObjet(c.getContext('2d'),a.k,a.c,'se');
+    else if(ou==='dedans')  apercuMeuble(c.getContext('2d'),a.k,a.c,'se');
+    else                    apercuToi(c.getContext('2d'),a.k,a.c);
+    const nom=document.createElement('span'); nom.textContent=a.n;
+    const prix=document.createElement('span'); prix.className='prix';
+    prix.textContent = eu ? '✓ à toi' : (a.prix+' shells');
+    bt.appendChild(c); bt.appendChild(nom); bt.appendChild(prix);
+    bt.onclick=()=>{ vitrine = (vitrine===a.k) ? null : a.k; buildAll(); };
+    return bt;
+  };
+  const rayon=(titre,lot,ou)=>{
     const f=field(titre), g=document.createElement('div'); g.className='objs';
-    BOUTIQUE.filter(a=>a.ou===ou).forEach(a=>{
-      const eu=achete(a.k), cher=!eu&&b.shells<a.prix;
-      const bt=document.createElement('button'); bt.type='button';
-      bt.className='obj'+(eu?' acquis':(cher?' cher':''));
-      bt.setAttribute('aria-pressed',String(vitrine===a.k));
-      bt.title=a.n+' — '+a.d;
-      const c=document.createElement('canvas'); c.width=120; c.height=120;
-      // La vitrine montre chaque objet à sa teinte naturelle, pas à celle du
-      // pinceau : vingt vignettes toutes vertes ne donnent envie de rien.
-      if(ou==='ile')         apercuObjet(c.getContext('2d'),a.k,a.c,'se');
-      else if(ou==='dedans')  apercuMeuble(c.getContext('2d'),a.k,a.c,'se');
-      else                    apercuToi(c.getContext('2d'),a.k,a.c);
-      const nom=document.createElement('span'); nom.textContent=a.n;
-      const prix=document.createElement('span'); prix.className='prix';
-      prix.textContent = eu ? '✓ à toi' : (a.prix+' shells');
-      bt.appendChild(c); bt.appendChild(nom); bt.appendChild(prix);
-      bt.onclick=()=>{ vitrine = (vitrine===a.k) ? null : a.k; buildAll(); };
-      g.appendChild(bt); });
+    lot.forEach(a=>g.appendChild(vignette(a,ou)));
     f.appendChild(g); p.appendChild(f);
-    if(choisi && choisi.ou===ou) p.appendChild(comptoir(choisi)); });
+    // Le comptoir tombe sous le rayon d'où vient le clic, pas en bas de la
+    // section : c'est la règle de la boutique du 16/09 — le refus, et le
+    // prix, tombent là où est le doigt. Avec 26 vignettes en une grille, le
+    // bas de la section était déjà à un écran de défilement.
+    if(choisi && lot.indexOf(choisi)>=0) p.appendChild(comptoir(choisi));
+  };
+
+  rayon('Pour toi', BOUTIQUE.filter(a=>a.ou==='toi'), 'toi');
+
+  /* « Sur ton île » a grandi jusqu'à 26 vignettes en une seule grille triée
+     par prix : les six bâtiments y étaient éparpillés entre l'échoppe et le
+     toboggan, et rien ne disait qu'il y avait un village à bâtir. La vitrine
+     reprend donc les rayons de l'atelier — et elle les **lit** dans
+     `OBJ_GROUPS` plutôt que de les recopier, pour que le rayon d'un objet
+     soit le même des deux côtés le jour où on en ajoute un. */
+  // Un titre seul au-dessus de ses rayons aurait l'air d'un rayon vide. Il
+  // porte donc sa ligne, et elle travaille : elle dit que ces rayons-là sont
+  // ceux de l'atelier, donc où l'objet ira se ranger une fois payé.
+  const ileTitre=field('Sur ton île');
+  ileTitre.appendChild(hint('Les rayons sont ceux de ton <b>atelier</b> : un objet acheté ici va se ranger dans le rayon du même nom, dans l’onglet <b>Île</b>.'));
+  p.appendChild(ileTitre);
+  const dejaVu=[];
+  OBJ_GROUPS.forEach(([titre,items])=>{
+    const cles=items.map(o=>o[0]);
+    const lot=BOUTIQUE.filter(a=>a.ou==='ile'&&cles.indexOf(a.k)>=0);
+    if(!lot.length) return;
+    lot.forEach(a=>dejaVu.push(a.k));
+    rayon(titre,lot,'ile');
+  });
+  // Un article d'île qui ne serait dans aucun rayon de l'atelier ne doit pas
+  // disparaître de la vitrine : il se vendrait sans pouvoir se poser, et rien
+  // ne le dirait. Aucun aujourd'hui — vérifié, les 26 sont rangés.
+  const restants=BOUTIQUE.filter(a=>a.ou==='ile'&&dejaVu.indexOf(a.k)<0);
+  if(restants.length) rayon('Divers',restants,'ile');
+
+  rayon('Dans ta maison', BOUTIQUE.filter(a=>a.ou==='dedans'), 'dedans');
+
+  // Ce qui rapporte, construit tout en haut avec la bourse et posé ici :
+  // même geste que l'archipel de `buildVoisins()`, et pour la même raison.
+  p.appendChild(apres);
 
   p.appendChild(rule());
   p.appendChild(hint('Tout se paie en <b>shells</b>, la monnaie de l’île. On les gagne en jouant, jamais avec de l’argent : il n’y a rien à acheter ici avec autre chose que des shells.'));
