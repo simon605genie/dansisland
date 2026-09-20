@@ -354,6 +354,12 @@ l'intégration Git ne répond plus :
 ./build.sh && npx wrangler pages deploy dist --project-name dansisland --branch main
 ```
 
+**Lire ce que `build.sh` affiche avant de publier**, et pas seulement le
+lancer : il donne l'empreinte de `dist/index.html`, le commit, et un
+avertissement si le clone est en retard sur son amont. Le 20/09, un clone
+resté sur un vieux commit a publié l'ancienne version — la mise en ligne
+avait parfaitement marché, sur le mauvais code.
+
 ### Quand l'intégration Git décroche
 
 Le 18/09/2026, la production a cessé d'être redéployée : `dansisland.app`
@@ -375,18 +381,20 @@ variables → Actions** :
 
     CLOUDFLARE_API_TOKEN    un jeton « Cloudflare Pages: Edit »
     CLOUDFLARE_ACCOUNT_ID   l'identifiant de compte, lisible dans l'URL
-                            du tableau de bord
+                            du tableau de bord ou dans `npx wrangler whoami`
 
 Sans eux, le job s'arrête au premier pas en nommant ce qui manque, plutôt
 que d'échouer plus loin sur une erreur d'authentification illisible.
 
-**Et c'est exactement où il en est, mesuré le 19/09 au soir.** Le workflow
-n'est plus bloqué — il se planifie, il tourne, il passe le `checkout`, et il
-s'arrête au pas « Les secrets sont-ils là ? », tout le reste en `skipped`.
-Autrement dit : **il ne manque que ces deux secrets.** Les ajouter suffit,
-et le prochain push sur `main` publie. Ils
-restent chez GitHub : ils ne passent pas dans les logs et ne sont pas dans
-ce dépôt.
+**Les deux sont en place depuis le 20/09/2026 au soir**, et le premier run
+qui les a eus a publié en 22 secondes. Un push sur `main` met donc le site
+en ligne. Ils restent chez GitHub : ils ne passent pas dans les logs et ne
+sont pas dans ce dépôt.
+
+Le log du pas « Les secrets sont-ils là ? » dit **lequel** des deux manque
+(`JETON: ***` contre `COMPTE:` vide), ce qui évite de demander. Et les deux
+n'ont pas la même nature : l'`ACCOUNT_ID` est un identifiant, il se lit et
+il circule ; le jeton, lui, ne se colle nulle part où il resterait écrit.
 
 Il ne remplace pas forcément l'intégration Git : si elle repart, les deux
 coexistent sans dommage — deux déploiements du même contenu. Mais il ne

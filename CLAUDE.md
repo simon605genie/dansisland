@@ -1627,22 +1627,31 @@ Deux choses à savoir sur `faux-store.js`, qui a gagné deux crochets :
   donc le panneau gagnait partout et recouvrait la bulle de l'objet visé.
   Une heure perdue là-dessus.
 
-## Pourquoi le site n'est pas en ligne — 19/09/2026
+## Pourquoi le site n'était pas en ligne — 19/09/2026, réglé le 20/09 au soir
 
-**Le fait établi, et c'est le seul qui compte pour déployer :
-`CLOUDFLARE_API_TOKEN` n'existe pas dans ce dépôt.** Mesuré, pas déduit :
-une sonde jetable l'a lu dans un job qui, lui, a bien tourné, et la
-variable est arrivée vide. Tant que le secret n'est pas ajouté dans
-*Settings → Secrets and variables → Actions*, **aucun déploiement ne peut
-partir de GitHub**, quoi qu'on fasse d'autre au workflow.
+**Deux secrets manquaient, et rien d'autre.** `CLOUDFLARE_API_TOKEN` et
+`CLOUDFLARE_ACCOUNT_ID` ont été ajoutés dans *Settings → Secrets and
+variables → Actions* le 20/09 au soir, et le run suivant est passé de bout
+en bout en **22 secondes** — les deux `[ -z … ]` du premier pas, `build.sh`,
+`npx wrangler`, la compilation du Worker, le déploiement. Le contrôle
+« Vérifier le déploiement » a confirmé dans la minute : empreinte servie =
+empreinte du dépôt, octet pour octet.
 
-La voie qui marche, et elle a déjà servi :
+**Un push sur `main` publie donc, désormais.** Tout ce qui suit dans cette
+section reste écrit parce que ce sont des pannes qu'on peut rouvrir, pas
+parce que le site attend encore quelque chose.
+
+La voie à la main marche toujours, et elle reste la bonne pour un correctif
+qu'on ne veut pas faire passer par GitHub :
 
     ./build.sh && npx wrangler pages deploy dist \
       --project-name dansisland --branch main
 
 C'est un projet Pages en **upload direct**, pas une intégration Git : ce
-n'est pas un contournement, c'est le chemin normal de ce projet.
+n'est pas un contournement, c'est le chemin normal de ce projet. `build.sh`
+affiche l'empreinte et le commit juste avant de publier — **les lire** est
+ce qui distingue une mise en ligne d'une mise en ligne du mauvais code, et
+c'est la leçon du 20/09 écrite plus bas.
 
 ### Le second défaut, non résolu, et les trois fausses pistes
 
@@ -1683,14 +1692,27 @@ secrets sont-ils là ? » — avec les quatre suivants en `skipped`.
     4 skipped  Préparer dist/
     5 skipped  Publier sur Cloudflare Pages
 
-Donc : **il ne manque que les deux secrets Cloudflare.** Les ajouter suffit,
-et le prochain push sur `main` publie. C'est la seule chose qui sépare le
-dépôt de la production, et ce n'est plus une hypothèse.
+Donc : **il ne manquait que les deux secrets Cloudflare.** Le diagnostic
+tenait, et il n'a pas eu besoin d'être refait : les secrets ajoutés le
+20/09 au soir, le run suivant est passé sans qu'une ligne du workflow
+change. Une panne dont on sait nommer la cause exacte se règle par un
+geste, pas par une enquête de plus.
 
-Le contrôle « Le site répond, et il est complet » reste rouge tant que
-personne n'a déployé, et il a raison : il compare l'empreinte du dépôt à
-celle de la page servie. Il est rouge sur `main` comme sur les branches —
-ce n'est pas un défaut de la branche qu'on relit.
+Ce qui a servi ce soir-là, et qui vaut pour la prochaine fois : **le log du
+run dit lequel des deux manque.** Le run 27 affichait `JETON: ***` et
+`COMPTE:` vide — donc le jeton était déjà en place et il ne restait que
+l'identifiant de compte. Demander « lequel as-tu ajouté ? » aurait coûté un
+aller-retour ; le log le disait déjà.
+
+Et un **Account ID n'est pas un secret** : c'est un identifiant, il se lit
+dans `npx wrangler whoami` et il peut circuler. Un **jeton d'API**, si : il
+ne doit jamais être collé dans une conversation, où il resterait écrit. La
+distinction est ce qui permet de débloquer ce genre de chose vite sans rien
+exposer.
+
+Le contrôle « Le site répond, et il est complet » était rouge tant que
+personne n'avait déployé, et il avait raison : il compare l'empreinte du
+dépôt à celle de la page servie. Il est vert depuis le 20/09 au soir.
 
 **Ne jamais remettre `toJSON(secrets)` dans un workflow de ce dépôt.**
 Lister les noms des secrets — une commodité que j'avais ajoutée pour
