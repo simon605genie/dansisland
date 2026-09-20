@@ -1,0 +1,98 @@
+# ============================================================
+#  Les adresses réservées le sont-elles **vraiment en base** ?
+#
+#  Le contrôle 3 de `test/robots.mjs` croise déjà `PAGES` avec le fichier
+#  `supabase/2026-09-20_slugs_reserves.sql`. Ce qu'il ne peut pas savoir,
+#  c'est si ce fichier a été **joué**, ni sur quel projet — or c'est
+#  exactement le risque nommé en tête de CLAUDE.md : le 15/09, un schéma a
+#  été appliqué par erreur sur le projet mamash.
+#
+#  Deux listes d'accord dans le dépôt ne valent rien si la base ne les
+#  connaît pas. Un joueur prendrait `comment-jouer` comme adresse d'île,
+#  la Pages Function répondrait avant le catch-all, et **son île
+#  deviendrait inatteignable** — sans erreur, sans trace, et sans qu'on
+#  puisse le lui expliquer.
+#
+#  Ce que ça fait : appeler `slug_reserve()` en **lecture seule**, avec la
+#  clé publishable — celle de `src/config.js`, publique par construction.
+#  Aucune écriture, aucun secret, rien à installer. Le conteneur des
+#  sessions Claude ne peut pas joindre Supabase (le proxy répond 403 au
+#  CONNECT), donc ce contrôle ne peut vivre qu'ici.
+#
+#  Quand il tourne : à la main, et quand l'une des deux listes bouge. Pas
+#  à chaque push — un contrôle qui interroge la production soixante fois
+#  par jour pour rien finit par être coupé.
+# ============================================================
+name: Les slugs réservés
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'supabase/**.sql'
+      - 'functions/_commun.js'
+
+permissions:
+  contents: read
+
+jobs:
+  slugs:
+    name: La base connaît les adresses des pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Interroger slug_reserve()
+        run: |
+          set -u
+          # L'URL et la clé se **lisent dans la source**, jamais recopiées
+          # ici : deux listes qui divergent, et ce contrôle interrogerait
+          # un autre projet que le jeu. C'est la leçon du témoin du
+          # déploiement, qui attendait une phrase écrite en dur.
+          URL=$(grep -o "https://[a-z0-9]*\.supabase\.co" src/config.js | head -1)
+          CLE=$(grep -o 'sb_publishable_[A-Za-z0-9_-]*' src/config.js | head -1)
+          echo "projet : $URL"
+          case "$URL" in
+            *cgputbitzfgokpwbbind*) echo "  → dansisland, le bon projet." ;;
+            *) echo "::error::Ce n'est pas le projet dansisland. On s'arrête."; exit 1 ;;
+          esac
+
+          demander () {
+            curl -sS -m 20 -X POST "$URL/rest/v1/rpc/slug_reserve" \
+              -H "apikey: $CLE" -H "Authorization: Bearer $CLE" \
+              -H "Content-Type: application/json" -d "{\"s\":\"$1\"}"
+          }
+
+          # Les huit adresses de pages se **lisent dans `PAGES`**, chemins
+          # et alias, plus les trois préfixes. Les recopier ici serait la
+          # neuvième liste à tenir d'accord.
+          ATTENDUS=$(grep -oE "(chemin|alias): '/[a-z-]+'" functions/_commun.js \
+                     | grep -oE "/[a-z-]+" | tr -d '/')
+          ATTENDUS="$ATTENDUS island carte sitemap"
+
+          n=0; dur=0
+          for s in $ATTENDUS; do
+            r=$(demander "$s")
+            n=$((n+1))
+            if [ "$r" = "true" ]; then
+              echo "  ✅ $s — réservé"
+            else
+              echo "  ❌ $s — la base répond « $r », donc une île peut le prendre"
+              dur=$((dur+1))
+            fi
+          done
+
+          # Un contrôle qui ne dit pas combien il a lu peut passer au vert
+          # en ne regardant rien : c'est écrit trois fois dans CLAUDE.md.
+          echo "  — $n adresses interrogées —"
+          [ "$n" -ge 11 ] || { echo "::error::Seulement $n adresses lues, il en faut 11."; exit 1; }
+
+          # Et le témoin en creux : un slug ordinaire doit rester libre,
+          # sinon la fonction rend « true » pour tout et le vert ne prouve
+          # rien. C'est la leçon du témoin sombre sur des cheveux noirs.
+          libre=$(demander "sable-rose")
+          echo "  témoin : « sable-rose » → $libre (attendu : false)"
+          [ "$libre" = "false" ] || { echo "::error::La fonction répond pareil à tout."; exit 1; }
+
+          [ "$dur" -eq 0 ] || { echo "::error::$dur adresse(s) non réservée(s) en base."; exit 1; }
+          echo "✅ Les $n adresses sont réservées, et un nom ordinaire reste libre."
