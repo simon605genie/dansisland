@@ -40,6 +40,10 @@ Trois pièces, réservées au propriétaire, entièrement dans `monde.interieur`
 
 1. `mondeNu()` liste les clés qui partent en base. Une clé absente de cette
    liste est effacée à la sauvegarde suivante, sans erreur et sans trace.
+   *(Et `encode()` est un **second** chemin pour la même donnée, celui du
+   code de sauvegarde : une clé neuve doit entrer dans les deux, sinon elle
+   part en base et disparaît du code, ou l'inverse. Voir « peindre le
+   sol », 20/09.)*
 2. `memoriser()` sérialise ce que Ctrl+Z sait rendre. Ce qui n'y est pas
    n'est pas annulable.
 
@@ -3923,6 +3927,149 @@ mesure les trois choses qui peuvent casser en silence :
    remplacement ratait sa cible ;
 3. marcher sur la rangée change l'image là où l'on marche, même trajet et
    mêmes touches des deux côtés.
+
+## Peindre le sol, et la première clé ajoutée à `mondeNu()` depuis longtemps — 20/09/2026 au soir
+
+Tout ce qui a été écrit ces deux jours tient **sans une clé de plus** — le
+vent, la météo, les saisons, les habitants, la dalle qui chante, le
+potager — parce que tout s'y déduit du temps ou de la case. Une couleur
+posée par un enfant ne se déduit de rien : c'est une donnée du joueur, et
+une donnée du joueur qui ne part pas en base est une donnée perdue. Cette
+clé-là se paie, donc. Ce qu'on peut choisir, c'est ce qu'elle coûte.
+
+### Ce qui a été écarté, et pourquoi
+
+**Un bitmap par case** — la grille du visage appliquée à une tuile — pèse
+576 caractères la case. Dix cases peintes font 5,7 ko dans un jsonb que
+*chaque sauvegarde réécrit*, cinquante en font 28. Le coût grandit avec
+l'usage, ce qui est exactement ce qu'on ne veut pas d'une clé de
+sauvegarde.
+
+**Des sous-cases** (2x2 par tuile, 36x36 = 1296 caractères) : fixe, mais
+quatre fois le prix, et ça ne se justifie pas — voir ci-dessous.
+
+### Ce qui est retenu : une couleur par case
+
+`mine.sol` est une chaîne de **324 caractères**, un par case, l'index dans
+`SOL_COUL` en base 36 et `.` pour « rien ». Exactement la forme de
+`me.face`, et le même piège : au-delà de trente-six couleurs il faudrait
+deux caractères, et toutes les chaînes déjà enregistrées se reliraient de
+travers.
+
+**La case est la bonne résolution, et ce n'est pas un compromis.** C'est
+l'unité de tout le reste — le pinceau de terrain, la pose d'un objet, la
+marée, la neige, le rayon. Une peinture à la case s'aligne donc sur ce qui
+l'entoure : un chemin peint est un chemin qu'on parcourt case par case.
+Des sous-cases donneraient un tapis posé *par-dessus* la grille, qui ne
+coïnciderait avec rien.
+
+**Et la clé n'est écrite que si on a peint** : `mondeNu()` omet `sol`
+quand la chaîne est vide. Une île qu'on n'a jamais peinte pèse exactement
+ce qu'elle pesait hier, et c'est ce qui rend cette clé acceptable.
+
+Six choses à tenir :
+
+1. **La peinture se pose entre le sol et la saison.** Après le sol, parce
+   que c'est de la peinture posée dessus ; avant la saison, parce que la
+   neige ne trie pas — elle couvre l'herbe, le sable et ce qu'on a peint.
+2. **Elle reprend le bruit `n` de la case**, sinon elle se lit comme un
+   autocollant collé sur l'île plutôt que comme de la couleur sur le sol.
+3. **Elle ne change pas ce qu'est la case.** Le pinceau de terrain choisit
+   de l'herbe, du sable, un chemin ou de l'eau ; celui-ci ne touche qu'à
+   la couleur. On peut peindre un chemin bleu sans que l'eau vienne avec.
+4. **La gomme est une pastille de la rangée**, pas un mode à part : la
+   règle déjà tenue par l'éditeur de visage.
+5. **`memoriser()` porte `p:solDe(mine)`**, et `annuler()` ne touche à la
+   peinture que si le pas empilé en porte une — les pas d'avant ce
+   changement n'en ont pas, et on ne les laisse pas l'effacer.
+6. **`recentrer()` repart d'une chaîne vide** quand la longueur ne tombe
+   pas juste. Il n'y a **pas** de cas 12x12 à recentrer comme pour les
+   tuiles : la clé n'a jamais existé sur l'ancienne grille, donc une
+   mauvaise longueur ne peut venir que d'une corruption.
+
+### `peindreLeSol()` ne s'appelle pas `peindreCase()`
+
+L'éditeur de visage a déjà une `peindreCase(cv, ev)` huit mille lignes
+plus bas. **C'est la deuxième fois en deux jours** que cette collision se
+présente — `empriseCases()` contre `casesDe()` avait coûté un village
+entier qui ne se posait nulle part, sans une ligne dans la console, parce
+que deux déclarations de fonction du même nom ne lèvent aucune erreur et
+que la dernière gagne. Repérée cette fois **avant** de lancer quoi que ce
+soit, en cherchant le nom dans le fichier au moment de l'écrire.
+
+### Deux défauts d'affichage trouvés en mesurant, dont un qui datait
+
+**Le compteur du panneau mentait.** J'y avais mis « 7 cases peintes », lu
+à la construction du panneau — or aucun pinceau n'appelle `buildAll()`,
+le panneau entier se refabriquerait à chaque coup. Le nombre restait donc
+celui d'il y a dix cases. `rafraichirPeinture()` réécrit ce seul texte,
+la discipline de `rafraichirChamps()`.
+
+**Et le code de sauvegarde était périmé après toute modification de
+l'île** — pas seulement après un coup de peinture. `ouvrirOnglet()` ne
+fait que montrer un panneau, il ne reconstruit rien : un enfant qui
+peignait son île, ouvrait Voisins et copiait son code **copiait l'île
+d'avant**, sans que rien ne le dise. Le pinceau de terrain et la pose d'un
+objet avaient déjà ce défaut depuis toujours. `saveMine()` réécrit
+maintenant le champ — sauf s'il a le focus, parce qu'on est alors en train
+d'y coller un code à importer.
+
+C'est le défaut le plus utile de la nuit, et il n'a **rien à voir avec la
+peinture** : il a été trouvé parce qu'une mesure de la peinture ne tombait
+pas juste. Une mesure qui ne tombe pas juste a toujours quelque chose à
+dire, même quand ce n'est pas sur ce qu'on mesurait.
+
+### Trois heures perdues sur une boîte relevée trop tôt
+
+Le harnais cliquait sur l'île et **rien ne se peignait** — ni avec le
+pinceau de peinture, ni avec le pinceau de terrain. J'ai cherché un
+overlay (il n'y en a pas), vérifié qu'un clic dispatché atteint bien son
+écouteur (oui), mesuré `tileFrom()` (juste : le centre du cadre rend la
+case 8,8).
+
+La cause était dans ma sonde : **cliquer une pastille fait défiler la
+page**, et je relevais la boîte du canvas avant ce défilement. Les clics
+partaient 200 px trop bas, hors de la grille — donc sans même un message
+de refus, puisque le gestionnaire sort en silence hors grille. Le silence
+était la seule chose qui aurait dû me mettre sur la piste, et je l'ai lu
+comme « la peinture ne marche pas » pendant une heure.
+
+Ce qui a tranché, c'est `servir(port, remplacer(...))` : une panne qui
+**expose l'état du jeu** (`tool.mode`, `solDe(mine)`, `dansLeRayon()`) à
+la page. Trois lignes, et la réponse en un tour — la peinture marchait
+depuis le début. Quand une mesure ne tombe pas juste, il faut instrumenter
+l'objet mesuré avant d'accuser le code.
+
+### Deux contrôles étaient pinés sur la *forme* de `mondeNu()`
+
+`mondeNu()` est passé de `return {…}` à `const o={…}; … return o;` — il le
+fallait pour n'ajouter `sol` que si on a peint. **Rien de ce que la
+fonction fait n'a changé**, et pourtant deux contrôles ont rougi :
+
+    toi.mjs     /return \{name:w\.name,[^}]*me:w\.me/   → faux
+    vivant.mjs  slice(indexOf('return {name:w.name'))   → 0 caractère
+
+Les deux affirmaient quelque chose de vrai (« `me` part en base », « ni
+météo ni saison n'entrent dans la liste ») en s'accrochant à la
+ponctuation qui l'entourait le jour où ils ont été écrits. Ils lisent
+maintenant le **corps de la fonction**, extrait par son nom.
+
+C'est la leçon du 20/09 au matin — « une liste recopiée dans un contrôle
+est une liste de trop », qui avait coûté un contrôle de déploiement rouge
+sur une accroche réécrite — appliquée cette fois à une **syntaxe**. Et
+c'est l'autre moitié de ce que ce fichier répète : un contrôle qui ne
+tombe pas juste n'a pas toujours trouvé un défaut, mais il a toujours
+quelque chose à dire.
+
+### Le faux `planifierSauvegarde()` retient ce qu'on lui donne
+
+Il ne faisait rien. Or **`mondeNu()` et `encode()` sont deux chemins**
+pour la même donnée, donc deux occasions de l'oublier, et le code de
+sauvegarde du panneau ne passe que par le second. Un harnais qui ne
+regarde qu'un des deux dit « tout va bien » sur la moitié de la question.
+Il retient maintenant les clés, la taille et le nombre de cases peintes —
+pas le monde entier, qui remplirait le quota de `localStorage` à chaque
+clic.
 
 ## Répondre à un mot — 20/09/2026 au soir
 

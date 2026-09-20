@@ -374,8 +374,19 @@ c.titre('3. le visage se peint, et il arrive sur le bonhomme');
      `mondeNu()`. Le contrôle le vérifie dans la source — une clé de plus
      dans le jsonb se perdrait en silence, c'est le piège nommé depuis le
      16/09. */
+  /* On lit le **corps de `mondeNu()`**, pas la forme qu'il avait le jour
+     où ce contrôle a été écrit.
+
+     La version d'avant cherchait `return {name:w.name, … me:w.me` : elle a
+     rougi le 20/09 au soir parce que `mondeNu()` est passé de `return {…}`
+     à `const o={…}; … return o;` pour pouvoir n'ajouter `sol` que si on a
+     peint. Rien de ce qu'elle affirme n'avait changé — seulement la
+     ponctuation autour. C'est « une liste recopiée dans un contrôle est
+     une liste de trop », appliqué à une syntaxe. */
   const src = lire('index.html');
-  c.dit(/return \{name:w\.name,[^}]*me:w\.me/.test(src.replace(/\s+/g, ' ')),
+  const corpsNu = (src.match(/function mondeNu\(w\)\{[\s\S]*?\n\}/) || [''])[0];
+  c.dit(corpsNu.length > 120, 'le corps de mondeNu() a été lu (' + corpsNu.length + ' caractères)');
+  c.dit(/\bme:\s*w\.me\b/.test(corpsNu),
         '`me` part bien en base — donc `me.face` aussi, sans migration');
   c.dit(!/mondeNu[\s\S]{0,200}face:/.test(src), 'et `face` n’ajoute aucune clé à `mondeNu()`');
 

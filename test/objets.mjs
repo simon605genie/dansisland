@@ -10,7 +10,7 @@
 
    Il éprouve aussi ce que chacun apporte, puisque c'est leur seule raison
    d'être : sans fonction, ce sont des décorations à 50 shells. */
-import { navigateur, servir, onglet, compteur, attendre } from './aide.mjs';
+import { navigateur, servir, onglet, compteur, attendre, remplacer } from './aide.mjs';
 import { readFileSync, readdirSync } from 'fs';
 
 const s = await servir(8155);
@@ -1039,6 +1039,233 @@ c.titre('17. répondre à un mot, et la réponse se lit au pied du panneau');
   console.log('     bourse après la réponse : ' + apres.trim() + ' (' + avantSous.trim() + ' avant)');
   c.dit(apres === avantSous,
         'la bourse n’a pas bougé — une réponse ne paie rien (' + apres.trim() + ')');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
+c.titre('18. peindre le sol — la première clé ajoutée à mondeNu() depuis longtemps');
+{
+  /* Tout ce qui a été écrit ces deux jours tient **sans une clé de plus**,
+     parce que tout s'y déduit du temps ou de la case. Une couleur posée
+     par un enfant ne se déduit de rien : c'est une donnée du joueur, et
+     une donnée du joueur qui ne part pas en base est une donnée perdue.
+
+     Le contrôle porte donc d'abord sur les **deux chemins** qu'elle doit
+     prendre, et qui sont deux occasions de l'oublier : `mondeNu()`, qui
+     va en base, et `encode()`, qui fait le code de sauvegarde. */
+  const { ctx, page, erreurs } = await ouvrir(null);
+
+  const ileTab = () => page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'ile');
+    if (b) b.click();
+  });
+  const champ = () => page.evaluate(() => {
+    const f = [...document.querySelectorAll('.field')].find(x => /Peindre le sol/.test(x.textContent));
+    if (!f) return null;
+    f.scrollIntoView({ block: 'center' });
+    return { pastilles: [...f.querySelectorAll('button')].map(b => b.textContent.trim()),
+             note: (f.querySelector('.hint') || {}).innerText || '',
+             eteintes: [...f.querySelectorAll('button')].filter(b => b.disabled).length };
+  });
+  const armer = nom => page.evaluate(n => {
+    const f = [...document.querySelectorAll('.field')].find(x => /Peindre le sol/.test(x.textContent));
+    f.scrollIntoView({ block: 'center' });
+    [...f.querySelectorAll('button')].find(b => new RegExp(n).test(b.textContent)).click();
+  }, nom);
+  const compte = async () => {
+    const t = (await champ()).note;
+    const m = t.match(/(\d+) case/);
+    return m ? +m[1] : 0;
+  };
+  const enBase = () => page.evaluate(() => {
+    try { return JSON.parse(localStorage.getItem('test:dernier-monde')); } catch (e) { return null; }
+  });
+  const codePeint = () => page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'voisins');
+    if (b) b.click();
+    const v = [...document.querySelectorAll('#p-voisins textarea')].map(e => e.value)
+      .find(x => x && x.length > 40) || '';
+    try { const j = JSON.parse(decodeURIComponent(escape(atob(v))));
+          return (j.l || '').split('').filter(c => c !== '.').length; }
+    catch (e) { return -1; }
+  });
+
+  await ileTab(); await attendre(600);
+  const av = await champ();
+  console.log('     pastilles : ' + (av ? av.pastilles.join(' · ') : '(champ absent)'));
+  c.dit(!!av, 'le champ « Peindre le sol » est dans le panneau Île');
+  c.dit(!!av && av.pastilles.length === 13,
+        'douze couleurs et une gomme (' + (av ? av.pastilles.length : 0) + ')');
+  c.dit(!!av && /Effacer/.test(av.pastilles[av.pastilles.length - 1]),
+        'et la gomme est une pastille de la rangée, pas un mode à part');
+
+  /* **Une île jamais peinte ne porte pas la clé.** 324 points pour dire
+     « rien » dans un jsonb que chaque sauvegarde réécrit, c'est 324 de
+     trop — et c'est ce qui rend cette clé acceptable. */
+  const nu0 = await enBase();
+  console.log('     en base au départ : ' + (nu0 ? nu0.cles.join(' ') : '(rien sauvegardé)'));
+  c.dit(!nu0 || !nu0.cles.includes('sol'),
+        'avant d’avoir peint, `sol` n’entre pas dans mondeNu()');
+
+  // On peint. La boîte du canvas est **relevée après l'armement** : cliquer
+  // une pastille fait défiler la page, et une boîte d'avant vise 200 px
+  // plus bas — une heure perdue là-dessus.
+  await armer('Corail');
+  await attendre(300);
+  const bb = await page.locator('#world').boundingBox();
+  for (const [fx, fy] of [[0.50, 0.50], [0.46, 0.53], [0.42, 0.56]]) {
+    await page.mouse.click(bb.x + bb.width * fx, bb.y + bb.height * fy);
+    await attendre(150);
+  }
+  await attendre(400);
+  const n1 = await compte();
+  console.log('     après trois clics : ' + n1 + ' case(s) peinte(s)');
+  c.dit(n1 === 3, 'trois clics peignent trois cases (' + n1 + ')');
+
+  const nu1 = await enBase();
+  console.log('     en base : ' + (nu1 ? nu1.cles.join(' ') + ' · sol ' + nu1.sol + ' car., ' + nu1.peint + ' peinte(s)' : '(rien)'));
+  c.dit(!!nu1 && nu1.cles.includes('sol'), '`sol` entre dans mondeNu() dès qu’on a peint');
+  c.dit(!!nu1 && nu1.sol === 324, 'et c’est une chaîne de 324 caractères, une par case');
+  c.dit(!!nu1 && nu1.peint === 3, 'qui porte bien les trois cases (' + (nu1 ? nu1.peint : 0) + ')');
+
+  /* **Le code de sauvegarde est l'autre chemin**, et il se remettait à
+     jour nulle part : `ouvrirOnglet()` ne reconstruit rien, et aucun
+     pinceau n'appelle `buildAll()`. Un enfant qui peignait puis copiait
+     son code copiait l'île d'avant. Ça ne datait pas de la peinture — le
+     pinceau de terrain avait déjà ce défaut. */
+  const cp = await codePeint();
+  console.log('     dans le code de sauvegarde : ' + cp);
+  c.dit(cp === 3, 'le code de sauvegarde porte la peinture sans attendre un buildAll (' + cp + ')');
+
+  // Ctrl+Z : une peinture qu'on ne peut pas reprendre n'est pas un pinceau.
+  await ileTab(); await attendre(400);
+  await page.keyboard.press('Control+z');
+  await attendre(600);
+  const n2 = await compte();
+  console.log('     après Ctrl+Z : ' + n2);
+  c.dit(n2 === 2, 'Ctrl+Z reprend le dernier coup de pinceau (' + n2 + ')');
+
+  // La gomme, qui est une couleur de la rangée.
+  await armer('Effacer');
+  await attendre(300);
+  const bb2 = await page.locator('#world').boundingBox();
+  await page.mouse.click(bb2.x + bb2.width * 0.46, bb2.y + bb2.height * 0.53);
+  await attendre(400);
+  const n3 = await compte();
+  console.log('     après la gomme : ' + n3);
+  c.dit(n3 === 1, 'la gomme retire une case (' + n3 + ')');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
+c.titre('18 bis. les deux chemins de la peinture, éprouvés en les cassant');
+{
+  /* Les deux assertions du contrôle 18 qui comptent — « `sol` entre dans
+     `mondeNu()` » et « le code de sauvegarde le porte » — ne valent que
+     si elles rougissent quand on casse ce qu'elles surveillent. Sans
+     ça, ce sont deux phrases.
+
+     On sert donc **deux copies abîmées** du site et on refait la même
+     mesure. `remplacer()` lève si la panne ne trouve pas sa cible : une
+     panne qui ne se pose pas rendrait le contrôle vert pour la pire des
+     raisons. */
+  const peindre = async (site) => {
+    const o = await onglet(nav, { taille: { width: 1200, height: 860 },
+      memoire: { 'dansisland:entre': '1', 'dansisland:guide': '1', 'dansisland:muet': '1' } });
+    await o.page.goto(site.url, { waitUntil: 'load' });
+    await attendre(2500);
+    await o.page.evaluate(() => {
+      const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'ile');
+      if (b) b.click();
+    });
+    await attendre(600);
+    await o.page.evaluate(() => {
+      const f = [...document.querySelectorAll('.field')].find(x => /Peindre le sol/.test(x.textContent));
+      f.scrollIntoView({ block: 'center' });
+      [...f.querySelectorAll('button')].find(b => /Corail/.test(b.textContent)).click();
+    });
+    await attendre(300);
+    // Relevée **après** l'armement : la pastille fait défiler la page.
+    const bb = await o.page.locator('#world').boundingBox();
+    for (const [fx, fy] of [[0.50, 0.50], [0.46, 0.53]]) {
+      await o.page.mouse.click(bb.x + bb.width * fx, bb.y + bb.height * fy);
+      await attendre(150);
+    }
+    await attendre(400);
+    const base = await o.page.evaluate(() => {
+      try { return JSON.parse(localStorage.getItem('test:dernier-monde')); } catch (e) { return null; }
+    });
+    const code = await o.page.evaluate(() => {
+      const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'voisins');
+      if (b) b.click();
+      const v = [...document.querySelectorAll('#p-voisins textarea')].map(e => e.value)
+        .find(x => x && x.length > 40) || '';
+      try { const j = JSON.parse(decodeURIComponent(escape(atob(v))));
+            return (j.l || '').split('').filter(ch => ch !== '.').length; }
+      catch (e) { return -1; }
+    });
+    await o.ctx.close();
+    return { base, code };
+  };
+
+  // 1. `mondeNu()` qui oublie la peinture : elle n'arriverait jamais en base.
+  const p1 = await servir(8157, src => remplacer(src,
+    /  const s=solDe\(w\); if\(s!==SOL_VIDE\) o\.sol=s;\n/, ''));
+  c.dit(p1.pannePosee, 'la panne « mondeNu() oublie sol » a bien été posée');
+  const r1 = await peindre(p1);
+  p1.fermer();
+  console.log('     sans la ligne de mondeNu : base ' +
+              (r1.base ? r1.base.peint + ' peinte(s)' : '(rien)') + ' · code ' + r1.code);
+  c.dit(!!r1.base && !r1.base.cles.includes('sol'),
+        'la peinture n’arrive plus en base — le contrôle 18 mord bien');
+  c.dit(r1.code === 2, 'et le code de sauvegarde, lui, la porte encore : ce sont deux chemins');
+
+  // 2. `saveMine()` qui ne rafraîchit plus le code : c'est le défaut qui
+  //    existait depuis toujours, remis en place pour vérifier qu'on le voit.
+  const p2 = await servir(8158, src => remplacer(src, /^  rafraichirCode\(\);\n/m, ''));
+  c.dit(p2.pannePosee, 'la panne « le code ne se rafraîchit plus » a bien été posée');
+  const r2 = await peindre(p2);
+  p2.fermer();
+  console.log('     sans rafraichirCode : base ' +
+              (r2.base ? r2.base.peint + ' peinte(s)' : '(rien)') + ' · code ' + r2.code);
+  c.dit(!!r2.base && r2.base.peint === 2, 'la base reçoit toujours la peinture');
+  c.dit(r2.code === 0,
+        'mais le code de sauvegarde repasse périmé (' + r2.code + ') — c’est bien lui qu’on corrigeait');
+}
+
+c.titre('18 ter. chez un voisin, on ne peint pas son sol');
+{
+  /* Un pinceau armé chez quelqu'un est un clic mort, et « je clique et il
+     ne se passe rien » est le pire des retours — la leçon de la boutique
+     du 16/09, tenue partout ailleurs par `fermerEnVisite()`. */
+  const { ctx, page, erreurs } = await ouvrir(null);
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'voisins');
+    if (b) b.click();
+  });
+  await attendre(700);
+  const parti = await page.evaluate(() => {
+    const n = [...document.querySelectorAll('#p-voisins .neighbor')][1];
+    const b = n && [...n.querySelectorAll('button,a')].find(x => /Visiter/i.test(x.textContent));
+    if (!b) return false;
+    b.click(); return true;
+  });
+  await attendre(2200);
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'ile');
+    if (b) b.click();
+  });
+  await attendre(600);
+  const v = await page.evaluate(() => {
+    const f = [...document.querySelectorAll('.field')].find(x => /Peindre le sol/.test(x.textContent));
+    if (!f) return null;
+    const b = [...f.querySelectorAll('button')];
+    return { total: b.length, eteintes: b.filter(x => x.disabled).length };
+  });
+  console.log('     chez le voisin : ' + (v ? v.eteintes + ' pastilles éteintes sur ' + v.total : '(champ absent)'));
+  c.dit(parti, 'on est bien arrivé chez un voisin');
+  c.dit(!!v && v.total === 13, 'la rangée est visible — on voit ce qu’on aura chez soi');
+  c.dit(!!v && v.eteintes === v.total, 'et toutes ses pastilles sont éteintes');
   c.dit(erreurs.length === 0, 'aucune erreur de console');
   await ctx.close();
 }

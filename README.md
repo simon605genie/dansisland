@@ -323,7 +323,8 @@ rien ne touche la base de production).
     etroit.mjs      360 px et 780x360 : rien ne déborde, rien n'est coupé
     parrainage.mjs  les trois branches de reglerLeParrainage()
     lien.mjs        le lien de connexion, et l'invite de rotation
-    objets.mjs      les sept rangs, les bulles, les listes qui s'accordent
+    objets.mjs      les sept rangs, les bulles, les listes qui s'accordent,
+                    répondre à un mot, peindre le sol
     dedans.mjs      l'intérieur : le cadre rempli, les articles, les plaques
     robots.mjs      ce qu'un robot lit, sans navigateur ni JavaScript
     toi.mjs         reprendre son bonhomme, le nom de l'île, l'éditeur de visage
@@ -533,6 +534,20 @@ passent par `depuis12()`. Les îles déjà en base passent par
 trois cases. Les mots, eux, vivent en colonnes SQL et ne peuvent pas être
 décalés côté client : c'est le rôle de `supabase/2026-09-16_grille18.sql`,
 **à ne jouer qu'une fois**.
+
+### Peindre le sol
+
+`monde.sol` est une seconde couche, **une couleur par case** : une chaîne
+de 324 caractères, l'index dans `SOL_COUL` en base 36 et `.` pour « rien ».
+Elle ne change pas ce qu'*est* une case — l'herbe reste de l'herbe — elle
+ne fait que la colorer, et elle se pose entre le sol et la saison, donc la
+neige de l'hiver passe par-dessus.
+
+C'est la seule clé ajoutée à `mondeNu()` depuis l'intérieur de la maison,
+et elle n'y entre **que si on a peint** : une île jamais peinte pèse ce
+qu'elle pesait hier. Elle ne grandit jamais non plus — 324 caractères,
+qu'on peigne une case ou deux cents. Un bitmap par case aurait coûté 576
+caractères *la case*, dans un jsonb que chaque sauvegarde réécrit.
 
 ## Portrait et paysage
 

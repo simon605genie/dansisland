@@ -600,9 +600,18 @@ c.titre('6. la météo ne rapporte rien et ne coûte rien');
         'ni l’une ni l’autre ne touche la bourse, un plafond, ou `faits`');
   c.dit(!/vitesse|blocked\(|hero\./.test(bloc),
         'et aucune ne touche au déplacement : ni un temps ni une saison ne ralentit');
-  // Une clé de plus dans `mondeNu()` serait une météo par île, donc la fin
-  // de « le même temps pour tout l'archipel ».
-  const nu = src.slice(src.indexOf('return {name:w.name'), src.indexOf('return {name:w.name') + 400);
+  /* Une clé de plus dans `mondeNu()` serait une météo par île, donc la fin
+     de « le même temps pour tout l'archipel ».
+
+     On lit le **corps de la fonction**, pas la forme qu'elle avait le jour
+     où ce contrôle a été écrit. La version d'avant découpait 400
+     caractères à partir de `return {name:w.name` : elle a rendu « 0
+     caractère » le 20/09 au soir, quand `mondeNu()` est passé à
+     `const o={…}` pour n'ajouter `sol` que si on a peint. Rien de ce
+     qu'elle affirme n'avait changé — seulement la ponctuation. C'est la
+     faute déjà nommée pour l'accroche recopiée dans le workflow : **une
+     forme recopiée dans un contrôle est une forme de trop.** */
+  const nu = (src.match(/function mondeNu\(w\)\{[\s\S]*?\n\}/) || [''])[0];
   c.dit(nu.length > 200, 'la liste de mondeNu() a été lue (' + nu.length + ' caractères)');
   c.dit(!/meteo|saison|vent/.test(nu),
         'et ni la météo, ni la saison, ni le vent n’y sont entrés');

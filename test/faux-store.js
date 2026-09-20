@@ -89,7 +89,26 @@ export async function chargerIle() { return null; }
 export async function creerIle() { return null; }
 export async function slugLibre() { return true; }
 export function brouillonLocal() { return null; }
-export function planifierSauvegarde() {}
+/* Elle **retient ce qu'on lui donne**, au lieu de ne rien faire.
+
+   C'est la seule façon d'éprouver `mondeNu()` pour de vrai : le code de
+   sauvegarde du panneau passe par `encode()`, qui est un autre chemin.
+   Deux chemins qui portent la même donnée, c'est deux occasions de
+   l'oublier, et un harnais qui n'en regarde qu'un dit « tout va bien »
+   sur la moitié de la question.
+
+   On ne garde que les **clés** et la taille : le monde entier dans
+   `localStorage` à chaque clic remplirait le quota pour rien. */
+export function planifierSauvegarde(id, monde) {
+  try {
+    localStorage.setItem('test:dernier-monde', JSON.stringify({
+      cles: Object.keys(monde || {}).sort(),
+      sol: typeof (monde || {}).sol === 'string' ? monde.sol.length : null,
+      peint: typeof (monde || {}).sol === 'string'
+        ? monde.sol.split('').filter(c => c !== '.').length : 0,
+    }));
+  } catch (e) {}
+}
 export async function marquerVu() {}
 
 /* Un mot semé : `['Ana', 'Bravo !', 'Merci !', x, y]`.

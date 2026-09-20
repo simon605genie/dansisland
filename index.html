@@ -1234,6 +1234,81 @@ const GRID=18, TW=56, TH=28, OX=384, OY=12, LIFT=7;
 // datent du 12x12 : depuis12() les décale, recentrer() décale les îles
 // déjà en base. Les mots, eux, sont décalés en SQL (voir supabase/).
 const GRID0=12, DECAL=(GRID-GRID0)/2;
+/* ================= la peinture du sol =================
+
+   **C'est la première clé ajoutée à `mondeNu()` depuis l'intérieur de la
+   maison, et elle se paie.** Tout le reste de ce qui a été écrit ces
+   deux jours — le vent, la météo, les saisons, les habitants, la dalle
+   qui chante — tient sans une clé de plus, parce que tout s'y déduit du
+   temps ou de la case. Une couleur posée par un enfant ne se déduit de
+   rien : c'est une donnée du joueur, et une donnée du joueur qui ne part
+   pas en base est une donnée perdue. Ce qu'on peut choisir, c'est ce
+   qu'elle coûte.
+
+   **Ce qui a été écarté.** Un bitmap par case — la grille du visage
+   appliquée à une tuile — pèse 576 caractères la case : dix cases
+   peintes font 5,7 ko dans un jsonb que *chaque sauvegarde réécrit*, et
+   cinquante en font 28. Le coût grandit avec l'usage, ce qui est
+   exactement ce qu'on ne veut pas d'une clé de sauvegarde.
+
+   **Ce qui est retenu : une couleur par case.** 324 caractères, un par
+   case, l'index dans `SOL_COUL` en base 36 et `.` pour « rien ».
+   Exactement la forme de `me.face`, et le même piège : au-delà de
+   trente-six couleurs il faudrait deux caractères, et toutes les chaînes
+   déjà enregistrées se reliraient de travers.
+
+   **La case est la bonne résolution, et ce n'est pas un compromis.**
+   C'est l'unité de tout le reste — le pinceau de terrain, la pose d'un
+   objet, la marée, la neige, le rayon. Une peinture à la case s'aligne
+   donc sur ce qui l'entoure : un chemin peint est un chemin qu'on
+   parcourt case par case. Des sous-cases donneraient un tapis posé
+   *par-dessus* la grille, qui ne coïnciderait avec rien.
+
+   **Et la clé n'est écrite que si on a peint** : `mondeNu()` omet `sol`
+   quand la chaîne est vide. 324 points pour dire « rien », c'est 324 de
+   trop, et une île qu'on n'a jamais peinte pèse ce qu'elle pesait hier. */
+const SOL_COUL=['#FFF8E8','#0D2630','#FF8F70','#72D6D0','#F4D7A1','#5FAF78',
+                '#184D5B','#F48CA8','#F2A93B','#9B6BC9','#8B5E3C','#E05252'];
+const SOL_NOMS=['Crème','Encre','Corail','Lagon','Sable','Herbe',
+                'Mer','Rose','Soleil','Violet','Bois','Rouge'];
+const SOL_VIDE='.'.repeat(GRID*GRID);
+function solDe(w){
+  const s=w&&w.sol;
+  return (typeof s==='string' && s.length===GRID*GRID) ? s : SOL_VIDE;
+}
+function peintureEn(w,x,y){
+  const k=parseInt(solDe(w)[y*GRID+x],36);
+  return (k>=0 && k<SOL_COUL.length) ? SOL_COUL[k] : null;
+}
+/* La note du panneau qui compte les cases peintes. Elle vit ici plutôt que
+   dans `buildIle()` parce que le clic sur l'île la réécrit **sans**
+   reconstruire le panneau : aucun pinceau n'appelle `buildAll()`. */
+let noteDeLaPeinture=null;
+function rafraichirPeinture(){
+  if(!noteDeLaPeinture) return;
+  const n=solDe(mine).split('').filter(c=>c!=='.').length;
+  noteDeLaPeinture.innerHTML = n
+    ? '<b>'+n+' case'+(n>1?'s':'')+'</b> peinte'+(n>1?'s':'')+
+      '. La neige de l’hiver passe par-dessus, et elle repart avec elle.'
+    : 'Une couleur par case, posée <b>sur</b> le terrain : elle ne change pas ce qu’est la case, seulement sa couleur.';
+}
+/* Une chaîne se réécrit d'un coup : `sol` reste une chaîne en base, jamais
+   un tableau, pour la même raison que `me.face`.
+
+   **Elle ne s'appelle pas `peindreCase()`**, et c'est la leçon du 20/09
+   au matin, rencontrée une deuxième fois en écrivant cette ligne :
+   l'éditeur de visage a déjà une `peindreCase(cv, ev)` huit mille lignes
+   plus bas. Deux déclarations de fonction du même nom ne lèvent **aucune
+   erreur** — la dernière gagne — et `empriseCases()` avait déjà coûté un
+   village entier qui ne se posait nulle part, sans une ligne dans la
+   console. */
+function peindreLeSol(x,y,k){
+  const s=solDe(mine), i=y*GRID+x, c=(k==null)?'.':k.toString(36);
+  if(s[i]===c) return false;
+  mine.sol=s.slice(0,i)+c+s.slice(i+1);
+  return true;
+}
+
 // Le rayon de l'île. Il part plus large qu'avant et grandit d'un cran à
 // chaque mot reçu : l'île s'agrandit parce que des gens sont passés.
 const RAYON0=7.0, RAYON_MAX=8.3, PAS_RAYON=0.13;
@@ -2116,6 +2191,15 @@ function recentrer(w){
     (w.objects||[]).forEach(o=>{ o.x+=DECAL; o.y+=DECAL; });
   }
   if((w.tiles||[]).length!==GRID*GRID) w.tiles=baseTiles(RAYON0,0.80);
+  /* La peinture du sol est arrivée après : une île d'avant reçoit une
+     chaîne vide, et rien n'est perdu puisqu'elle n'a jamais rien peint.
+
+     Il n'y a **pas** de cas 12x12 à recentrer comme pour les tuiles : la
+     clé n'a jamais existé sur l'ancienne grille. Une longueur qui ne
+     tombe pas juste ne peut donc venir que d'une corruption, et la seule
+     réponse honnête est de repartir vide — `solDe()` le fait déjà pour
+     le dessin, on l'écrit ici pour que la sauvegarde suivante soit propre. */
+  if(typeof w.sol!=='string' || w.sol.length!==GRID*GRID) w.sol=SOL_VIDE;
   if(typeof w.rayon!=='number') w.rayon=RAYON0;
   if(!w.ambiance) w.ambiance='vagues';
   // Volets et cheminée sont arrivés après : une maison d'avant les reçoit.
@@ -2555,11 +2639,23 @@ let target=null;
 // `bourses`, que le client ne peut pas écrire. Les y remettre serait rendre
 // la caisse au navigateur.
 function mondeNu(w){
-  return {name:w.name, pal:w.pal, sky:w.sky, tiles:w.tiles, house:w.house, me:w.me, rayon:w.rayon, ambiance:w.ambiance,
+  const o={name:w.name, pal:w.pal, sky:w.sky, tiles:w.tiles, house:w.house, me:w.me, rayon:w.rayon, ambiance:w.ambiance,
           interieur:w.interieur,
           objects:(w.objects||[]).filter(o=>o.t!=='panneau')};
+  // La peinture du sol n'entre que si on a peint : 324 points pour dire
+  // « rien » dans un jsonb que chaque sauvegarde réécrit, c'est 324 de
+  // trop, et une île qu'on n'a jamais peinte pèse ce qu'elle pesait hier.
+  const s=solDe(w); if(s!==SOL_VIDE) o.sol=s;
+  return o;
+}
+// Le champ « Code de sauvegarde » du panneau Voisins. Il vit ici parce
+// que `saveMine()` doit le remettre à jour sans reconstruire le panneau.
+let champCode=null;
+function rafraichirCode(){
+  if(champCode && document.activeElement!==champCode) champCode.value=encode(mine);
 }
 function saveMine(){
+  rafraichirCode();
   store.planifierSauvegarde(ileId, mondeNu(mine), mine.name, e=>{ etatSauvegarde=e; peindreCompte(); });
 }
 
@@ -2573,7 +2669,8 @@ function memoriser(){
     t:mine.tiles,
     o:(mine.objects||[]).filter(o=>o.t!=='panneau'),
     h:mine.house,
-    i:mine.interieur                     // sinon poser dedans est irrattrapable
+    i:mine.interieur,                    // sinon poser dedans est irrattrapable
+    p:solDe(mine)                        // et sinon un coup de pinceau au sol est sans retour
   }));
   if(histo.length>HISTO_MAX) histo.shift();
 }
@@ -2582,6 +2679,10 @@ function annuler(){
   const e=JSON.parse(histo.pop());
   mine.tiles=e.t; mine.objects=e.o; mine.house=e.h;
   if(e.i) mine.interieur=e.i;
+  // `p` manque dans les pas empilés avant ce changement : on ne touche
+  // alors pas à la peinture plutôt que de l'effacer.
+  if(typeof e.p==='string') mine.sol=e.p;
+  rafraichirPeinture();
   replanter(mine);
   if(!visiting) world=mine;
   saveMine(); degager(); buildAll(); son('annule');
@@ -4305,6 +4406,18 @@ function drawTiles(t){
     if(se){ ctx.fillStyle=shade(p.sand,-18); ctx.beginPath();
       ctx.moveTo(q.x+TW/2,cy); ctx.lineTo(q.x,cy+TH/2); ctx.lineTo(q.x,cy+TH/2+drop); ctx.lineTo(q.x+TW/2,cy+drop); ctx.closePath(); ctx.fill(); }
     isoTop(ctx,q.x,cy,TW/2,col);
+    /* La peinture du joueur, **entre le sol et la saison**.
+
+       Après le sol, parce que c'est de la peinture posée dessus. Avant la
+       saison, parce que la neige ne trie pas : elle couvre l'herbe, le
+       sable et ce qu'on a peint, comme dans la vraie vie.
+
+       Elle reprend le bruit `n` de la case, sinon elle se lit comme un
+       autocollant collé sur l'île plutôt que comme de la couleur sur le
+       sol — c'est la même raison qui fait que le terrain lui-même n'est
+       pas un aplat. */
+    const peint = peintureEn(world,x,y);
+    if(peint) isoTop(ctx,q.x,cy,TW/2,shade(peint,(n-0.5)*9));
     /* La saison se **pose sur** la case, elle ne la remplace pas : on voit
        toujours la palette que le joueur a choisie dessous. La neige est
        plus épaisse sur l'herbe que sur le sable et le chemin, comme dans
@@ -5475,7 +5588,7 @@ cv.addEventListener('click',e=>{
   if(visiting){ say('Tu es invité chez '+esc(world.owner)+" — on ne touche pas à l'île des autres."); return; }
   // On ne memorise que si le clic change vraiment quelque chose : sinon la
   // pile se remplit de pas qui n'annulent rien.
-  if((tool.mode==='terrain'||tool.mode==='objet') && !dansLeRayon(q.x,q.y)){
+  if((tool.mode==='terrain'||tool.mode==='objet'||tool.mode==='sol') && !dansLeRayon(q.x,q.y)){
     // Sur le sable découvert, « le large » serait faux : on a les pieds
     // dessus. Le refus doit dire la bonne raison, là où est le doigt.
     say(decouverte(q.x,q.y)
@@ -5486,6 +5599,19 @@ cv.addEventListener('click',e=>{
   if(tool.mode==='terrain'){
     if(world.tiles[q.y*GRID+q.x]===tool.kind) return;
     memoriser(); world.tiles[q.y*GRID+q.x]=tool.kind; son('pinceau');
+  }
+  /* La peinture du sol. `peindreLeSol()` rend faux quand la case porte
+     déjà cette couleur : on ne mémorise rien alors, sinon la pile de
+     Ctrl+Z se remplit de pas qui n'annulent rien — c'est la règle déjà
+     écrite juste au-dessus pour le pinceau de terrain.
+     Mémoriser **avant** de peindre, et donc le faire deux fois : une pour
+     savoir si ça change, une pour l'écrire. Le coût est une copie de
+     chaîne de 324 caractères, largement moins qu'un pas fantôme. */
+  else if(tool.mode==='sol'){
+    const s=solDe(mine), i=q.y*GRID+q.x;
+    const c=(tool.kind==null)?'.':tool.kind.toString(36);
+    if(s[i]===c) return;
+    memoriser(); peindreLeSol(q.x,q.y,tool.kind); rafraichirPeinture(); son('pinceau');
   }
   else if(tool.mode==='gomme'){
     // La gomme prend le bâtiment par n'importe laquelle de ses quatre cases :
@@ -5500,7 +5626,7 @@ cv.addEventListener('click',e=>{
   }
   else if(tool.mode==='tourner'){ tournerSurIle(q.x,q.y); }
   else if(tool.mode==='maison'){ poserMaison(q.x,q.y); guideFait(2); }
-  if(tool.mode==='terrain'||tool.mode==='objet') guideFait(3);
+  if(tool.mode==='terrain'||tool.mode==='objet'||tool.mode==='sol') guideFait(3);
   saveMine();
 });
 
@@ -7896,6 +8022,43 @@ function buildIle(){
     b.onclick=()=>{tool.mode=m;tool.kind=k;buildAll();}; bt.appendChild(b); });
   ft.appendChild(bt); p.appendChild(visiting?fermerEnVisite(ft):ft);
 
+  /* ---- la peinture du sol ----
+     Le pinceau de terrain choisit **ce qu'est** une case — de l'herbe, du
+     sable, un chemin, de l'eau. Celui-ci choisit sa **couleur**, sans rien
+     changer à ce qu'elle est : on peut peindre un chemin bleu sans que
+     l'eau vienne avec.
+
+     **La gomme est une pastille de la rangée**, pas un mode à part. Un
+     mode qu'on arme et qu'on oublie, c'est le pinceau armé au mauvais
+     endroit — le défaut que ce jeu corrige partout ailleurs, et la règle
+     déjà tenue par l'éditeur de visage. */
+  const fp=field('Peindre le sol'), bp=document.createElement('div'); bp.className='chips';
+  const pastille=(k,n)=>{
+    const b=document.createElement('button'); b.className='chip'; b.type='button';
+    b.innerHTML = k==null ? '⌫ Effacer'
+      : '<span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:'+
+        SOL_COUL[k]+';border:1px solid rgba(11,60,93,.25);margin-right:6px"></span>'+n;
+    b.setAttribute('aria-pressed',String(tool.mode==='sol'&&tool.kind===k));
+    b.onclick=()=>{tool.mode='sol';tool.kind=k;buildAll();};
+    bp.appendChild(b);
+  };
+  SOL_COUL.forEach((_,k)=>pastille(k,SOL_NOMS[k]));
+  pastille(null);
+  fp.appendChild(bp);
+  /* Combien de cases sont peintes : c'est la seule façon de retrouver le
+     point isolé qu'on a posé sans le vouloir à l'autre bout de l'île.
+
+     **Il se rafraîchit tout seul, et il le faut.** Un clic sur l'île
+     n'appelle pas `buildAll()` — aucun pinceau ne le fait, le panneau
+     entier se reconstruirait à chaque coup — donc un nombre écrit ici à
+     la construction resterait à sa valeur d'il y a dix cases. C'est la
+     discipline de `rafraichirChamps()` : on garde la référence du nœud
+     et on réécrit ce seul texte. */
+  noteDeLaPeinture=hint('');
+  fp.appendChild(noteDeLaPeinture);
+  rafraichirPeinture();
+  p.appendChild(visiting?fermerEnVisite(fp):fp);
+
   OBJ_GROUPS.forEach(([title,items0])=>{
     // Un objet de la boutique n'apparaît ici qu'une fois acheté : un bouton
     // mort dans l'atelier n'apprend rien, la boutique le dit mieux.
@@ -9030,6 +9193,23 @@ function buildVoisins(){
   // ---- sauvegarde / restauration hors ligne ----
   const sf=field('Code de sauvegarde'), ta=document.createElement('textarea');
   ta.value=encode(mine); ta.spellcheck=false;
+  /* **Le code se remet à jour à chaque sauvegarde**, et il le faut.
+
+     `ouvrirOnglet()` ne fait que montrer un panneau : il ne reconstruit
+     rien. Or aucun pinceau n'appelle `buildAll()` — le panneau entier se
+     refabriquerait à chaque coup — donc ce champ gardait la valeur qu'il
+     avait à la dernière reconstruction. Un enfant qui peignait son île,
+     ouvrait Voisins et copiait son code **copiait l'île d'avant**, sans
+     que rien ne le dise.
+
+     Ça ne datait pas de la peinture : le pinceau de terrain et la pose
+     d'un objet avaient déjà ce défaut. Trouvé en mesurant la peinture,
+     corrigé pour tout le monde.
+
+     Le champ qui a le focus n'est jamais réécrit : c'est la règle de
+     `rafraichirChamps()`, et ici elle protège le code qu'on est en train
+     de coller pour l'importer. */
+  champCode=ta;
   const r3=document.createElement('div'); r3.className='row';
   const cp=document.createElement('button'); cp.className='btn'; cp.textContent='Copier';
   cp.onclick=()=>{ ta.select();
@@ -9389,14 +9569,17 @@ function freeTile(w,t){
 }
 function encode(w){
   return btoa(unescape(encodeURIComponent(JSON.stringify(
+    // `l` est la peinture du sol. Sans elle, un code de sauvegarde
+    // rendrait une île dont le sol a été effacé — et un code est ce qu'on
+    // envoie à quelqu'un pour lui montrer son île.
     {n:w.name,p:w.pal.k,s:w.sky,t:w.tiles.join(''),h:w.house,o:w.objects,m:w.me,i:w.interieur,
-     b:w.bourse,a:w.achats}))));
+     l:solDe(w),b:w.bourse,a:w.achats}))));
 }
 function decode(s){
   const o=JSON.parse(decodeURIComponent(escape(atob(s))));
   return {name:o.n, pal:GROUNDS.find(g=>g.k===o.p)||GROUNDS[0], sky:o.s,
     tiles:String(o.t).split('').map(Number), house:o.h, objects:o.o, me:o.m, interieur:o.i,
-    bourse:o.b, achats:o.a};
+    sol:o.l, bourse:o.b, achats:o.a};
 }
 
 // La carte postale : le cadre tel qu'il est à l'écran, plus le nom de
