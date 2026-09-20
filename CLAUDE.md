@@ -3397,6 +3397,80 @@ pour retenir « ce nom a-t-il été choisi ? » — la question se déduit encor
 
 Les cinq cas sont dans `test/toi.mjs`, le refus compris.
 
+## Un déploiement a publié l'ancienne version — 20/09/2026
+
+Le site est en ligne, vérifié : `dansisland.app` sert `eebd21736e9ad6a2`,
+l'empreinte exacte du dépôt. Mais **il a fallu deux déploiements**, et le
+premier vaut d'être écrit.
+
+Le clone de déploiement était resté sur un vieux commit. La mise en ligne
+a donc parfaitement fonctionné — sur le mauvais code.
+
+    ce que servait dansisland.app   cd121071a0adae80   463 210 octets
+    ce que portait le dépôt         eebd21736e9ad6a2   492 066 octets
+
+### La vérification à la main ne pouvait pas le voir
+
+Pour trancher vite, j'avais donné deux commandes : l'empreinte du
+`dist/index.html` local, et celle de la page servie. Elles sont revenues
+**identiques** — et c'était vrai : l'ancienne comparée à l'ancienne.
+
+Le bloc de déploiement que j'avais écrit contenait pourtant « vérifier
+qu'on est bien sur le bon commit ». Le raccourci l'a laissé tomber.
+
+C'est, mot pour mot, ce que ce fichier répète depuis le 19/09 : **une
+mesure qui ne vérifie pas qu'elle regarde la bonne chose passe au vert en
+ne regardant rien.** Les trois prénoms au lieu de vingt, le contrôle 9 qui
+ne lisait pas `GRANDS`, le repère absent qui absolvait au lieu de faire
+échouer — et maintenant celle-ci, la première qui ait coûté une mise en
+production.
+
+Le contrôle du dépôt, lui, l'a vu : il compare l'empreinte servie à celle
+du dépôt **reconstruit par le runner**, donc il ne peut pas se tromper de
+source. Mais six minutes après coup.
+
+### Le garde-fou est passé de la consigne au script
+
+Une consigne dans un message ne se relit pas. `build.sh` affiche
+maintenant, juste avant qu'on publie :
+
+    empreinte : eebd21736e9ad6a2   (492066 octets)
+    commit    : 30d31af  (claude/dans-island-relaxation-game-wtkjm8)
+
+et, quand c'est le cas, l'avertissement qui manquait — le nombre de
+commits de retard, et la commande exacte pour se remettre à jour. C'est le
+seul endroit que personne ne peut sauter : la sortie de la commande qu'on
+lance de toute façon.
+
+L'empreinte affichée est **celle que compare le workflow**. Les deux
+doivent coïncider après la mise en ligne, et c'est vérifiable d'un coup
+d'œil au lieu d'un aller-retour.
+
+Trois choses à ne pas défaire :
+
+1. **Ça ne va jamais chercher le réseau.** `git fetch` déclenché par un
+   script de build est une surprise, et une surprise dans un script qu'on
+   lance avant de publier est la dernière chose qu'on veut. On lit les
+   références déjà présentes, ou on se tait.
+2. **C'est `@{u}`, pas `origin/$branche`.** Éprouvé en détachant HEAD —
+   ce que fait `actions/checkout` sur un runner : la branche s'y appelle
+   « HEAD », donc `origin/HEAD` **résout** vers la branche par défaut et
+   le script annonçait un retard inexistant avec un remède absurde
+   (`git checkout -B HEAD origin/HEAD`). `@{u}` n'existe que pour une
+   branche qui suit vraiment quelque chose, donc le cas détaché se tait
+   tout seul. Un faux positif use un garde-fou aussi sûrement qu'un angle
+   mort — c'est la leçon de `store.js` compté comme export manquant.
+3. **Ça ne fait jamais échouer le build.** Les trois cas — à jour, en
+   retard, hors dépôt git — sortent en 0, mesuré. Un script de
+   construction qui refuse de construire parce qu'un clone est en retard
+   empêche aussi de déployer un correctif en urgence.
+
+Éprouvé sur les trois états, en fabriquant chacun : un clone à jour, un
+clone reculé d'un commit, un dossier sans `.git`. Et vérifié que la
+modification **ne change pas** `dist/index.html` — l'empreinte est restée
+`eebd21736e9ad6a2` de part et d'autre, donc ce garde-fou ne demande aucun
+redéploiement.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
