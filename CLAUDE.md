@@ -2931,9 +2931,30 @@ passe devant : c'est ce qu'on lit dans ses favoris.
 
 ### Quatre pages éditoriales, et pas quarante
 
-`/how-to-play`, `/features`, `/build-your-island`, `/postcards`. Le contenu
-et la maquette vivent dans `functions/_pages.js` ; les quatre fichiers de
-route ne font qu'appeler `rendre()`.
+`/comment-jouer`, `/fonctionnalites`, `/construire-son-ile`,
+`/cartes-postales` — **les chemins canoniques sont en français**, parce que
+le site l'est et que « comment jouer à » se tape en français. Les quatre
+adresses anglaises (`/how-to-play`, `/features`, `/build-your-island`,
+`/postcards`) sont des **alias** : même page, canonique pointé sur le
+français, donc un moteur consolide les deux.
+
+Pas de `noindex` sur un alias, et ce n'est pas un oubli : posé sur une page
+qui canonicalise ailleurs, il envoie deux signaux contraires et aucun
+moteur ne sait lequel suivre.
+
+Le contenu et la maquette vivent dans `functions/_pages.js` ; les **huit**
+fichiers de route ne font qu'appeler `rendre()` avec le chemin **canonique**
+— l'alias aussi, et c'est ça qui pose le canonique au bon endroit.
+
+**Les huit adresses sont réservées côté base**
+(`supabase/2026-09-20_slugs_reserves.sql`, rejouable). C'est un défaut
+trouvé avant d'écrire le français, et il valait pour l'anglais depuis la
+veille : ce sont des routes d'**un seul segment**, comme l'adresse d'une
+île. Sans réservation, un joueur prenait `comment-jouer`, la fonction
+répondait avant le catch-all, et **son île devenait inatteignable** — sans
+erreur, sans trace, et sans qu'on puisse le lui expliquer. `slug_reserve()`
+est la source unique, et le contrôle 3 de `test/robots.mjs` croise les deux
+listes.
 
 **Pourquoi quatre routes nommées et pas un `[page].js`.** Un attrape-tout à
 la racine intercepterait *toutes* les adresses d'un segment — donc `/simon`
@@ -2983,6 +3004,15 @@ Deux choses apprises :
    les `titre:` d'un fichier en comptait cinq : les quatre des pages, et
    celui de l'appel à `page()`. La même leçon que `store.js` compté comme
    export manquant.
+3. **Une liste recopiée dans un contrôle est une liste de trop.** La
+   section 1 cherchait `href="/how-to-play"` en dur : le jour où les
+   chemins sont passés au français, elle est devenue rouge pour rien. Elle
+   lit `PAGES` maintenant, comme tout le reste du fichier.
+4. **Un contrôle qui ne parcourt qu'un côté a l'angle mort de l'autre.**
+   « Chaque alias rend le chemin canonique » ne regardait que les alias :
+   la panne posée sur un fichier **canonique** est passée. Il parcourt les
+   huit, et la remet en rouge en nommant le fichier. C'est, une fois de
+   plus, le défaut du contrôle 9 qui ne lisait pas `GRANDS`.
 
 ## Reste du contexte
 

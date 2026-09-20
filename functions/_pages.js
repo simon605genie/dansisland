@@ -1,6 +1,7 @@
 // ============================================================
-//  Les pages éditoriales : /how-to-play, /features, /build-your-island,
-//  /postcards.
+//  Les pages éditoriales : /comment-jouer, /fonctionnalites,
+//  /construire-son-ile, /cartes-postales — et leurs alias anglais, qui
+//  servent la même page avec le canonique pointé sur le français.
 //
 //  **Le contenu et la maquette vivent ici**, et les quatre fichiers de route
 //  ne font qu'appeler `rendre()`. Quatre copies de la maquette, du fil et de
@@ -50,7 +51,7 @@ function fil(ici) {
 }
 
 const CONTENU = {
-  '/how-to-play': {
+  '/comment-jouer': {
     titre: 'Comment jouer à Dan’s Island | Jeu relaxant de construction d’île',
     h1: 'Comment jouer',
     desc: 'Créer son personnage, construire sa maison et son île, aller marcher ' +
@@ -94,7 +95,7 @@ const CONTENU = {
     </div>` + CTA
   },
 
-  '/features': {
+  '/fonctionnalites': {
     titre: 'Ce qu’on peut faire | Dan’s Island, jeu relaxant de construction d’île',
     h1: 'Ce qu’on peut faire',
     desc: 'Construction d’île, maison et intérieur, personnage, décoration, marées, ' +
@@ -146,12 +147,12 @@ const CONTENU = {
     e-mail suffit.</p>
 
     <h2>Partager</h2>
-    <p>Une <a href="/postcards">carte postale</a> de ton île s’envoie par WhatsApp en
+    <p>Une <a href="/cartes-postales">carte postale</a> de ton île s’envoie par WhatsApp en
     deux gestes, l’image comprise. Et si quelqu’un crée son île par ton lien, vous
     recevez tous les deux des shells.</p>` + CTA
   },
 
-  '/build-your-island': {
+  '/construire-son-ile': {
     titre: 'Construire son île | Dan’s Island, jeu relaxant dans le navigateur',
     h1: 'Construire son île',
     desc: 'Le terrain, les objets, les bâtiments, la maison et son intérieur — et ' +
@@ -191,7 +192,7 @@ const CONTENU = {
     </div>` + CTA
   },
 
-  '/postcards': {
+  '/cartes-postales': {
     titre: 'Les cartes postales | Dan’s Island, jeu relaxant de construction d’île',
     h1: 'Les cartes postales',
     desc: 'Envoie une image de ton île par WhatsApp, avec son adresse. C’est ce qui ' +

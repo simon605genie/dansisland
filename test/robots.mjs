@@ -69,8 +69,16 @@ c.titre('1. la page servie, sans une ligne de JavaScript');
   console.log('     mots lisibles hors script : ' + mots);
   c.dit(mots > 150, 'il y a de quoi lire sans exécuter le jeu (' + mots + ' mots)');
 
-  const liens = (html.match(/href="\/(how-to-play|features|build-your-island|postcards)"/g) || []);
-  c.dit(liens.length === 4, 'les quatre pages éditoriales sont reliées depuis l’accueil (' + liens.length + ')');
+  /* Les adresses ne sont pas recopiées ici : elles se **lisent** dans
+     `PAGES`. Écrites à la main, ce contrôle serait resté vert le jour où
+     les chemins sont passés au français — ou rouge pour rien, ce qui est
+     arrivé. Une liste de plus à tenir d'accord est une liste de trop. */
+  const commun0 = lire('functions/_commun.js');
+  const chemins = [...commun0.matchAll(/chemin:\s*'(\/[a-z-]+)'/g)].map(m => m[1]);
+  const liens = chemins.filter(p => html.indexOf('href="' + p + '"') >= 0);
+  console.log('     liens : ' + liens.join(' · '));
+  c.dit(chemins.length === 4 && liens.length === 4,
+        'les quatre pages éditoriales sont reliées depuis l’accueil (' + liens.length + '/' + chemins.length + ')');
   c.dit(/<link rel="canonical" href="https:\/\/dansisland\.app\/">/.test(html), 'la page porte son canonique');
   c.dit(/og:image" content="https:/.test(html), 'et une image de partage absolue et en https');
 }
@@ -108,7 +116,12 @@ c.titre('3. les quatre pages éditoriales, et les listes qui doivent s’accorde
 {
   const commun = lire('functions/_commun.js');
   const pages = [...commun.matchAll(/chemin:\s*'(\/[a-z-]+)'/g)].map(m => m[1]);
+  const alias = [...commun.matchAll(/alias:\s*'(\/[a-z-]+)'/g)].map(m => m[1]);
   c.dit(pages.length === 4, 'quatre pages déclarées dans PAGES (' + pages.length + ')');
+  c.dit(alias.length === 4, 'et leurs quatre alias (' + alias.length + ')');
+  // Le canonique est le français : c'est ce qu'un enfant francophone tape.
+  c.dit(pages.every(p => /^\/[a-z-]+$/.test(p) && !/^\/(how|features|build|post)/.test(p)),
+        'les chemins canoniques sont en français (' + pages.join(' · ') + ')');
 
   const mod = lire('functions/_pages.js');
   const contenu = [...mod.matchAll(/^  '(\/[a-z-]+)':\s*\{/gm)].map(m => m[1]);
@@ -121,13 +134,54 @@ c.titre('3. les quatre pages éditoriales, et les listes qui doivent s’accorde
   const orphelin = contenu.filter(p => pages.indexOf(p) < 0);
   c.dit(orphelin.length === 0, 'et rien n’est écrit sans être relié' + (orphelin.length ? ' → ' + orphelin.join(', ') : ''));
 
-  // Et chaque page doit avoir son fichier de route : une route absente, et
-  // l'adresse retombe sur le jeu sans que personne ne le remarque.
-  const sansRoute = pages.filter(p => {
+  // Et chaque adresse doit avoir son fichier de route — canonique **et**
+  // alias : une route absente, et l'adresse retombe sur le jeu sans que
+  // personne ne le remarque.
+  const sansRoute = pages.concat(alias).filter(p => {
     try { lire('functions' + p + '.js'); return false; } catch (e) { return true; }
   });
   c.dit(sansRoute.length === 0,
-        'chaque page a son fichier de route' + (sansRoute.length ? ' → ' + sansRoute.join(', ') : ''));
+        'les huit adresses ont leur fichier de route' + (sansRoute.length ? ' → ' + sansRoute.join(', ') : ''));
+
+  /* **Les huit** routes doivent rendre un chemin **canonique**, pas le
+     leur : sinon deux adresses se déclarent chacune canonique et un moteur
+     en indexe deux là où il n'y a qu'une page.
+
+     Éprouvé en posant la panne sur le fichier **canonique** — et la
+     première version de ce contrôle l'a laissée passer, parce qu'elle ne
+     parcourait que les alias. Elle avait l'angle mort du côté qu'elle
+     n'avait pas pensé à regarder, comme le contrôle 9 qui ne lisait pas
+     `GRANDS`. Elle parcourt les huit maintenant. */
+  const fautifs = pages.concat(alias).filter(a => {
+    const src = lire('functions' + a + '.js');
+    const m = src.match(/rendre\('(\/[a-z-]+)'/);
+    return !m || pages.indexOf(m[1]) < 0;
+  });
+  c.dit(fautifs.length === 0,
+        'les huit routes rendent un chemin canonique' + (fautifs.length ? ' → ' + fautifs.join(', ') : ''));
+
+  /* **Les huit adresses doivent être réservées côté base.** Ce sont des
+     routes d'un seul segment, comme l'adresse d'une île : sans réservation,
+     un joueur pouvait prendre `comment-jouer`, la fonction répondait avant
+     le catch-all, et **son île devenait inatteignable** — sans erreur, sans
+     trace, et sans qu'on puisse le lui expliquer.
+
+     Deux listes qui doivent rester d'accord, donc, et ce contrôle est le
+     seul endroit qui les regarde ensemble. */
+  const sql = lire('supabase/2026-09-20_slugs_reserves.sql');
+  const bloc = sql.slice(sql.indexOf('select lower(s) in ('), sql.indexOf('$$;'));
+  const reserves = [...bloc.matchAll(/'([a-z0-9-]+)'/g)].map(m => m[1]);
+  console.log('     réservés : ' + reserves.length + ' noms');
+  c.dit(reserves.length > 20, 'la liste SQL des slugs réservés a été lue (' + reserves.length + ')');
+  const nus = pages.concat(alias).map(p => p.slice(1));
+  const oubliees = nus.filter(n => reserves.indexOf(n) < 0);
+  c.dit(oubliees.length === 0,
+        'les huit adresses sont réservées en base' + (oubliees.length ? ' → ' + oubliees.join(', ') : ''));
+  // Les quinze noms d'avant ne doivent pas avoir disparu au passage.
+  const avant = ['api', 'admin', 'app', 'archipel', 'auth', 'compte', 'src', 'www'];
+  const perdus = avant.filter(n => reserves.indexOf(n) < 0);
+  c.dit(perdus.length === 0,
+        'et les réservations d’avant sont toujours là' + (perdus.length ? ' → ' + perdus.join(', ') : ''));
 
   // Le contenu lui-même : un titre qui dit le genre, un h1, de quoi lire.
   let courtes = [];

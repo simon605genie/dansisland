@@ -52,12 +52,28 @@ export const ILES_INDEXABLES = ['dan'];
 /* Les pages éditoriales. Une seule liste : le plan du site les énumère, le
    pied de page les relie, et chaque page sait laquelle elle est. Deux listes
    qui divergent, et le plan annonce une adresse qui n'existe pas — le piège
-   déjà nommé pour les prix SQL et pour les rayons de l'atelier. */
+   déjà nommé pour les prix SQL et pour les rayons de l'atelier.
+
+   **`chemin` est français, et c'est le canonique.** Le site est en français
+   et pour des enfants francophones : « comment jouer à » se tape en
+   français, pas en anglais, et une adresse qu'on ne sait pas lire ne se
+   partage pas de vive voix.
+
+   **`alias` est l'adresse anglaise**, servie à l'identique, canonique
+   pointé sur le français. Ce n'est pas un doublon : c'est la même page à
+   deux portes, et un moteur consolide les deux sur une seule. Un `noindex`
+   sur l'alias, lui, contredirait son propre canonique — les deux signaux
+   ne se posent pas ensemble.
+
+   **Les huit adresses sont réservées côté base** (`slug_reserve()`,
+   `supabase/2026-09-20_slugs_reserves.sql`) : sans ça, un joueur pouvait
+   prendre `comment-jouer` comme adresse d'île, et sa page de fonction
+   aurait masqué son île sans que rien ne le signale. */
 export const PAGES = [
-  { chemin: '/how-to-play',      nom: 'Comment jouer' },
-  { chemin: '/features',         nom: 'Ce qu’on peut faire' },
-  { chemin: '/build-your-island', nom: 'Construire son île' },
-  { chemin: '/postcards',        nom: 'Les cartes postales' }
+  { chemin: '/comment-jouer',      alias: '/how-to-play',       nom: 'Comment jouer' },
+  { chemin: '/fonctionnalites',    alias: '/features',          nom: 'Ce qu’on peut faire' },
+  { chemin: '/construire-son-ile', alias: '/build-your-island', nom: 'Construire son île' },
+  { chemin: '/cartes-postales',    alias: '/postcards',         nom: 'Les cartes postales' }
 ];
 
 function base(env) {

@@ -1,8 +1,13 @@
-// Construire son île — /build-your-island
+// Construire son île — /build-your-island, l'alias anglais de /construire-son-ile
 //
-//  Une route nommée, et rien d'autre : le contenu et la maquette des quatre
-//  pages éditoriales vivent dans `_pages.js`. Voir l'en-tête de ce
-//  fichier-là pour le pourquoi de ce découpage.
+//  Il sert **exactement la même page**, canonique compris : `rendre()`
+//  reçoit le chemin français, donc `<link rel="canonical">` et `og:url`
+//  pointent sur lui. C'est ce qui consolide les deux adresses en une seule
+//  aux yeux d'un moteur, sans rien cacher à personne.
+//
+//  Pas de `noindex` ici, et ce n'est pas un oubli : un `noindex` posé sur
+//  une page qui canonicalise ailleurs envoie deux signaux contraires, et
+//  aucun moteur ne sait lequel suivre.
 import { rendre } from './_pages.js';
 
-export const onRequestGet = (context) => rendre('/build-your-island', context);
+export const onRequestGet = (context) => rendre('/construire-son-ile', context);
