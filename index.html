@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0B3C5D">
+<meta name="theme-color" content="#0D2630">
 <title>Dan's Island | Jeu relaxant de construction d'île</title>
 <meta name="description" content="Jeu relaxant de construction d’île, gratuit et sans installation. Construis ton île, ta maison et ton personnage, décore-la, puis va te promener chez les voisins et envoie-leur une carte postale. Pas de score, pas de minuteur.">
 <link rel="canonical" href="https://dansisland.app/">
@@ -16,8 +16,8 @@
 <meta property="og:url" content="https://dansisland.app/">
 <meta property="og:title" content="Dan's Island | Jeu relaxant de construction d'île">
 <meta property="og:description" content="Jeu relaxant de construction d’île. Construis ton île, ta maison et ton personnage, puis va te promener chez les voisins.">
-<meta property="og:image" content="https://dansisland.app/og.png?v=2">
-<meta property="og:image:secure_url" content="https://dansisland.app/og.png?v=2">
+<meta property="og:image" content="https://dansisland.app/og.png?v=3">
+<meta property="og:image:secure_url" content="https://dansisland.app/og.png?v=3">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -25,7 +25,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Dan's Island | Jeu relaxant de construction d'île">
 <meta name="twitter:description" content="Jeu relaxant de construction d’île. Construis ton île, ta maison et ton personnage, puis va te promener chez les voisins.">
-<meta name="twitter:image" content="https://dansisland.app/og.png?v=2">
+<meta name="twitter:image" content="https://dansisland.app/og.png?v=3">
 <!-- Données structurées. Un jeu de navigateur, gratuit, en français : c'est
      tout ce qu'un moteur peut en dire d'utile, et rien n'y est inventé. Les
      pages publiques d'îles et de cartes postales portent les leurs, écrites
@@ -36,7 +36,7 @@
  "applicationCategory":"Game","gamePlatform":"Navigateur web",
  "genre":["Jeu de détente","Construction","Bac à sable"],
  "description":"Jeu relaxant de construction d’île. Construis ton île, ta maison et ton personnage, puis va te promener chez les voisins.",
- "image":"https://dansisland.app/og.png?v=2",
+ "image":"https://dansisland.app/og.png?v=3",
  "offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -58,52 +58,115 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <style>
-:root{
-  --navy:#0B3C5D;
-  --teal:#148A9C;
-  --mint:#5EC6B3;
-  --sand:#F4D6A0;
-  --pink:#F48CA8;
-  --brown:#8B5E3C;
+/* ================= la planche de couleurs =================
+   Sept couleurs, et elles ont un nom parce qu'un nom se discute — « le
+   corail » se dit à voix haute, « #FF8F70 » se recopie de travers. Elles
+   sont le socle : **rien d'autre n'a le droit d'être une couleur en dur**
+   dans cette feuille, et les jetons sémantiques en dessous ne font que
+   les distribuer.
 
-  --paper:#FAF6EA;
-  --card:#FFFDF5;
-  --sunk:#F1EBDA;
-  --ink:#0B3C5D;
-  --ink-2:#3F6B85;
-  --ink-3:#8AA3B2;
-  --line:#E2D8C2;
-  --accent:var(--pink);
-  --on-accent:#0B3C5D;
-  /* Ce qui est choisi. En clair c'est le navy ; en sombre le navy **est** la
+   Elles n'ont pas été choisies ici : elles viennent de la planche
+   d'identité du 20/09. Ce qui a été fait ici, c'est de les **mesurer**
+   avant de les poser — les vingt couples de texte qu'elles produisent,
+   contre le seuil AA, dans les deux thèmes. Un seul est tombé sous la
+   barre, « mer sur corail » à 4,18, et il n'est utilisé nulle part :
+   l'encre d'une pastille colorée est **toujours** l'océan, jamais la mer.
+   Voir la section « le design du site » de CLAUDE.md pour le relevé.
+
+   `--mer-claire` est la seule couleur dérivée, et elle a une raison : la
+   planche n'a pas de bleu moyen, or un lien sur du papier crème en
+   demande un — le lagon y rend 1,4 (illisible), la mer ne se distingue
+   plus de l'encre. #146A78 rend 5,90.
+
+   `--brun` n'est pas sur la planche non plus : c'est le tronc des
+   palmiers, il appartient au dessin du jeu et il est ici pour que le
+   logo n'aille pas chercher sa couleur ailleurs. */
+:root{
+  --ocean:#0D2630;
+  --mer:#184D5B;
+  --mer-claire:#146A78;
+  --lagon:#72D6D0;
+  --sable:#F4D7A1;
+  --corail:#FF8F70;
+  --vegetal:#5FAF78;
+  --creme:#FFF8E8;
+  --brun:#8B5E3C;
+
+  /* Les anciens noms, rebranchés sur la planche. Deux cents usages les
+     lisent encore dans cette feuille ; les renommer d'un coup aurait été
+     un diff qu'on ne relit pas. Ils ne sont pas dépréciés pour autant —
+     ils disent le rôle (« le rose », c'est l'accent) là où la planche dit
+     la teinte. */
+  --navy:var(--mer);
+  --teal:var(--mer-claire);
+  --mint:var(--lagon);
+  --sand:var(--sable);
+  --pink:var(--corail);
+  --brown:var(--brun);
+
+  --paper:var(--creme);
+  --card:#FFFEF8;
+  --sunk:#F6EBD5;
+  --ink:var(--ocean);
+  --ink-2:var(--mer);
+  --ink-3:#4E6E78;
+  --line:#E8DBBE;
+  --accent:var(--corail);
+  --on-accent:var(--ocean);
+  /* Le corail **écrit**. Le corail de la planche est une couleur d'aplat :
+     posé en texte sur du crème il rend 2,2, donc illisible. Celui-ci rend
+     5,24 sur le papier du jeu et 5,9 sur la carte. En sombre c'est
+     l'inverse — le corail clair y passe, le foncé disparaît. */
+  --corail-ecrit:#B8431E;
+  /* Le fond des cartes **posées sur le voile**. Translucide, et c'est le
+     point : une carte opaque rendrait l'île invisible derrière elle, et
+     l'accueil redeviendrait la page qu'il ne doit pas être. */
+  --voile-carte:rgba(255,254,248,.62);
+  /* L'encre des pastilles colorées : sable, corail, lagon, végétation
+     restent claires dans les deux thèmes, donc ce qui s'écrit dessus ne
+     peut pas suivre `--ink`. Vingt-huit `var(--encre)` en dur disaient ça
+     avant, et il fallait les retrouver un par un le jour où le bleu
+     changeait — c'est exactement ce jour-là. */
+  --encre:var(--ocean);
+  /* Ce qui est choisi. En clair c'est la mer ; en sombre la mer **est** la
      couleur des cartes (--card), et un chip sélectionné devenait donc
      invisible : « Jour », « Vagues », « Marcher » se lisaient comme du texte
      mort. Un jeton à part, et le piège ne peut plus revenir. */
-  --sel:#0B3C5D;
-  --on-sel:#FAF6EA;
-  --link:var(--teal);
-  --shadow:0 1px 0 rgba(11,60,93,.05), 0 10px 28px -16px rgba(11,60,93,.45);
-  --r:16px;
+  --sel:var(--mer);
+  --on-sel:var(--creme);
+  --link:var(--mer-claire);
+  --shadow:0 1px 0 rgba(13,38,48,.05), 0 10px 28px -16px rgba(13,38,48,.45);
+  --r:18px;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --paper:#062434;
-    --card:#0B3C5D;
-    --sunk:#051D2A;
-    --ink:#F6F1E2;
-    --ink-2:#A9CBD6;
-    --ink-3:#75A0B1;
-    --line:#14567A;
-    --link:var(--mint);
-    --sel:#5EC6B3;
-    --on-sel:#062434;
+    --paper:var(--ocean);
+    --card:var(--mer);
+    --sunk:#081A21;
+    --ink:var(--creme);
+    --ink-2:#C6DDE2;
+    --ink-3:#9CC0C7;
+    --line:#24657A;
+    --link:var(--lagon);
+    /* `--teal` est la couleur de ce qui n'est ni l'encre ni l'accent : la
+       sous-ligne du titre, un survol, le rond d'une pastille. En sombre,
+       la mer claire y rendait **2,51** sur l'océan — mesuré par
+       `test/design.mjs`, pas relu. Le lagon rend 9,1. */
+    --teal:var(--lagon);
+    --sel:var(--lagon);
+    --on-sel:var(--ocean);
+    /* Et le corail de la planche rend 4,18 sur la carte sombre, juste sous
+       la barre. Éclairci d'un cran, il rend 5,03. */
+    --corail-ecrit:#FFA98F;
+    --voile-carte:rgba(24,77,91,.55);
     --shadow:0 1px 0 rgba(0,0,0,.35), 0 12px 32px -18px rgba(0,0,0,.9);
   }
 }
 :root[data-theme="dark"]{
-  --paper:#062434; --card:#0B3C5D; --sunk:#051D2A; --ink:#F6F1E2; --ink-2:#A9CBD6;
-  --ink-3:#75A0B1; --line:#14567A; --link:var(--mint);
-  --sel:#5EC6B3; --on-sel:#062434;
+  --paper:var(--ocean); --card:var(--mer); --sunk:#081A21; --ink:var(--creme);
+  --ink-2:#C6DDE2; --ink-3:#9CC0C7; --line:#24657A; --link:var(--lagon);
+  --sel:var(--lagon); --on-sel:var(--ocean); --teal:var(--lagon);
+  --corail-ecrit:#FFA98F; --voile-carte:rgba(24,77,91,.55);
   --shadow:0 1px 0 rgba(0,0,0,.35), 0 12px 32px -18px rgba(0,0,0,.9);
 }
 
@@ -128,10 +191,17 @@ a{color:var(--link)}
 .word .marque-page{font-family:"Baloo 2","Nunito",system-ui,sans-serif; line-height:1.05;
   margin:0; font-size:clamp(32px,5.2vw,48px); font-weight:800; letter-spacing:.005em}
 .word svg{display:block;width:100%;height:11px;overflow:visible}
-/* Le `h1` de la page, et le seul. Il porte la promesse ; la phrase qui
-   explique vient sous lui, en plus petit. */
-.tagline-h1{font-size:clamp(19px,2.5vw,26px); font-weight:800; color:var(--teal);
-  max-width:46ch; margin-left:auto; line-height:1.2}
+.word .devise{margin:5px 0 0; font-size:10.5px; letter-spacing:.13em;
+  text-transform:uppercase; font-weight:700; color:var(--ink-3)}
+/* Le `h1` de la page, et le seul. Deux lignes : la marque parlée, puis les
+   verbes. La grande est en encre et pas en couleur — la planche met le
+   titre en océan sur le crème, et c'est la couleur la plus lisible des
+   sept (14,8 contre 5,9 pour le lien). */
+.tagline-h1{max-width:46ch; margin-left:auto; line-height:1.15}
+.tagline-h1 .grand{display:block; font-size:clamp(21px,2.9vw,30px); font-weight:800;
+  color:var(--ink); letter-spacing:-.005em}
+.tagline-h1 .petit{display:block; font-size:clamp(14px,1.6vw,16.5px); font-weight:700;
+  color:var(--teal); margin-top:5px; line-height:1.35}
 .tagline{color:var(--ink-2); max-width:46ch; font-size:15px; margin:4px 0 0; margin-left:auto}
 .tagline b{color:var(--ink); font-weight:700}
 
@@ -158,9 +228,9 @@ a{color:var(--link)}
   font-family:"Baloo 2",sans-serif; font-size:13px; font-weight:700; padding:3px 11px;
   border-radius:999px; background:var(--sunk); color:var(--ink-3); white-space:nowrap;
 }
-.etat[data-e="sauvé"]{background:var(--mint); color:#0B3C5D}
-.etat[data-e="envoi"],.etat[data-e="en attente"]{background:var(--sand); color:#0B3C5D}
-.etat[data-e="hors ligne"]{background:var(--pink); color:#0B3C5D}
+.etat[data-e="sauvé"]{background:var(--mint); color:var(--encre)}
+.etat[data-e="envoi"],.etat[data-e="en attente"]{background:var(--sand); color:var(--encre)}
+.etat[data-e="hors ligne"]{background:var(--pink); color:var(--encre)}
 
 /* ---------- stage ---------- */
 .stage{display:grid; grid-template-columns:minmax(0,1fr) 358px; gap:20px; align-items:start}
@@ -179,7 +249,7 @@ a{color:var(--link)}
    connexion mangeaient le premier tiers de l'écran et il fallait défiler
    pour voir son île. On arrive sur un jeu, pas sur une page. */
 @media (max-width:640px){
-  .tagline,.tagline-h1{display:none}
+  .tagline,.tagline-h1,.word .devise{display:none}
   .mast{padding:14px 0 10px; gap:10px 18px}
   .mark{width:38px; height:38px; border-radius:10px}
   .word .marque-page{font-size:25px}
@@ -240,7 +310,7 @@ a{color:var(--link)}
    défilement dès que le doigt glisse et le bonhomme ne bouge jamais. */
 .pad{
   position:absolute; left:14px; bottom:14px; width:112px; height:112px; border-radius:50%;
-  background:rgba(11,60,93,.20); border:2px solid rgba(11,60,93,.28);
+  background:rgba(13,38,48,.20); border:2px solid rgba(13,38,48,.28);
   touch-action:none; -webkit-user-select:none; user-select:none; z-index:3;
   display:grid; place-items:center;
 }
@@ -252,11 +322,11 @@ a{color:var(--link)}
 @media (orientation:landscape) and (max-height:560px){ .viewport.avecpad .whisper{left:108px} }
 .pad .knob{
   width:50px; height:50px; border-radius:50%; background:var(--pink);
-  border:2.5px solid #FAF6EA; box-shadow:0 3px 10px rgba(11,60,93,.3);
+  border:2.5px solid var(--creme); box-shadow:0 3px 10px rgba(13,38,48,.3);
   pointer-events:none; will-change:transform;
 }
-@media (max-width:640px){ .pad{left:10px; bottom:10px; width:86px; height:86px; background:rgba(11,60,93,.14)} .pad .knob{width:40px;height:40px} }
-@media (orientation:landscape) and (max-height:560px){ .pad{width:76px;height:76px; background:rgba(11,60,93,.14)} .pad .knob{width:36px;height:36px} }
+@media (max-width:640px){ .pad{left:10px; bottom:10px; width:86px; height:86px; background:rgba(13,38,48,.14)} .pad .knob{width:40px;height:40px} }
+@media (orientation:landscape) and (max-height:560px){ .pad{width:76px;height:76px; background:rgba(13,38,48,.14)} .pad .knob{width:36px;height:36px} }
 
 /* Le zoom. Au milieu du bord droit, et pas ailleurs : le pad tient le coin
    bas-gauche, le murmure toute la bande du bas, les plaques celle du haut.
@@ -265,9 +335,9 @@ a{color:var(--link)}
   display:grid; gap:7px; z-index:3}
 .zoom button{
   width:36px; height:36px; padding:0; border-radius:50%;
-  border:1.5px solid rgba(11,60,93,.18); background:rgba(253,251,240,.94);
-  color:#0B3C5D; font:700 19px/1 "Baloo 2",sans-serif; cursor:pointer;
-  box-shadow:0 2px 0 rgba(11,60,93,.14); display:grid; place-items:center;
+  border:1.5px solid rgba(13,38,48,.18); background:rgba(253,251,240,.94);
+  color:var(--encre); font:700 19px/1 "Baloo 2",sans-serif; cursor:pointer;
+  box-shadow:0 2px 0 rgba(13,38,48,.14); display:grid; place-items:center;
   -webkit-user-select:none; user-select:none; touch-action:manipulation;
 }
 .zoom button:disabled{opacity:.4; cursor:default}
@@ -280,11 +350,11 @@ a{color:var(--link)}
 
 .hud{position:absolute; inset:13px 13px auto 13px; display:flex; gap:8px; align-items:center; pointer-events:none; flex-wrap:wrap}
 .plate{
-  background:#0B3C5D; color:#FDFBF0; border-radius:999px; padding:5px 13px;
+  background:var(--encre); color:#FDFBF0; border-radius:999px; padding:5px 13px;
   font-family:"Baloo 2",sans-serif; font-weight:700; font-size:13.5px; letter-spacing:.01em;
-  box-shadow:0 2px 0 rgba(11,60,93,.18);
+  box-shadow:0 2px 0 rgba(13,38,48,.18);
 }
-.plate.guest{background:var(--pink); color:#0B3C5D}
+.plate.guest{background:var(--pink); color:var(--encre)}
 /* Dedans, le nom de l'île devient le chemin du retour. On essaie de le
    cliquer, donc il clique. Sans lui, la seule sortie était de retrouver
    le paillasson dans huit cases sur six : une maison dont on ne sait plus
@@ -294,19 +364,19 @@ a{color:var(--link)}
 #hud-name{border:0}
 #hud-name.retour{
   display:inline-block; pointer-events:auto; cursor:pointer;
-  background:var(--pink); color:#0B3C5D;
+  background:var(--pink); color:var(--encre);
 }
 /* La bourse. Elle suit le joueur, pas l'île : on la voit aussi en visite. */
-.plate.sous{background:var(--sand); color:#0B3C5D}
+.plate.sous{background:var(--sand); color:var(--encre)}
 .plate.sous b{font-size:15px; font-weight:800; margin:0 1px 0 3px}
 .plate.bouton{pointer-events:auto; cursor:pointer; border:0; margin-left:auto}
-.plate.bouton[aria-pressed="false"]{background:#3D5A70; color:#CBD9E2}
+.plate.bouton[aria-pressed="false"]{background:#2A4956; color:#C6DDE2}
 /* Le bouton rose : le même geste que la touche E, pour qui joue au doigt.
    Il ne dit pas toujours la même chose — une porte, un souvenir, un chien. */
-.plate.bouton.rose{background:var(--pink); color:#0B3C5D}
+.plate.bouton.rose{background:var(--pink); color:var(--encre)}
 .plate.bouton.rose[hidden]{display:none}
 /* Le compteur de la balade. Le murmure du bas s'efface, pas lui. */
-.plate.balade{background:var(--pink); color:#0B3C5D}
+.plate.balade{background:var(--pink); color:var(--encre)}
 .plate.balade[hidden]{display:none}
 /* La bourse qui monte. Un chiffre qui change tout seul ne se remarque pas ;
    le mouvement, si. Neutralisé par prefers-reduced-motion, plus haut. */
@@ -322,14 +392,19 @@ a{color:var(--link)}
    quand la ligne tombe sur un toit sombre ou sur la mer. */
 .whisper{
   position:absolute; left:13px; right:13px; bottom:8px; pointer-events:none;
-  font-size:12.5px; line-height:1.35; padding:3px 9px; border-radius:8px; color:#0B3C5D;
+  font-size:12.5px; line-height:1.35; padding:3px 9px; border-radius:8px; color:var(--encre);
   background:rgba(253,251,240,.58);
   text-shadow:0 1px 0 rgba(253,251,240,.95), 0 0 6px rgba(253,251,240,.85);
   opacity:0; transform:translateY(4px); transition:.2s ease;
 }
 @media (max-width:640px){ .whisper{font-size:11.5px; padding:2px 8px; bottom:6px} }
 .whisper.on{opacity:1; transform:none}
-.whisper b{color:#B44C6C}
+/* Le gras du murmure. Il se peint sur le canvas, donc sur le papier du
+   jeu et jamais sur `--paper` : c'est un corail **profond** et fixe,
+   mesuré à 5,24 sur ce papier-là, et non `--corail` qui n'y rendrait
+   que 2,3. La seule couleur de cette feuille qui ne vient pas de la
+   planche parce qu'elle ne peint pas la page. */
+.whisper b{color:#B8431E}
 
 /* ---------- atelier ---------- */
 .atelier{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden}
@@ -346,7 +421,7 @@ a{color:var(--link)}
   cursor:pointer;
 }
 .tabs button:last-child{border-right:0}
-.tabs button[aria-selected="true"]{background:var(--card); color:var(--ink); box-shadow:inset 0 -3px 0 var(--pink)}
+.tabs button[aria-selected="true"]{background:var(--card); color:var(--ink); box-shadow:inset 0 -3.5px 0 var(--accent)}
 .panel{padding:17px; display:none; gap:15px; flex-direction:column; max-height:min(74vh,660px); overflow-y:auto}
 .panel.on{display:flex}
 
@@ -363,7 +438,7 @@ a{color:var(--link)}
 .objs{display:grid; grid-template-columns:repeat(4,1fr); gap:6px}
 .obj{
   appearance:none; cursor:pointer; padding:3px 2px 5px;
-  border:1.5px solid var(--line); border-radius:13px; background:var(--paper);
+  border:1.5px solid var(--line); border-radius:14px; background:var(--paper);
   display:flex; flex-direction:column; align-items:center; gap:1px;
   font-family:"Nunito",sans-serif; font-size:10.5px; font-weight:700;
   line-height:1.15; color:var(--ink-2); text-align:center;
@@ -383,15 +458,15 @@ a{color:var(--link)}
 }
 /* ---------- la boutique ---------- */
 .tresor{
-  font-family:"Baloo 2",sans-serif; font-weight:700; font-size:14.5px; color:#0B3C5D;
+  font-family:"Baloo 2",sans-serif; font-weight:700; font-size:14.5px; color:var(--encre);
   background:var(--sand); border-radius:13px; padding:11px 15px; margin:0;
 }
 .tresor b{font-family:"Baloo 2",sans-serif; font-size:27px; line-height:1; margin-right:5px}
 .obj .prix{font-family:"Baloo 2",sans-serif; font-size:12px; font-weight:700; color:var(--link)}
 .obj.cher{opacity:.62}
 .obj.cher .prix{color:var(--ink-3)}
-.obj.acquis{background:var(--mint); border-color:var(--mint); color:#0B3C5D; cursor:default}
-.obj.acquis .prix{color:#0B3C5D}
+.obj.acquis{background:var(--mint); border-color:var(--mint); color:var(--encre); cursor:default}
+.obj.acquis .prix{color:var(--encre)}
 /* Ce qui rapporte aujourd'hui. Quatre paragraphes de texte disaient la
    même chose et personne ne les lisait : une barre se lit d'un coup d'œil,
    et « 3/8 » dit tout de suite ce qu'il reste à faire. */
@@ -404,7 +479,7 @@ a{color:var(--link)}
 .gain .n{font-family:"Baloo 2",sans-serif; font-size:13px; font-weight:700; color:var(--ink-2); white-space:nowrap}
 .gain small{grid-column:1/-1; font-size:11.5px; color:var(--ink-3); line-height:1.4}
 .gain .bar{grid-column:1/-1; height:6px; border-radius:999px; overflow:hidden; margin-top:5px;
-            background:rgba(11,60,93,.16)}
+            background:rgba(13,38,48,.16)}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .gain .bar{background:rgba(0,0,0,.30)} }
 :root[data-theme="dark"] .gain .bar{background:rgba(0,0,0,.30)}
 .gain .bar i{display:block; height:100%; border-radius:999px; background:var(--mint); transition:width .35s ease}
@@ -524,26 +599,26 @@ textarea{
      et sans se rappeler que le chiffre lu n'est pas celui qu'on croit : la
      couche plate et le dégradé s'ajoutent. */
   background:
-    radial-gradient(58% 60% at 50% 50%, rgba(250,246,234,.94), rgba(250,246,234,.80) 58%,
-                    rgba(250,246,234,.40) 100%),
-    rgba(250,246,234,.24);
+    radial-gradient(58% 60% at 50% 50%, rgba(255,248,232,.90), rgba(255,248,232,.74) 58%,
+                    rgba(255,248,232,.34) 100%),
+    rgba(255,248,232,.18);
   -webkit-backdrop-filter:blur(7px); backdrop-filter:blur(7px);
   animation:accueilentre .5s ease both;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]) .accueil{
-    background:radial-gradient(58% 60% at 50% 50%, rgba(6,36,52,.94), rgba(6,36,52,.80) 58%,
-                             rgba(6,36,52,.40) 100%), rgba(6,36,52,.24);
+    background:radial-gradient(58% 60% at 50% 50%, rgba(13,38,48,.90), rgba(13,38,48,.74) 58%,
+                             rgba(13,38,48,.34) 100%), rgba(13,38,48,.18);
   }
 }
 :root[data-theme="dark"] .accueil{
-  background:radial-gradient(58% 60% at 50% 50%, rgba(6,36,52,.94), rgba(6,36,52,.80) 58%,
-                             rgba(6,36,52,.40) 100%), rgba(6,36,52,.24);
+  background:radial-gradient(58% 60% at 50% 50%, rgba(13,38,48,.90), rgba(13,38,48,.74) 58%,
+                             rgba(13,38,48,.34) 100%), rgba(13,38,48,.18);
 }
 .accueil[hidden]{display:none}
 @keyframes accueilentre{from{opacity:0}to{opacity:1}}
 .accueil .carte{
-  width:min(560px,100%); text-align:center;
+  width:min(720px,100%); text-align:center;
   display:flex; flex-direction:column; align-items:center; gap:2px;
 }
 .accueil .mark{width:74px; height:74px; margin-bottom:10px;
@@ -556,22 +631,31 @@ textarea{
 .accueil .marque{font-family:"Baloo 2","Nunito",system-ui,sans-serif; line-height:1.05;
   margin:0; font-size:clamp(30px,7vw,46px); font-weight:800; letter-spacing:.005em}
 .accueil .trait{display:block; width:min(300px,78%); height:11px; overflow:visible; margin:1px 0 14px}
-/* Même phrase que le `h1` de l'en-tête, en paragraphe : un seul h1 par page. */
+/* La grande ligne de la planche. Elle est en encre, pas en couleur : c'est
+   ce qui se lit le mieux des sept, et une accroche qui se bat avec le
+   bouton corail juste dessous fait deux accents et donc aucun. */
 .accueil .promesse{
-  font-family:"Baloo 2",sans-serif; font-weight:800; font-size:clamp(21px,5vw,29px);
-  color:var(--teal); margin:0 0 10px; line-height:1.2; max-width:22ch;
+  font-family:"Baloo 2",sans-serif; font-weight:800; font-size:clamp(30px,7.4vw,46px);
+  color:var(--ink); margin:0 0 6px; line-height:1.06; max-width:12ch; letter-spacing:-.012em;
 }
-.accueil .dit{color:var(--ink-2); font-size:16px; max-width:40ch; margin:0 0 22px; line-height:1.55}
+.accueil .dit{color:var(--ink-2); font-size:clamp(16px,2.2vw,18.5px); max-width:40ch;
+  margin:0 0 24px; line-height:1.5; font-weight:600}
 .accueil .portes{display:flex; flex-wrap:wrap; gap:10px; justify-content:center}
-.accueil .portes .btn{font-size:17px; padding:13px 22px; border-radius:14px}
-.accueil .portes .btn.primary{box-shadow:0 4px 0 rgba(180,76,108,.35)}
+.accueil .portes .btn{font-size:17px; padding:14px 24px; border-radius:15px}
+/* La porte principale est un **coussin de corail**, pas un rectangle : la
+   planche la dessine large, ronde et posée, et c'est le seul objet de
+   l'écran qui a le droit d'attirer l'œil autant. */
+.accueil .portes .btn.primary{font-size:19px; padding:15px 30px; border-radius:17px}
+.accueil .portes .btn.primary span{margin-left:3px; display:inline-block; transition:transform .18s ease}
+.accueil .portes .btn.primary:hover span{transform:translateX(4px)}
+.accueil .portes .btn.primary{box-shadow:0 5px 0 rgba(200,84,54,.38), 0 14px 30px -14px rgba(255,143,112,.7)}
 /* L'éditeur de visage. `touch-action:none` est la ligne qui compte : sans
    elle, un doigt qui trace fait défiler le panneau et ne peint rien — le
    navigateur confisque le geste, exactement comme il confisquait le
    pincement sur le cadre du jeu avant `pan-y`. */
 .visage{display:block; width:min(264px,100%); height:auto; margin:0 auto 10px;
   background:#FDFBF0; border-radius:50%; cursor:crosshair; touch-action:none;
-  box-shadow:0 1px 0 rgba(11,60,93,.06), 0 10px 26px -18px rgba(11,60,93,.6)}
+  box-shadow:0 1px 0 rgba(13,38,48,.06), 0 10px 26px -18px rgba(13,38,48,.6)}
 .visage-coul{justify-content:center}
 /* La gomme est une pastille de la rangée, pas un mode à part : un damier,
    signe universel du « rien », et rien à armer ni à désarmer. */
@@ -591,17 +675,49 @@ textarea{
    retirée le 17/09 parce qu'elle parlait par-dessus le jeu, et il ne
    s'agit pas de la remettre sous un autre nom. */
 .accueil .socle{
-  margin-top:26px; padding-top:18px; border-top:1.5px solid var(--line);
-  display:grid; grid-template-columns:repeat(3,1fr); gap:14px; width:100%;
+  margin-top:28px; display:grid; grid-template-columns:repeat(3,1fr); gap:10px; width:100%;
 }
-.accueil .socle div{font-size:13px; color:var(--ink-3); line-height:1.45}
-.accueil .socle b{display:block; font-family:"Baloo 2",sans-serif; font-size:14.5px;
-  font-weight:700; color:var(--ink-2); margin-bottom:2px}
-.accueil .bas{margin-top:16px; font-size:12.5px; color:var(--ink-3)}
+/* Trois cartes plutôt que trois colonnes de texte. La planche les dessine
+   comme des objets posés sur le papier, et c'est ce qui les distingue du
+   paragraphe au-dessus : on les parcourt, on ne les lit pas. Le fond est
+   translucide et non `--card` : on est sur un **voile**, et une carte
+   opaque rendrait l'île invisible derrière elle — c'est toute la raison de
+   ne pas avoir fait une page. */
+.accueil .socle div{
+  font-size:13px; color:var(--ink-3); line-height:1.45; text-align:left;
+  background:var(--voile-carte);
+  border:1.5px solid var(--line); border-radius:15px; padding:13px 14px 14px;
+}
+.accueil .socle .rond{
+  display:grid; place-items:center; width:32px; height:32px; border-radius:50%;
+  background:var(--sunk); color:var(--teal); margin-bottom:9px;
+}
+.accueil .socle .rond svg{width:18px; height:18px; display:block}
+.accueil .socle b{display:block; font-family:"Baloo 2",sans-serif; font-size:15px;
+  font-weight:800; color:var(--ink); line-height:1.15}
+.accueil .socle i{display:block; font-style:normal; font-size:12.5px; font-weight:700;
+  color:var(--corail-ecrit); margin:1px 0 6px}
+.accueil .bas{margin-top:18px; font-size:12.5px; color:var(--ink-3)}
+/* La signature de la planche, en petites capitales espacées : c'est une
+   marque déposée au bas d'une affiche, pas une phrase à lire. */
+.accueil .signature{
+  margin:14px 0 0; font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  font-weight:700; color:var(--ink-3);
+}
 @media (max-width:520px){
   .accueil{padding:18px 14px; place-items:start center}
   .accueil .mark{width:56px; height:56px}
-  .accueil .socle{grid-template-columns:1fr; gap:9px; margin-top:20px}
+  .accueil .socle{grid-template-columns:1fr; gap:8px; margin-top:20px}
+  .accueil .socle div{display:grid; grid-template-columns:32px 1fr; column-gap:11px;
+    align-items:center; padding:10px 12px}
+  .accueil .socle .rond{margin:0; grid-row:span 3}
+  .accueil .socle i{margin-bottom:0}
+  /* En portrait la carte se replie sur son titre : trois phrases de plus
+     tiendraient l'écran entier et la porte tomberait sous le pli. Le texte
+     reste dans le HTML — c'est un robot qui le lit, pas un pouce. */
+  .accueil .socle div{font-size:0}
+  .accueil .socle b,.accueil .socle i{font-size:14px}
+  .accueil .socle i{font-size:12.5px}
 }
 /* Paysage court : le même accueil, mais couché. Sans ça, sur un téléphone
    tenu en travers, le titre seul remplissait l'écran et les deux portes
@@ -612,8 +728,9 @@ textarea{
   .accueil .mark{width:44px; height:44px; margin-bottom:4px}
   .accueil .marque{font-size:27px}
   .accueil .trait{height:8px; margin-bottom:8px}
-  .accueil .promesse{font-size:18px; margin-bottom:5px}
-  .accueil .dit{font-size:13.5px; margin-bottom:13px}
+  .accueil .promesse{font-size:24px; margin-bottom:4px; max-width:none}
+  .accueil .dit{font-size:14px; margin-bottom:13px}
+  .accueil .signature{margin-top:9px; font-size:10px}
   .accueil .portes .btn{font-size:14.5px; padding:9px 16px}
   .accueil .socle{display:none}
   .accueil .apages{font-size:12px; gap:3px 11px; margin-top:10px}
@@ -648,25 +765,25 @@ textarea{
 .guide{
   --pasw:35px;   /* 25 px de pastille + 10 px de gouttière */
   display:flex; flex-wrap:wrap; align-items:center; gap:7px 10px; padding:9px 12px;
-  background:var(--sand); color:#0B3C5D; border-bottom:1px solid var(--line);
+  background:var(--sand); color:var(--encre); border-bottom:1px solid var(--line);
 }
 .guide[hidden]{display:none}
 .guide .pas{
   flex:none; width:25px; height:25px; border-radius:50%; display:grid; place-items:center;
-  background:#0B3C5D; color:#FDFBF0; font-family:"Baloo 2",sans-serif; font-weight:800; font-size:13px;
+  background:var(--encre); color:#FDFBF0; font-family:"Baloo 2",sans-serif; font-weight:800; font-size:13px;
 }
 .guide .quoi{flex:1 1 calc(100% - var(--pasw)); min-width:0; font-size:13.5px; line-height:1.35; font-weight:600}
 .guide .quoi b{font-family:"Baloo 2",sans-serif}
 .guide button{
-  flex:none; appearance:none; border:0; background:rgba(11,60,93,.12); color:#0B3C5D;
+  flex:none; appearance:none; border:0; background:rgba(13,38,48,.12); color:var(--encre);
   font-family:"Baloo 2",sans-serif; font-weight:700; font-size:12px; padding:5px 10px;
   border-radius:999px; cursor:pointer;
 }
-.guide button:hover{background:rgba(11,60,93,.2)}
+.guide button:hover{background:rgba(13,38,48,.2)}
 /* Les points de progression : quatre pas, on voit où on en est. */
 .guide .points{flex:none; display:flex; gap:4px}
-.guide .points i{width:6px; height:6px; border-radius:50%; background:rgba(11,60,93,.25)}
-.guide .points i.fait{background:#0B3C5D}
+.guide .points i{width:6px; height:6px; border-radius:50%; background:rgba(13,38,48,.25)}
+.guide .points i.fait{background:var(--encre)}
 .guide .points i.ici{background:var(--pink); box-shadow:0 0 0 2px rgba(244,140,168,.4)}
 
 /* ---------- la carte postale ----------
@@ -695,12 +812,12 @@ textarea{
    décalée d'une rangée. */
 .invite{
   display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px;
-  background:var(--pink); color:#0B3C5D; border-bottom:1px solid var(--line);
+  background:var(--pink); color:var(--encre); border-bottom:1px solid var(--line);
   padding:11px 14px; font-size:14px; font-weight:600; line-height:1.35;
 }
 .invite[hidden]{display:none}
 .invite b{font-family:"Baloo 2",sans-serif; font-weight:800}
-.invite .btn{background:#0B3C5D; border-color:#0B3C5D; color:#FDFBF0; margin-left:auto; font-size:13.5px; padding:7px 13px}
+.invite .btn{background:var(--encre); border-color:var(--encre); color:#FDFBF0; margin-left:auto; font-size:13.5px; padding:7px 13px}
 .invite .btn:hover{filter:brightness(1.15)}
 @media (max-width:520px){ .invite{font-size:13px; padding:9px 11px} .invite .btn{margin-left:0} }
 
@@ -823,9 +940,9 @@ textarea{
      bonhomme. Une invite qui cache ce qu'elle invite à regarder, non. */
   position:absolute; right:9px; bottom:28px; z-index:4; max-width:min(178px,58%);
   display:none; align-items:center; gap:8px; border:0; text-align:left;
-  background:#0B3C5D; color:#FDFBF0; border-radius:12px; padding:7px 10px;
+  background:var(--encre); color:#FDFBF0; border-radius:12px; padding:7px 10px;
   font-family:"Baloo 2",sans-serif; font-weight:700; font-size:10.5px; line-height:1.25;
-  box-shadow:0 4px 14px rgba(11,60,93,.34); cursor:pointer; pointer-events:auto;
+  box-shadow:0 4px 14px rgba(13,38,48,.34); cursor:pointer; pointer-events:auto;
   animation:tournearrive .6s ease both 2.6s;
 }
 @keyframes tournearrive{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
@@ -879,12 +996,12 @@ textarea{
   <header class="mast">
     <div class="brand">
       <svg class="mark" viewBox="0 0 64 64" aria-label="Dan's Island">
-        <rect width="64" height="64" rx="15" fill="#0B3C5D"/>
-        <path d="M10 44c0-7 6-12 13-12s13 5 13 12z" fill="#8B5E3C"/>
-        <path d="M22 33V19" stroke="#FAF6EA" stroke-width="3.4" stroke-linecap="round"/>
-        <path d="M22 19c-5-4-10-3-12 1 4-1 7 0 9 2M22 19c5-4 10-3 12 1-4-1-7 0-9 2M22 19c-1-5 2-8 6-8-2 2-3 5-2 8" fill="#FAF6EA"/>
-        <circle cx="46" cy="20" r="7" fill="#F48CA8"/>
-        <rect x="42" y="32" width="8" height="18" rx="4" fill="#FAF6EA"/>
+        <rect width="64" height="64" rx="15" fill="#0D2630"/>
+  <circle cx="43" cy="20" r="9" fill="#FF8F70"/>
+  <path d="M11 48c0-10 9.5-15 21-15s21 5 21 15z" fill="#F4D7A1"/>
+  <path d="M26 35V21" stroke="#8B5E3C" stroke-width="3.8" stroke-linecap="round"/>
+  <path d="M26 21c-7-5.5-13.5-3-15.5 2.5 5.5-2 10 0 12 2.5M26 21c7-5.5 13.5-3 15.5 2.5-5.5-2-10 0-12 2.5M26 21c-1-6.5 3.5-10 9-10-3.5 2.5-4.5 6.5-3.5 10" fill="#5FAF78"/>
+  <path d="M6 56c6-4 11 4 17 0s11 4 17 0 11 4 17 0" fill="none" stroke="#72D6D0" stroke-width="5" stroke-linecap="round"/>
       </svg>
       <div class="word">
         <!-- La marque est un **logotype**, pas le titre de la page : le `h1`
@@ -893,11 +1010,25 @@ textarea{
              seul titre, c'est ne répondre à aucune recherche. -->
         <p class="marque-page">DAN'S ISLAND</p>
         <svg viewBox="0 0 300 12" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M2 8C28 -1 50 11 78 6s44 -9 74 -1 44 10 72 3 50 -6 72 1" fill="none" stroke="#148A9C" stroke-width="7" stroke-linecap="round"/>
+          <path d="M2 8C28 -1 50 11 78 6s44 -9 74 -1 44 10 72 3 50 -6 72 1" fill="none" stroke="#72D6D0" stroke-width="7" stroke-linecap="round"/>
         </svg>
+        <!-- La signature de la planche d'identité. Elle est **sous le
+             logotype**, pas à la place du `h1` : elle dit ce que le jeu
+             essaie d'être, ce qui n'est pas ce qu'on cherche dans un
+             moteur. Elle part à 640 px avec le reste du discours. -->
+        <p class="devise">Des îles plus heureuses sur un internet plus doux.</p>
       </div>
     </div>
-    <h1 class="tagline-h1">Construis ton île. Détends-toi. Partage-la.</h1>
+    <!-- Le `h1` de la page, et le seul. Il porte les **deux** lignes de la
+         planche d'identité : la grande, qui est la marque parlée (« Ton île.
+         Ton rythme. »), et la petite, qui dit les verbes. Les deux dans un
+         seul `h1`, parce qu'une page a une réponse et pas deux à « de quoi
+         parles-tu ? » — et parce que la petite ligne porte les mots qu'on
+         tape dans un moteur : construire, île, partager. -->
+    <h1 class="tagline-h1">
+      <span class="grand">Ton île. Ton rythme.</span>
+      <span class="petit">Construis ton île, regarde-la vivre, partage-la.</span>
+    </h1>
     <p class="tagline">Un jeu de détente&nbsp;: crée ton personnage, construis ta maison et ton île,
       puis va découvrir celles de tes voisins. Gratuit, dans le navigateur, rien à installer.</p>
   </header>
@@ -981,30 +1112,52 @@ textarea{
 <div class="accueil" id="accueil">
   <main class="carte">
     <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
-      <rect width="64" height="64" rx="15" fill="#0B3C5D"/>
-      <path d="M10 44c0-7 6-12 13-12s13 5 13 12z" fill="#8B5E3C"/>
-      <path d="M22 33V19" stroke="#FAF6EA" stroke-width="3.4" stroke-linecap="round"/>
-      <path d="M22 19c-5-4-10-3-12 1 4-1 7 0 9 2M22 19c5-4 10-3 12 1-4-1-7 0-9 2M22 19c-1-5 2-8 6-8-2 2-3 5-2 8" fill="#FAF6EA"/>
-      <circle cx="46" cy="20" r="7" fill="#F48CA8"/>
-      <rect x="42" y="32" width="8" height="18" rx="4" fill="#FAF6EA"/>
+      <rect width="64" height="64" rx="15" fill="#0D2630"/>
+  <circle cx="43" cy="20" r="9" fill="#FF8F70"/>
+  <path d="M11 48c0-10 9.5-15 21-15s21 5 21 15z" fill="#F4D7A1"/>
+  <path d="M26 35V21" stroke="#8B5E3C" stroke-width="3.8" stroke-linecap="round"/>
+  <path d="M26 21c-7-5.5-13.5-3-15.5 2.5 5.5-2 10 0 12 2.5M26 21c7-5.5 13.5-3 15.5 2.5-5.5-2-10 0-12 2.5M26 21c-1-6.5 3.5-10 9-10-3.5 2.5-4.5 6.5-3.5 10" fill="#5FAF78"/>
+  <path d="M6 56c6-4 11 4 17 0s11 4 17 0 11 4 17 0" fill="none" stroke="#72D6D0" stroke-width="5" stroke-linecap="round"/>
     </svg>
     <p class="marque">DAN’S ISLAND</p>
     <svg class="trait" viewBox="0 0 300 12" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M2 8C28 -1 50 11 78 6s44 -9 74 -1 44 10 72 3 50 -6 72 1" fill="none" stroke="#148A9C" stroke-width="7" stroke-linecap="round"/>
+      <path d="M2 8C28 -1 50 11 78 6s44 -9 74 -1 44 10 72 3 50 -6 72 1" fill="none" stroke="#72D6D0" stroke-width="7" stroke-linecap="round"/>
     </svg>
-    <p class="promesse">Construis ton île. Détends-toi. Partage-la.</p>
-    <p class="dit">Crée ton personnage, construis ta maison et ton île,
-      puis va découvrir celles de tes voisins.</p>
+    <!-- La même phrase que le `h1` de l'en-tête, en paragraphe : un seul h1
+         par page, et c'est celui qui survit à la fermeture du voile. -->
+    <p class="promesse">Ton île.<br>Ton rythme.</p>
+    <p class="dit">Construis, regarde vivre, partage.</p>
     <div class="portes">
-      <button class="btn primary" id="acc-creer" type="button">Créer mon île</button>
+      <button class="btn primary" id="acc-creer" type="button">Créer mon île <span aria-hidden="true">→</span></button>
       <button class="btn" id="acc-visiter" type="button">Visiter l’île de Dan</button>
     </div>
+    <!-- Les trois choses que la planche met sous l'accroche. Ce sont des
+         **titres** de la planche posés sur les phrases qui étaient déjà là :
+         le titre dit en trois mots, la phrase donne à lire — et c'est la
+         phrase qui compte pour un robot, puisque c'est le seul texte du
+         site qu'il puisse lire. -->
     <div class="socle">
-      <div><b>Rien à perdre</b>Pas de score, pas de minuteur, pas de partie ratée. On construit, on regarde, on revient.</div>
-      <div><b>Une île qui vit</b>La mer monte et descend, un requin passe au large, les mouettes traversent le ciel.</div>
-      <div><b>Des voisins</b>Ton île a son adresse. On s’y promène, on y laisse un mot, on rapporte un souvenir.</div>
+      <div>
+        <span class="rond" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 15a6 6 0 0 0 12 0V4H6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6 6H3v2a3 3 0 0 0 3 3M18 6h3v2a3 3 0 0 1-3 3M9 21h6M12 21v-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <b>Pas de score</b><i>Juste du plaisir</i>
+        Pas de minuteur, pas de partie ratée. On construit, on regarde, on revient.
+      </div>
+      <div>
+        <span class="rond" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 17c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2M2 21c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="17" cy="6" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 13c0-3.3 2.7-5 6-5s6 1.7 6 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <b>Ton île vit</b><i>Mer, oiseaux, visiteurs</i>
+        La mer monte et descend, un requin passe au large, les mouettes traversent le ciel.
+      </div>
+      <div>
+        <span class="rond" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14 19V5M2.5 9.5h11.5M2.5 14h11.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="17.8" cy="9.3" r="1.6" fill="currentColor"/></svg></span>
+        <b>Cartes postales</b><i>Pour partager la magie</i>
+        Ton île a son adresse. On s’y promène, on y laisse un mot, on rapporte un souvenir.
+      </div>
     </div>
     <p class="bas">Gratuit, sans publicité, sans achat. Ça se joue dans le navigateur, au doigt ou au clavier.</p>
+    <!-- La signature de la planche. Elle dit ce que le jeu essaie d'être, et
+         c'est la seule phrase du site qui parle du jeu plutôt qu'au joueur :
+         sa place est tout en bas, après les portes, jamais devant elles. -->
+    <p class="signature">Des îles plus heureuses sur un internet plus doux.</p>
     <!-- Quatre pages qui racontent le jeu en texte, pour les moteurs comme
          pour qui veut lire avant de cliquer. Elles sont servies par
          `functions/` : ce sont, avec cet accueil, les seules pages du site
@@ -6191,16 +6344,68 @@ function swatches(label,path,list){
    chaîne tient parce qu'à chaque appel l'ancien prénom est celui d'avant
    la lettre, pas celui du début.
 
-   L'apostrophe est la **droite**, comme dans `defaultWorld()` : le reste du
-   jeu écrit des apostrophes typographiques, mais c'est avec cette
-   chaîne-là qu'il faut tomber d'accord, sinon l'égalité échoue et rien ne
-   suit. */
+   ── Ce que l'égalité simple ratait, mesuré le 20/09 ──────────────
+
+   La première version comparait `mine.name` à `nomIleDe(avant)`, et rien
+   d'autre. Éprouvée sur quatre états de départ plutôt que sur le seul
+   qu'un harnais savait produire, elle en ratait **deux sur quatre** :
+
+     « L'île de Dan » + prénom « Dan »  → L'île de Simon   ✅
+     « L’île de Dan » + prénom « Dan »  → L'île de Dan     ❌
+     « L'île de Dan » + prénom vide     → L'île de Dan     ❌
+     « Mon île »      + prénom vide     → L'île de Simon   ✅
+
+   La deuxième ligne est le piège : tout le reste du jeu écrit l'apostrophe
+   **typographique**, donc un nom passé par n'importe quel autre chemin que
+   `defaultWorld()` ne tombait jamais d'accord. La troisième est celle d'un
+   enfant qui efface son prénom avant de taper le sien — le lien se coupait
+   pour toujours, sans rien dire.
+
+   ── La règle qui remplace l'égalité ──────────────────────────────
+
+   `nomGenere()` répond à « ce nom, est-ce le jeu qui l'a écrit ? » en
+   reconnaissant la **forme** et en rendant la partie variable. Les deux
+   apostrophes y valent l'une pour l'autre.
+
+   On suit alors si la forme est celle du jeu **et** que la partie variable
+   est l'ancien prénom, ou le nom du compte, ou que l'ancien prénom était
+   vide. Donc :
+
+     « Roche-Ronde »        n'a pas la forme          → jamais touché
+     « L'île de Marie »     a la forme, mais Marie
+                            n'est ni l'ancien prénom
+                            ni le propriétaire        → jamais touché
+
+   C'est la règle du cadre qu'on glisse contre le mur plutôt que d'effacer :
+   **on ne reprend pas ce qui a été choisi.** Un nom qu'on a tapé soi-même
+   ne bouge pas, et un nom que le jeu a écrit tout seul a le droit de
+   suivre. Toujours aucune clé de plus dans `mondeNu()` : la question se
+   déduit encore. */
 const nomIleDe = n => n ? ("L'île de " + n) : 'Mon île';
 const enseigneDe = n => n ? ('Chez ' + n) : 'Chez moi';
+// Les deux apostrophes valent l'une pour l'autre : le jeu écrit « ’ »
+// partout et `defaultWorld()` écrit « ' ». Une comparaison qui les
+// distingue est une comparaison qui échoue un jour sur deux.
+const memeApostrophe = s => String(s == null ? '' : s).replace(/[’‘]/g, "'");
+function nomGenere(s, un, deux){
+  const t = memeApostrophe(s).trim();
+  if(t === deux) return '';                       // « Mon île », « Chez moi »
+  return t.startsWith(un) ? t.slice(un.length) : null;
+}
+function suivreUnNom(actuel, avant, apres, un, deux){
+  const x = nomGenere(actuel, un, deux);
+  if(x === null) return null;                     // un nom choisi : on n'y touche pas
+  if(x !== avant && x !== (mine.owner || '') && avant !== '') return null;
+  return apres ? un + apres : deux;
+}
 function suivreLePrenom(avant, apres){
   if(avant === apres) return;
-  if(mine.name === nomIleDe(avant)) mine.name = nomIleDe(apres);
-  if(mine.house && mine.house.sign === enseigneDe(avant)) mine.house.sign = enseigneDe(apres);
+  const n = suivreUnNom(mine.name, avant, apres, "L'île de ", 'Mon île');
+  if(n !== null) mine.name = n;
+  if(mine.house){
+    const e = suivreUnNom(mine.house.sign, avant, apres, 'Chez ', 'Chez moi');
+    if(e !== null) mine.house.sign = e;
+  }
 }
 /* Un champ dont la valeur a changé **derrière son dos** doit se remettre à
    jour, et il n'y a que `buildAll()` pour le faire — or on ne peut pas

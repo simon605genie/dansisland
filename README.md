@@ -16,6 +16,8 @@ depuis le 17/09/2026.
     manifest.webmanifest  l'île ajoutable à l'écran d'accueil, plein écran, paysage
     icone-*.png           les icônes de l'app, tirées du logo SVG du site
     apple-touch-icon.png  la même, pour l'écran d'accueil iOS
+    og.png              l'image d'aperçu des liens partagés
+    outils/marque.mjs   régénère les icônes et og.png depuis le logo de index.html
     robots.txt          tout ouvert, et l'adresse du plan du site
     src/config.js       URL et clé publishable Supabase
     src/store.js        seule couche qui parle à Supabase
@@ -289,7 +291,7 @@ lu que par Cloudflare Pages. Seule la racine est testable ainsi.
     npx playwright install chromium
     npm test
 
-Six harnais, dans `test/`, qui font tourner **la vraie page dans un vrai
+Neuf harnais, dans `test/`, qui font tourner **la vraie page dans un vrai
 navigateur** contre un serveur simulé (`test/faux-store.js` remplace
 `src/store.js` dans une copie jetable — le dépôt n'est jamais modifié, et
 rien ne touche la base de production).
@@ -300,6 +302,9 @@ rien ne touche la base de production).
     lien.mjs        le lien de connexion, et l'invite de rotation
     objets.mjs      les sept rangs, les bulles, les listes qui s'accordent
     dedans.mjs      l'intérieur : le cadre rempli, les articles, les plaques
+    robots.mjs      ce qu'un robot lit, sans navigateur ni JavaScript
+    toi.mjs         reprendre son bonhomme, le nom de l'île, l'éditeur de visage
+    design.mjs      la planche de couleurs, les contrastes, le voile, les icônes
 
 Ils existent parce que les défauts qu'ils surveillent ont tous été
 trouvés à l'œil, tard, et qu'aucun n'aurait survécu à un contrôle : des

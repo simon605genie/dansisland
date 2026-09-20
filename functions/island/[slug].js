@@ -11,7 +11,7 @@
 //  trouvé dans une recherche, une carte postale relayée, un signet.
 // ============================================================
 import { ileParSlug, page, reponse, vignette, ech, SITE, SLUG,
-         ROBOTS_OUI, ROBOTS_NON, ILES_INDEXABLES } from '../_commun.js';
+         ROBOTS_OUI, ROBOTS_NON, ILES_INDEXABLES, rang } from '../_commun.js';
 
 export async function onRequestGet(context) {
   const { params, env, next } = context;
@@ -53,7 +53,8 @@ export async function onRequestGet(context) {
         <a class="btn" href="/?de=${ech(slug)}">Créer mon île</a>
       </div>
     </div>
-  </main>`;
+  </main>
+  ${rang('')}`;
 
   /* **Noindex par défaut, et c'est le seul réglage qui compte ici.** Cette
      page porte le prénom de quelqu'un, le nom qu'il a donné à son île et le

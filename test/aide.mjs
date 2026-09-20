@@ -55,6 +55,16 @@ export async function servir(port) {
   fs.copyFileSync(path.join(RACINE, 'index.html'), path.join(dos, 'index.html'));
   fs.copyFileSync(path.join(RACINE, 'src', 'config.js'), path.join(dos, 'src', 'config.js'));
   fs.copyFileSync(path.join(ICI, 'faux-store.js'), path.join(dos, 'src', 'store.js'));
+  /* Les icônes et le manifeste. Ils ne servaient à aucun harnais jusqu'au
+     20/09 — et c'est exactement pour ça que personne ne vérifiait qu'elles
+     suivaient le logo. `design.mjs` les compare au SVG de la source, dans
+     un canvas : il faut donc qu'elles arrivent par la **même origine**,
+     sinon le canvas est souillé et `getImageData()` lève. */
+  for (const f of ['icone-192.png', 'icone-512.png', 'icone-maskable.png',
+                   'apple-touch-icon.png', 'og.png', 'manifest.webmanifest', 'robots.txt']) {
+    const src = path.join(RACINE, f);
+    if (fs.existsSync(src)) fs.copyFileSync(src, path.join(dos, f));
+  }
 
   const serveur = http.createServer((req, res) => {
     const u = decodeURIComponent(req.url.split('?')[0]);

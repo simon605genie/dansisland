@@ -34,13 +34,21 @@
 //  En cas de doute, `next()` : une adresse inconnue retombe sur le
 //  catch-all de `_redirects`, qui sert le jeu. C'est la règle des îles.
 // ============================================================
-import { page, reponse, ech, SITE, PAGES, ROBOTS_OUI } from './_commun.js';
+import { page, reponse, ech, SITE, PAGES, ROBOTS_OUI, VAGUE, PALMES, rang } from './_commun.js';
 
 const CTA = `
   <div class="portes">
     <a class="btn p" href="/">Créer mon île</a>
     <a class="btn" href="/dan">Visiter l’île de Dan</a>
   </div>`;
+
+/* La citation de la planche d'identité. Elle n'est **pas** décorative : elle
+   dit en une ligne ce que les quatre pages mettent trois écrans à dire, et
+   c'est elle qu'on retient. Une seule par page, toujours au même endroit —
+   juste avant le fil — sinon elle devient un slogan qui traîne. */
+const CITATION = `
+  <blockquote class="citation">« Un petit coin de douceur, ouvert sur le monde. »
+    <span>Dan’s Island — un jeu où l’on ne perd rien, jamais.</span></blockquote>`;
 
 // Le fil : où on est, et où sont les trois autres. Un lien par page, pas
 // plus : quatre pages qui se relient toutes entre elles suffisent.
@@ -250,11 +258,23 @@ export function rendre(chemin, context) {
     isPartOf: { '@type': 'VideoGame', name: "Dan's Island", url: SITE + '/' }
   });
 
+  /* Le bandeau, puis le rang des cinq, puis le texte. C'est l'ordre de la
+     planche, et c'est aussi la règle que ce dépôt s'est donnée le 19/09
+     après « Voisins ne montrait aucun voisin » : **ce qu'une page est doit
+     être en haut de cette page.** Quelqu'un qui arrive ici depuis une
+     recherche veut savoir de quoi on parle avant de lire trois écrans. */
   const corps = `
-  <main class="page">
+  <header class="banniere">
+    <span class="soleil" aria-hidden="true"></span>
+    ${PALMES}
     <h1>${ech(c.h1)}</h1>
     <p class="chapo">${ech(c.chapo)}</p>
+    ${VAGUE}
+  </header>
+  ${rang(chemin)}
+  <main class="page">
     ${c.corps}
+    ${CITATION}
     ${fil(chemin)}
   </main>`;
 

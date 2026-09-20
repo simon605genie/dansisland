@@ -1,4 +1,4 @@
-/* Les six épreuves, l'une après l'autre.
+/* Les neuf épreuves, l'une après l'autre.
 
    En série et non en parallèle : chacune ouvre un navigateur, et quatre
    Chromium à la fois sur une machine ordinaire donnent des délais qui
@@ -10,7 +10,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const ICI = path.dirname(fileURLToPath(import.meta.url));
-const EPREUVES = ['balises.mjs', 'etroit.mjs', 'parrainage.mjs', 'lien.mjs', 'objets.mjs', 'dedans.mjs', 'robots.mjs', 'toi.mjs'];
+const EPREUVES = ['balises.mjs', 'etroit.mjs', 'parrainage.mjs', 'lien.mjs', 'objets.mjs',
+                  'dedans.mjs', 'robots.mjs', 'toi.mjs', 'design.mjs'];
 
 const lancer = f => new Promise(r => {
   console.log('\n\n══════════════ ' + f + ' ══════════════');

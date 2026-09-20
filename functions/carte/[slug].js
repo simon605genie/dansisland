@@ -14,7 +14,7 @@
 //  échappé comme tout le reste par `ech()`, coupé à 120 caractères, et il
 //  ne sort jamais du bloc qui lui est réservé.
 // ============================================================
-import { ileParSlug, page, reponse, vignette, ech, SITE, SLUG, ROBOTS_NON } from '../_commun.js';
+import { ileParSlug, page, reponse, vignette, ech, SITE, SLUG, ROBOTS_NON, rang } from '../_commun.js';
 
 export async function onRequestGet(context) {
   const { params, request, env, next } = context;
@@ -63,7 +63,8 @@ export async function onRequestGet(context) {
         <a class="btn" href="/?de=${ech(slug)}">Créer mon île</a>
       </div>
     </div>
-  </main>`;
+  </main>
+  ${rang('')}`;
 
   /* **Jamais indexée.** Elle porte un message personnel dans son adresse,
      donc il n'y a pas de cas où elle devrait se retrouver dans un moteur.

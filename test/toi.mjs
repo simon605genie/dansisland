@@ -124,6 +124,40 @@ c.titre('2. le nom de l’île suit le prénom — tant qu’on ne l’a pas cho
   const choisi = await plaque();
   console.log('     nom choisi, prénom → Nour : ' + choisi);
   c.dit(choisi === 'Roche-Ronde', 'un nom **choisi** ne se fait jamais renommer dans le dos');
+
+  /* Les quatre états de départ, et non le seul que ce harnais produisait.
+     La première version de `suivreLePrenom()` comparait le nom de l'île à
+     la chaîne dérivée de l'ancien prénom, point. Éprouvée sur un seul
+     état — celui de `defaultWorld()` — elle passait au vert en ratant la
+     moitié des cas réels :
+
+       « L’île de Dan » (apostrophe typographique)  → ne suivait pas
+       « L'île de Dan » + prénom effacé             → ne suivait pas
+
+     C'est, une fois de plus, une mesure qui raisonnait comme son objet :
+     le harnais fabriquait l'état avec le même caractère que le code
+     testé. Il les fabrique maintenant tous les quatre. */
+  const essai = async (nomIle, prenomAvant) => {
+    await onglets(page, 'toi'); await taper(page, '#p-toi input[type=text]', prenomAvant);
+    await onglets(page, 'ile'); await taper(page, '#p-ile input[type=text]', nomIle);
+    await onglets(page, 'toi'); await taper(page, '#p-toi input[type=text]', 'Simon');
+    return plaque();
+  };
+  for (const [nomIle, prenomAvant] of [["L'île de Dan", 'Dan'], ['L’île de Dan', 'Dan'],
+                                       ["L'île de Dan", ''],   ['Mon île', '']]) {
+    const r = await essai(nomIle, prenomAvant);
+    console.log('     ' + JSON.stringify(nomIle).padEnd(17) + ' + prénom ' +
+                JSON.stringify(prenomAvant).padEnd(6) + ' → ' + r);
+    c.dit(r === "L'île de Simon", 'un nom que le **jeu** a écrit suit le prénom (' + nomIle + ')');
+  }
+  // Et l'autre moitié de la règle : une forme générée dont la partie
+  // variable n'est ni l'ancien prénom ni le propriétaire est un nom qu'on
+  // a tapé soi-même. On ne reprend pas ce qui a été choisi.
+  const marie = await essai("L'île de Marie", 'Paul');
+  console.log('     « L\'île de Marie » + prénom "Paul" → ' + marie);
+  c.dit(marie === "L'île de Marie",
+        'mais « L’île de Marie » tapé à la main reste « L’île de Marie »');
+
   c.dit(erreurs.length === 0, 'aucune erreur de console');
   await ctx.close();
 }

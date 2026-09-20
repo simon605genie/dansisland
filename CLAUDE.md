@@ -3156,6 +3156,232 @@ doit être amené à l'écran avant qu'on clique.** Le panneau défile, un clic
 à des coordonnées hors cadre ne touche rien, et la première version
 peignait zéro case sans rien dire.)*
 
+## Le site prend une identité — 20/09/2026
+
+Une planche d'identité est arrivée : sept couleurs nommées, un logotype,
+une accroche, une signature, et une maquette de page. Tout ce qui suit en
+découle. **Aucune migration, aucune clé de plus dans `mondeNu()`** : c'est
+du CSS, du HTML en dur et quatre fichiers PNG régénérés.
+
+    Océan profond   #0D2630      Sable chaud    #F4D7A1
+    Mer profonde    #184D5B      Corail doux    #FF8F70
+    Lagon           #72D6D0      Végétation     #5FAF78
+    Crème           #FFF8E8
+
+### La planche a été mesurée avant d'être posée
+
+Une trentaine de couples de texte, contre le seuil AA, avant d'écrire une
+ligne de CSS. **Un seul est tombé** : « mer sur corail », à 4,18. Il n'est utilisé
+nulle part, et c'est une règle et pas un hasard — **l'encre d'une pastille
+colorée est toujours l'océan**, jamais la mer. Le reste passe largement :
+l'encre sur le papier rend 14,8, le bouton corail 7,0, la puce choisie 8,8.
+
+Deux couleurs ne sont pas sur la planche et ont chacune leur raison :
+
+- **`--mer-claire` #146A78**, le lien. La planche n'a pas de bleu moyen :
+  le lagon sur le crème rend 1,4 (illisible) et la mer ne se distingue plus
+  de l'encre. Celle-ci rend 5,9.
+- **`--corail-ecrit`**, le corail *écrit*. Le corail de la planche est une
+  couleur d'aplat : en texte sur du crème il rend 2,2. En clair c'est
+  #B8431E (5,2 sur le papier du jeu) ; **en sombre c'est l'inverse**, le
+  foncé y disparaît, donc #FFA98F (5,0 sur la carte).
+
+### Ce qui ne change pas de couleur, et pourquoi
+
+**Le dessin du jeu garde sa palette.** `PAPER`, `SEA`, `ROOFS`, `WALLS`,
+`OBJ_COLORS`, les teints, les cheveux : rien n'a bougé dans le canvas. La
+planche habille le **cadre**, pas le monde qui vit dedans — c'est d'ailleurs
+ce que montre la planche elle-même, une illustration posée dans un chrome.
+Repeindre deux mille lignes de dessin aurait été le chantier d'une semaine
+pour un gain nul, et il aurait fallu relire chaque objet.
+
+Corollaire tenu : `.obj canvas` et `.neighbor canvas` gardent `#FDFBF0`,
+l'invariant du 16/09. Et le gras du murmure est un corail **profond fixe**,
+parce qu'il se peint sur le papier du jeu et non sur `--paper`.
+
+### Les anciens noms sont des alias, pas des reliques
+
+`--navy`, `--teal`, `--mint`, `--sand`, `--pink`, `--brown` existent
+toujours et pointent sur la planche. Deux cents usages les lisent : les
+renommer d'un coup aurait donné un diff qu'on ne relit pas. Ils disent le
+**rôle** (« le rose », c'est l'accent) là où la planche dit la teinte.
+
+Le piège du 16/09 tient toujours : en sombre, `--navy` **est** `--card`. Ce
+qui est choisi se peint en `--sel`, qui vaut le lagon en sombre.
+
+### Les vingt-trois `#0B3C5D` en dur
+
+Ils voulaient tous dire la même chose — « l'encre sur une pastille claire »
+— et il fallait les retrouver un par un le jour où le bleu changerait.
+C'était ce jour-là. `--encre` les remplace, et le contrôle 1 de
+`test/design.mjs` refuse désormais toute couleur en dur hors d'une liste de
+neuf, chacune documentée dans la feuille.
+
+### L'accueil dit la planche
+
+« Ton île. Ton rythme. » en grand, « Construis, regarde vivre, partage. »
+dessous, la porte corail, puis les trois cartes de la planche — Pas de
+score, Ton île vit, Cartes postales — et la signature en capitales
+espacées.
+
+Quatre choses à ne pas défaire :
+
+1. **C'est toujours un voile, pas une page.** Les cartes du socle ont un
+   fond **translucide** (`--voile-carte`) : une carte opaque rendrait l'île
+   invisible derrière elle, et l'accueil redeviendrait la page qu'il ne
+   doit pas être. Le voile s'est d'ailleurs ouvert d'un cran (94/80/40/24 →
+   90/74/34/18), parce que le papier a éclairci et qu'à alphas constants on
+   voyait **moins** l'île qu'avant.
+2. **Le `h1` porte les deux lignes.** La grande est la marque parlée, la
+   petite dit les verbes — et c'est elle qui porte « construis », « île »,
+   « partage ». Un seul `h1`, donc une seule réponse à « de quoi parles-tu ».
+   Ne pas remonter « Ton île. Ton rythme. » seul en `h1` : il ne répond à
+   aucune recherche.
+3. **La coupure du titre est un `<br>`, pas une largeur.** À 12 caractères
+   de large, « Ton île. Ton » tient et la coupure tombait après « Ton ».
+   Une largeur qui donne la bonne coupure à une taille la donne fausse à la
+   suivante.
+4. **En portrait, les cartes se replient sur leur titre** (`font-size:0` sur
+   le conteneur, la taille rendue aux enfants). Le texte reste dans le
+   HTML — c'est un robot qui le lit, pas un pouce — mais trois phrases de
+   plus tiendraient l'écran et la porte tomberait sous le pli.
+
+### Les pages publiques ont enfin une maquette
+
+`page()` porte maintenant un en-tête (logotype, menu, porte corail), un
+**bandeau de titre** en océan avec son soleil et ses palmiers en filigrane,
+le **rang des cinq** (Moi · Maison · Île · Voisins · Cartes postales), une
+**citation**, et un pied qui porte la signature et les cinq verbes.
+
+Six choses à tenir :
+
+1. **Le bandeau n'a pas de photo, et n'en aura pas.** Ce dépôt n'a ni build
+   ni dépendance : une image par page demanderait un rasteriseur. Le
+   dégradé, le halo de corail et les palmiers en crème à 9 % ne chargent
+   rien et sont vrais dans les deux thèmes — un bandeau est un **panneau**,
+   il n'a pas à suivre le thème.
+2. **Le rang des cinq dit « Voisins », pas « Explorer ».** La planche écrit
+   Explorer ; le jeu affiche Voisins. Un site qui apprend un mot que le jeu
+   n'emploie pas fait chercher un onglet qui n'existe pas. La structure
+   vient de la planche, le vocabulaire vient du jeu.
+3. **Le rang est aussi sur la page d'une île et sur une carte postale.**
+   C'est là qu'arrive quelqu'un qui n'a jamais entendu parler du jeu, par
+   un lien reçu sur WhatsApp : « c'est quoi, ce truc ? » a besoin d'une
+   réponse en images, pas d'un paragraphe.
+4. **`PAGES` a gagné un champ `court`, pas une seconde liste.** Le menu du
+   haut porte `court`, le pied porte `nom`. Mesuré : à 1100 px, les quatre
+   noms longs poussaient « Créer mon île » à la ligne — une porte tombée
+   sous son propre menu. Un champ de plus sur la même ligne ne peut pas
+   diverger ; une seconde liste, si.
+5. **Pas d'accent grave dans un commentaire de gabarit.** Une apostrophe
+   inversée dans un commentaire HTML **à l'intérieur** d'un littéral de
+   gabarit ferme la chaîne, et le module ne se charge plus du tout. Trouvé
+   en cassant `_commun.js`, pas à la relecture.
+6. **Les deux feuilles portent la même planche.** `index.html` et
+   `functions/_commun.js` déclarent les sept couleurs chacune de leur côté ;
+   le contrôle 1 croise les deux. C'est le piège déjà nommé pour les clés
+   Supabase de ce fichier et pour les prix SQL.
+
+### Le logo, et les icônes qui le suivent enfin
+
+Le carré porte maintenant une île de sable sous un palmier vert, un soleil
+corail et une vague lagon. Il a été jugé **rendu**, à trois tailles et en
+quatre variantes : celle qui l'a emporté est la seule dont la mer ne
+déborde pas du coin arrondi — deux candidates avaient une bande d'eau qui
+sortait du `rx`, ce qui ne se voit pas dans le balisage.
+
+Les quatre PNG ont été **régénérés depuis ce SVG**, comme la consigne le
+demandait depuis le 17/09. La maskable recule à 80 % sur un aplat d'océan :
+Android découpe jusqu'à 20 % de chaque bord, et un carré arrondi découpé en
+cercle laisse quatre encoches.
+
+Et cette consigne est maintenant **mesurée**. Le contrôle 4 rasterise le
+SVG de la source dans un canvas, décode le PNG du dépôt dans un autre, et
+compare pixel par pixel : 1,3 sur 255 d'écart moyen aujourd'hui, 111 quand
+on met un autre dessin à la place. Une consigne que personne ne relit
+finit par être fausse ; celle-ci ne peut plus l'être en silence.
+
+### `test/design.mjs`, neuvième harnais — et ce qu'il a trouvé tout de suite
+
+Quatre sections : la planche est la seule source de couleur, tout ce qui
+s'écrit reste lisible dans les **deux** thèmes, le voile garde ses trois
+déclarations d'accord, les icônes sont celles du logo.
+
+**Il a trouvé trois vrais défauts à sa première exécution**, tous les trois
+en thème sombre et tous les trois invisibles à la relecture :
+
+    la sous-ligne du h1      2,51   `--teal` était resté la mer claire
+    la pastille corail       4,18   le corail d'aplat, écrit sur la carte
+    les alphas du voile        —    mon propre motif n'en lisait qu'un sur trois
+
+Le troisième est le plus instructif : c'est le **contrôle** qui était
+faux. Son expression s'arrêtait au premier `), rgba(` venu, donc elle
+concluait que les trois déclarations s'accordaient — sur un tiers de ce
+qu'elles disent. C'est, mot pour mot, le défaut des trois prénoms au lieu
+de vingt et des îles écrites à la main : *un contrôle qui ne lit pas tout
+ce qu'il prétend lire absout à tort.* D'où l'assertion « chacune a bien ses
+trois arrêts **et** sa couche plate », qui refuse un relevé trop court.
+
+Les quatre sections ont été éprouvées en remettant une vraie panne, une par
+une, et **chacune n'a fait rougir que sa propre ligne** :
+
+    une couleur en dur dans une règle        → section 1
+    `--teal` sombre rendu à la mer claire    → section 2, « sous » à 2,51
+    un alpha du voile qui dérive             → section 3
+    une icône qui n'est plus le logo         → section 4, écart 111
+
+**Ce qu'il ne mesure pas, et il ne faut pas prétendre le contraire :** le
+goût. Il n'y a pas d'assertion sur « est-ce joli », et c'est pour ça que
+chaque écran a été **regardé** — trois tailles, deux thèmes, le voile, le
+jeu, les six pages publiques. C'est la limite déjà écrite pour le son et
+pour les deux relevés de genres : il y a des choses dont le juge est
+quelqu'un.
+
+Au passage, `aide.mjs` sert maintenant les icônes, le manifeste et
+`robots.txt`. Ils ne servaient à aucun harnais — et c'est exactement pour
+ça que personne ne vérifiait qu'ils suivaient le logo.
+
+## Le nom de l'île ratait la moitié des cas — 20/09/2026
+
+`suivreLePrenom()` existait depuis le matin et `test/toi.mjs` le disait
+vert. Signalé quand même : « l'île de Dan doit se mettre en île de Simon
+quand je change mon prénom ». Éprouvé sur **quatre** états de départ au
+lieu du seul que le harnais savait produire :
+
+    « L'île de Dan » + prénom « Dan »   → L'île de Simon   ✅
+    « L’île de Dan » + prénom « Dan »   → L'île de Dan     ❌
+    « L'île de Dan » + prénom vide      → L'île de Dan     ❌
+    « Mon île »      + prénom vide      → L'île de Simon   ✅
+
+La deuxième ligne est le piège, et il est bête : tout le jeu écrit
+l'apostrophe **typographique**, `defaultWorld()` écrit la droite, et
+l'égalité les distinguait. La troisième est celle d'un enfant qui efface
+son prénom avant de taper le sien — le lien se coupait pour toujours, sans
+rien dire.
+
+Le harnais ne pouvait pas le voir : il fabriquait l'état de départ avec le
+même caractère que le code éprouvé. **Une mesure qui raisonne comme son
+objet hérite de ses angles morts** — quatrième fois que cette phrase
+s'écrit ici, après la regex qui cherchait des sélecteurs, le harnais qui ne
+mesurait que des fenêtres étroites, et le seuil qui ne connaissait qu'une
+police.
+
+L'égalité est remplacée par une question de **forme** : `nomGenere()`
+répond à « ce nom, est-ce le jeu qui l'a écrit ? » et rend la partie
+variable, les deux apostrophes valant l'une pour l'autre. On suit alors si
+cette partie est l'ancien prénom, ou le nom du compte, ou si l'ancien
+prénom était vide. Donc :
+
+    « Roche-Ronde »      n'a pas la forme                  → jamais touché
+    « L'île de Marie »   a la forme, mais « Marie » n'est
+                         ni l'ancien prénom ni le compte   → jamais touché
+
+C'est la règle du cadre glissé contre le mur plutôt qu'effacé : **on ne
+reprend pas ce qui a été choisi.** Toujours aucune clé dans `mondeNu()`
+pour retenir « ce nom a-t-il été choisi ? » — la question se déduit encore.
+
+Les cinq cas sont dans `test/toi.mjs`, le refus compris.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
