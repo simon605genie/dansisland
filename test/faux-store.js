@@ -61,8 +61,25 @@ export async function monIle() {
   // `normaliserInterieur()` — c'est là que les meubles hors des murs sont
   // écartés et que les cadres se raccrochent.
   const interieur = lu('test:interieur', undefined);
+  /* `test:me` sème un avatar **tel qu'il serait déjà en base**. Il existe
+     pour une question qu'aucun autre crochet ne sait poser : *« un visage
+     dessiné avant que la grille ne change se relit-il encore ? »*
+
+     On ne peut y répondre qu'en faisant arriver l'ancienne donnée par le
+     vrai chemin de chargement. Un harnais qui écrirait dans `mine.me`
+     après coup sauterait `normaliserMonde()`, c'est-à-dire exactement
+     l'endroit où une donnée de joueur se perd sans bruit. */
+  const me = lu('test:me', undefined);
+  /* `me` n'est ajouté **que s'il existe**, et ce n'est pas une élégance :
+     le jeu charge par `Object.assign(defaultWorld(), monde)`, et
+     `Object.assign` recopie une clé même quand sa valeur est `undefined`.
+     Un `me: undefined` écrase donc l'avatar par défaut, et le jeu meurt
+     au premier `mine.me.name`. Mesuré — tous les harnais qui sèment des
+     objets sont tombés d'un coup. */
+  const monde = (objets || interieur || me) ? { objects: objets || [], interieur } : null;
+  if (monde && me) monde.me = me;
   return { id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', slug: 'filleul', nom: 'L’île du filleul',
-           monde: (objets || interieur) ? { objects: objets || [], interieur } : null,
+           monde,
            maj_le: new Date().toISOString(),
            // `vu_le` à l'époque zéro : tous les mots semés comptent comme
            // reçus pendant l'absence, donc le drapeau de la boîte se lève.

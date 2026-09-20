@@ -345,6 +345,18 @@ a{color:var(--link)}
    navigateur : sans cette ligne, le bouton de l'appareil photo reste
    visible et cliquable avant d'avoir été acheté. */
 .zoom button[hidden]{display:none}
+/* Le bouton qui rend la main est **toujours là**, donc il doit dire quand
+   il a vraiment quelque chose à rendre — sinon, dans une colonne de
+   quatre, il devient un meuble qu'on ne voit plus. Corail quand un pinceau,
+   le viseur ou le comptoir confisquent le clic ; discret le reste du temps,
+   où il ne fait que confirmer.
+
+   `--sel` / `--on-sel` et jamais `--navy` : en thème sombre, `--navy` est
+   la couleur de la carte et l'état choisi devient invisible. C'est la
+   règle écrite le 16/09, et elle vaut pour tout nouvel état sélectionné. */
+#marche-btn[aria-pressed="true"]{
+  background:var(--accent); border-color:rgba(13,38,48,.28); color:var(--on-accent);
+}
 @media (max-width:640px){ .zoom{right:9px; gap:6px} .zoom button{width:32px; height:32px; font-size:17px} }
 @media (orientation:landscape) and (max-height:560px){ .zoom button{width:30px; height:30px; font-size:16px} }
 
@@ -1052,15 +1064,24 @@ textarea{
         <button type="button" id="zoom-plus" aria-label="Voir de plus près">+</button>
         <button type="button" id="zoom-moins" aria-label="Voir toute l’île">−</button>
         <button type="button" id="photo-btn" aria-label="Appareil photo" hidden>📷</button>
-        <!-- Reprendre la main. Il n'apparaît **que** quand un pinceau est
-             armé : un bouton toujours là serait un bouton mort neuf fois
-             sur dix, et c'est la règle déjà tenue pour l'appareil photo.
-             Ici, dans la colonne du bord droit, parce que c'est le seul
-             endroit libre du cadre — le pad tient le coin bas-gauche, le
-             murmure la bande du bas, les plaques celle du haut — et
-             surtout parce que **c'est là qu'est le doigt** : le pinceau
-             s'est armé dans un panneau, à un écran de là. -->
-        <button type="button" id="marche-btn" aria-label="Reprendre ton bonhomme" hidden>✋</button>
+        <!-- **Reprendre son bonhomme, et il est toujours là.**
+
+             Il n'apparaissait d'abord que quand un pinceau était armé, au
+             nom de la règle du bouton mort tenue pour l'appareil photo.
+             C'était une erreur de raisonnement : l'appareil photo, on sait
+             qu'on ne l'a pas acheté ; un bonhomme qui ne répond plus, on ne
+             sait **pas pourquoi**. Chercher un bouton qui n'apparaît que
+             dans l'état où on est déjà perdu, c'est le contraire d'un
+             secours. Demandé explicitement, et à raison : « peu importe où
+             l'on se trouve dans le jeu ».
+
+             Il vit dans la colonne du bord droit, avec le zoom et
+             l'appareil, parce que c'est le seul endroit libre du cadre —
+             le pad tient le coin bas-gauche, le murmure la bande du bas,
+             les plaques celle du haut — et parce que cette colonne est la
+             seule qui existe **partout** : dehors, dedans, et chez les
+             voisins. -->
+        <button type="button" id="marche-btn" aria-label="Reprendre ton bonhomme">✋</button>
       </div>
       <button class="tourne" id="tourne" type="button" hidden><span>⟳</span>
         <em style="font-style:normal"><b class="mieux">Dan’s Island se joue mieux en paysage.</b>
@@ -1582,6 +1603,45 @@ const ECH_BAT={culte:2.02, ecole:2.22, ferme:2.64,
 // Ce qui éclaire la nuit, et la hauteur de la flamme. Le phare, lui, porte
 // sa lumière dans son propre dessin.
 const LUEUR={lampe:34, feudecamp:16};
+
+/* Ce que le vent plie, et de combien. C'est une propriété du **type**, dans
+   le catalogue, au même titre que `NIVEAU`, `PIVOT_ILE`, `EMPRISE_ILE` et
+   `ECH_BAT` — donc **rien dans le jsonb**, rien de plus dans `mondeNu()`,
+   rien pour Ctrl+Z, aucun gain. C'est du dessin, la ligne déjà écrite pour
+   les mouettes, le requin et le voilier.
+
+   **Un type absent ne plie pas, et c'est le bon défaut** : une maison qui
+   ondulerait serait bien pire qu'un arbre immobile. On n'ajoute ici que ce
+   qui, dans la vraie vie, cède au vent. Le rocher, le puits et les six
+   bâtiments n'y sont pas, et n'ont pas à y être. */
+const VENT_PLIE={palmier:1.30, arbre:0.85, sapin:0.50, buisson:0.70, fleur:1.15,
+                 cactus:0.18, tente:0.30, hamac:0.55, montgolfiere:0.75,
+                 balancoire:0.45, cabane:0.25};
+
+/* Une **onde qui traverse l'île**, pas dix objets qui battent ensemble. La
+   phase se déduit de la case (`x+y`), donc l'arbre du bord se penche avant
+   celui du milieu et ça se lit comme une rafale qui passe. C'est mot pour
+   mot la leçon des vingt-deux éclats sur l'eau : des choses qui battent à
+   l'unisson se lisent comme un clignotement de l'écran, pas comme de la vie.
+
+   Deux périodes qui ne sont pas multiples l'une de l'autre — une seule
+   donnerait un balancement de métronome, qu'on remarque au bout de dix
+   secondes et qui ne repart plus.
+
+   Tout se déduit de `t`. Aucun état à tenir, rien à remettre à zéro en
+   entrant dans la maison ou en changeant d'île. */
+function vent(t,x,y){
+  // `ventForce()` vient de la météo : une rafale plie plus fort, une brume
+  // immobilise l'air. Elle vaut 1 tant qu'il fait beau, donc cette ligne
+  // ne change rien pour qui n'a pas encore vu le temps tourner.
+  return (Math.sin(t/1550 - (x+y)*0.55)*0.55 + Math.sin(t/640 - x*0.31)*0.18) * ventForce();
+}
+// Le pli, en cisaillement : la base reste plantée dans le sol et c'est le
+// haut qui part. Un objet déplacé en bloc glisserait sur sa case.
+function ventPlie(g,t,x,y,k){
+  const a=VENT_PLIE[k]; if(!a) return;
+  g.transform(1,0,vent(t,x,y)*a*0.085,1,0,0);
+}
 
 const TWI=72, THI=36, HX=TWI/2, HY=THI/2, MURH=86;
 // `mur:'nw'` = la paroi du fond à gauche (x=0), l'index porte sur y.
@@ -2126,7 +2186,8 @@ DEMO.forEach((d,i)=>{ d.slug=d.id; d.demo=true; d.mots=[]; d.ambiance=['vagues',
 const COUL_OBJ={arbre:'#2E7D5B',palmier:'#2E7D5B',sapin:'#2E7D6B',buisson:'#2E7D5B',
   cactus:'#6FA37A',fleur:'#F48CA8',rocher:'#7E8CA0',boutique:'#FDFBF2',phare:'#FDFBF2',
   ponton:'#A9764A',lampe:'#F4D6A0',banc:'#8B5E3C',barriere:'#FDFBF2',cloture:'#FDFBF2',
-  coffre:'#8B5E3C',chien:'#C89A63',tortue:'#5EA36B',crabe:'#F0736E',mouette:'#FDFBF2'};
+  coffre:'#8B5E3C',chien:'#C89A63',tortue:'#5EA36B',crabe:'#F0736E',mouette:'#FDFBF2',
+  potager:'#4E9B5E'};
 // Chaque île a son parti pris : une île qui mélange tout ne ressemble à rien.
 /* Ce que les îles de démonstration portent — et **rien de payant**.
 
@@ -2278,6 +2339,57 @@ function vieDuBonhomme(t,immobile){
   const u=ph/SAUT_DUREE;
   return souffle + Math.abs(Math.sin(u*Math.PI*2))*(1-u*0.45)*SAUT_H;
 }
+
+/* L'hôte qui fait les cent pas devant chez lui, quand on visite son île.
+
+   **Le segment est éprouvé case par case avant d'être parcouru.** C'est
+   tout l'intérêt de cette forme : une maison au bord de l'île peut avoir
+   la mer devant sa porte, et un hôte qui marcherait sur l'eau serait le
+   genre de défaut qu'on ne voit qu'en visitant la dix-septième île. On
+   rétrécit le segment tant qu'une extrémité n'est pas sur la terre, et
+   **s'il ne reste rien, l'hôte reste assis** — ce qui est exactement
+   l'état d'avant. Un repli qui rend l'ancien comportement ne peut pas
+   faire de dégât.
+
+   Il ne va pas à ta rencontre : ça demanderait un chemin, donc un état,
+   donc quelque chose qui peut se coincer. Un va-et-vient dit « il habite
+   ici » aussi bien, et ne peut rien rater. C'est la ligne du chien qui
+   s'assied — rien ici n'a le droit d'échouer.
+
+   Tout se déduit de `t` et de la position de la maison : deux îles voisines
+   ne marchent pas en même temps, et rien ne se remet à zéro quand on
+   change d'île. */
+function segmentDevantLaPorte(){
+  const h=world.house, y=h.y+2.3;
+  let a=h.x+0.45, b=h.x+2.55;
+  for(let k=0;k<7 && b-a>0.5;k++){
+    if(!terre(Math.round(a),Math.round(y))) a+=0.35;
+    else if(!terre(Math.round(b),Math.round(y))) b-=0.35;
+    else break;
+  }
+  if(b-a<0.7) return null;
+  if(!terre(Math.round(a),Math.round(y))||!terre(Math.round(b),Math.round(y))) return null;
+  return {a,b,y};
+}
+function hoteAu(t){
+  const s=segmentDevantLaPorte(); if(!s) return null;
+  // Onze secondes l'aller-retour, et une phase par maison : deux voisins
+  // qui marcheraient au pas se liraient comme une animation, pas comme
+  // deux personnes.
+  const ph=h2(world.house.x*7.1+1.3, world.house.y*3.3+5.7);
+  const u=((t/11000+ph)%1+1)%1;
+  /* Quatre temps : il va, il souffle, il revient, il souffle. Les deux
+     pauses ne sont pas une coquetterie — un aller-retour sans arrêt se lit
+     comme un pendule, et c'est le défaut nommé pour le vent d'une seule
+     période. */
+  let f, marche=true;
+  if(u<0.40){ f=u/0.40; }
+  else if(u<0.50){ f=1; marche=false; }
+  else if(u<0.90){ f=1-(u-0.50)/0.40; }
+  else { f=0; marche=false; }
+  return { x:s.a+(s.b-s.a)*f, y:s.y, marche,
+           face: marche ? (u<0.45?'droite':'gauche') : 'bas' };
+}
 let target=null;
 
 // Le monde part en base ; `mots` et les clés locales restent hors du jsonb.
@@ -2363,18 +2475,52 @@ function replanter(w){
 
    Il ne rapporte rien, ne coûte rien, ne se perd pas : c'est la ligne
    déjà écrite pour les mouettes. */
-const FACE_N = 12;
+/* `FACE_N` a valu **12** jusqu'au 20/09 au soir. Il vaut 24, et le choix
+   du nombre est tout le sujet : **24 est le double exact de 12**, donc
+   chaque ancienne case devient exactement quatre nouvelles et un visage
+   déjà dessiné se relit **sans une perte de pixel**. Une grille de 16 ou
+   de 20 aurait demandé un rééchantillonnage, c'est-à-dire d'abîmer un
+   dessin que quelqu'un a fait à la main.
+
+   C'est la règle qui prime sur toutes les autres ici : **on ne touche
+   jamais aux données d'un joueur.** Une grille plus fine ne vaut pas un
+   visage flou.
+
+   Rien n'est réécrit en base pour autant : `faceAgrandie()` convertit **à
+   la lecture**, et la chaîne de 144 reste telle quelle tant que l'enfant
+   ne repeint pas. Le jour où il repeint, elle part en 576. Aucune
+   migration, aucune clé de plus. */
+const FACE_N = 24;
 const FACE_COUL = ['#1B1714','#FFFFFF','#E05252','#F48CA8','#F2A93B','#F4D6A0',
                    '#3FBF8F','#148A9C','#45CFE8','#0B3C5D','#9B6BC9','#8B5E3C','#8F98A6'];
 const FACE_VIDE = '.'.repeat(FACE_N*FACE_N);
-// `c` est l'index dans FACE_COUL, en base 36 : un caractère par case, donc
-// treize couleurs au maximum. Au-delà, il faudrait deux caractères et
-// toutes les chaînes déjà enregistrées se reliraient de travers — c'est le
-// piège de `encode()` et des valeurs de tuile, transposé.
+/* `c` est l'index dans FACE_COUL, en base 36 : un caractère par case, donc
+   **trente-six couleurs au maximum**, pas treize. (Ce commentaire a
+   longtemps dit treize, en confondant la longueur de la liste avec la
+   capacité de l'encodage — il y a treize couleurs parce qu'on en a choisi
+   treize, pas parce que le format s'arrête là.) Au-delà de trente-six, il
+   faudrait deux caractères et toutes les chaînes déjà enregistrées se
+   reliraient de travers : c'est le piège d'`encode()` et des valeurs de
+   tuile, transposé — et lui, il est réel. */
 const faceCar = i => (i<0 ? '.' : i.toString(36));
+/* Un visage d'une grille plus grossière, relu dans la grille d'aujourd'hui.
+   L'agrandissement est **entier** ou il n'a pas lieu : on recopie chaque
+   case, on n'interpole rien. Un visage d'enfant qu'on lisserait ne serait
+   plus le sien. */
+function faceAgrandie(f){
+  if(f.length===FACE_N*FACE_N) return f;
+  const n=Math.round(Math.sqrt(f.length));
+  if(n<2 || n*n!==f.length || FACE_N%n) return null;
+  const k=FACE_N/n;
+  let out='';
+  for(let j=0;j<FACE_N;j++) for(let i=0;i<FACE_N;i++)
+    out += f[((j/k)|0)*n + ((i/k)|0)];
+  return out;
+}
 function faceLue(a){
   const f = a && typeof a.face==='string' ? a.face : '';
-  return f.length===FACE_N*FACE_N ? f : null;
+  if(!f) return null;
+  return faceAgrandie(f);
 }
 /* Le visage peint, découpé au crâne. `r` est le rayon de la tête, `dx`/`dy`
    le décalage du regard.
@@ -2708,6 +2854,62 @@ const DRAW={
     c.strokeStyle='rgba(11,60,93,.35)'; c.lineWidth=1.4; c.stroke();
     c.fillStyle='rgba(11,60,93,.45)';
     for(let i=0;i<3;i++) c.fillRect(-9,-26+i*4.2,18-(i===2?8:0),1.7);
+  },
+  /* Le potager. `etat` est le jour de pousse, de 0 à 5 — il vient de
+     `etatObjet()`, seul endroit qui dise ce qu'un dessin lit du jeu.
+
+     **`etat` absent vaut zéro**, et la vignette de l'atelier montre donc
+     de la terre retournée : c'est la règle des `||0` de la girouette et
+     du carillon, un dessin qui exige son état ne peut plus servir de
+     vignette.
+
+     Les sillons sont dessinés en losange comme le reste de l'île : un
+     carré de terre posé à plat dans une isométrie se lit comme un tapis. */
+  potager(c,C,etat){
+    const k=Math.max(0,Math.min(5,etat|0)), terre='#7A5436';
+    /* La planche de terre, en losange — un carré posé à plat dans cette
+       isométrie se lirait comme un tapis. */
+    const W=18,H=9.5;
+    c.fillStyle=terre; c.beginPath();
+    c.moveTo(0,-H); c.lineTo(W,0); c.lineTo(0,H); c.lineTo(-W,0); c.closePath(); c.fill();
+    // Un bord plus clair au nord : c'est ce qui donne du relief à la terre.
+    c.fillStyle=shade(terre,14); c.beginPath();
+    c.moveTo(0,-H); c.lineTo(W,0); c.lineTo(W-3,0.9); c.lineTo(0,-H+1.8); c.closePath(); c.fill();
+    /* Les sillons sont **parallèles à l'arête nord-est**, donc ils suivent
+       l'un des deux axes de la grille. Un sillon horizontal à l'écran ne
+       suivrait aucun des deux et se lirait comme une rayure.
+
+       Un point de l'arête N→W au paramètre t vaut `(-tW, H(t-1))`, et le
+       point correspondant de l'arête E→S vaut `(W(1-t), tH)` : le segment
+       entre les deux est parallèle à N→E par construction. */
+    c.strokeStyle=shade(terre,-26); c.lineWidth=1.5; c.lineCap='round';
+    [0.28,0.52,0.76].forEach(u=>{ c.beginPath();
+      c.moveTo(-u*W, H*(u-1)); c.lineTo(W*(1-u), u*H); c.stroke(); });
+    if(k===0) return;                       // la terre seule, rien de semé
+    const g=C||LEAF;
+    // Trois plants, de plus en plus hauts, alignés sur les trois sillons.
+    [[-7.5,2.2],[0,0],[7.5,-2.2]].forEach((p,i)=>{
+      const h=3+k*3.2+(i%2)*1.1;
+      c.strokeStyle=shade(g,-16); c.lineWidth=2; c.lineCap='round';
+      c.beginPath(); c.moveTo(p[0],p[1]); c.lineTo(p[0],p[1]-h); c.stroke();
+      if(k>=2){ c.fillStyle=g;
+        c.beginPath(); c.ellipse(p[0]-3.4,p[1]-h*0.58,4,2.4,-0.5,0,Math.PI*2); c.fill();
+        c.fillStyle=shade(g,12);
+        c.beginPath(); c.ellipse(p[0]+3.4,p[1]-h*0.82,4,2.4,0.5,0,Math.PI*2); c.fill(); }
+      // Les fleurs viennent avant les légumes : c'est l'ordre du potager,
+      // et c'est ce qui rend le cinquième jour lisible comme une attente.
+      if(k===4){ c.fillStyle='#F2C64B';
+        [[-1.8,-0.2],[1.9,-1.3]].forEach(d=>{ c.beginPath();
+          c.arc(p[0]+d[0],p[1]-h+d[1],2.4,0,Math.PI*2); c.fill(); }); }
+      if(k===5){
+        c.fillStyle='#D8453F';
+        c.beginPath(); c.arc(p[0]-2.2,p[1]-h*0.42,3.4,0,Math.PI*2); c.fill();
+        c.fillStyle='#E86A5C';
+        c.beginPath(); c.arc(p[0]+2.4,p[1]-h*0.70,3,0,Math.PI*2); c.fill();
+        // Un éclat sur chaque tomate : c'est ce qui les fait rondes.
+        c.fillStyle='rgba(255,255,255,.45)';
+        c.beginPath(); c.arc(p[0]-3.1,p[1]-h*0.42-1,1,0,Math.PI*2); c.fill(); }
+    });
   },
   buisson(c,C){
     const g=C||LEAF;
@@ -3162,7 +3364,7 @@ function dessinDe(g,t,col,o,etat){
   (DRAW[t]||DRAW.rocher)(g,col,etat); g.restore();
 }
 const OBJ_GROUPS=[
-  ['Nature',[['arbre','Arbre à fleurs'],['palmier','Palmier'],['sapin','Sapin'],['buisson','Buisson'],['cactus','Cactus'],['fleur','Fleur','f'],['rocher','Rocher'],['mare','Mare aux canards','f'],['puits','Puits']]],
+  ['Nature',[['arbre','Arbre à fleurs'],['palmier','Palmier'],['sapin','Sapin'],['buisson','Buisson'],['cactus','Cactus'],['fleur','Fleur','f'],['rocher','Rocher'],['mare','Mare aux canards','f'],['puits','Puits'],['potager','Potager']]],
   ['Village',[['boutique','Échoppe','f'],['phare','Phare'],['ponton','Ponton'],['lampe','Lampadaire'],['banc','Banc'],['barriere','Barrière','f'],['cloture','Clôture','f'],['coffre','Coffre'],['fontaine','Fontaine','f'],['moulin','Moulin'],['statue','Statue','f'],['girouette','Girouette','f'],['carillon','Carillon'],['boitelettres','Boîte aux lettres','f']]],
   ['Bâtiments',[['ferme','Ferme','f'],['ecole','École','f'],['coiffeur','Coiffeur'],['supermarche','Supermarché'],['restaurant','Restaurant'],['culte','Lieu de culte']]],
   ['Dehors',[['feudecamp','Feu de camp'],['hamac','Hamac'],['tente','Tente','f'],['balancoire','Balançoire','f'],['toboggan','Toboggan'],['cabane','Cabane perchée','f'],['montgolfiere','Montgolfière','f']]],
@@ -3329,16 +3531,49 @@ function ciel(t){
     ctx.fillStyle='rgba(242,237,220,.85)';
     for(let i=0;i<26;i++){ const h=h2(i*3.1,i*1.7), h3=h2(i*5.3,i*2.9);
       ctx.beginPath(); ctx.arc(h*CW, h3*190, 0.7+h*1.2, 0, Math.PI*2); ctx.fill(); }
+    constellations(t);
     etoileFilante(t);
   } else {
+    /* **Le soleil se cache quand le ciel se couvre.** C'est ce qui a
+       manqué au premier jet : la pluie tombait et le soleil brillait
+       au-dessus, ce qui ne se lit pas comme de la pluie mais comme des
+       rayures sur l'écran. Un temps se lit d'abord à la lumière, et
+       seulement ensuite aux gouttes.
+
+       Il ne disparaît pas tout à fait sous les nuages — un disque pâle
+       derrière la couche, c'est exactement ce qu'on voit un jour gris, et
+       c'est plus juste qu'un ciel vide. */
+    const cache=SOLEIL_VOILE[meteoNow]; if(cache===0) return;
     const warm = world.sky==='crépuscule';
     const sunC = warm ? '#F09A6B' : '#F7D774';
+    const k=cache===undefined?1:cache;
     const g=ctx.createRadialGradient(sx,sy,8,sx,sy,74);
-    g.addColorStop(0, warm?'rgba(240,154,107,.5)':'rgba(247,215,116,.5)');
+    g.addColorStop(0, warm?'rgba(240,154,107,'+(0.5*k).toFixed(3)+')':'rgba(247,215,116,'+(0.5*k).toFixed(3)+')');
     g.addColorStop(1, warm?'rgba(240,154,107,0)':'rgba(247,215,116,0)');
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,sy,74,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=k;
     ctx.fillStyle=sunC; ctx.beginPath(); ctx.arc(sx,sy,26,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
   }
+}
+/* Ce qui reste du soleil selon le temps. Un type absent le laisse entier —
+   c'est le bon défaut, la même règle que `VENT_PLIE` : ce qui n'est pas
+   déclaré ne change rien. */
+const SOLEIL_VOILE={nuages:0.34, pluie:0.16, brume:0.22};
+/* Le voile de la météo : la **lumière** du cadre, et c'est lui qui fait
+   qu'un temps se reconnaît avant qu'on ait vu une goutte. En repère
+   écran, posé après la mer et avant la pluie.
+
+   Un temps absent n'a pas de voile, et la ligne ne coûte alors rien. */
+const METEO_VOILE={nuages:['150,170,185',0.16], pluie:['110,135,155',0.26],
+                   brume:['228,238,238',0.34], rafale:['170,185,190',0.08]};
+function voileMeteo(t){
+  const v=METEO_VOILE[meteoNow]; if(!v) return;
+  // La brume respire ; les autres sont stables. Un ciel couvert qui
+  // palpiterait se lirait comme un défaut d'affichage.
+  const a=meteoNow==='brume' ? v[1]+0.06*Math.sin(t/4200) : v[1];
+  ctx.fillStyle='rgba('+v[0]+','+a.toFixed(3)+')';
+  ctx.fillRect(0,0,CW,CH);
 }
 /* Les nuages et les mouettes se peignent **après la mer**, et c'est la
    marée qui l'a imposé. Ils vivaient dans le fond, derrière l'eau : tant
@@ -3350,16 +3585,125 @@ function ciel(t){
    Ils restent en repère écran, donc ils ne glissent pas avec la caméra,
    et ils passent **sous l'île**, comme le requin et le poisson : quand
    leur route croise la terre, ça se lit comme « derrière ». */
+/* Les constellations.
+
+   **Ce sont des formes, pas des étoiles reliées au hasard.** Un premier
+   essai tirait des traits entre les vingt-six étoiles déjà semées par
+   `h2()` : ça ne donne pas une constellation, ça donne un gribouillis, et
+   l'œil ne voit qu'un défaut d'affichage. Une constellation se reconnaît
+   parce qu'elle a une silhouette — d'où des points écrits à la main, comme
+   `NUAGES` et `MOUETTES` sont écrits à la main.
+
+   La Casserole, parce que c'est celle que tout le monde sait retrouver, et
+   le Voilier, parce qu'il passe déjà au nord de l'île. Le reste du ciel
+   reste semé au hasard : trois formes de plus et ce ne serait plus un ciel,
+   ce serait un planétarium.
+
+   Tout se déduit de `t` : aucun état, rien en base, rien pour Ctrl+Z,
+   aucun gain. Elles ne se cliquent pas et ne rapportent rien — dans ce jeu
+   une chose qui brille est une chose à prendre, alors elles ne brillent
+   pas : elles luisent à peine, loin, derrière la mer. */
+const CONSTEL=[
+  // [x, y] en repère écran, et les segments par index de point.
+  { p:[[196,40],[218,33],[240,34],[261,42],[258,63],[236,68],[213,58]],
+    s:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,0]], ph:0.0 },   // la Casserole
+  { p:[[560,58],[560,22],[588,58],[534,58],[596,66]],
+    s:[[0,1],[1,2],[2,4],[3,4],[0,3]], ph:2.1 },               // le Voilier
+];
+function constellations(t){
+  CONSTEL.forEach(k=>{
+    // Un scintillement propre à chaque forme, et lent : un ciel qui bat
+    // vite se lit comme un écran qui grésille.
+    const a=0.16+0.09*Math.sin(t/2600+k.ph);
+    ctx.strokeStyle='rgba(242,237,220,'+a.toFixed(3)+')'; ctx.lineWidth=1;
+    ctx.beginPath();
+    k.s.forEach(([i,j])=>{ ctx.moveTo(k.p[i][0],k.p[i][1]); ctx.lineTo(k.p[j][0],k.p[j][1]); });
+    ctx.stroke();
+    ctx.fillStyle='rgba(248,244,232,'+(a*3.4).toFixed(3)+')';
+    k.p.forEach((q,i)=>{ ctx.beginPath();
+      ctx.arc(q[0],q[1],1.15+0.5*Math.sin(t/1700+i*1.3+k.ph),0,Math.PI*2); ctx.fill(); });
+  });
+}
 function cielDevant(t){
   const tone=skyTone();
   NUAGES.forEach((n,i)=>{
     cloud(boucle(n[0]+t*0.0050*(0.6+i*0.17), CW+200)-100, n[1], n[2], tone.cloud);
   });
+  /* Le ciel couvert et la pluie amènent **les mêmes nuages, plus bas et
+     plus nombreux** : une seconde liste de nuages à tenir aurait divergé
+     de la première au premier réglage. Ils sont décalés d'un demi-écran et
+     descendus, donc on ne reconnaît pas les mêmes formes. */
+  if(meteoNow==='nuages'||meteoNow==='pluie'){
+    NUAGES.forEach((n,i)=>{
+      cloud(boucle(n[0]+CW/2+t*0.0062*(0.6+i*0.13), CW+200)-100, n[1]+34, n[2]*1.15,
+            meteoNow==='pluie' ? shade(tone.cloud,-16) : tone.cloud);
+    });
+  }
   MOUETTES.forEach(m=>{
-    // Un léger roulis : un vol parfaitement horizontal est un trait, pas un vol.
+    /* Les mouettes rentrent quand il pleut, et c'est ce qui rend la pluie
+       lisible sans une goutte de plus : un ciel vide se remarque. Elles ne
+       disparaissent pas d'un coup — `sortie` les fait glisser hors du
+       cadre, sinon elles s'évanouiraient en vol. */
     const y=m.y+Math.sin(t/1400+m.ph*9)*6;
+    // Un léger roulis : un vol parfaitement horizontal est un trait, pas un vol.
     bird(boucle(t*m.v+m.ph*(CW+140), CW+140)-70, y, m.sc, tone.bird, Math.sin(t/m.bat+m.ph*11));
   });
+}
+
+/* La pluie. En **repère écran**, comme les nuages et les mouettes : elle
+   tombe devant tout, y compris devant l'île, et elle ne glisse pas quand
+   la caméra suit le bonhomme. Un nouveau décor de fond va dans `ciel()` ou
+   ici, jamais dans `mer()` — la règle est écrite depuis la marée.
+
+   Tout se déduit de `t` : aucun état, rien à remettre à zéro en entrant
+   dans la maison ou en changeant d'île. Deux-cent-vingt gouttes, tirées de
+   `h2()` comme les vingt-deux éclats sur l'eau — et chacune a sa propre
+   vitesse, sinon la pluie tombe en rideau et se lit comme une rayure.
+
+   Elle est peinte **après le voile de la météo**, pas avant : le voile
+   l'aurait délavée, et c'est ce qui lui manquait au premier jet. */
+function pluie(t){
+  ctx.save();
+  ctx.strokeStyle='rgba(222,240,246,.60)'; ctx.lineWidth=1.3; ctx.lineCap='round';
+  ctx.beginPath();
+  for(let i=0;i<220;i++){
+    const a=h2(i*3.7,i*1.9), b=h2(i*5.1,i*2.3);
+    const v=0.42+a*0.30, L=12+b*9;
+    const x=boucle(a*CW + t*0.05*(0.5+b), CW+60)-30;
+    const y=boucle(b*CH + t*v, CH+50)-25;
+    ctx.moveTo(x,y); ctx.lineTo(x-3.2,y+L);
+  }
+  ctx.stroke(); ctx.restore();
+}
+
+/* L'arc-en-ciel. Il appartient au **monde** et non à l'écran : il est
+   posé sur la mer, donc il doit glisser avec la caméra comme la mer le
+   fait. C'est le seul des quatre dans ce cas, et c'est pour ça qu'il est
+   peint dans `drawWorld()` sous la caméra et non dans `cielDevant()`.
+
+   Sept bandes, du rouge au violet, très pâles : un arc-en-ciel saturé sur
+   un papier crème écrase tout le reste du cadre. */
+const ARC_COUL=['#E86A5C','#EE9A5A','#EFCB63','#6FBF7A','#5EB6D8','#5D82C8','#8C6FC0'];
+function arcDeCiel(t,k){
+  /* **Il doit passer largement au-dessus de l'île.** Le premier jet le
+     dessinait à `MER_RX*0,86` de rayon, centré près du niveau de la mer :
+     l'île en mangeait tout le sommet et il n'en restait que **deux pieds**
+     posés sur l'eau, à gauche et à droite. Ce n'était pas un défaut de
+     profondeur — un arc-en-ciel est loin, donc l'île le cache, et c'est
+     juste — c'était un défaut de **taille**. Un arc dont on ne voit pas
+     l'arche n'est pas un arc.
+
+     D'où un rayon vertical plus grand que la mer elle-même, et un centre
+     descendu sous elle : le sommet monte alors dans le ciel, et les deux
+     pieds retombent dans l'eau de part et d'autre de l'île. */
+  const c=merCentre(), rx=MER_RX*0.92, ry=MER_RY*1.75;
+  ctx.save(); ctx.globalAlpha=k*0.34; ctx.lineWidth=8; ctx.lineCap='butt';
+  ARC_COUL.forEach((col,i)=>{
+    ctx.strokeStyle=col; ctx.beginPath();
+    ctx.ellipse(c.x, c.y+MER_RY*0.88, rx-i*8, ry-i*8, 0, Math.PI, Math.PI*2);
+    ctx.stroke();
+  });
+  ctx.restore();
 }
 // La mer, elle, appartient au monde : elle passe sous la caméra comme le
 // reste, sinon l'île flotterait sur une tache qui ne la suit pas.
@@ -3755,6 +4099,19 @@ function drawTiles(t){
     if(se){ ctx.fillStyle=shade(p.sand,-18); ctx.beginPath();
       ctx.moveTo(q.x+TW/2,cy); ctx.lineTo(q.x,cy+TH/2); ctx.lineTo(q.x,cy+TH/2+drop); ctx.lineTo(q.x+TW/2,cy+drop); ctx.closePath(); ctx.fill(); }
     isoTop(ctx,q.x,cy,TW/2,col);
+    /* La saison se **pose sur** la case, elle ne la remplace pas : on voit
+       toujours la palette que le joueur a choisie dessous. La neige est
+       plus épaisse sur l'herbe que sur le sable et le chemin, comme dans
+       la vraie vie — et elle ne tient pas sur l'eau.
+
+       `h2()` donne à chaque case son propre écart, sinon la couche est un
+       aplat qui se lit comme une seconde palette au lieu d'une chute de
+       neige. */
+    if(SAISON_SOL[saisonNow] && k!==2){
+      const s=SAISON_SOL[saisonNow];
+      ctx.globalAlpha = s.a * (k===0||k===HAUTE ? 1 : 0.62) * (0.78+n*0.44);
+      isoTop(ctx,q.x,cy,TW/2,s.c); ctx.globalAlpha=1;
+    }
     if(k!==1&&n>0.8){ ctx.fillStyle='rgba(255,255,255,.16)';
       ctx.beginPath(); ctx.ellipse(q.x+(n-0.5)*18,cy+(n*13%8)-4,5.5,2.4,0,0,Math.PI*2); ctx.fill(); }
   }
@@ -3763,21 +4120,35 @@ function drawTiles(t){
   for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++){
     if(tileAt(x,y)!==HAUTE) continue;
     const q=iso(x,y);
-    ctx.save(); ctx.translate(q.x,q.y+TH/2-LIFT); touffe(ctx,p.grass,h2(x*3.1,y*7.7)); ctx.restore();
+    // Un brin d'herbe plie bien plus qu'un tronc : il reçoit le vent en
+    // entier plutôt qu'en cisaillement, et c'est lui qui rend la rafale
+    // lisible — les arbres seuls, on ne la voit qu'en la cherchant.
+    ctx.save(); ctx.translate(q.x,q.y+TH/2-LIFT);
+    touffe(ctx,p.grass,h2(x*3.1,y*7.7),vent(t,x,y)); ctx.restore();
   }
 }
 // Une dizaine de brins, tirés de la même graine que le reste du terrain :
 // deux touffes voisines ne se ressemblent pas, et elles ne bougent pas
 // d'une visite à l'autre.
-function touffe(c,g,n){
+/* `v` est le vent du moment, entre −0,73 et 0,73 ; **absent, il vaut zéro**
+   et la touffe est celle d'avant, immobile. Ce n'est pas une politesse :
+   un dessin qui exige son état ne peut plus servir de vignette, et c'est la
+   règle déjà écrite pour le `||0` de la girouette et du carillon.
+
+   Le vent emporte la pointe, jamais le pied : `bx` ne bouge pas, et c'est
+   ce qui garde le brin planté dans sa case. Les brins ne plient pas tous
+   pareil (`0.7+r`) — une touffe dont les dix brins partent du même angle
+   au même instant se lit comme un éventail, pas comme de l'herbe. */
+function touffe(c,g,n,v){
   c.lineCap='round'; c.lineWidth=2.2;
+  const w=(v||0);
   for(let i=0;i<10;i++){
     const r=h2(i*3.3+n*97, i*1.7+n*53), a=(i/10+n)*Math.PI*2;
     const bx=Math.cos(a)*(3+r*6), by=Math.sin(a)*(1.5+r*3);
-    const ht=8+r*9, sg=(i%2)?1:-1;
+    const ht=8+r*9, sg=(i%2)?1:-1, p=w*(0.7+r)*ht*0.42;
     c.strokeStyle=shade(g, i%3===0 ? -34 : (i%3===1 ? -8 : 20));
     c.beginPath(); c.moveTo(bx,by);
-    c.quadraticCurveTo(bx+sg*3, by-ht*0.6, bx+sg*7, by-ht); c.stroke();
+    c.quadraticCurveTo(bx+sg*3+p*0.45, by-ht*0.6, bx+sg*7+p, by-ht); c.stroke();
   }
 }
 /* Ce que la mer laisse sur le sable. Quatre dessins minuscules, du même
@@ -3873,6 +4244,10 @@ function drawWorld(t){
   // Le ciel de devant sort de la caméra le temps de se peindre : nuages et
   // mouettes sont un décor d'écran, pas des objets de l'île.
   camLever(); cielDevant(t); camPoser();
+  // L'arc-en-ciel appartient au monde : il est posé sur la mer, donc il
+  // glisse avec la caméra. Après la mer et avant l'île — il passe derrière
+  // la terre comme le requin et le voilier.
+  const arc=arcEnCiel(); if(arc) arcDeCiel(t,arc);
   dessinerRequin(t); dessinerPoisson(t); dessinerVoilier(t); drawTiles(t); seuilDeLaMaison();
 
   if(tool.mode!=='marche'&&hover.x>=0&&!visiting){
@@ -3918,6 +4293,13 @@ function drawWorld(t){
     items.push({d:ce.x+ce.y, f:()=>{
       ctx.save(); ctx.translate(c0.x,c0.y-LIFT);
       shadowDiamond(ctx,0,0,bat?26:12);
+      /* Le vent se pose **ici** et non dans `DRAW.*`, pour la raison déjà
+         écrite pour le scintillement du coffre : `dessinDe()` peint aussi
+         les vignettes de l'atelier et de la vitrine, et un palmier qui
+         ondule dans une case de 60 px se lit comme une image qui tremble.
+         L'ombre reste au sol, elle : c'est l'arbre qui plie, pas le soleil
+         qui bouge. */
+      ventPlie(ctx,t,o.x,o.y,o.t);
       dessinDe(ctx,o.t,o.c||'#8AA3B2',o.o,etatObjet(o,t));
       // Dans ce jeu, une chose qui brille est une chose à prendre : le
       // coffre du jour, et la boîte où un mot attend d'être lu.
@@ -3925,8 +4307,22 @@ function drawWorld(t){
     }});
   });
   if(visiting){
-    const hx=world.house.x+2.1, hy=world.house.y+1.4, q=iso(hx,hy);
-    items.push({d:hx+hy, f:()=>drawChar(ctx,q.x,q.y-LIFT,world.me,0.95,'bas',t,vieDuBonhomme(t,t))});
+    /* **L'hôte fait les cent pas devant chez lui.** Il était assis, et
+       vingt îles de démonstration sont la première chose qu'un nouveau
+       venu voit en cliquant « Voisins » : vingt cartes postales où rien
+       ne bouge.
+
+       Tout se déduit de `t` : aucun état à tenir, rien à remettre à zéro
+       en changeant d'île, rien en base. La ligne des mouettes.
+
+       Il ne va **pas** à ta rencontre, et c'est un choix : ça demanderait
+       un chemin, donc un état, donc quelque chose qui peut se coincer. Un
+       va-et-vient devant sa porte dit « il habite ici » aussi bien, et ne
+       peut rien rater. */
+    const b=hoteAu(t);
+    const hx=b?b.x:world.house.x+2.1, hy=b?b.y:world.house.y+1.4, q=iso(hx,hy);
+    items.push({d:hx+hy, f:()=>drawChar(ctx,q.x,q.y-LIFT,world.me,0.95,
+      b?b.face:'bas', b&&b.marche?t:0, vieDuBonhomme(t, b&&b.marche?0:t))});
     // Le compagnon de l'hôte, assis à côté de lui. On lit `world.me` sans
     // pouvoir vérifier ses achats : la RLS ne montre pas la bourse du
     // voisin, et ce n'est pas grave : c'est du dessin, il n'y a rien à
@@ -3979,6 +4375,30 @@ function drawWorld(t){
       ctx.fillStyle=g; ctx.beginPath(); ctx.arc(gx,gy,r,0,Math.PI*2); ctx.fill(); };
     world.objects.forEach(o=>{ if(LUEUR[o.t]){ const q=ctr(o.x,o.y);
       glow(q.x,q.y-LIFT-LUEUR[o.t],72,world.sky==='nuit'?0.5:0.3); } });
+    /* Le phare balaie l'eau. Il est peint **ici**, dans la section de nuit,
+       pour deux raisons qui tiennent ensemble : le `clip()` sur `seaPath()`
+       est déjà posé, donc le faisceau s'arrête au bord de la mer au lieu de
+       déborder sur le papier — c'est la règle de `wMer()` partagé, écrite
+       pour le requin — et le `lighter` est déjà en place, donc il ajoute de
+       la lumière au lieu de peindre par-dessus.
+
+       Il est **écrasé au rapport de la case** (`TH/TW`), comme la flaque de
+       jour sur le plancher de la maison : un faisceau rond serait posé
+       debout sur l'eau au lieu d'être couché dessus. Neuf secondes le tour,
+       comme un vrai. */
+    world.objects.forEach(o=>{
+      if(o.t!=='phare') return;
+      const q=ctr(o.x,o.y), a=t/9000*Math.PI*2+(o.x+o.y);
+      ctx.save(); ctx.translate(q.x,q.y-LIFT-70); ctx.scale(1,TH/TW); ctx.rotate(a);
+      const P=430, g=ctx.createLinearGradient(0,0,P,0);
+      const f=world.sky==='nuit'?0.30:0.16;
+      g.addColorStop(0,'rgba(255,236,178,'+f+')');
+      g.addColorStop(0.55,'rgba(255,236,178,'+(f*0.45).toFixed(3)+')');
+      g.addColorStop(1,'rgba(255,236,178,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.arc(0,0,P,-0.10,0.10); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    });
     const hq=iso(world.house.x+1,world.house.y+1);
     glow(hq.x,hq.y-LIFT-22,86,world.sky==='nuit'?0.34:0.2);
     ctx.restore();
@@ -3986,6 +4406,18 @@ function drawWorld(t){
   // Après le voile : une luciole peinte dessous ne brillerait pas.
   insectes(t);
   camLever();
+  /* Le voile de la météo passe en tout dernier et **hors caméra** : il est
+     entre l'œil et l'île, pas posé sur l'eau. Peint sous la caméra, il
+     glisserait avec le monde et se lirait comme une tache sur la mer.
+
+     Après le voile de nuit, donc : un jour de pluie reste un jour de
+     pluie même la nuit, et les deux s'ajoutent comme dans la vraie vie. */
+  voileMeteo(t);
+  if(meteoNow==='pluie') pluie(t);
+  /* Ce que la saison fait tomber, après le voile comme la pluie : peint
+     dessous, il serait délavé. Et **pas de neige quand il pleut** — les
+     deux à la fois, c'est un ciel qui se contredit. */
+  if(meteoNow!=='pluie') chuteDeSaison(t);
 }
 
 /* ================= l'intérieur : le rendu =================
@@ -4081,13 +4513,51 @@ const DRAWM={
     pave(c,s[0]-0.46,s[1]-0.46,0,C,1.6);
     pave(c,s[0]-0.95,s[1]-0.95,0,shade(C,22),2.2);
   },
+  /* Le lit.
+
+     Le premier dessin était trois boîtes sans rapport : une tête de lit de
+     **52 unités** — plus haute qu'une commode, et elle masquait le
+     bonhomme —, un édredon posé **à côté** du matelas au lieu de le
+     couvrir, et un oreiller qui flottait en biais. Signalé comme « une
+     sculpture ratée avec un drap mal placé », et c'était juste.
+
+     Ce qui l'avait rendu illisible tient en une ligne : **deux jeux de
+     coordonnées écrits à la main**, un par orientation, avec des ternaires
+     partout. Impossible de voir qu'un décalage était faux, puisqu'il n'y
+     avait rien à quoi le comparer. D'où `axe()` : on écrit le lit **une
+     fois**, dans un repère tête-pieds, et l'orientation ne choisit plus
+     que la façon de reposer ce repère. C'est la règle déjà tenue pour
+     `laPiece()` — trois orthographes d'une même idée, c'est trois endroits
+     à tenir d'accord.
+
+     Un lit se lit à quatre choses, et il les faut toutes : un sommier qui
+     porte, un matelas en retrait dessus, une couette qui part **des pieds**
+     et s'arrête avant l'oreiller, et un revers replié au bord de cette
+     couette. Sans le revers, la couette est une planche posée. */
   lit(c,C,s,o){
-    pave(c,s[0]-0.26,s[1]-0.26,19,'#FDFBF2');
-    adosse(c,s,o,0.2,52,BROWN);
-    c.save(); dec(c, o==='sw'?0:0.36, o==='sw'?0.36:0);
-    pave(c, o==='sw'?s[0]-0.3:s[0]-0.95, o==='sw'?s[1]-0.95:s[1]-0.3, 4, C, 19); c.restore();
-    c.save(); dec(c, o==='sw'?0:-0.52, o==='sw'?-0.52:0);
-    pave(c, o==='sw'?0.72:0.42, o==='sw'?0.42:0.72, 7, '#F6F1E2', 19); c.restore();
+    const sw=o==='sw';
+    // `l` va vers les pieds, `t` en travers. Rendu en [u,v] selon le sens.
+    const axe=(l,t)=> sw ? [l,t] : [t,l];
+    const pose=(l,t,u,v,h,col,y0)=>{ c.save();
+      const d=axe(l,t); dec(c,d[0],d[1]);
+      const e=axe(u,v); pave(c,e[0],e[1],h,col,y0); c.restore(); };
+
+    const SOM=11, MAT=9, HAUT=SOM+MAT;      // sommier, matelas, le dessus
+    pave(c,s[0]-0.16,s[1]-0.16,SOM,BROWN);                  // le sommier
+    pave(c,s[0]-0.34,s[1]-0.34,MAT,'#FBF7EC',SOM);          // le matelas
+    // La tête de lit : haute comme une chaise, pas comme un mur.
+    adosse(c,s,o,0.17,30,BROWN);
+
+    /* La couette part des pieds et s'arrête aux deux tiers : c'est ce qui
+       laisse voir le matelas sous l'oreiller, et c'est à ça qu'on
+       reconnaît un lit fait. Elle déborde un peu du matelas sur les côtés
+       — une couette à ras du matelas se lit comme un second matelas. */
+    pose(0.30,0, 1.12,s[1]-0.22, 6, C, HAUT);
+    // Le revers replié, en haut de la couette, plus clair.
+    pose(-0.21,0, 0.20,s[1]-0.22, 7, shade(C,26), HAUT);
+
+    // Deux oreillers, à plat contre la tête de lit.
+    [-0.36,0.36].forEach(t=> pose(-0.60,t, 0.42,0.60, 6, '#FFFDF6', HAUT));
   },
   chevet(c,C){
     pave(c,0.5,0.5,30,C);
@@ -4904,13 +5374,32 @@ function majZoomBtn(){
   m.disabled = z <= zPlancher()+0.005;
 }
 document.getElementById('photo-btn').addEventListener('click',()=>basculerViseur());
-/* Reprendre son bonhomme. Le même geste que « ✋ Marcher » de l'atelier,
-   posé là où le pinceau vient de servir. `buildAll()` remet la puce de
-   l'atelier d'accord avec la réalité, et `hudSync()` fait disparaître le
-   bouton : un bouton qui reste après avoir fait son travail se reclique. */
+/* Reprendre son bonhomme — **le bouton qui rend la main, quoi qu'il
+   arrive**.
+
+   Trois choses confisquent le clic sur l'île : un pinceau armé, le viseur
+   de l'appareil photo, et le comptoir de la carte postale. Elles ont
+   chacune leur façon de se refermer, et c'est très bien — mais un enfant
+   qui ne sait plus pourquoi son bonhomme ne bouge plus n'a pas à savoir
+   laquelle des trois le retient. **Ce bouton les lève toutes**, d'un seul
+   geste, et c'est tout son intérêt : il n'y a rien à diagnostiquer.
+
+   Il ne casse rien de ce qui compte : la balade du chien continue (on y
+   marche déjà), et rien n'est effacé ni perdu. C'est un bouton qui rend,
+   jamais un bouton qui annule.
+
+   Il reste visible après coup, contrairement à sa première version : on ne
+   le cache plus une fois son travail fait. Un bouton de secours qui
+   disparaît quand tout va bien est introuvable quand ça ne va plus. */
 document.getElementById('marche-btn').addEventListener('click',()=>{
-  tool.mode='marche'; tool.kind=null; buildAll(); hudSync();
-  say('Tu as repris ton bonhomme. <b>Clique</b> où tu veux aller.');
+  const confisque = tool.mode!=='marche' || viseurOn || carteOuverte;
+  tool.mode='marche'; tool.kind=null;
+  fermerLeViseur();
+  carteOuverte=false;
+  buildAll(); hudSync();
+  say(confisque
+    ? 'Tu as repris ton bonhomme. <b>Clique</b> où tu veux aller.'
+    : 'Ton bonhomme t’écoute. <b>Clique</b> où tu veux aller, ou marche aux flèches.');
 });
 document.getElementById('zoom-plus').addEventListener('click',()=>zoomer(1.22));
 document.getElementById('zoom-moins').addEventListener('click',()=>zoomer(1/1.22));
@@ -4965,6 +5454,14 @@ function frame(t){
   // que lit `blocked()`, et un pas fait sur un masque périmé serait un pas
   // dans l'eau.
   avancerMaree();
+  /* Après la mer et non avant : la météo lit `etatMaree()`, qui vient
+     d'être remise à l'heure. Et **avant le dessin**, parce que `vent()`
+     lit `ventForce()` à chaque objet peint — une rafale qui s'annoncerait
+     au milieu d'une image plierait la moitié de l'île. */
+  avancerMeteo();
+  // La saison change une fois par trimestre : on la relit une fois par
+  // image plutôt qu'à chaque case, `jourDuJeu()` traversant la bourse.
+  avancerSaison();
   let dx=0,dy=0;
   if(keys.arrowup||keys.z||keys.w){ dx-=1; dy-=1; }
   if(keys.arrowdown||keys.s){ dx+=1; dy+=1; }
@@ -5108,6 +5605,171 @@ async function accorderMaree(){
     mareeServeur=true; poserMaree(m.phase, m.numero|0);
   }catch(e){ /* migration pas encore passée, ou hors ligne : cycle local */ }
 }
+/* La météo.
+
+   **Elle ne demande pas une ligne de SQL**, et c'est le point qui a décidé
+   de sa forme. La marée porte déjà une horloge accordée au serveur :
+   `numero + phase` avance de 1 toutes les 12 h 25, et `accorderMaree()`
+   la remet à l'heure dès que le serveur répond. `meteoNo()` la découpe en
+   tranches de 2 h 29 — un cinquième de cycle — et tire le temps qu'il fait
+   de ce numéro.
+
+   Conséquence voulue, et c'est la même que pour la marée : **il fait le
+   même temps sur tout l'archipel**, donc deux enfants qui jouent le même
+   soir peuvent en parler. Une météo tirée dans chaque navigateur serait
+   une décoration ; celle-ci est un fait partagé.
+
+   Sans compte ou hors ligne, le cycle local prend le relais, exactement
+   comme pour la mer et comme `dansisland:bourse` pour la bourse.
+
+   **Rien n'en part en base** : pas une clé de plus dans `mondeNu()`, rien
+   pour Ctrl+Z, **aucun gain, aucun plafond, rien dans `faits`**. La pluie
+   ne fait pousser rien du tout et ne rapporte pas un shell — un temps qui
+   paierait serait un gain qui tombe tout seul cinq fois par jour, ce que
+   la marée a déjà refusé d'être.
+
+   Et il n'y a **pas de mauvais temps** : on ne perd rien, on ne glisse
+   pas, on n'est pas ralenti. La pluie est une chose à regarder depuis sa
+   fenêtre, pas une punition. C'est la ligne du chien qui s'assied. */
+/* ================= les saisons =================
+
+   L'île suit le vrai calendrier. Tout se déduit de `jourDuJeu()`, qui est
+   déjà le jour du **serveur** : aucune clé de plus dans `mondeNu()`, rien
+   pour Ctrl+Z, aucun gain, aucun plafond. La ligne des mouettes.
+
+   **La règle qui a décidé de tout le reste : une saison ajoute, elle ne
+   remplace jamais.** Le joueur a choisi sa palette de terrain et la
+   couleur de chacun de ses objets ; un hiver qui repeindrait son herbe en
+   blanc lui prendrait son île. La neige se **pose dessus**, les feuilles
+   se **sèment dessus**, les pétales **passent devant**. On peut toujours
+   voir ce qu'on a choisi.
+
+   Corollaire tenu : l'été n'ajoute rien du tout, et c'est exactement l'île
+   d'avant. Personne ne se réveille avec une île qu'il ne reconnaît pas.
+
+   Les dates sont celles des saisons météorologiques (1er mars, juin,
+   septembre, décembre) et non des solstices : elles tombent sur un premier
+   du mois, donc elles se disent à un enfant en une phrase. */
+const SAISONS={
+  /* Les phrases disent **ce qui est vraiment dessiné**, pas ce qui ferait
+     joli. Le premier jet promettait « il a neigé sur les toits » — la
+     neige se pose sur les cases, pas sur les toitures, qui sont des
+     dessins à part et qu'il faudrait refaire une par une. Promettre un
+     détail qu'on ne peint pas, c'est envoyer un enfant le chercher. */
+  printemps:{n:'le printemps', d:'Des pétales passent dans le vent.'},
+  ete:      {n:'l’été',        d:'Rien de plus : l’île est comme elle est.'},
+  automne:  {n:'l’automne',    d:'Des feuilles tombent sur l’herbe.'},
+  hiver:    {n:'l’hiver',      d:'Il neige, et le sol est blanc.'},
+};
+function saisonDe(jour){
+  const m=+String(jour||'').slice(5,7);
+  if(!(m>=1&&m<=12)) return 'ete';
+  return m<3?'hiver' : m<6?'printemps' : m<9?'ete' : m<12?'automne' : 'hiver';
+}
+function saison(){ return saisonDe(jourDuJeu()); }
+/* Ce que la saison pose sur le sol. Une saison absente ne pose rien, et
+   c'est l'été : la même règle que `VENT_PLIE` et `METEO_VOILE`, ce qui
+   n'est pas déclaré ne change rien. */
+const SAISON_SOL={ hiver:{c:'#FFFFFF', a:0.62}, automne:{c:'#C97A3C', a:0.20} };
+/* Et ce qui tombe du ciel. Même forme que la pluie, et pour la même
+   raison : en repère écran, tout déduit de `t`, aucun état à tenir. */
+const SAISON_CHUTE={
+  printemps:{c:'#F9C6D6', n:34, v:0.022, taille:2.4},
+  automne:  {c:'#C97A3C', n:26, v:0.030, taille:2.8},
+  hiver:    {c:'#FFFFFF', n:70, v:0.026, taille:2.0},
+};
+/* Le `saisonNow` est relu une fois par image plutôt qu'à chaque case :
+   `jourDuJeu()` traverse la bourse, et le faire quatre cents fois par
+   image pour un résultat qui change une fois par trimestre serait
+   absurde. */
+let saisonNow='ete';
+function avancerSaison(){ saisonNow=saison(); }
+/* Ce qui tombe : pétales, feuilles ou neige. Chaque flocon a sa propre
+   dérive latérale, sinon la chute est un rideau — c'est la leçon des
+   vingt-deux éclats sur l'eau, et celle de la pluie. */
+function chuteDeSaison(t){
+  const s=SAISON_CHUTE[saisonNow]; if(!s) return;
+  ctx.save(); ctx.fillStyle=s.c;
+  for(let i=0;i<s.n;i++){
+    const a=h2(i*3.3+11,i*1.7+5), b=h2(i*5.9+2,i*2.1+13);
+    const y=boucle(b*CH + t*s.v*(0.6+a), CH+40)-20;
+    // Le va-et-vient : une feuille qui tombe droit est une goutte.
+    const x=boucle(a*CW + Math.sin(t/900+i*1.7)*22 + t*0.004, CW+50)-25;
+    ctx.globalAlpha=0.30+b*0.45;
+    ctx.beginPath();
+    ctx.ellipse(x,y,s.taille*(0.7+a*0.6),s.taille*(0.5+b*0.5),
+                saisonNow==='hiver'?0:Math.sin(t/700+i)*1.1,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+const METEO_PAR_CYCLE=5;            // une tranche de 2 h 29
+/* Les poids sont écrits en entiers plutôt qu'en pourcentages : la somme se
+   vérifie d'un coup d'œil, et il n'y a pas de virgule qui traîne. Le beau
+   temps domine largement — une île où il pleut un jour sur trois n'est pas
+   un endroit où l'on vient se poser. */
+const METEO=[
+  ['beau',    46, ''],
+  ['nuages',  22, '<b>Le ciel se couvre.</b> Rien de grave, ça passera.'],
+  ['pluie',   14, '<b>Il pleut sur ton île.</b> C’est le moment d’aller voir dedans.'],
+  ['brume',   10, '<b>De la brume.</b> Elle se lèvera toute seule.'],
+  ['rafale',   8, '<b>Le vent se lève.</b> Regarde les arbres.'],
+];
+const METEO_TOTAL=METEO.reduce((s,m)=>s+m[1],0);
+/* Ce que le panneau Île en dit. Séparé du murmure exprès : le murmure
+   annonce un **changement** (« le ciel se couvre »), le panneau décrit un
+   **état** (« le ciel est couvert »). Les confondre donne un panneau qui
+   annonce une nouvelle vieille de deux heures. */
+const METEO_DIT={
+  beau:   '<b>Il fait beau.</b> Le soleil est de sortie et les mouettes avec lui.',
+  nuages: '<b>Le ciel est couvert.</b> Le soleil passe derrière, pâle.',
+  pluie:  '<b>Il pleut.</b> Les mouettes se sont posées. Rien ne s’abîme et rien ne pousse : c’est juste la pluie.',
+  brume:  '<b>Il y a de la brume.</b> Elle se lèvera toute seule.',
+  rafale: '<b>Le vent souffle fort.</b> Regarde les arbres et les herbes.',
+};
+function meteoNo(){
+  const e=etatMaree();
+  return Math.floor((e.numero+e.phase)*METEO_PAR_CYCLE);
+}
+/* Le temps qu'il fait, tiré du numéro de la tranche. `h2()` est la même
+   graine que partout ailleurs dans ce fichier : deux tranches voisines ne
+   se ressemblent pas, et la suite ne bouge pas d'une visite à l'autre. */
+function meteoDe(n){
+  let r=h2(n*5.7+1.3, n*2.9+7.1)*METEO_TOTAL;
+  for(const m of METEO){ r-=m[1]; if(r<0) return m[0]; }
+  return 'beau';
+}
+let meteoNow='beau', meteoAvant=null;
+/* L'arc-en-ciel n'est pas un temps qu'il fait, c'est ce qui **suit** la
+   pluie : il n'a donc pas sa ligne dans `METEO`, il se déduit. Une demi-
+   tranche, pas plus — un arc-en-ciel permanent est un décor, et ce qui ne
+   se rate jamais ne se remarque plus. */
+function arcEnCiel(){
+  if(meteoNow!=='beau' || world.sky==='nuit') return 0;
+  if(meteoDe(meteoNo()-1)!=='pluie') return 0;
+  const e=etatMaree(), dans=((e.numero+e.phase)*METEO_PAR_CYCLE)%1;
+  return dans<0.5 ? Math.sin(dans*2*Math.PI)*0.9 : 0;
+}
+// La force du vent. Une rafale plie plus fort, une brume immobilise l'air.
+function ventForce(){
+  return meteoNow==='rafale' ? 2.3 : meteoNow==='brume' ? 0.35 : 1;
+}
+function avancerMeteo(){
+  const m=meteoDe(meteoNo());
+  if(m===meteoNow && meteoAvant!==null) return;
+  meteoNow=m;
+  // Au tout premier tour on ne dit rien : annoncer « le ciel se couvre »
+  // à quelqu'un qui vient d'arriver, c'est raconter un changement qu'il
+  // n'a pas vu. C'est la règle du murmure de la marée.
+  const dire=meteoAvant!==null && meteoAvant!==m;
+  meteoAvant=m;
+  if(dire){ const l=METEO.find(x=>x[0]===m); if(l&&l[2]) say(l[2],0,3200); }
+  // Le panneau Île dit le temps qu'il fait : il doit se refaire quand il
+  // change, sinon il annonce la pluie d'il y a deux heures.
+  if(dire) buildAll();
+}
+
 // Le tour de mer, une fois par image. Il ne fait rien tant que la mer ne
 // change pas d'avis, et tout d'un coup quand elle en change.
 function avancerMaree(){
@@ -6171,6 +6833,17 @@ function proximity(){
       return;
     }
   }
+  /* Le potager, chez soi comme chez les autres : la pousse est la même
+     pour tout l'archipel, exactement comme la mer. Il se **regarde**, il
+     ne se ramasse pas — donc pas de plaque rose, pas de `E`, rien à
+     rater. C'est le seul objet du jeu dont tout le propos est qu'il ne se
+     passe rien aujourd'hui et qu'il faut revenir demain. */
+  const pot=potagerProche();
+  if(pot){ boutonRose(null);
+    bulle(POTAGER_CLE, 'Dans le potager : <b>'+POUSSE_DIT[pousseDuPotager()]+'</b>.'+
+      (saisonNow==='hiver' ? ' L’hiver, la terre se repose.' : ' Repasse demain, ça aura poussé.'));
+    return;
+  }
   // La girouette, chez soi comme chez les autres : la mer est la même pour
   // tout le monde.
   if(girouetteProche()){
@@ -6476,8 +7149,16 @@ function dessinerEditeurVisage(cv){
       g.fillRect(cx-r+i*pas, cy-r+j*pas, pas+0.5, pas+0.5);
     }
   }
-  g.strokeStyle='rgba(11,60,93,.16)'; g.lineWidth=1;
+  /* Le quadrillage s'allège quand la grille se resserre. À douze cases, un
+     trait par case aidait à viser ; à vingt-quatre, les vingt-cinq traits
+     dans chaque sens mangeaient le dessin — on voyait la grille et plus le
+     visage. Les traits fins restent, très pâles, et **un trait sur quatre**
+     est marqué : c'est ce qui permet de compter les cases sans les subir,
+     comme le papier millimétré. */
   for(let i=0;i<=FACE_N;i++){
+    const fort = i%4===0;
+    g.strokeStyle = fort ? 'rgba(11,60,93,.20)' : 'rgba(11,60,93,.08)';
+    g.lineWidth = fort ? 1 : 0.6;
     g.beginPath(); g.moveTo(cx-r+i*pas,cy-r); g.lineTo(cx-r+i*pas,cy+r); g.stroke();
     g.beginPath(); g.moveTo(cx-r,cy-r+i*pas); g.lineTo(cx+r,cy-r+i*pas); g.stroke();
   }
@@ -6501,7 +7182,12 @@ function peindreCase(cv, ev){
 }
 function champVisage(){
   const f=field('Son visage, à peindre');
-  const cv=document.createElement('canvas'); cv.className='visage'; cv.width=264; cv.height=264;
+  /* 384 et non plus 264 : à vingt-quatre cases, 264 pixels n'en donnaient
+     que onze par case, et le quadrillage se confondait avec le dessin. Le
+     canvas est peint plus grand et affiché à la même taille — c'est du
+     dessin plus net, pas un panneau plus large. `peindreCase()` ramène le
+     point dans ce repère, donc la visée suit toute seule. */
+  const cv=document.createElement('canvas'); cv.className='visage'; cv.width=384; cv.height=384;
   cv.setAttribute('role','img'); cv.setAttribute('aria-label','Le visage de ton bonhomme, à peindre case par case');
   // La note change de sens à la première case peinte — « tant que tu n'as
   // rien peint » devient faux — et l'éditeur ne reconstruit pas le panneau.
@@ -6655,19 +7341,23 @@ function buildToi(){
       const nom=document.createElement('span'); nom.textContent=ph.chez ? ('chez '+(ph.qui||'?')) : (ph.ile||'chez toi');
       const q=document.createElement('span'); q.className='prix'; q.textContent=ph.jour||'';
       d.appendChild(im); d.appendChild(nom); d.appendChild(q);
-      d.onclick=()=>{ const a=document.createElement('a');
-        a.download='photo-'+(ph.jour||'')+'.jpg'; a.href=ph.u;
-        document.body.appendChild(a); a.click(); a.remove(); };
+      /* Cliquer une vignette **l'envoie** plutôt que de la réenregistrer.
+         C'est le geste qui manquait : l'album était une impasse, on y
+         rangeait des photos qu'on ne pouvait montrer à personne. Et
+         `envoyerPhoto()` retombe sur l'enregistrement quand il n'y a pas
+         de partage natif — donc l'ancien geste n'est pas perdu, il est
+         devenu le repli. */
+      d.onclick=()=>envoyerPhoto(ph);
       d.style.cursor='pointer';
       ga.appendChild(d); });
     fa.appendChild(ga); p.appendChild(fa);
-    p.appendChild(hint('Clique une vignette pour la réenregistrer. L’album garde les <b>'+ALBUM_MAX+
-      ' dernières</b> et il vit dans <b>ce navigateur</b>, pas en base : il ne te suit pas d’un appareil à l’autre. Le tirage en grand, lui, est descendu dans tes fichiers au moment de la photo.'));
+    p.appendChild(hint('Clique une photo pour l’<b>envoyer</b> — sur téléphone elle part dans la conversation, ailleurs elle descend dans tes fichiers. L’album garde les <b>'+ALBUM_MAX+
+      ' dernières</b> et il vit dans <b>ce navigateur</b>, pas en base : il ne te suit pas d’un appareil à l’autre.'));
   }else{
     p.appendChild(fa);
     p.appendChild(hint(appareilEnMain()
       ? 'Ton album est vide. Appuie sur <b>P</b> ou sur 📷, au bord du cadre : le viseur s’ouvre, tu cadres, et un second appui déclenche.'
-      : 'Tu n’as pas d’<b>appareil photo</b>. Il est à la Boutique, au rayon <b>Pour toi</b> : on vise, on déclenche, et la photo descend dans tes fichiers.'));
+      : 'Tu n’as pas d’<b>appareil photo</b>. Il est à la Boutique, au rayon <b>Pour toi</b> : on vise, on déclenche, et la photo se range ici — d’où tu peux l’envoyer.'));
   }
 
   paintPreview();
@@ -6938,6 +7628,16 @@ function buildIle(){
     : '<b>La mer est haute.</b> Deux fois par jour elle se retire et d\u00e9couvre un anneau de sable '+
       'mouill\u00e9 au bord de l\u2019\u00eele, o\u00f9 elle laisse des choses \u00e0 ramasser. '+
       'Comme la vraie, elle passe environ cinquante minutes plus tard chaque jour.'));
+  /* Le temps qu'il fait, à côté de la marée et pour la même raison : pas
+     de plaque de plus dans le bandeau, l'avertissement des 360 px vaut
+     toujours. Et il dit **qu'il est le même pour tout le monde** — c'est
+     ce qui le rend racontable à un copain, exactement comme la marée. */
+  p.appendChild(hint(METEO_DIT[meteoNow] +
+    ' Il fait le même temps sur toutes les îles, et il change toutes les deux heures et demie.'));
+  // La saison, dans la même note que le temps : ce sont deux choses qu'on
+  // ne choisit pas et qui arrivent à tout l'archipel en même temps.
+  p.appendChild(hint('C’est <b>'+SAISONS[saisonNow].n+'</b>. '+SAISONS[saisonNow].d+
+    ' L’île suit le vrai calendrier, et la saison ne repeint jamais ce que tu as choisi : elle se pose dessus.'));
   p.appendChild(rule());
 
   // ---- livre d'or ----
@@ -7599,7 +8299,47 @@ function coffreProche(){
 function etatObjet(o,t){
   if(o.t==='girouette'||o.t==='carillon') return t;
   if(o.t==='boitelettres') return boitePleine(o);
+  if(o.t==='potager') return pousseDuPotager();
   return coffreOuvert(o);
+}
+
+/* ================= le potager =================
+
+   **La question tranchée avant d'écrire une ligne, et c'est toujours la
+   même : est-ce que ça rapporte ?** Non. Pas un shell, pas un plafond,
+   pas un cran de terrain. « L'île grandit parce que des gens sont passés,
+   jamais parce que le temps passe » — et un potager qui paierait serait
+   exactement ce que cette phrase interdit, puisque tout ce qu'il fait,
+   c'est attendre.
+
+   **La seconde question, et c'est elle qui a décidé de la forme : où vit
+   la date de plantation ?** Réponse : nulle part. Un objet posé reste
+   `{t,x,y,o,c}`, et la pousse **se déduit du jour**, exactement comme la
+   marée se déduit de l'heure et la météo de l'horloge de la marée.
+
+   Conséquence voulue, la même que pour la marée et le temps : **tous les
+   potagers de l'archipel en sont au même point**, donc deux enfants qui
+   jouent le même jour peuvent en parler. Et il n'y a rien à planter, rien
+   à arroser, rien à rater : on pose un carré de terre, et il vit.
+
+   Six jours de cycle, un pas par jour. Ni sept ni trente : une semaine se
+   compte, et un mois s'oublie. Et **rien ne meurt jamais** — après le
+   sixième jour ça recommence, il n'y a pas de récolte manquée. C'est la
+   ligne du chien qui s'assied. */
+const POUSSE_JOURS=6;
+const POUSSE_DIT=['de la terre retournée','des graines à peine semées',
+                  'deux petites pousses','des feuilles bien vertes',
+                  'des fleurs jaunes','des légumes mûrs'];
+function pousseDuPotager(){
+  const j=String(jourDuJeu()||'');
+  // Le jour en nombre, depuis une date fixe : deux jours de suite doivent
+  // donner deux pas de suite, ce qu'un hachage ne garantit pas.
+  const d=Date.UTC(+j.slice(0,4), +j.slice(5,7)-1, +j.slice(8,10));
+  if(!isFinite(d)) return 0;
+  // L'hiver, la terre se repose : le potager reste au premier état. Ce
+  // n'est pas une perte, c'est une saison — et la neige le couvre déjà.
+  if(saisonNow==='hiver') return 0;
+  return ((Math.floor(d/86400000)%POUSSE_JOURS)+POUSSE_JOURS)%POUSSE_JOURS;
 }
 
 /* ---- la boîte aux lettres ----
@@ -7701,6 +8441,20 @@ function dureeLisible(sec){
 // recouverte par l'invitation à l'image suivante. `say()` écrit toujours,
 // lui, donc réappuyer sur E rafraîchit bien le délai.
 const GIROUETTE_CLE=verrouProx('girouette');
+/* Le potager. `verrouProx()` inscrit la clé dans le registre, donc le
+   ménage du bas de `proximity()` la lève quand on s'éloigne — sans que
+   personne ait à penser à l'ajouter à une liste. C'est tout l'intérêt du
+   registre, écrit le 19/09 après que trois bulles neuves soient restées à
+   l'écran pour toujours. */
+const POTAGER_CLE=verrouProx('potager');
+function potagerProche(){
+  if(dedans) return null;
+  // Un souvenir de potager rapporté de chez un ami pousse quand même : ce
+  // n'est pas une capacité, c'est un carré de terre. `estSouvenir()` ne
+  // sert qu'aux objets qui *font* quelque chose, et celui-ci ne fait rien.
+  return (world.objects||[]).find(o=>o.t==='potager' &&
+    Math.hypot(o.x+0.5-hero.x, o.y+0.5-hero.y)<0.95) || null;
+}
 function lireLaGirouette(){
   const p=prochaineMaree(); son('piece');
   say(p.basse
@@ -8330,19 +9084,51 @@ function prendreLaPhoto(t){
   const lieu = world.name || 'Sans nom';
   const jour = jourDuJeu();
 
-  // Le tirage : marge blanche, large en bas, comme un polaroid.
-  const m=Math.round(w*0.045), bas=Math.round(w*0.15);
+  /* Le tirage, **au format 4:5 et signé**. C'était un polaroid : une
+     marge blanche, une bande plus large en bas, et le nom de l'île. Il le
+     reste dans l'esprit, mais la carte est maintenant au rapport que
+     demande un fil Instagram, et elle porte l'adresse du jeu.
+
+     **Elle ne recadre pas l'île, elle la monte.** Un 4:5 est un portrait
+     et le cadre du jeu est un paysage de 1,536:1 : découper un 4:5 dedans
+     ne garderait qu'une tranche verticale de l'île, c'est-à-dire presque
+     rien. On garde donc la photo entière et on lui donne du papier
+     au-dessus et en dessous — ce qui est exactement ce à quoi ressemble
+     une affiche, et ce qui laisse la place à la signature.
+
+     Ce que ça change pour le joueur : rien qu'il perde. Il obtient la
+     même photo, sur une carte qu'il peut publier telle quelle. Et le jour
+     où il la publie, elle porte `dansisland.app` — c'est-à-dire que
+     chaque photo partagée est une invitation, comme la carte postale.
+
+     Les deux bandes se **déduisent** du rapport voulu : écrites en dur,
+     elles seraient fausses le jour où la photo change de proportion. */
+  const m=Math.round(w*0.045), W=w+m*2, H=Math.round(W*1.25);
+  const reste=H-h-m*2;                       // ce qui reste pour les bandes
+  const haut=Math.max(m, Math.round(reste*0.34)), bas=reste-haut;
   const tir=document.createElement('canvas');
-  tir.width=w+m*2; tir.height=h+m+bas;
+  tir.width=W; tir.height=H;
   const g=tir.getContext('2d');
-  g.fillStyle='#FDFBF0'; g.fillRect(0,0,tir.width,tir.height);
-  g.drawImage(vue,m,m);
-  g.strokeStyle='rgba(11,60,93,.14)'; g.lineWidth=2; g.strokeRect(m,m,w,h);
-  const ligne=m+h+Math.round(bas*0.58);
-  g.fillStyle='#0B3C5D'; g.textAlign='left'; g.font='700 '+Math.round(w*0.052)+'px "Baloo 2", sans-serif';
-  g.fillText(lieu+(visiting?(' · chez '+chez):''), m, ligne);
-  g.fillStyle='#8AA3B2'; g.textAlign='right'; g.font='600 '+Math.round(w*0.036)+'px Nunito, sans-serif';
-  g.fillText(jour, tir.width-m, ligne);
+  g.fillStyle='#FFF8E8'; g.fillRect(0,0,W,H);
+  g.drawImage(vue, m, m+haut);
+  g.strokeStyle='rgba(13,38,48,.14)'; g.lineWidth=2; g.strokeRect(m,m+haut,w,h);
+
+  // La signature du haut : le logotype, centré, en capitales espacées.
+  g.textAlign='center'; g.fillStyle='#0D2630';
+  g.font='800 '+Math.round(w*0.062)+'px "Baloo 2", sans-serif';
+  g.fillText('DAN’S ISLAND', W/2, m+Math.round(haut*0.72));
+
+  // La bande du bas : le nom de l'île, puis l'adresse et la date.
+  const y1=m+haut+h+Math.round(bas*0.40), y2=m+haut+h+Math.round(bas*0.78);
+  g.fillStyle='#0D2630'; g.textAlign='center';
+  g.font='700 '+Math.round(w*0.055)+'px "Baloo 2", sans-serif';
+  g.fillText(lieu+(visiting?(' · chez '+chez):''), W/2, y1);
+  g.fillStyle='#184D5B';
+  g.font='700 '+Math.round(w*0.036)+'px Nunito, sans-serif';
+  g.fillText('dansisland.app', W/2, y2);
+  g.fillStyle='#7E8CA0'; g.textAlign='right';
+  g.font='600 '+Math.round(w*0.030)+'px Nunito, sans-serif';
+  g.fillText(jour, W-m, H-Math.round(m*0.6));
 
   const a=document.createElement('a');
   a.download='photo-'+(world.slug||'ile')+'-'+jour+'.png';
@@ -8351,14 +9137,33 @@ function prendreLaPhoto(t){
 
   rangerDansLalbum(vue, lieu, chez, jour);
   flashJusqua=t+180; son('photo'); fermerLeViseur();
-  say('<b>Photo prise'+(visiting?(' chez '+esc(chez)):'')+'.</b> Elle est enregistrée, et elle est dans ton album, onglet <b>Toi</b>.');
+  // La phrase dit maintenant ce qu'on peut en **faire**, pas seulement où
+  // elle est allée : l'album n'est plus une impasse.
+  say('<b>Photo prise'+(visiting?(' chez '+esc(chez)):'')+'.</b> Elle est enregistrée, et elle est dans ton album, onglet <b>Toi</b> — clique-la pour l’envoyer.');
   buildAll();
 }
-/* L'album. Une vignette par photo, en JPEG à 260 px de large : mesuré à
-   ~11 ko pièce, soit ~140 ko pour les douze, là où douze tirages PNG
-   pleine taille en feraient plus de deux mégaoctets et rempliraient
-   `localStorage` à eux seuls. La plus ancienne s'efface quand la
-   treizième arrive, et l'album le dit. */
+/* L'album. Une photo par prise, en JPEG.
+
+   **Elle est passée de 260 à 720 px de large le 20/09 au soir**, et la
+   raison est qu'on peut maintenant l'**envoyer**. À 260 px, une photo
+   partagée arrive dans une conversation comme une vignette floue : ce
+   n'est pas un souvenir, c'est un timbre. À 720 elle se regarde.
+
+   Ce qui rend l'agrandissement sûr, c'est la boucle de `rangerDansLalbum()`
+   qui existait déjà : quand `localStorage` refuse, on jette la plus
+   ancienne jusqu'à ce que ça rentre. Le coût d'une photo plus lourde n'est
+   donc pas un risque de casse, c'est un album un peu plus court sur un
+   navigateur serré — et l'album le dit.
+
+   Mesuré plutôt que supposé, sur le vrai cadre :
+
+       260 px → 6 ko pièce     720 px → 20 ko pièce   (0,2 Mo les douze)
+       520 px → 13 ko          900 px → 26 ko
+
+   Les douze tiennent donc dans 0,2 Mo, très loin des cinq mégaoctets que
+   `localStorage` accorde d'ordinaire — et très loin du tirage PNG pleine
+   taille, qui pèse plus de deux mégaoctets **pièce**. Le JPEG à 0,72 est
+   ce qui permet les deux à la fois. */
 let album=[];
 function relireLalbum(){
   try{ const l=JSON.parse(localStorage.getItem(ALBUM)||'[]');
@@ -8366,7 +9171,12 @@ function relireLalbum(){
   catch(e){ album=[]; }
 }
 function rangerDansLalbum(vue, lieu, chez, jour){
-  const L=260, c=document.createElement('canvas');
+  /* **Jamais plus large que la source.** Sur un écran à un pixel par
+     point, le cadrage fait moins de 720 px : demander 720 donnerait un
+     JPEG plus lourd et plus flou que l'original, ce qui est le pire des
+     deux. Sur un écran à deux pixels par point la source est plus grande,
+     et c'est là que les 720 servent vraiment. */
+  const L=Math.min(720, vue.width||720), c=document.createElement('canvas');
   c.width=L; c.height=Math.round(L*vue.height/vue.width);
   c.getContext('2d').drawImage(vue,0,0,c.width,c.height);
   album.unshift({u:c.toDataURL('image/jpeg',0.72), ile:lieu, qui:chez, jour, chez:!!visiting});
@@ -8379,6 +9189,53 @@ function rangerDansLalbum(vue, lieu, chez, jour){
   }
 }
 relireLalbum();
+
+/* **Envoyer une photo.** L'album était une impasse : on prenait une photo,
+   elle descendait dans les fichiers, et la vignette restait dans ce
+   navigateur pour toujours. Une chose qu'on fabrique et qu'on ne peut pas
+   montrer n'a pas de raison d'être dans un jeu dont le moteur est le
+   partage.
+
+   **Ce n'est pas une carte postale, et il ne faut pas les confondre** —
+   c'est écrit depuis le 18/09 : la carte porte l'adresse de l'île, c'est
+   une **invitation** ; la photo ne porte que ce qu'on a cadré, c'est un
+   **souvenir**. Le texte de partage le dit donc autrement, et il ne porte
+   pas de lien : une photo n'invite personne, elle se montre.
+
+   Même chemin que la carte, et pour les mêmes raisons : `navigator.share`
+   avec le fichier d'abord, parce que c'est le seul qui met la vraie image
+   dans la conversation ; l'enregistrement ensuite, parce qu'il y a
+   toujours une sortie. Un bouton qui ne marche que sur un téléphone récent
+   n'existe pas pour les autres. */
+function texteDeLaPhoto(ph){
+  return ph.chez ? ('Une photo prise chez ' + (ph.qui||'un voisin') + ', sur Dan’s Island.')
+                 : ('Une photo de ' + (ph.ile||'mon île') + ', sur Dan’s Island.');
+}
+function enregistrerPhoto(ph){
+  const a=document.createElement('a');
+  a.download='photo-'+(ph.jour||'dansisland')+'.jpg'; a.href=ph.u;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+async function envoyerPhoto(ph){
+  // Une `data:` URL se retransforme en fichier par `fetch`, qui la lit
+  // sans réseau : c'est le chemin le plus court d'une vignette stockée à
+  // un `File` partageable.
+  let f=null;
+  try{
+    const blob=await (await fetch(ph.u)).blob();
+    f=new File([blob],'photo-'+(ph.jour||'dansisland')+'.jpg',{type:'image/jpeg'});
+  }catch(e){ f=null; }
+  try{
+    if(f && navigator.canShare && navigator.canShare({files:[f]})){
+      await navigator.share({title:'Dan’s Island', text:texteDeLaPhoto(ph), files:[f]});
+      say('Photo envoyée.');
+      return;
+    }
+  }catch(e){ if(e && e.name==='AbortError') return; }
+  // Pas de partage natif : elle descend dans les fichiers, et on le dit.
+  enregistrerPhoto(ph);
+  say('Ta photo est <b>enregistrée</b> : tu peux la joindre à un message.');
+}
 
 /* ================= la carte postale =================
    C'\u00e9tait un bouton qui enregistrait le cadre dans les fichiers, et rien
@@ -8992,17 +9849,20 @@ function hudSync(){
   // objets verrouillés de l'atelier.
   const pb=document.getElementById('photo-btn');
   if(pb){ pb.hidden=!appareilEnMain(); pb.setAttribute('aria-pressed',String(viseurOn)); }
-  /* **Reprendre la main.** Un pinceau armé confisque le clic : on pose un
-     arbre, on veut marcher, et le seul moyen était de rouvrir l'onglet Île
-     et d'y retrouver « ✋ Marcher » — à un écran de défilement, et loin du
-     doigt qui vient de poser. Le bouton apparaît dès qu'un outil est armé
-     et s'en va quand on marche : jamais mort, jamais en trop.
+  /* **Reprendre la main, et le bouton ne s'en va jamais.**
 
-     Il vit dans la colonne du bord droit, avec le zoom et l'appareil,
-     parce que c'est le seul endroit libre du cadre — le pad tient le coin
-     bas-gauche, le murmure la bande du bas, les plaques celle du haut. */
+     Il n'apparaissait que quand un outil était armé. Un enfant dont le
+     bonhomme ne répond plus ne sait pas *pourquoi* il ne répond plus :
+     lui demander de trouver un bouton qui n'existe que dans cet état, ça
+     revient à demander le diagnostic avant le remède.
+
+     Ce qui reste de l'idée d'origine : **il se met en avant quand il a
+     vraiment quelque chose à rendre.** `aria-pressed` porte cet état, et
+     le CSS le colore — sans ça, un bouton permanent dans une colonne de
+     quatre devient un meuble qu'on ne voit plus. */
   const mb=document.getElementById('marche-btn');
-  if(mb) mb.hidden = (tool.mode==='marche');
+  if(mb) mb.setAttribute('aria-pressed',
+      String(tool.mode!=='marche' || viseurOn || carteOuverte));
   cv.classList.toggle('walking', tool.mode==='marche');
 }
 // L'onglet ouvert est un état du jeu, pas seulement un clic : franchir une

@@ -3493,6 +3493,499 @@ modification **ne change pas** `dist/index.html` — l'empreinte est restée
 `eebd21736e9ad6a2` de part et d'autre, donc ce garde-fou ne demande aucun
 redéploiement.
 
+## Le rAF n'est pas bridé, et ça faisait un an qu'on ne mesurait rien — 20/09/2026 au soir
+
+Ce fichier écrit depuis le 19/09 que le rendu image par image ne s'éprouve
+pas : « le rAF y est bridé, le canvas garde la dernière image peinte, et
+seize mesures rendent seize fois la même valeur — mesuré, pas supposé ».
+Cette phrase a servi de raison de ne rien mesurer pour le requin, le
+voilier, les lucioles, les éclats sur l'eau, la respiration du bonhomme et
+l'étoile filante. **Remesurée :**
+
+    images par seconde : 60,5
+    relevés du canvas  : 6 valeurs distinctes sur 6
+
+**Elle est fausse ici.** Elle a peut-être été vraie sur une autre machine —
+ce n'est pas la question. Une limite qu'on n'a pas revérifiée depuis qu'on
+l'a écrite cesse d'être une mesure et devient une habitude, et celle-ci
+tenait six animations hors de toute épreuve.
+
+C'est la leçon déjà écrite pour l'audit de référencement (« vérifier que ce
+qu'il décrit est la version qu'on a ») retournée vers ce fichier lui-même :
+**les affirmations d'hier se remesurent, surtout celles qui nous
+arrangent.**
+
+### `test/vivant.mjs`, dixième harnais
+
+Il échantillonne le canvas dans le **temps réel** et compte les pixels qui
+changent dans une région. Un contrôle qui dirait seulement « ça bouge » ne
+prouverait rien — le ciel est plein de mouettes, la mer scintille, le
+bonhomme respire. **Ce qui prouve, c'est l'écart avec la même scène dont on
+a débranché la chose.**
+
+D'où `servir(port, panne)` : `aide.mjs` sert maintenant une copie d'
+`index.html` passée par une fonction. Fabriquer la panne ne demande plus de
+modifier le dépôt, et `pannePosee` dit si le remplacement a mordu — une
+panne qui ne se pose pas rend le contrôle vert pour la pire des raisons.
+
+Quatre erreurs de sonde, toutes rattrapées par l'image et non par une
+assertion, et les quatre valent d'être écrites :
+
+1. **J'ai mesuré le vent sur une île sans un seul arbre.** `test:objets`
+   attend `{t,x,y}` et j'écrivais `['palmier',7,6]` : `normaliserMonde()`
+   a écarté les neuf objets en silence. Trois sections ont tourné comme
+   ça. D'où l'assertion de comptage — 9 sur 9 — avant toute mesure.
+2. **Mon comptage rendait 0 sur 9 devant une île qui les portait.** Le
+   code de sauvegarde est en **base64** ; je cherchais `"palmier"` dans la
+   chaîne encodée. Un compte qui rend zéro devant une chose visible est un
+   compte cassé, pas une découverte.
+3. **Les trois boîtes du phare visaient le sud-ouest, et le balayage passe
+   au nord-ouest.** Elles rendaient 1175/576, puis 327/323, puis 174/164 —
+   et resserrer une boîte qui vise à côté ne fait que mesurer le vide de
+   plus près. J'ai failli conclure que le faisceau n'existait pas ; il est
+   parfaitement visible sur la capture.
+4. **`max` ne mesurait pas ce que je croyais.** L'écart le plus fort d'un
+   pixel entre deux instants est saturé par les éclats sur l'eau, à 158 des
+   deux côtés. Un faisceau **ajoute de la lumière** : c'est la clarté
+   moyenne qu'il faut lire.
+
+Les constellations, elles, se mesurent **sur leurs propres segments**, aux
+coordonnées que `CONSTEL` déclare, comparées aux mêmes points décalés de
+huit pixels. Compter les « pixels clairs » d'une bande de ciel comptait
+surtout des nuages et la lune : 1608 contre 1232, un rapport qui ne disait
+rien. Sur les traits : 188 contre 126, et 133 juste à côté.
+
+**Les seuils viennent d'une dispersion mesurée, pas d'un chiffre rond.**
+Trois tours de chaque côté : 3591/3727/3834 avec le vent, 1667/1694/1703
+sans. Le rapport observé va de 1,7 à 2,3 et vaut **1,0 par construction**
+vent coupé. Le seuil est à 1,4 — entre les deux, jamais au bord de l'un
+d'eux, parce qu'un contrôle qui clignote finit par ne plus être lu. Et il
+n'a **pas** été obtenu en forçant la rafale : remonter l'amplitude pour
+faire passer une mesure, c'est laisser la mesure décider du jeu.
+
+## Le vent, le phare et les constellations — 20/09/2026 au soir
+
+**Aucune migration, aucune clé de plus dans `mondeNu()`** — vérifié par le
+harnais, qui relit le code de sauvegarde avant et après une rafale et
+refuse toute clé de vent. C'est du dessin : la ligne déjà écrite pour les
+mouettes, le requin et le voilier.
+
+**`VENT_PLIE` est une propriété du type**, dans le catalogue, au même titre
+que `NIVEAU`, `PIVOT_ILE`, `EMPRISE_ILE` et `ECH_BAT`. **Un type absent ne
+plie pas, et c'est le bon défaut** : une maison qui ondulerait serait bien
+pire qu'un arbre immobile. Le rocher, le puits et les six bâtiments n'y
+sont pas, et n'ont pas à y être.
+
+Cinq choses à ne pas défaire :
+
+1. **Le vent est une onde qui traverse l'île**, pas dix objets qui battent
+   ensemble : la phase se déduit de `x+y`. C'est mot pour mot la leçon des
+   vingt-deux éclats sur l'eau — ce qui bat à l'unisson se lit comme un
+   clignotement d'écran. Deux périodes non multiples l'une de l'autre,
+   sinon c'est un métronome.
+2. **Il se pose dans `drawWorld()`, jamais dans `DRAW.*`.** `dessinDe()`
+   peint aussi les vignettes de l'atelier et de la vitrine, et un palmier
+   qui ondule dans une case de 60 px se lit comme une image qui tremble.
+   C'est la règle déjà écrite pour le scintillement du coffre.
+3. **C'est un cisaillement, pas un déplacement** : la base reste plantée
+   dans le sol et c'est le haut qui part. Un objet déplacé en bloc
+   glisserait sur sa case. L'ombre ne bouge pas : c'est l'arbre qui plie,
+   pas le soleil.
+4. **`touffe()` reçoit le vent en quatrième paramètre, et il est
+   optionnel.** Absent, il vaut zéro et la touffe est celle d'avant — un
+   dessin qui exige son état ne peut plus servir de vignette, c'est la
+   règle des `||0` de la girouette. Les brins ne plient pas tous pareil,
+   sinon la touffe se lit comme un éventail.
+5. **Le faisceau du phare est peint dans la section de nuit**, où le
+   `clip()` sur `seaPath()` et le `lighter` sont déjà posés : il s'arrête
+   donc au bord de la mer au lieu de déborder sur le papier — la règle de
+   `wMer()` partagé, écrite pour le requin — et il ajoute de la lumière au
+   lieu de peindre par-dessus. Il est **écrasé au rapport de la case**
+   (`TH/TW`) comme la flaque de jour sur le plancher : un faisceau rond
+   serait posé debout sur l'eau.
+
+**Les constellations sont des formes, pas des étoiles reliées au hasard.**
+Un premier essai tirait des traits entre les vingt-six étoiles déjà semées
+par `h2()` : ça ne donne pas une constellation, ça donne un gribouillis.
+La Casserole, parce que c'est celle que tout le monde sait retrouver, et le
+Voilier, parce qu'il passe déjà au nord de l'île. Deux, pas cinq : trois
+formes de plus et ce ne serait plus un ciel, ce serait un planétarium.
+Elles ne se cliquent pas et ne rapportent rien — dans ce jeu une chose qui
+brille est une chose à prendre, alors elles ne brillent pas, elles luisent.
+
+**Ce qui a été écarté en chemin :** « les fenêtres s'allument une à une au
+crépuscule ». `world.sky` est un **choix du joueur**, pas une transition —
+il n'y a pas de crépuscule qui tombe, il y a un bouton. Simuler l'allumage
+progressif aurait donné une maison qui clignote. Écarté après avoir lu le
+code, pas après l'avoir écrit.
+
+## La météo, déduite de l'horloge de la marée — 20/09/2026 au soir
+
+**Aucune migration, aucune clé de plus dans `mondeNu()`, et pas une ligne
+de SQL** — c'est ce dernier point qui a décidé de sa forme. La marée porte
+déjà une horloge accordée au serveur : `etatMaree()` rend `numero + phase`,
+qui avance de 1 toutes les 12 h 25 et que `accorderMaree()` remet à l'heure
+dès que le serveur répond. `meteoNo()` la découpe en cinq tranches de
+2 h 29 et tire le temps de ce numéro.
+
+Conséquence voulue, la même que pour la marée : **il fait le même temps sur
+tout l'archipel**, donc deux enfants qui jouent le même soir peuvent en
+parler. Une météo tirée dans chaque navigateur serait une décoration.
+
+Sans compte ou hors ligne, le cycle local prend le relais, comme pour la
+mer et comme `dansisland:bourse` pour la bourse.
+
+**Rien ne rapporte, rien ne coûte, rien ne ralentit.** Pas de plafond, rien
+dans `faits`, pas une ligne qui touche au déplacement — vérifié par le
+contrôle 6 de `vivant.mjs`, qui lit le bloc et refuse `PLAFOND`, `GAIN_`,
+`bourse_gagner`, `vitesse`, `blocked(`. Un temps qui paierait serait un
+gain qui tombe tout seul cinq fois par jour, exactement ce que la marée a
+refusé d'être. Et **il n'y a pas de mauvais temps** : la pluie est une
+chose à regarder depuis sa fenêtre, pas une punition. C'est la ligne du
+chien qui s'assied.
+
+### Le défaut du premier jet : des particules sans lumière
+
+La pluie tombait, **et le soleil brillait au-dessus**. Ça ne se lit pas
+comme de la pluie, ça se lit comme des rayures sur l'écran. Un temps se
+reconnaît d'abord à la **lumière du cadre**, et seulement ensuite aux
+gouttes — d'où `SOLEIL_VOILE` (ce qui reste du soleil) et `METEO_VOILE`
+(le voile posé sur tout le cadre). Sans eux, un contrôle qui compte les
+gouttes serait passé au vert sur un dessin qui ne marchait pas.
+
+Mesuré, clarté moyenne du cadre : beau 212, nuages 205, pluie 192,
+brume 220 — la brume **délave** au lieu d'assombrir, et c'est ce qui la
+distingue d'un ciel couvert.
+
+Cinq choses à tenir :
+
+1. **Un type absent n'a ni voile ni pli**, et c'est le bon défaut — la
+   même règle que `VENT_PLIE`. Ce qui n'est pas déclaré ne change rien.
+2. **La pluie est peinte après le voile**, pas avant : le voile la
+   délavait, et c'est ce qui lui manquait.
+3. **Le voile est hors caméra**, en tout dernier : il est entre l'œil et
+   l'île, pas posé sur l'eau. Sous la caméra, il glisserait avec le monde.
+4. **L'arc-en-ciel, lui, appartient au monde** : il est posé sur la mer,
+   donc il glisse avec elle, et l'île le cache — un arc-en-ciel est loin.
+   Il n'est pas dans `METEO` : il se **déduit** d'une tranche belle qui
+   suit une tranche de pluie, et ne dure qu'une demi-tranche. Ce qui ne se
+   rate jamais ne se remarque plus.
+5. **Il doit passer largement au-dessus de l'île.** Le premier jet, à
+   `MER_RX*0,86` centré près du niveau de la mer, n'en laissait voir que
+   **deux pieds** posés sur l'eau : l'île mangeait toute l'arche. Ce
+   n'était pas un défaut de profondeur, c'était un défaut de taille — un
+   arc dont on ne voit pas l'arche n'est pas un arc.
+
+Les mouettes ne volent plus sous la pluie et les nuages descendent d'un
+cran : **ce sont les mêmes `NUAGES`, décalés d'un demi-écran et abaissés**,
+jamais une seconde liste — deux listes divergent au premier réglage.
+
+## Les saisons ajoutent, elles ne repeignent jamais — 20/09/2026 au soir
+
+L'île suit le vrai calendrier. Tout se déduit de `jourDuJeu()`, qui est
+déjà le jour du **serveur** : aucune clé de plus dans `mondeNu()`, aucune
+migration, aucun gain.
+
+**La règle qui a décidé de toute la forme : une saison ajoute, elle ne
+remplace jamais.** Le joueur a choisi sa palette de terrain et la couleur
+de chacun de ses objets ; un hiver qui repeindrait son herbe en blanc lui
+prendrait son île. La neige se **pose dessus**, les feuilles se **sèment
+dessus**, les pétales **passent devant**. On voit toujours ce qu'on a
+choisi.
+
+Corollaire tenu, et c'est celui que le contrôle vérifie en premier :
+**l'été n'ajoute rien du tout**, donc c'est exactement l'île d'avant.
+Personne ne se réveille avec une île qu'il ne reconnaît pas. Mesuré, clarté
+du sol : été 182, printemps 182, automne 180, hiver 206 — le printemps ne
+touche pas à la terre, il ne fait tomber que des pétales.
+
+Trois choses à tenir :
+
+1. **Les dates sont météorologiques** (1er mars, juin, septembre,
+   décembre), pas les solstices : elles tombent sur un premier du mois,
+   donc elles se disent à un enfant en une phrase.
+2. **`saisonNow` se relit une fois par image, pas par case.**
+   `jourDuJeu()` traverse la bourse, et le faire quatre cents fois par
+   image pour un résultat qui change une fois par trimestre serait absurde.
+3. **Pas de neige quand il pleut.** Les deux à la fois, c'est un ciel qui
+   se contredit.
+
+**Les phrases disent ce qui est vraiment dessiné.** Le premier jet
+promettait « il a neigé sur les toits » — la neige se pose sur les cases,
+pas sur les toitures, qui sont des dessins à part. Promettre un détail
+qu'on ne peint pas, c'est envoyer un enfant le chercher ; la phrase dit
+donc « il neige, et le sol est blanc ».
+
+### Le crochet `test:me`, et le piège d'`Object.assign`
+
+`test:me` sème un avatar **tel qu'il serait déjà en base**, par le vrai
+chemin de chargement. Il est né pour éprouver le passage du visage en
+24x24, et il a immédiatement cassé tous les autres harnais : le jeu charge
+par `Object.assign(defaultWorld(), monde)`, et **`Object.assign` recopie
+une clé même quand sa valeur est `undefined`**. Un `me: undefined` écrasait
+donc l'avatar par défaut, et le jeu mourait au premier `mine.me.name`.
+
+La clé n'est ajoutée que si elle existe. C'est une ligne, mais c'est le
+genre de ligne qui fait tomber dix harnais d'un coup — et le message
+(`Cannot read properties of undefined`) ne nomme jamais le coupable.
+
+## L'hôte fait les cent pas chez lui — 20/09/2026 au soir
+
+Vingt îles de démonstration sont la première chose qu'un nouveau venu voit
+en cliquant « Voisins ». Leur hôte était **assis** : vingt cartes postales
+où rien ne bouge. Il marche maintenant devant sa porte, s'arrête, repart.
+
+**Aucune clé de plus dans `mondeNu()`** — tout se déduit de `t` et de la
+position de la maison, donc deux voisins ne marchent pas au pas, et rien ne
+se remet à zéro quand on change d'île. La bestiole de l'hôte suit
+gratuitement : elle se cale déjà sur sa position.
+
+Trois choses à ne pas défaire :
+
+1. **Le segment est éprouvé case par case avant d'être parcouru.** Une
+   maison au bord de l'île peut avoir la mer devant sa porte, et un hôte
+   qui marcherait sur l'eau serait le défaut qu'on ne découvre qu'à la
+   dix-septième île. On rétrécit tant qu'une extrémité n'est pas sur
+   `terre()`, et **s'il ne reste rien, l'hôte reste assis** — c'est-à-dire
+   exactement l'état d'avant. Un repli qui rend l'ancien comportement ne
+   peut pas faire de dégât, et c'est ce que le contrôle vérifie en
+   refusant `terre()` partout.
+2. **Il ne va pas à ta rencontre**, et c'est un choix : ça demanderait un
+   chemin, donc un état, donc quelque chose qui peut se coincer. Un
+   va-et-vient dit « il habite ici » aussi bien et ne peut rien rater —
+   la ligne du chien qui s'assied.
+3. **Deux pauses par aller-retour.** Sans elles, c'est un pendule : le
+   défaut déjà nommé pour un vent à une seule période.
+
+## `vivant.mjs` mesure par beau temps d'été, et c'est son garde-fou le plus important
+
+La saison et la météo ajoutent toutes deux des choses qui tombent, et elles
+tombent dans les régions où l'on mesure le vent. Sans les figer, ce harnais
+**mesure autre chose selon le jour et l'heure où on le lance** :
+
+- lancé un 20 septembre, le contrôle du vent est tombé de 2,1x à 1,2x
+  parce que les feuilles d'automne bougeaient des **deux** côtés de la
+  comparaison ;
+- et la météo tourne toutes les 2 h 29, donc une tranche de pluie aurait
+  rendu le même contrôle rouge une fois sur sept, au hasard.
+
+**Un contrôle dont le verdict dépend du calendrier n'est pas un contrôle,
+c'est un oracle.** Il aurait été rouge tout l'automne et vert en juillet
+sans que rien du jeu n'ait changé — et c'est le pire des deux mondes, parce
+qu'on finit par ne plus le lire. `NEUTRE` fige l'été et le beau temps ;
+seules les sections qui éprouvent l'un ou l'autre forcent le leur.
+
+C'est la même famille que le seuil calibré sur une police (19/09) et que la
+fenêtre d'échantillonnage tirée au hasard dans le cycle du vent : **une
+mesure doit tenir toutes ses variables sauf celle qu'elle nomme.**
+
+## Le lit était une sculpture ratée — 20/09/2026 au soir
+
+Signalé en jouant, et c'était juste : une tête de lit de **52 unités**,
+plus haute qu'une commode et qui masquait le bonhomme ; un édredon posé
+**à côté** du matelas au lieu de le couvrir ; un oreiller qui flottait en
+biais. Trois boîtes sans rapport.
+
+**Ce qui l'avait rendu illisible tient en une ligne : deux jeux de
+coordonnées écrits à la main**, un par orientation, avec des ternaires
+partout. Impossible de voir qu'un décalage était faux, puisqu'il n'y avait
+rien à quoi le comparer. C'est exactement le défaut des trois phrases qui
+recollaient leur article à la main avant `laPiece()`.
+
+D'où `axe()` : **le lit s'écrit une fois**, dans un repère tête-pieds, et
+l'orientation ne choisit plus que la façon de reposer ce repère. Un lit se
+lit à quatre choses, et il les faut toutes — un sommier qui porte, un
+matelas en retrait dessus, une couette qui part **des pieds** et s'arrête
+avant l'oreiller, et un revers replié à son bord. Sans le revers, la
+couette est une planche posée.
+
+La leçon, et c'est la même que pour les six bâtiments du 19/09 : **ça ne se
+voit que rendu.** Quinze relectures n'avaient pas vu ce lit ; une capture
+d'écran l'a dit en une seconde.
+
+## Le bouton qui rend la main est toujours là — 20/09/2026 au soir
+
+Il n'apparaissait que quand un outil était armé, au nom de la règle du
+bouton mort tenue pour l'appareil photo. **Le raisonnement était faux, et
+c'est une distinction qui vaut d'être écrite** : l'appareil photo, on sait
+qu'on ne l'a pas acheté ; un bonhomme qui ne répond plus, on ne sait
+**pas pourquoi**. Demander de trouver un bouton qui n'existe que dans
+l'état où l'on est déjà perdu, c'est demander le diagnostic avant le
+remède.
+
+Demandé explicitement — « peu importe où l'on se trouve dans le jeu » — et
+c'est ce qui en fait un secours plutôt qu'un raccourci.
+
+Trois choses à tenir :
+
+1. **Il lève les trois choses qui confisquent le clic** d'un seul geste :
+   le pinceau armé, le viseur de l'appareil, le comptoir de la carte
+   postale. Un enfant n'a pas à savoir laquelle des trois le retient.
+2. **Il rend, il n'annule jamais.** La balade du chien continue, rien
+   n'est effacé. Et il reste visible après coup : un secours qui disparaît
+   quand tout va bien est introuvable quand ça ne va plus.
+3. **Il se met en avant quand il a quelque chose à rendre** (`aria-pressed`
+   + corail), parce qu'un bouton permanent dans une colonne de quatre
+   devient sinon un meuble qu'on ne voit plus. C'est `--accent`, et l'état
+   choisi se peint en `--sel` ailleurs : jamais `--navy`, qui est la
+   couleur de la carte en thème sombre.
+
+La colonne du bord droit est la seule qui existe **partout** — dehors,
+dedans, chez les voisins — et c'est pour ça que le bouton y vit.
+
+## Le potager, et la date qui n'existe nulle part — 20/09/2026 au soir
+
+Deux questions tranchées avant d'écrire une ligne, et ce sont toujours les
+mêmes.
+
+**Est-ce que ça rapporte ?** Non. Pas un shell, pas un plafond, pas un cran
+de terrain. « L'île grandit parce que des gens sont passés, jamais parce
+que le temps passe » — et un potager qui paierait serait exactement ce que
+cette phrase interdit, puisque tout ce qu'il fait, c'est attendre.
+
+**Où vit la date de plantation ?** Nulle part. C'est la réponse qui a
+décidé de toute la forme : un objet posé reste `{t,x,y,o,c}`, et la pousse
+**se déduit du jour**, exactement comme la marée se déduit de l'heure et la
+météo de l'horloge de la marée. Aucune clé de plus, aucune migration.
+
+Conséquence voulue, la même que pour la marée et le temps : **tous les
+potagers de l'archipel en sont au même point**, donc deux enfants qui
+jouent le même jour peuvent en parler. Et il n'y a rien à planter, rien à
+arroser, rien à rater.
+
+Quatre choses à tenir :
+
+1. **Six jours de cycle, un pas par jour.** Ni sept ni trente : une semaine
+   se compte, un mois s'oublie.
+2. **Rien ne meurt jamais.** Après le sixième jour ça recommence — il n'y a
+   pas de récolte manquée. La ligne du chien qui s'assied.
+3. **Le calcul part d'une date, pas d'un hachage.** Deux jours de suite
+   doivent donner deux pas de suite, ce qu'un `h2()` ne garantit pas.
+4. **L'hiver, la terre se repose** : le potager reste au premier état. Ce
+   n'est pas une perte, c'est une saison — et la neige le couvre déjà.
+
+Il est **gratuit**, au rayon Nature. Un objet payant aurait demandé une
+ligne de `catalogue` en SQL, donc une migration à jouer — et surtout, un
+potager qu'on ne trouve qu'après avoir gagné trente shells n'est pas un
+potager, c'est une récompense. `potagerProche()` ne lit pas `estSouvenir()`
+non plus : un carré de terre rapporté de chez un ami pousse comme les
+autres, puisqu'il ne *fait* rien au sens de `FONCTIONNEL`.
+
+C'est le seul objet du jeu dont tout le propos est **qu'il ne se passe rien
+aujourd'hui** et qu'il faut revenir demain. Pas de plaque rose, pas de `E` :
+il se regarde.
+
+## L'album n'est plus une impasse — 20/09/2026 au soir
+
+On prenait une photo, elle descendait dans les fichiers, et la vignette
+restait dans ce navigateur pour toujours. **Une chose qu'on fabrique et
+qu'on ne peut montrer à personne n'a pas sa place dans un jeu dont le
+moteur est le partage.** Cliquer une photo l'envoie.
+
+**Ce n'est pas une carte postale, et il ne faut pas les confondre** — c'est
+écrit depuis le 18/09 : la carte porte l'adresse de l'île, c'est une
+**invitation** ; la photo ne porte que ce qu'on a cadré, c'est un
+**souvenir**. Le texte de partage le dit donc autrement, et il ne porte
+**pas de lien** : une photo n'invite personne, elle se montre.
+
+Trois choses à tenir :
+
+1. **La photo est passée de 260 à 720 px**, parce qu'à 260 elle arrive
+   dans une conversation comme un timbre flou. Mesuré sur le vrai cadre :
+   260 px → 6 ko, 520 → 13, 720 → 20, 900 → 26. Les douze tiennent dans
+   **0,2 Mo**, très loin des cinq mégaoctets que `localStorage` accorde.
+   Ce qui rend l'agrandissement sûr, c'est la boucle de
+   `rangerDansLalbum()` qui existait déjà : quand le stockage refuse, on
+   jette la plus ancienne jusqu'à ce que ça rentre. Le coût n'est donc pas
+   un risque de casse, c'est un album plus court sur un navigateur serré.
+2. **Jamais plus large que la source** (`Math.min(720, vue.width)`). Sur un
+   écran à un pixel par point le cadrage fait moins de 720 : demander 720
+   donnerait un JPEG plus lourd **et** plus flou que l'original.
+3. **Le repli n'est pas perdu, il est devenu le repli.** `envoyerPhoto()`
+   tente `navigator.share({files})`, puis retombe sur l'enregistrement —
+   l'ancien geste, exactement. Un `AbortError` ne déclenche pas le repli :
+   on ne renvoie pas ce qu'on vient de refuser.
+
+Ce que le harnais **ne peut pas** éprouver, et il le dit : `navigator.share`
+n'existe pas dans un navigateur piloté. On éprouve le repli — celui que la
+plupart des joueurs sur ordinateur rencontreront — et on vérifie dans la
+source que le chemin natif est tenté d'abord. Le partage natif reste dans
+la liste de ce qui ne s'éprouve qu'à la main, avec le son et le parrainage
+à deux comptes.
+
+## Le tirage devient une carte qu'on publie — 20/09/2026 au soir
+
+Le tirage de l'appareil photo était un polaroid : marge blanche, bande plus
+large en bas, le nom de l'île. Il est maintenant au **format 4:5**, celui
+d'un fil Instagram, et il porte `dansisland.app`.
+
+**Il ne recadre pas l'île, il la monte.** Un 4:5 est un portrait et le
+cadre du jeu est un paysage de 1,536:1 : découper un 4:5 dedans ne
+garderait qu'une tranche verticale de l'île, c'est-à-dire presque rien. On
+garde donc la photo entière et on lui donne du papier au-dessus et en
+dessous — ce qui est exactement ce à quoi ressemble une affiche, et ce qui
+laisse la place à la signature.
+
+Deux choses à tenir :
+
+1. **Les deux bandes se déduisent du rapport voulu**, elles ne sont pas
+   écrites en dur : `reste = H - h - 2m`, puis 34 % en haut. Des hauteurs
+   fixes seraient fausses le jour où la photo change de proportion.
+2. **Le joueur ne perd rien.** Il obtient la même photo, sur une carte
+   qu'il peut publier telle quelle — et le jour où il la publie, elle
+   porte l'adresse. Chaque photo partagée devient une invitation, comme la
+   carte postale.
+
+Mesuré : 1206x1508, rapport 0,800 exactement.
+
+## Le visage se peint en 24x24 — 20/09/2026 au soir
+
+`FACE_N` passe de 12 à 24, et **le choix du nombre est tout le sujet** :
+24 est le double exact de 12, donc chaque ancienne case devient exactement
+quatre nouvelles et un visage déjà dessiné se relit **sans une perte de
+pixel**. Une grille de 16 ou de 20 aurait demandé un rééchantillonnage,
+c'est-à-dire d'abîmer un dessin que quelqu'un a fait à la main.
+
+C'est la règle qui prime sur toutes les autres ici : **on ne touche jamais
+aux données d'un joueur.** Une grille plus fine ne vaut pas un visage flou.
+
+Quatre choses à tenir :
+
+1. **La conversion est à la lecture, jamais à la sauvegarde.**
+   `faceAgrandie()` relit une chaîne de 144 dans la grille du jour ; elle
+   reste une chaîne de 144 en base tant que l'enfant ne repeint pas.
+   Aucune migration, aucune clé de plus.
+2. **L'agrandissement est entier ou il n'a pas lieu.** `FACE_N % n` refuse
+   ce qui ne tombe pas juste, plutôt que d'interpoler. Un visage d'enfant
+   qu'on lisserait ne serait plus le sien.
+3. **Le quadrillage s'allège quand la grille se resserre.** À douze cases,
+   un trait par case aidait à viser ; à vingt-quatre, les vingt-cinq traits
+   dans chaque sens mangeaient le dessin. Traits fins très pâles, **un sur
+   quatre** marqué — le papier millimétré.
+4. **Le canvas passe de 264 à 384 pixels** pour que chaque case en fasse
+   seize et non onze. C'est du dessin plus net, pas un panneau plus large :
+   la taille d'affichage ne bouge pas, et `peindreCase()` ramène le point
+   dans ce repère, donc la visée suit toute seule.
+
+**Corrigé au passage, un commentaire faux depuis le début :** « treize
+couleurs au maximum, parce qu'un caractère par case ». Un caractère en base
+36 en porte **trente-six**. Il y a treize couleurs parce qu'on en a choisi
+treize, pas parce que le format s'arrête là. Le piège d'`encode()` est réel
+— il commence à trente-sept.
+
+`test:me` est né pour ce chantier : il sème un avatar **tel qu'il serait
+déjà en base**, par le vrai chemin de chargement. C'est la seule façon de
+poser la question qui compte — *un visage dessiné avant que la grille ne
+change se relit-il encore ?* — et un harnais qui écrirait dans `mine.me`
+après coup sauterait `normaliserMonde()`, c'est-à-dire l'endroit exact où
+une donnée de joueur se perd sans bruit.
+
+*(Et un témoin de plus qui se vérifiait lui-même : mon premier jet
+cherchait le violet sous le caractère `'9'`, alors que `#9B6BC9` est le
+onzième de `FACE_COUL`, donc l'index 10, donc `'a'`. Le contrôle rendait
+zéro pixel et il avait raison — c'est le témoin qui était faux. L'index se
+lit maintenant dans la source.)*
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

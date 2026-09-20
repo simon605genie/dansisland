@@ -48,11 +48,25 @@ export async function navigateur(args = []) {
 
    Toute adresse inconnue rend `index.html` : c'est exactement ce que fait
    le catch-all de `_redirects` en production, et c'est ce qui permet
-   d'éprouver `/carte/<slug>` et `/island/<slug>`. */
-export async function servir(port) {
+   d'éprouver `/carte/<slug>` et `/island/<slug>`.
+
+   `panne` reçoit la source d'`index.html` et rend celle qu'on veut servir.
+   **C'est ce qui permet de fabriquer une vraie panne** plutôt que de
+   supposer qu'un contrôle mordrait : ce dépôt éprouve chacun de ses
+   garde-fous en remettant le défaut, et jusqu'ici il fallait modifier le
+   fichier du dépôt pour le faire. Le dépôt n'est jamais touché, et la
+   copie est jetée avec le serveur.
+
+   Un remplacement qui ne remplace rien passerait inaperçu — une panne qui
+   ne se pose pas rend le contrôle vert pour la mauvaise raison, et c'est
+   exactement ce que ce dépôt se reproche depuis le 19/09. D'où `pannePosee`,
+   que l'appelant doit pouvoir vérifier. */
+export async function servir(port, panne) {
   const dos = fs.mkdtempSync(path.join(os.tmpdir(), 'dansisland-test-'));
   fs.mkdirSync(path.join(dos, 'src'));
-  fs.copyFileSync(path.join(RACINE, 'index.html'), path.join(dos, 'index.html'));
+  const src = fs.readFileSync(path.join(RACINE, 'index.html'), 'utf8');
+  const sortie = panne ? panne(src) : src;
+  fs.writeFileSync(path.join(dos, 'index.html'), sortie);
   fs.copyFileSync(path.join(RACINE, 'src', 'config.js'), path.join(dos, 'src', 'config.js'));
   fs.copyFileSync(path.join(ICI, 'faux-store.js'), path.join(dos, 'src', 'store.js'));
   /* Les icônes et le manifeste. Ils ne servaient à aucun harnais jusqu'au
@@ -79,6 +93,7 @@ export async function servir(port) {
   return {
     url: 'http://127.0.0.1:' + port + '/',
     dossier: dos,
+    pannePosee: sortie !== src,
     fermer: () => { serveur.close(); fs.rmSync(dos, { recursive: true, force: true }); },
   };
 }
@@ -132,3 +147,18 @@ export function compteur() {
 }
 
 export const attendre = ms => new Promise(r => setTimeout(r, ms));
+
+/* Un remplacement qui **doit** mordre.
+
+   `pannePosee` dit qu'une panne a changé quelque chose ; il ne dit pas que
+   *chacun* des remplacements a trouvé sa cible. Une panne en deux temps
+   dont le second rate se pose à moitié, et le contrôle mesure alors un
+   état que personne n'a voulu — vert ou rouge, il ne dit plus rien.
+
+   Ça m'est arrivé en forçant l'arc-en-ciel : le premier remplacement
+   passait, le second visait une ligne que j'avais réécrite, et la capture
+   ne montrait aucun arc. J'ai cru à un défaut du dessin. */
+export function remplacer(src, re, par) {
+  if (!re.test(src)) throw new Error('la panne ne trouve pas sa cible : ' + re);
+  return src.replace(re, par);
+}

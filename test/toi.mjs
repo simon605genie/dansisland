@@ -16,9 +16,9 @@ const nav = await navigateur();
 const c = compteur();
 const lire = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
-const ouvre = async () => {
+const ouvre = async (graines) => {
   const o = await onglet(nav, { taille: { width: 1280, height: 900 },
-                                memoire: { 'dansisland:muet': '1' } });
+                                memoire: { 'dansisland:muet': '1', ...(graines || {}) } });
   await o.page.goto(s.url, { waitUntil: 'load' });
   await attendre(2400);
   return o;
@@ -38,32 +38,41 @@ const taper = async (page, sel, v) => {
   await attendre(350);
 };
 
-c.titre('1. reprendre son bonhomme sans rouvrir un panneau');
+c.titre('1. reprendre son bonhomme — un bouton toujours là');
 {
   /* Un pinceau armé confisque le clic sur l'île : on pose un arbre, on veut
      marcher, et le seul moyen était de rouvrir l'onglet Île et d'y
      retrouver « ✋ Marcher » — à un écran de défilement, et loin du doigt
      qui vient de poser.
 
-     Le bouton n'existe que quand il sert : un bouton toujours là serait
-     mort neuf fois sur dix, c'est la règle déjà tenue pour l'appareil
-     photo. Donc on éprouve les **trois** états, pas seulement celui du
-     milieu. */
+     **Ce contrôle a changé de contrat le 20/09 au soir**, et il vaut de
+     dire pourquoi. Le bouton n'apparaissait d'abord que quand un outil
+     était armé, au nom de la règle du bouton mort tenue pour l'appareil
+     photo — et ce harnais exigeait qu'il disparaisse le reste du temps.
+
+     Le raisonnement était faux. L'appareil photo, on sait qu'on ne l'a pas
+     acheté ; un bonhomme qui ne répond plus, on ne sait **pas pourquoi**.
+     Demander de trouver un bouton qui n'existe que dans l'état où l'on est
+     déjà perdu, c'est demander le diagnostic avant le remède. Le bouton est
+     donc permanent, il se met seulement **en avant** quand il a quelque
+     chose à rendre — et c'est ce que ce contrôle éprouve maintenant. */
   const { ctx, page, erreurs } = await ouvre();
   const etat = () => page.evaluate(() => {
     const b = document.getElementById('marche-btn');
-    return b ? { la: true, vu: b.offsetParent !== null } : { la: false, vu: false };
+    return b ? { la: true, vu: b.offsetParent !== null,
+                 avant: b.getAttribute('aria-pressed') === 'true' } : { la: false };
   });
 
   const a = await etat();
   c.dit(a.la, 'le bouton existe dans la page');
-  c.dit(!a.vu, 'en marchant, il ne se montre pas — un bouton mort n’apprend rien');
+  c.dit(a.vu, 'et il est là même quand on marche déjà — on ne cherche pas un secours');
+  c.dit(!a.avant, 'discret tant que rien ne confisque le clic');
 
   await onglets(page, 'ile');
   await page.evaluate(() => { const b = document.querySelector('#p-ile .objs .obj'); if (b) b.click(); });
   await attendre(450);
   const b = await etat();
-  c.dit(b.vu, 'un pinceau armé le fait apparaître');
+  c.dit(b.vu && b.avant, 'un pinceau armé le met en avant');
 
   await page.evaluate(() => document.getElementById('marche-btn').click());
   await attendre(450);
@@ -73,7 +82,8 @@ c.titre('1. reprendre son bonhomme sans rouvrir un panneau');
     return w && w.classList.contains('on') ? w.innerText.replace(/\s+/g, ' ').trim() : '';
   });
   console.log('     ' + (murmure || '(pas de murmure)'));
-  c.dit(!d.vu, 'un clic dessus rend la main, et le bouton s’en va');
+  c.dit(d.vu, 'après le clic il reste là — un secours qui disparaît est introuvable');
+  c.dit(!d.avant, 'et il redevient discret : il n’a plus rien à rendre');
   c.dit(/repris ton bonhomme/i.test(murmure), 'et il le dit, là où est le doigt');
   // La puce « ✋ Marcher » de l'atelier doit suivre : deux endroits qui
   // disent l'état du pinceau, et l'un ment.
@@ -82,6 +92,198 @@ c.titre('1. reprendre son bonhomme sans rouvrir un panneau');
     return b ? b.getAttribute('aria-pressed') : null;
   });
   c.dit(marche === 'true', 'et l’atelier est d’accord (« ✋ Marcher » redevient le choisi)');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
+c.titre('1 bis. et il est là partout, pas seulement dehors');
+{
+  /* « Peu importe où l'on se trouve dans le jeu » — demandé comme ça, et
+     c'est ce qui fait la valeur du bouton. Un secours qui n'existe que
+     dehors n'est pas un secours : dedans aussi, un meuble armé confisque
+     le clic.
+
+     La colonne du bord droit est la seule qui existe dans les deux états,
+     et c'est pour ça que le bouton y vit. Ce contrôle le vérifie plutôt que
+     de le supposer. */
+  const { ctx, page, erreurs } = await ouvre();
+  const vu = () => page.evaluate(() => {
+    const b = document.getElementById('marche-btn');
+    return !!b && b.offsetParent !== null;
+  });
+  c.dit(await vu(), 'dehors : le bouton est là');
+
+  await onglets(page, 'maison');
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('#p-maison button')].find(x => /Entrer/.test(x.textContent));
+    if (b) b.click();
+  });
+  await attendre(1400);
+  const dedans = await page.evaluate(() => {
+    const p = document.getElementById('hud-mode');
+    return p ? p.textContent.trim() : '';
+  });
+  console.log('     plaque : ' + dedans);
+  c.dit(/salon|chambre|atelier/i.test(dedans), 'on est bien entré dans la maison');
+  c.dit(await vu(), 'dedans : le bouton est là aussi');
+
+  // Et il rend vraiment la main dedans : un meuble armé, un clic, c'est fini.
+  await page.evaluate(() => { const b = document.querySelector('#p-maison .objs .obj'); if (b) b.click(); });
+  await attendre(450);
+  const arme = await page.evaluate(() => document.getElementById('marche-btn').getAttribute('aria-pressed'));
+  await page.evaluate(() => document.getElementById('marche-btn').click());
+  await attendre(450);
+  const rendu = await page.evaluate(() => document.getElementById('marche-btn').getAttribute('aria-pressed'));
+  c.dit(arme === 'true', 'un meuble armé le met en avant, dedans aussi');
+  c.dit(rendu === 'false', 'et le clic rend la main sans sortir de la maison');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
+c.titre('3 bis. un visage dessiné en 12x12 ne perd pas un pixel');
+{
+  /* `FACE_N` est passé de 12 à 24 le 20/09 au soir. La grille d'un enfant
+     qui avait déjà peint son bonhomme **ne lui appartient pas moins pour
+     autant** : c'est la règle qui prime sur toutes les autres ici, on ne
+     touche jamais aux données d'un joueur.
+
+     24 est le double exact de 12, donc chaque ancienne case devient
+     exactement quatre nouvelles et la conversion est sans perte. Ce
+     contrôle l'éprouve des deux côtés : l'arithmétique d'abord — un
+     aller-retour 12 → 24 → 12 doit rendre la chaîne d'origine, caractère
+     pour caractère — puis le rendu, en semant un **vrai ancien visage**
+     par le chemin de chargement du jeu et en vérifiant qu'il arrive sur le
+     bonhomme.
+
+     Ce que ça ne fait pas : réécrire la base. Une chaîne de 144 reste une
+     chaîne de 144 tant que l'enfant ne repeint pas — on convertit à la
+     lecture, jamais à la sauvegarde. */
+  const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const bloc = src.match(/function faceAgrandie\(f\)\{[\s\S]*?\n\}/);
+  c.dit(!!bloc, 'faceAgrandie() a été trouvée dans la source');
+  const N = +(src.match(/const FACE_N = (\d+);/) || [])[1];
+  console.log('     FACE_N = ' + N);
+  c.dit(N > 12, 'la grille du visage s’est bien resserrée (' + N + ')');
+  c.dit(N % 12 === 0, 'et elle reste un multiple entier de 12 — sinon un ancien visage serait rééchantillonné');
+
+  const agrandie = new Function('FACE_N', bloc[0] + '; return faceAgrandie;')(N);
+  /* L'index du violet est **lu dans la source**, jamais recopié : c'est une
+     liste de couleurs, elle bougera, et un index écrit à la main ici
+     pointerait un jour sur autre chose sans que rien ne le dise. */
+  const COUL = (src.match(/const FACE_COUL = \[([\s\S]*?)\];/) || [])[1] || '';
+  const FACE_COUL_IDX = COUL.split(',').findIndex(x => /9B6BC9/i.test(x));
+  c.dit(FACE_COUL_IDX >= 0, 'le violet témoin a été retrouvé dans FACE_COUL (index ' + FACE_COUL_IDX + ')');
+  // Un vrai dessin, pas une chaîne uniforme : une chaîne uniforme se
+  // convertit juste même quand la fonction est fausse.
+  let vieux = '';
+  for (let j = 0; j < 12; j++) for (let i = 0; i < 12; i++)
+    vieux += (j === 4 && (i === 3 || i === 8)) ? '0'
+           : (j === 8 && i >= 4 && i <= 7) ? '2'
+           : (i === j) ? 'a' : '.';
+  const neuf = agrandie(vieux);
+  const k = N / 12;
+  let retour = '';
+  for (let j = 0; j < 12; j++) for (let i = 0; i < 12; i++) retour += neuf[(j * k) * N + i * k];
+  const peints = [...vieux].filter(ch => ch !== '.').length;
+  console.log('     ' + vieux.length + ' → ' + neuf.length + ' caractères · ' +
+              peints + ' cases peintes');
+  c.dit(peints >= 18, 'le visage témoin porte assez de cases peintes (' + peints + ')');
+  c.dit(neuf.length === N * N, 'il est relu dans la grille d’aujourd’hui (' + neuf.length + ')');
+  c.dit(retour === vieux, 'et l’aller-retour rend la chaîne d’origine, caractère pour caractère');
+
+  /* Le rendu : le même vieux visage, semé comme il le serait depuis la base.
+
+     Le témoin est le **onzième** de `FACE_COUL`, donc l'index 10, donc le
+     caractère `'a'` en base 36 — et pas `'9'`, qui est le bleu nuit. Mon
+     premier jet écrivait `'9'` et le contrôle rendait zéro pixel violet :
+     il mesurait juste, c'est le témoin qui était faux. Une assertion se
+     vérifie contre ce que le fichier contient, pas contre ce qu'on croit y
+     avoir écrit — c'est la leçon du `’` cherché en caractère. */
+  const violet = FACE_COUL_IDX.toString(36);
+  let temoin = '';
+  for (let j = 0; j < 12; j++) for (let i = 0; i < 12; i++)
+    temoin += (j >= 6 && j <= 8 && i >= 4 && i <= 7) ? violet : '.';
+  const { ctx, page, erreurs } = await ouvre({
+    'test:me': JSON.stringify({ name: 'Dan', genre: 'garcon', body: 'rond', skin: '#F4D6A0',
+                                hair: 'vague', hairC: '#1F1A18', eyes: 'joyeux',
+                                outfit: '#148A9C', acc: 'aucun', face: temoin }),
+  });
+  await onglets(page, 'toi');
+  const n = await page.evaluate(() => {
+    const cv = document.querySelector('#p-toi canvas.visage');
+    if (!cv) return -1;
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4)
+      if (Math.abs(d[i] - 155) < 12 && Math.abs(d[i + 1] - 107) < 12 && Math.abs(d[i + 2] - 201) < 12) n++;
+    return n;
+  });
+  console.log('     pixels violets de l’ancien visage, relus : ' + n);
+  c.dit(n > 200, 'un visage de 12x12 venu de la base s’affiche bien dans l’éditeur (' + n + ' px)');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
+c.titre('3 ter. l’album n’est plus une impasse : une photo s’envoie');
+{
+  /* On prenait une photo, elle descendait dans les fichiers, et la
+     vignette restait dans ce navigateur pour toujours. Une chose qu'on
+     fabrique et qu'on ne peut montrer à personne n'a pas sa place dans un
+     jeu dont le moteur est le partage.
+
+     **Ce que ce contrôle ne peut pas éprouver, et il faut le dire :**
+     `navigator.share` n'existe pas dans un navigateur piloté, et il
+     n'ouvre de toute façon une feuille de partage que sur un vrai
+     appareil. On éprouve donc le **repli** — celui que 90 % des joueurs
+     sur ordinateur rencontreront — et on vérifie que le chemin natif est
+     bien tenté d'abord, dans la source. Le partage natif lui-même reste
+     dans la liste de ce qui ne s'éprouve qu'à la main, avec le son et le
+     parrainage à deux comptes. */
+  const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const bloc = (src.match(/async function envoyerPhoto\(ph\)\{[\s\S]*?\n\}/) || [''])[0];
+  console.log('     envoyerPhoto() : ' + bloc.length + ' caractères');
+  c.dit(bloc.length > 300, 'envoyerPhoto() a été trouvée (' + bloc.length + ')');
+  c.dit(/navigator\.canShare[\s\S]*navigator\.share/.test(bloc),
+        'elle tente le partage natif avec le fichier en premier');
+  c.dit(/enregistrerPhoto\(ph\)/.test(bloc),
+        'et elle retombe sur l’enregistrement — il y a toujours une sortie');
+  c.dit(/AbortError/.test(bloc),
+        'un partage annulé ne déclenche pas le repli : on ne renvoie pas ce qu’on vient de refuser');
+
+  // Une photo semée dans l'album, comme elle y serait après une prise.
+  const petite = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////' +
+                 '////////////////////////////////////////////////////////////' +
+                 '///////////////////wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/E' +
+                 'ABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==';
+  const { ctx, page, erreurs } = await ouvre({
+    'dansisland:album': JSON.stringify([
+      { u: petite, ile: 'L’île du filleul', qui: '', jour: '2026-09-20', chez: false },
+      { u: petite, ile: '', qui: 'Lila', jour: '2026-09-19', chez: true },
+    ]),
+  });
+  await onglets(page, 'toi');
+  const vu = await page.evaluate(() => {
+    const f = [...document.querySelectorAll('#p-toi .field')].find(x => /Ton album/.test(x.textContent));
+    if (!f) return null;
+    const v = [...f.querySelectorAll('.obj')];
+    return { n: v.length, mots: f.parentElement.textContent.replace(/\s+/g, ' ') };
+  });
+  console.log('     vignettes dans l’album : ' + (vu ? vu.n : '(pas d’album)'));
+  c.dit(vu && vu.n === 2, 'les deux photos semées sont dans l’album (' + (vu ? vu.n : 0) + ')');
+
+  // Le clic ne doit rien casser quand il n'y a pas de partage natif.
+  await page.evaluate(() => {
+    const f = [...document.querySelectorAll('#p-toi .field')].find(x => /Ton album/.test(x.textContent));
+    f.querySelector('.obj').click();
+  });
+  await attendre(700);
+  const murmure = await page.evaluate(() => {
+    const w = document.getElementById('whisper');
+    return w && w.classList.contains('on') ? w.innerText.replace(/\s+/g, ' ').trim() : '';
+  });
+  console.log('     ' + (murmure || '(pas de murmure)'));
+  c.dit(/enregistr/i.test(murmure),
+        'sans partage natif, le clic enregistre et le dit — jamais un clic mort');
   c.dit(erreurs.length === 0, 'aucune erreur de console');
   await ctx.close();
 }

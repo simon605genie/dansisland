@@ -291,7 +291,7 @@ lu que par Cloudflare Pages. Seule la racine est testable ainsi.
     npx playwright install chromium
     npm test
 
-Neuf harnais, dans `test/`, qui font tourner **la vraie page dans un vrai
+Dix harnais, dans `test/`, qui font tourner **la vraie page dans un vrai
 navigateur** contre un serveur simulé (`test/faux-store.js` remplace
 `src/store.js` dans une copie jetable — le dépôt n'est jamais modifié, et
 rien ne touche la base de production).
@@ -305,6 +305,8 @@ rien ne touche la base de production).
     robots.mjs      ce qu'un robot lit, sans navigateur ni JavaScript
     toi.mjs         reprendre son bonhomme, le nom de l'île, l'éditeur de visage
     design.mjs      la planche de couleurs, les contrastes, le voile, les icônes
+    vivant.mjs      ce qui bouge tout seul : vent, phare, constellations,
+                    météo, saisons — et que rien de tout ça n'entre en base
 
 Ils existent parce que les défauts qu'ils surveillent ont tous été
 trouvés à l'œil, tard, et qu'aucun n'aurait survécu à un contrôle : des
@@ -319,12 +321,25 @@ Ce qu'ils ne couvrent pas, et il ne faut pas croire le contraire :
 
 - **le SQL**, qui s'éprouve dans l'éditeur du projet — voir les cinq
   vérifications plus haut, et la mise en garde sur le rôle `postgres` ;
-- **le rendu image par image**, parce que le `rAF` est bridé dans un
-  navigateur piloté : le canvas garde la dernière image peinte et dix
-  mesures rendent dix fois la même valeur. Ce qui se déduit de `t` —
-  éclats sur l'eau, requin, voilier — s'éprouve par sa formule, hors
-  navigateur ;
+- ~~le rendu image par image~~ — **c'était faux, et ça a été remesuré le
+  20/09 au soir.** Ce README affirmait que le `rAF` est bridé sous
+  pilotage et que « dix mesures rendent dix fois la même valeur ». Relevé
+  dans ce conteneur : **60,5 images par seconde, six relevés du canvas tous
+  différents.** La phrase a servi de raison de ne rien mesurer pour le
+  requin, le voilier, les lucioles, les éclats sur l'eau et la respiration
+  du bonhomme. `vivant.mjs` mesure maintenant le canvas dans le temps réel,
+  et compare chaque effet à la même scène dont on l'a débranché
+  (`servir(port, panne)`). Ce qui reste vrai : un effet mesuré seul ne
+  prouve rien, parce que tout bouge partout ;
 - **le son**, qui n'a pas de sortie ici ;
+- **le partage natif** (`navigator.share`) : il n'existe pas dans un
+  navigateur piloté, et il n'ouvre de feuille de partage que sur un vrai
+  appareil. On éprouve le **repli** — l'enregistrement, celui que la
+  plupart des joueurs sur ordinateur rencontrent — et on vérifie dans la
+  source que le chemin natif est tenté d'abord ;
+- **le goût** : aucune assertion ne dit si c'est joli. Chaque dessin
+  ajouté a été **regardé** rendu, et c'est la seule méthode qui ait trouvé
+  le lit bancal, le faisceau du phare et l'arc-en-ciel réduit à deux pieds ;
 - **ce qui demande deux comptes** : parrainage de bout en bout, livraison,
   visites payantes.
 
