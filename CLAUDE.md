@@ -2620,6 +2620,88 @@ bonhomme rend le même nombre dans les deux réglages — 660 contre 660 — car
 il est peint sur un mur rayé, donc tout y est opaque. C'est la couleur de
 la tenue qu'il faut compter.)*
 
+## La Boutique ne montrait pas de boutique — 20/09/2026
+
+Question posée en regardant le jeu, pas le code : « les six bâtiments, le
+joueur les trouve où ? » La mesure a répondu, et la réponse était mauvaise.
+Panneau de 636 px, onglet Boutique ouvert :
+
+    y=  297   Ce qui rapporte aujourd’hui   (816 px de jauges)
+    y= 1113   le premier article
+    y= 1762   les six bâtiments
+
+Deux défauts distincts, et ils se cumulaient.
+
+### Sept jauges passaient avant la première vignette
+
+C'est mot pour mot « Voisins ne montrait aucun voisin », corrigé la veille,
+et le bloc Compagnon « à un écran de défilement du haut » avant lui. La
+règle est écrite depuis : **ce qu'un onglet est doit être en haut de cet
+onglet.**
+
+« Ce qui rapporte aujourd'hui » descend donc **sous** la vitrine, par le
+même `DocumentFragment` que l'archipel de `buildVoisins()` : il se
+construit là où il était, avec la bourse dont il dépend, et se **pose**
+plus bas. Ce qui reste en tête est ce qu'on vient lire à chaque fois et qui
+tient en deux lignes — le cadeau du jour, et ce qu'on a en poche.
+
+Il n'est pas caché pour autant, et c'est ce qui rend le déplacement
+acceptable : une ligne sous la bourse y mène **et dit le nombre**, « il te
+reste 19 shells à gagner aujourd'hui », ce qui répond à la seule question
+qu'on se pose devant un prix trop cher. Et le comptoir disait déjà quoi
+faire quand il manque des shells, là où est le doigt.
+
+    1er article   y1113 → y370      les bâtiments   y1762 → y1018
+
+### Vingt-six vignettes en une grille plate
+
+« Sur ton île » était une seule grille triée par prix, où les six bâtiments
+étaient éparpillés entre l'échoppe (35) et le toboggan (38), la girouette
+(42) et la statue (50). Rien ne disait qu'il y avait un village à bâtir.
+C'est la leçon du 19/09 au matin : **ce qui existe mais ne se nomme nulle
+part n'existe pas.**
+
+La vitrine reprend les rayons de l'atelier, et elle les **lit dans
+`OBJ_GROUPS`** plutôt que de les recopier : le rayon d'un objet est le même
+des deux côtés le jour où on en ajoute un, sans que personne ait à y
+penser. C'est la règle déjà tenue pour `PIVOT_ILE` dans la phrase du Sens
+et pour les prix SQL.
+
+Trois choses à ne pas défaire :
+
+1. **Un article d'île absent de tout rayon tomberait dans « Divers »**,
+   il ne disparaît pas. Une vitrine qui perd un article le vend sans
+   pouvoir le poser, et rien ne le dirait. Aucun aujourd'hui — mesuré, les
+   26 sont rangés — mais la branche existe pour le jour où.
+2. **Le comptoir tombe sous le rayon d'où vient le clic**, plus en bas de
+   la section. Règle de la boutique du 16/09 : le prix et le refus tombent
+   là où est le doigt. Avec 26 vignettes, « en bas de la section » était
+   déjà à un écran de défilement — le défaut qu'on croyait corrigé revenait
+   par la longueur de la liste.
+3. **La vignette est fabriquée à un seul endroit.** Elle se construit
+   maintenant dans deux boucles ; deux copies du même bouton, et elles
+   divergent au premier changement.
+
+Le titre « Sur ton île » porte sa ligne plutôt que de flotter seul au-dessus
+de ses rayons — un libellé sans rien dessous se lit comme un rayon vide — et
+elle travaille : elle dit que ces rayons-là sont ceux de l'atelier, donc où
+l'objet ira se ranger une fois payé.
+
+### Ce que les deux pannes ont appris
+
+Les deux sections d'`etroit.mjs` ont été éprouvées en remettant le vrai
+défaut, une par une. La première a rendu cinq rouges, la seconde six.
+
+**Mais la section du comptoir est passée au vert pendant la seconde**, et
+c'est elle qui vaut d'être écrite ici : sans rayon Bâtiments, `bat` valait
+`-1`, donc « le comptoir est sous le rayon » était vrai sans rien mesurer.
+Un repère absent doit faire **échouer** ce qui s'appuie dessus, jamais
+l'absoudre. La section vérifie donc d'abord que le rayon existe.
+
+C'est la même famille que les trois prénoms au lieu de vingt et que les
+îles écrites à la main : un contrôle qui ne s'assure pas d'avoir trouvé ce
+qu'il mesure passe au vert en ne regardant rien.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

@@ -407,5 +407,126 @@ c.titre('chez un voisin, le cadeau du jour dit où il est');
   await ctx.close();
 }
 
+/* La Boutique montre des articles.
+
+   Même défaut que « Voisins ne montrait aucun voisin », et trouvé de la même
+   façon — en regardant, pas en relisant. Mesuré avant correction, dans un
+   panneau de 636 px :
+
+     y=  297   Ce qui rapporte aujourd’hui   (816 px de jauges)
+     y= 1113   le premier article
+     y= 1762   les six bâtiments
+
+   Sept jauges de gain passaient donc avant la première vignette. Et « Sur ton
+   île » était une grille plate de 26 articles triés par prix, où les six
+   bâtiments étaient éparpillés entre l'échoppe et le toboggan : rien ne
+   disait qu'il y avait un village à bâtir. C'est la leçon du 19/09 au matin —
+   ce qui existe mais ne se nomme nulle part n'existe pas.
+
+   Deux choses éprouvées ici, et elles sont distinctes : les **rayons** (une
+   vitrine qui se lit) et l'**ordre** (une boutique qui montre sa boutique). */
+c.titre('la Boutique montre des articles, et ses rayons se lisent');
+for (const [nom, width, height, tactile, voitSansDefiler] of [
+  ['grand écran 1280', 1280, 900, false, true],
+  ['portrait 390', 390, 844, true, true],
+  ['paysage court 780x360', 780, 360, true, false]]) {
+  const { ctx, page, erreurs } = await onglet(nav, { taille: { width, height }, tactile });
+  await page.goto(s.url, { waitUntil: 'load' });
+  await attendre(2000);
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'boutique');
+    if (b) b.click();
+  });
+  await attendre(700);
+
+  const r = await page.evaluate(() => {
+    const p = document.getElementById('p-boutique');
+    if (!p) return null;
+    const y0 = p.getBoundingClientRect().top - p.scrollTop;
+    const rayons = [...p.querySelectorAll('.field')].filter(f => f.querySelector('.objs .obj'))
+      .map(f => ({ titre: (f.querySelector('.lab') || {}).textContent.trim(),
+                   n: f.querySelectorAll('.objs .obj').length,
+                   y: Math.round(f.getBoundingClientRect().top - y0) }));
+    const gains = [...p.querySelectorAll('.field')].find(f => f.querySelector('.gains'));
+    const v1 = p.querySelector('.objs .obj');
+    const bat = rayons.find(x => /Bâtiments/.test(x.titre));
+    return {
+      rayons, bat,
+      gainsY: gains ? Math.round(gains.getBoundingClientRect().top - y0) : -1,
+      premierY: v1 ? Math.round(v1.getBoundingClientRect().top - y0) : -1,
+      visible: v1 ? (v1.getBoundingClientRect().top >= p.getBoundingClientRect().top &&
+                     v1.getBoundingClientRect().top < p.getBoundingClientRect().bottom) : false,
+      haut: Math.round(p.getBoundingClientRect().height),
+    };
+  });
+  console.log('     ' + nom.padEnd(22) + ' panneau ' + (r ? r.haut + ' px · 1er article y' + r.premierY +
+              ' · Bâtiments y' + (r.bat ? r.bat.y : '?') + ' · « ce qui rapporte » y' + r.gainsY : '(absent)'));
+  if (r) console.log('       rayons : ' + r.rayons.map(x => x.titre + ' (' + x.n + ')').join(' · '));
+
+  // Le comptage d'abord : un contrôle qui ne dit pas combien il a lu peut
+  // passer au vert en ne regardant presque rien. C'est la leçon des îles de
+  // démonstration, et celle des trois prénoms au lieu de vingt.
+  c.dit(r && r.rayons.length >= 6, nom + ' — la vitrine a ses rayons (' + (r ? r.rayons.length : 0) + ')');
+  c.dit(r && r.bat && r.bat.n === 6, nom + ' — le rayon Bâtiments porte les six (' +
+        (r && r.bat ? r.bat.n : 0) + ')');
+  c.dit(r && r.premierY >= 0 && r.gainsY > r.premierY,
+        nom + ' — « ce qui rapporte » passe sous la vitrine, pas avant');
+  if (voitSansDefiler)
+    c.dit(r && r.visible, nom + ' — le premier article se voit sans défiler (y' + (r ? r.premierY : '?') + ')');
+  c.dit(erreurs.length === 0, nom + ' — aucune erreur de console');
+  await ctx.close();
+}
+
+/* Le comptoir tombe sous le rayon d'où vient le clic, pas en bas de la
+   section. C'est la règle de la boutique du 16/09 — le prix et le refus
+   tombent là où est le doigt — et avec 26 vignettes en une grille, « en bas
+   de la section » était déjà à un écran de défilement. */
+c.titre('le comptoir tombe sous le rayon qu’on vient de toucher');
+{
+  const { ctx, page, erreurs } = await onglet(nav, { taille: { width: 1280, height: 900 } });
+  await page.goto(s.url, { waitUntil: 'load' });
+  await attendre(2200);
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'boutique');
+    if (b) b.click();
+  });
+  await attendre(600);
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('#p-boutique .objs .obj')].find(x => /Ferme/.test(x.textContent));
+    if (b) b.click();
+  });
+  await attendre(600);
+
+  const r = await page.evaluate(() => {
+    const p = document.getElementById('p-boutique');
+    const co = p.querySelector('.comptoir');
+    const y0 = p.getBoundingClientRect().top - p.scrollTop;
+    const bat = [...p.querySelectorAll('.field')].find(f => /Bâtiments/.test(
+      ((f.querySelector('.lab') || {}).textContent || '')));
+    const dedans = [...p.querySelectorAll('.field')].find(f => /Dans ta maison/.test(
+      ((f.querySelector('.lab') || {}).textContent || '')));
+    const y = e => e ? Math.round(e.getBoundingClientRect().top - y0) : -1;
+    return { txt: co ? co.innerText.replace(/\s+/g, ' ').trim() : null,
+             co: y(co), bat: y(bat), dedans: y(dedans) };
+  });
+  console.log('     Bâtiments y' + r.bat + ' · comptoir y' + r.co + ' · rayon suivant y' + r.dedans);
+  console.log('     ' + (r.txt || '(aucun comptoir)').slice(0, 96));
+  c.dit(!!r.txt, 'toucher un bâtiment ouvre le comptoir');
+  /* Le rayon d'abord, et ce n'est pas une politesse : éprouvé en remettant la
+     grille plate, `bat` valait -1, donc « le comptoir est sous le rayon »
+     était vrai sans rien mesurer et la section passait au vert pendant que
+     la précédente était rouge. Un repère absent doit faire échouer ce qui
+     s'appuie dessus, jamais l'absoudre. */
+  c.dit(r.bat >= 0, 'le rayon Bâtiments existe, et c’est ce qui rend la suite mesurable');
+  c.dit(r.bat >= 0 && r.co > r.bat, 'il tombe **sous** le rayon Bâtiments');
+  c.dit(r.bat >= 0 && r.dedans > 0 && r.co < r.dedans,
+        'et avant le rayon suivant, pas en bas de la section');
+  // Le prix dans la ligne du titre, toujours : « il te manque 24 » ne dit pas
+  // si l'objet en vaut 34 ou 340. Règle du 19/09.
+  c.dit(!!r.txt && /34 shells/.test(r.txt), 'et il porte le prix (34 shells)');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
 await nav.close(); s.fermer();
 process.exit(c.fin() ? 1 : 0);
