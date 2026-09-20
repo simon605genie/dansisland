@@ -3757,6 +3757,316 @@ Trois choses à ne pas défaire :
 3. **Deux pauses par aller-retour.** Sans elles, c'est un pendule : le
    défaut déjà nommé pour un vent à une seule période.
 
+## Le village a des habitants — 20/09/2026 au soir
+
+Six bâtiments payants posés au nord, et personne dedans. Une école sans
+élèves et un restaurant sans clients ne sont pas des bâtiments, ce sont des
+maquettes : le village avait la silhouette et pas la vie.
+
+**Aucune migration, aucune clé de plus dans `mondeNu()`, aucun gain.** Tout
+se déduit de `t`, de la place des bâtiments et de la graine `h2()` — c'est
+la ligne déjà écrite pour les mouettes, le requin, le voilier et l'hôte qui
+fait les cent pas. Un objet posé reste `{t,x,y,o,c}`.
+
+Six choses à ne pas défaire.
+
+1. **Un bâtiment, un habitant, et il va chez le plus proche** — ou chez toi
+   s'il est seul. Deux voisins qui se rendent visite se lisent en une
+   seconde ; un habitant qui errerait au hasard demanderait un but, donc un
+   chemin, donc un état qui peut se coincer.
+2. **Le chemin est éprouvé de proche en proche, jamais supposé.** La
+   propagation part du bâtiment et s'arrête au premier pas hors de
+   `terre()` : c'est la leçon de `majMouillees()`, et éprouver chaque case
+   séparément laisserait un habitant sauter par-dessus un bras de mer pour
+   reprendre sa marche de l'autre côté. Pas la place, pas d'habitant —
+   c'est-à-dire exactement l'île d'avant, le repli qui ne peut rien casser.
+3. **`terre()` et non `tileAt()!==EAU`.** À marée basse le sable mouillé
+   porte, et le chemin se recalcule à chaque image : ils reviennent sur la
+   terre ferme quand la mer remonte, sans une ligne pour le dire.
+4. **Le salut ne les arrête pas**, et ce n'est pas un raccourci.
+   S'arrêter demanderait de figer une position qui se déduit de `t` : dès
+   que tu t'éloignes, `t` a avancé et l'habitant se téléporterait au milieu
+   de sa rue. Il tourne la tête et lève le bras **en marchant**, ce qu'on
+   fait en croisant quelqu'un.
+5. **Ils ne bloquent rien et on ne peut pas les rater.** `blocked()` ne les
+   connaît pas, on ne leur parle pas, ils ne rapportent rien. Un habitant
+   qui barrerait un chemin serait la première chose du jeu qu'on puisse
+   rater.
+6. **La tenue se déduit de la case du bâtiment.** Deux habitants d'une même
+   île ne se ressemblent pas, et la même île rend les mêmes gens à chaque
+   chargement. Pas de `name`, pas de `face` : personne ne parle, et
+   `faceLue()` rend null, donc ils gardent des yeux dessinés.
+
+### Le bras qui salue, et les deux nombres qui ne se devinent pas
+
+`brasQuiSalue()` relit `W` et `H` **comme `drawChar` les calcule** : un
+bras posé en dur tombe au milieu du ventre sur un « costaud » et dans le
+vide sur un « élancé ».
+
+Et la main doit passer **au-dessus de la tête**. Le crâne est un rond de
+10,5 de rayon centré à `-H-9,5`, donc son sommet est 24 unités au-dessus
+de l'épaule : mon premier jet donnait un bras de 16 à hauteur d'épaule, et
+il s'arrêtait à hauteur d'oreille — le salut se lisait comme un bras tendu
+qui **montre le large**. Le deuxième, à 0,9 radian d'écart, donnait un
+bâton horizontal. Épaule à `-H*0,92`, bras de 21, écart de 0,40 : mesuré à
+l'écran, trois fois, pas déduit une fois.
+
+C'est la règle de la journée, la même que pour les six bâtiments et pour le
+lit : **ça ne se voit que rendu.**
+
+### Ce que le contrôle 6 ter mesure, et la boîte qui a été calibrée
+
+Quatre boîtes candidates, trois tours chacune, avant d'en écrire une :
+
+    large  1,81x     centre 1,81x     rues 1,87x
+    ouest  2,16x     puis 3,26x       puis 2,82x
+
+`ouest` l'emporte parce qu'elle serre la rue où les habitants passent au
+lieu de compter la mer et les mouettes autour. Le seuil est à **1,6** :
+l'observé va de 2,16 à 3,26 d'un côté et vaut 1,0 par construction de
+l'autre, donc il est entre les deux nuages et au bord d'aucun.
+
+Trois assertions, et la deuxième est celle qui protège les joueurs :
+
+1. les quatre bâtiments sont **vraiment posés** avant qu'on mesure quoi que
+   ce soit — c'est le défaut des neuf arbres invisibles, et il ne se
+   repose pas ;
+2. **une île sans bâtiment est exactement l'île d'avant.** Avec ou sans
+   habitants, le relevé est le même à la dispersion près : personne
+   n'apparaît chez qui n'a rien acheté ;
+3. `cheminHabitant()` rendu nul partout ne lève **aucune erreur** et rend
+   l'île d'avant — le repli, éprouvé plutôt que promis.
+
+Mesuré aussi, parce qu'un village qui ralentit le jeu serait payé cher :
+**60,3 images par seconde avec quatre habitants, 60,8 sans.**
+
+## La dalle qui chante — 20/09/2026 au soir
+
+Le seul instrument du jeu, et **on en joue en marchant**. C'est la forme que
+ce jeu donne à tout : le coffre a sorti le cadeau du jour d'un panneau,
+l'appareil a sorti la carte postale d'un bouton, le pas de la porte a sorti
+la commande d'une liste. Un instrument qu'on jouerait avec des touches
+serait un piano dans une fenêtre, pas une île.
+
+Les deux questions de toujours, tranchées avant d'écrire une ligne.
+
+**Est-ce que ça rapporte ?** Non. Pas un shell, pas un plafond, rien dans
+`faits`.
+
+**Où vit la hauteur de la note ?** Nulle part. Elle se déduit de la case —
+`(x+y) % 10`, cinq degrés sur deux octaves — comme la pousse du potager se
+déduit du jour et la marée de l'heure. Un objet posé reste `{t,x,y,o,c}` :
+**aucune clé de plus dans `mondeNu()`, aucune migration.**
+
+Conséquence voulue, et c'est elle qui fait le jeu : **une rangée de dalles
+monte toute seule.** On compose en posant, pas en réglant, et deux enfants
+qui posent la même rangée entendent la même mélodie.
+
+Six choses à ne pas défaire.
+
+1. **Elle est gratuite**, et ça règle deux choses d'un coup. D'abord la
+   raison du potager : un instrument qu'on ne trouve qu'après trente shells
+   n'est pas un instrument, c'est une récompense — et pas de ligne de
+   `catalogue` en SQL, donc pas de migration à jouer. Ensuite
+   `FONCTIONNEL`, qui existe pour qu'une visite ne donne pas gratuitement
+   un objet **payant** qui fait quelque chose : il n'y a rien à donner ici,
+   et surtout **un visiteur doit l'entendre**, c'est tout le propos. Un
+   souvenir de dalle chante donc comme les autres. Ce n'est pas un oubli.
+2. **La hauteur se voit** : un point par degré, et la dalle plus claire à
+   l'octave du haut. Un instrument dont on ne peut pas lire les notes se
+   joue au hasard — et il y a des appareils où le son ne sort pas.
+3. **L'onde est peinte dans `drawWorld()`**, jamais dans `DRAW.dalle` :
+   `dessinDe()` peint aussi les vignettes de l'atelier, et une case de
+   60 px qui bouge se lit comme une image qui tremble. La règle déjà écrite
+   pour le scintillement du coffre et pour le vent.
+4. **Une note par entrée sur la case**, pas une par image. `dalleSous`
+   retient la case ; il se remet à zéro dans `go()`, comme le viseur, et
+   pour une raison qui ne se voit pas en lisant — sans ça, une dalle à la
+   même case sur l'île d'arrivée resterait muette.
+5. **Elle sonne même en ambiance `silence`**, contrairement au carillon :
+   c'est un geste et non une nappe, la famille de `son('piece')`. Le
+   branchement est `echo||ambiance||maitre`, une seule expression, parce
+   que deux chemins de son finiraient par diverger.
+6. **Rien ne peut rater** : pas de bulle, pas de `E`, pas de bouton rose.
+   Les sept rangs d'`agir()` et de `proximity()` ne bougent pas d'une ligne.
+
+### Les deux défauts que le rendu a montrés, et que la relecture n'aurait pas vus
+
+**Les cinq points tenaient dans quatre pixels.** Mon premier placement les
+répartissait sur `0,30 + k*0,105` d'une demi-largeur, soit quatre pixels en
+tout : une dalle à cinq points et une dalle à un point rendaient la **même
+image**, donc la hauteur ne se voyait pas du tout. Le calcul juste tient en
+une ligne — un point du segment nord→est vaut `u*(W,H)` et reste dans le
+losange tant que `|u| <= 0,5`.
+
+**Et l'octave basculait à 4 au lieu de 5.** La teinte se décide dans
+`DRAW.dalle` (`haut = i>=5`) et la fréquence dans `noteDeDalle()`
+(`1+floor(i/5)`) : deux expressions de la même idée, donc deux listes à
+tenir d'accord. Écrite à 4, **une dalle sur dix s'affichait dans une octave
+et sonnait dans l'autre**, et rien ne le disait — les deux moitiés du défaut
+sont dans deux fonctions qu'on ne lit jamais ensemble. Le contrôle 6 quater
+lit les deux bornes dans la source et les compare, comme le contrôle 11
+croise la vitrine et le SQL.
+
+### Ce que le contrôle 6 quater mesure, et ce qu'il ne peut pas
+
+Il ne dit **pas** que ça fait du bruit : il n'y a pas de sortie audio dans
+un navigateur piloté, c'est écrit depuis le 19/09 et ça n'a pas changé. Il
+mesure les trois choses qui peuvent casser en silence :
+
+1. les deux bornes de l'octave s'accordent (le défaut ci-dessus) ;
+2. **la vignette de l'atelier ne bouge pas d'un pixel en 700 ms** — et la
+   panne qui remet l'onde dans `DRAW.dalle` la fait bouger, donc le
+   contrôle mord. La panne est en **deux** remplacements, parce que l'onde
+   doit aussi cesser de dépendre de `dalleFrappee` : sinon elle se poserait
+   sans rien produire, et c'est la leçon de l'arc-en-ciel dont le second
+   remplacement ratait sa cible ;
+3. marcher sur la rangée change l'image là où l'on marche, même trajet et
+   mêmes touches des deux côtés.
+
+## Répondre à un mot — 20/09/2026 au soir
+
+`supabase/2026-09-20_reponses.sql`, **rejouable** : `add column if not
+exists`, `create or replace`, `drop trigger if exists`. **À jouer dans
+l'éditeur SQL du projet `dansisland`** — le conteneur ne joint pas
+Supabase, mesuré.
+
+Le livre d'or ne parlait que dans un sens. On plantait un mot chez un ami,
+il le lisait, et c'était fini : il n'y avait plus aucune raison de
+repasser. Or tout ce jeu tient sur une phrase — « l'île grandit parce que
+des gens sont passés » — et une réponse est exactement ce qui fait revenir
+quelqu'un.
+
+**Deux colonnes, aucune table, aucune fonction, et aucune policy
+nouvelle.** `mots_maj` autorise déjà le propriétaire de l'île à modifier
+les mots de son île, et c'est précisément le droit qu'il faut. En ajouter
+une deuxième qui dit la même chose, c'est se préparer à ce qu'elles ne le
+disent plus pareil.
+
+Cinq choses à ne pas défaire.
+
+1. **Ça ne rapporte rien.** La réponse s'écrit chez soi, donc c'est un
+   geste solitaire, et un geste solitaire ne paie pas dans ce jeu — la
+   règle du 16/09, celle que le potager et la dalle qui chante tiennent
+   aussi. Ce qui paie, c'est que l'autre **revienne** planter un mot, et
+   c'est déjà payé.
+2. **La réponse se lit au pied du panneau**, pas seulement dans un
+   panneau. C'est la forme que ce jeu donne à tout : le cadeau du jour est
+   dans le coffre, la commande au pas de la porte, et une réponse n'a de
+   sens qu'à côté de ce qu'elle répond. Dans un onglet, ce serait une
+   boîte de réception.
+3. **Le champ se déplie, il n'est pas là d'avance.** Huit mots à l'écran
+   font huit champs, et le livre d'or devenait un formulaire. Même forme
+   que la boutique, le viseur et la carte postale : on ouvre, on voit ce
+   qu'on fait, puis on fait. Le dépli est **local** — il ne passe pas par
+   `buildAll()`, qui reconstruit le panneau entier et rangerait le champ
+   au premier caractère tapé.
+4. **Un champ vide efface la réponse**, il n'en écrit pas une de zéro
+   caractère : `repondreAuMot()` rend `null` pour le dire, et le trigger
+   remet `reponse_le` à null avec elle. Une île qui afficherait « répondu
+   le 3 mars » sous une réponse vide est un défaut qu'on ne voit qu'une
+   fois, chez quelqu'un.
+5. **`reponse_le` est posée par le serveur**, jamais par le client : une
+   date d'écriture que l'appelant choisit ne vaut rien.
+
+Tant que la migration n'est pas jouée, `mots.reponse` n'existe pas et la
+demander rend un `42703`. `motsDe()` **redemande alors sans la colonne**,
+et retient le repli pour ne pas refaire la requête ratée à chaque île. Le
+livre d'or continue de marcher sans les réponses : c'est exactement ce que
+fait `ramasser()` quand `bourse_ramasser` n'existe pas encore, et ça vaut
+pour la fenêtre entre le déploiement du client et le passage du SQL.
+
+### Un trou qui existait avant, fermé au passage
+
+`mots_maj` laissait le propriétaire faire un `update` sur **toutes** les
+colonnes, `texte` et `auteur_nom` comprises. Autrement dit : depuis le
+16/09, le propriétaire d'une île pouvait réécrire le mot d'un visiteur en
+gardant sa signature. Personne ne l'a fait parce que le client ne
+l'expose pas — mais « le client ne l'expose pas » n'a jamais été une
+protection, et c'est ce que ce fichier répète à propos des quatre tables
+sans policy d'écriture.
+
+Ajouter une réponse rendait le trou pire, puisque l'update devient un
+geste ordinaire. `mots_figer()` gèle donc tout ce qui appartient à
+l'auteur et ne laisse passer que ce qui appartient au propriétaire :
+`masque`, `reponse`, `reponse_le`.
+
+C'est un **trigger et non une policy**, et ça change ce qu'on peut
+vérifier : l'éditeur SQL du dashboard tourne en rôle `postgres` et
+contourne la RLS, mais **pas un trigger**. Le contrôle du fichier se joue
+donc tel quel, sans `set local role anon` — contrairement au vide de
+policy des quatre autres tables.
+
+### Ce que le contrôle 17 mesure
+
+Quatre choses, et la première est celle qui compte le plus : **une
+réponse est du texte libre qui arrive sur l'écran de quelqu'un d'autre.**
+C'est le deuxième chemin de ce genre dans tout le jeu, après le mot
+lui-même que le contrôle 15 couvre depuis le 19/09. On envoie donc une
+vraie tentative — `<img src=x onerror=…>` — et on demande au navigateur
+ce qu'il en a fait : le titre ne change pas, aucune `<img>` n'apparaît, et
+le texte s'affiche en clair, dans la liste **et** dans la bulle du
+panneau.
+
+## Trois contrôles qui clignotaient, et la faute qu'ils avaient en commun — 20/09/2026 au soir
+
+Le harnais `vivant.mjs` a rendu trois rouges sur une exécution et deux sur
+la suivante, **sans qu'une ligne du jeu ait changé**. Repris à la racine
+plutôt que rejoués jusqu'à ce qu'ils passent : un contrôle qu'on relance
+pour avoir du vert n'est plus un contrôle.
+
+La première chose faite, et c'est elle qui a tout tranché : **relancer le
+harnais sur le commit d'avant**, dans un worktree. Le phare y échouait
+aussi. Un rouge qui existe déjà sur la version d'avant n'est pas une
+régression, et il n'y avait donc rien à chercher dans le code du jour.
+
+Les trois avaient la même faute, sous trois formes : **une mesure qui ne
+couvre pas la période du phénomène qu'elle nomme.**
+
+1. **Le phare.** « Clarté 81 contre 81 », sur un faisceau parfaitement
+   allumé. Il fait le tour en 9 s et n'occupe qu'un vingtième de tour
+   (`arc(-0,10 ; 0,10)`) : une mesure ponctuelle le rate dix-neuf fois sur
+   vingt. D'où `clarte(page, boîte, {pas, duree})`, qui suit la clarté sur
+   un tour entier. On lit le **max** — ce qui compte est qu'il existe un
+   moment où l'eau est plus claire ; la moyenne serait presque celle d'une
+   eau sans phare.
+2. **Le printemps.** « 181 = 182 », sur une égalité exacte. Ce qui traverse
+   la boîte, ce sont les pétales : ils passent **devant** le sol et
+   déplacent la moyenne d'une unité selon l'instant. Les quatre saisons se
+   lisent maintenant en moyenne sur douze relevés, et l'assertion est un
+   **écart relatif** — le printemps touche le sol bien moins que l'automne,
+   qui est le plus discret des deux qui y touchent vraiment. Un seuil
+   absolu rougit au passage d'un pétale ; celui-ci rougit si quelqu'un
+   peint la terre au printemps.
+3. **La rafale.** « 18225 contre 17431 », soit 1,05, contre un seuil à
+   1,12. Neuf relevés donnent 1,14 · 1,15 · 1,17 · 1,17 · 1,21 · 1,22 ·
+   1,23 · 1,25 · 1,26, et une exécution est tombée à 1,05 : **le seuil
+   était posé dans le nuage**, ce que ce fichier interdit ailleurs depuis
+   le contrôle de l'hôte.
+
+   La raison est mesurée et vaut d'être écrite : à force 1 les feuilles
+   balaient déjà presque tous leurs pixels en 1,6 s, donc doubler
+   l'amplitude n'ajoute que la marge. **Ma correction évidente était
+   fausse** — ne compter que les gros écarts devait séparer les deux, et à
+   seuil 8 le rapport vaut 1,22, à 50 il tombe à 1,06, à 140 il passe sous
+   1. Une rafale élargit la zone balayée, elle ne creuse pas les écarts
+   pixel par pixel. Allonger la fenêtre de 1,6 à 6,4 s ne resserre rien non
+   plus.
+
+   La paire **rafale contre brume** porte la même affirmation — que
+   `ventForce()` est branché dans les deux sens, 2,3 contre 0,35 — et elle
+   a de la marge : 1,6 à 2,0 mesuré, seuil à 1,35. Le sens beau → rafale
+   est désormais **imprimé et pas affirmé** : il est vrai, il est trop
+   serré pour une assertion, et un contrôle honnête montre ce qu'il ne peut
+   pas juger. C'est déjà ce que font les deux relevés de genres et la ligne
+   des prénoms élidés.
+
+La leçon tient en une phrase, et c'est la quatrième fois qu'elle s'écrit
+ici sous une forme ou une autre : **une mesure doit couvrir la période de
+ce qu'elle mesure, et son seuil doit tomber entre les deux nuages, jamais
+au bord de l'un d'eux.** Trois contrôles qui clignotent valent moins que
+zéro contrôle, parce qu'on finit par ne plus les lire.
+
 ## `vivant.mjs` mesure par beau temps d'été, et c'est son garde-fou le plus important
 
 La saison et la météo ajoutent toutes deux des choses qui tombent, et elles

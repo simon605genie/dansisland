@@ -92,21 +92,40 @@ export function brouillonLocal() { return null; }
 export function planifierSauvegarde() {}
 export async function marquerVu() {}
 
+/* Un mot semé : `['Ana', 'Bravo !', 'Merci !', x, y]`.
+
+   Les trois dernières cases sont facultatives. La **réponse** est vide
+   par défaut, parce qu'un mot sans réponse est le cas ordinaire. La
+   **case** l'est aussi, et la valeur par défaut la met loin du bonhomme
+   : un harnais qui veut lire la bulle du panneau la sème sous les pieds,
+   comme `objets.mjs` sème ses objets, plutôt que d'essayer d'y marcher —
+   viser une case demanderait de refaire la caméra, et `pt()` est seul à
+   avoir le droit de défaire cette transformation. */
 export async function motsDe() {
   return lu('test:mots', []).map((m, i) => ({
     id: 'm' + i, auteur: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     auteur_nom: m[0], texte: m[1], masque: false,
+    reponse: m[2] || null,
+    reponse_le: m[2] ? new Date().toISOString() : null,
     // `replanter()` plante chaque mot sur l'île sous forme de panneau, et
     // `proximity()` fait passer un panneau avant tout le reste. Sans case,
     // la distance vaut NaN, `NaN >= 0.95` est faux, et le panneau gagne
     // partout : la bulle d'un mot recouvrait celle de l'objet visé.
-    case_x: 2 + i, case_y: 2,
+    case_x: typeof m[3] === 'number' ? m[3] : 2 + i,
+    case_y: typeof m[4] === 'number' ? m[4] : 2,
     cree_le: new Date(Date.now() - (10 - i) * 1000).toISOString(),
   }));
 }
 export async function planterMot() { return null; }
 export async function supprimerMot() {}
 export async function masquerMot() {}
+/* Le faux tient le contrat du vrai : il rend ce qui a été écrit, et
+   `null` pour une réponse vide. Un faux trop gentil n'éprouve rien —
+   c'est la leçon de `bourseCadeau()`, qui rendait la bourse inchangée et
+   laissait un contrôle passer pour la mauvaise raison. */
+export async function repondreAuMot(id, reponse) {
+  return (reponse || '').trim() || null;
+}
 export async function archipel() { return []; }
 export async function livraisonsDe() { return []; }
 export async function livrer() { return null; }

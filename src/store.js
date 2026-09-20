@@ -253,12 +253,47 @@ export async function mesFilleuls() {
 
 /* ---------------- livre d'or ---------------- */
 
+const MOT_CHAMPS = 'id, auteur, auteur_nom, texte, case_x, case_y, masque, cree_le';
+
+/* Tant que `2026-09-20_reponses.sql` n'est pas joué, `mots.reponse`
+   n'existe pas et demander la colonne rend une erreur `42703`. On
+   redemande alors sans elle : le livre d'or continue de marcher, sans
+   les réponses, et rien ne se perd entre le déploiement du client et le
+   passage du SQL. C'est exactement ce que fait déjà `ramasser()` quand
+   `bourse_ramasser` n'existe pas encore.
+
+   Le repli est **retenu** : sans ça, chaque île visitée referait la
+   requête ratée avant la bonne, ce qui double les allers-retours pour
+   toute la durée du déploiement. */
+let motsAvecReponse = true;
 export async function motsDe(ileId) {
-  const { data, error } = await sb.from('mots')
-    .select('id, auteur, auteur_nom, texte, case_x, case_y, masque, cree_le')
+  if (motsAvecReponse) {
+    const r = await sb.from('mots').select(MOT_CHAMPS + ', reponse, reponse_le')
+      .eq('ile', ileId).order('cree_le', { ascending: true });
+    if (!r.error) return r.data || [];
+    if (!/reponse/i.test(r.error.message || '')) throw r.error;
+    motsAvecReponse = false;
+  }
+  const { data, error } = await sb.from('mots').select(MOT_CHAMPS)
     .eq('ile', ileId).order('cree_le', { ascending: true });
   if (error) throw error;
   return data || [];
+}
+
+/* Répondre à un mot laissé chez soi. Aucune policy nouvelle : `mots_maj`
+   ouvre déjà l'update au propriétaire de l'île, et le trigger
+   `mots_figer` interdit de toucher au texte du visiteur. La date est
+   posée par le serveur — une date d'écriture que l'appelant choisit ne
+   vaut rien.
+
+   Une réponse vide **efface** la réponse plutôt que d'en écrire une de
+   zéro caractère : c'est le geste qu'on attend en vidant le champ. */
+export async function repondreAuMot(id, reponse) {
+  const t = (reponse || '').trim();
+  const { error } = await sb.from('mots')
+    .update({ reponse: t || null }).eq('id', id);
+  if (error) throw error;
+  return t || null;
 }
 
 export async function planterMot(ileId, texte, x, y, nom) {

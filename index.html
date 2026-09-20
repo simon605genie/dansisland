@@ -2187,7 +2187,7 @@ const COUL_OBJ={arbre:'#2E7D5B',palmier:'#2E7D5B',sapin:'#2E7D6B',buisson:'#2E7D
   cactus:'#6FA37A',fleur:'#F48CA8',rocher:'#7E8CA0',boutique:'#FDFBF2',phare:'#FDFBF2',
   ponton:'#A9764A',lampe:'#F4D6A0',banc:'#8B5E3C',barriere:'#FDFBF2',cloture:'#FDFBF2',
   coffre:'#8B5E3C',chien:'#C89A63',tortue:'#5EA36B',crabe:'#F0736E',mouette:'#FDFBF2',
-  potager:'#4E9B5E'};
+  potager:'#4E9B5E',dalle:'#72D6D0'};
 // Chaque île a son parti pris : une île qui mélange tout ne ressemble à rien.
 /* Ce que les îles de démonstration portent — et **rien de payant**.
 
@@ -2390,6 +2390,162 @@ function hoteAu(t){
   return { x:s.a+(s.b-s.a)*f, y:s.y, marche,
            face: marche ? (u<0.45?'droite':'gauche') : 'bas' };
 }
+
+/* ---- les habitants ----
+   Six bâtiments payants posés au nord, et personne dedans. Une école sans
+   élèves et un restaurant sans clients ne sont pas des bâtiments, ce sont
+   des maquettes : le village avait la silhouette et pas la vie.
+
+   **Rien n'en part en base, et il n'y a rien à remettre à zéro.** Pas une
+   clé de plus dans `mondeNu()`, rien pour Ctrl+Z, aucun gain, aucune perte
+   possible : tout se déduit de `t`, de la place des bâtiments et de la
+   graine `h2()`. C'est la ligne déjà écrite pour les mouettes, le requin,
+   le voilier et l'hôte qui fait les cent pas.
+
+   **Un bâtiment, un habitant**, et il va chez le bâtiment le plus proche —
+   ou chez toi s'il est seul. Deux voisins qui se rendent visite se lisent
+   en une seconde ; un habitant qui errerait au hasard demanderait un but,
+   donc un chemin, donc un état qui peut se coincer.
+
+   **Le jeu n'a toujours aucun moyen de perdre.** Ils ne bloquent pas le
+   passage, on ne peut ni leur parler ni les rater, et un habitant qui n'a
+   pas la place de marcher n'existe simplement pas — c'est-à-dire
+   exactement l'île d'avant. C'est la ligne du chien qui s'assied. */
+const HAB_TOUR=15000;          // l'aller-retour, un peu plus lent que l'hôte
+const HAB_SALUT=2.4;           // la distance à laquelle on te fait signe
+
+// La tenue se déduit de la case du bâtiment : deux habitants d'une même
+// île ne se ressemblent pas, et la même île rend les mêmes gens à chaque
+// chargement. Pas de `name` et pas de `face` : personne ne parle et
+// `faceLue()` rend null, donc ils gardent des yeux dessinés.
+function avatarHabitant(o){
+  const p=(k,l)=>l[Math.floor(h2(o.x*13.7+k*4.1, o.y*7.9+k*2.3)*l.length)%l.length];
+  return {genre:p(1,['garcon','fille']), body:p(2,['rond','élancé','costaud']),
+          skin:p(3,SKINS), hair:p(4,['aucun','vague','chignon','piquants','longs']),
+          hairC:p(5,HAIRS), eyes:p(6,['rond','joyeux','malin','calme']),
+          outfit:p(7,CLOTH), acc:p(8,['aucun','aucun','aucun','chapeau','lunettes'])};
+}
+
+/* Le chemin d'un bâtiment vers un autre, **éprouvé de proche en proche**
+   et jamais supposé. Un bâtiment au bord de l'île peut avoir la mer entre
+   lui et son voisin, et un habitant qui marcherait sur l'eau est le défaut
+   qu'on ne découvre qu'à la dix-septième île.
+
+   La propagation part du bâtiment et s'arrête au premier pas qui n'est pas
+   sur `terre()` : c'est la leçon de `majMouillees()`. Éprouver chaque case
+   séparément laisserait l'habitant sauter par-dessus un bras de mer pour
+   reprendre sa marche de l'autre côté.
+
+   `terre()` et non `tileAt()!==EAU` : à marée basse le sable mouillé porte,
+   et un habitant qui refuserait d'y aller serait plus frileux que le
+   bonhomme. Il repose sur la terre ferme dès que la mer remonte, puisque
+   le chemin se recalcule à chaque image. */
+function cheminHabitant(o,cible){
+  const a=centreDe(o.t,o.x,o.y);
+  const dx=cible.x-a.x, dy=cible.y-a.y, L=Math.hypot(dx,dy);
+  if(L<3) return null;                       // trop près : on ne va pas chez le voisin de palier
+  const ux=dx/L, uy=dy/L;
+  // On sort du bâtiment avant de marcher : un 2x2 va jusqu'à une case de
+  // son centre, donc un habitant né plus près naîtrait dans son mur.
+  const d0=1.35, dmax=L-1.35;
+  if(dmax-d0<1.2) return null;
+  if(!terre(Math.round(a.x+ux*d0), Math.round(a.y+uy*d0))) return null;
+  let fin=d0;
+  for(let d=d0; d<=dmax; d+=0.25){
+    if(!terre(Math.round(a.x+ux*d), Math.round(a.y+uy*d))) break;
+    fin=d;
+  }
+  if(fin-d0<1.2) return null;                // pas la place : pas d'habitant
+  return {x0:a.x+ux*d0, y0:a.y+uy*d0, x1:a.x+ux*fin, y1:a.y+uy*fin};
+}
+
+function batimentsDuMonde(){
+  return (world.objects||[]).filter(o=>estBatiment(o.t))
+    .sort((a,b)=>(a.x+a.y)-(b.x+b.y)||a.x-b.x);
+}
+
+/* Où chacun se trouve à l'instant `t`. Quatre temps comme l'hôte — il va,
+   il souffle, il revient, il souffle : sans les deux pauses, un
+   aller-retour se lit comme un pendule, et c'est le défaut déjà nommé pour
+   un vent d'une seule période.
+
+   **Le salut ne l'arrête pas**, et c'est un choix. S'arrêter demanderait
+   de figer une position qui se déduit de `t` : dès que tu t'éloignes, `t`
+   a avancé et l'habitant se téléporterait au milieu de sa rue. Il tourne
+   la tête vers toi et lève le bras en marchant, ce qu'on fait en croisant
+   quelqu'un dans la vraie vie. */
+function habitantsAu(t){
+  const bats=batimentsDuMonde(); if(!bats.length) return [];
+  // La maison est le seul 2x2 qui ne soit pas dans `objects` : son centre
+  // s'écrit ici comme `drawHouse()` l'écrit, `h.x+1`, et non par
+  // `centreDe()`, qui ne connaît que le catalogue.
+  const mh={x:world.house.x+1, y:world.house.y+1};
+  const out=[];
+  for(const o of bats){
+    // Le plus proche des autres, et la maison s'il est seul : un village
+    // d'un seul bâtiment a quand même quelqu'un qui en sort.
+    // Centre à centre, des deux côtés : comparer un centre à une case
+    // d'ancrage décale toutes les distances d'une case et peut désigner le
+    // mauvais voisin quand deux bâtiments sont à peu près aussi loin.
+    const moi=centreDe(o.t,o.x,o.y);
+    let cible=null, best=Infinity;
+    for(const q of bats){
+      if(q===o) continue;
+      const c=centreDe(q.t,q.x,q.y), d=Math.hypot(c.x-moi.x,c.y-moi.y);
+      if(d<best){ best=d; cible=c; }
+    }
+    const r=cheminHabitant(o, cible||mh);
+    if(!r) continue;
+    const ph=h2(o.x*5.3+2.9, o.y*11.7+1.1);
+    const u=((t/HAB_TOUR+ph)%1+1)%1;
+    let f, marche=true;
+    if(u<0.38){ f=u/0.38; }
+    else if(u<0.50){ f=1; marche=false; }
+    else if(u<0.88){ f=1-(u-0.50)/0.38; }
+    else { f=0; marche=false; }
+    const x=r.x0+(r.x1-r.x0)*f, y=r.y0+(r.y1-r.y0)*f;
+    // En isométrie l'écran va vers la droite quand `x-y` grandit : c'est
+    // le sens de l'écran qui décide du regard, pas le sens de la grille.
+    const av=(r.x1-r.x0)-(r.y1-r.y0), aller=u<0.50;
+    const salut=Math.hypot(hero.x-x, hero.y-y)<HAB_SALUT;
+    out.push({o, x, y, marche, salut,
+      face: salut ? (hero.x-x)-(hero.y-y)>0 ? 'droite' : 'gauche'
+           : marche ? ((aller?av:-av)>0?'droite':'gauche') : 'bas',
+      a: avatarHabitant(o)});
+  }
+  return out;
+}
+
+/* Le bras levé. Il est peint **après** le bonhomme, donc par-dessus : un
+   bras qui salue passe devant le corps.
+
+   Il bat doucement — un bras figé en l'air n'est pas un salut, c'est une
+   statue — et il porte la manche du vêtement et la main au teint, comme le
+   reste du bonhomme. Un trait bleu sorti de l'épaule se lirait comme une
+   antenne. */
+function brasQuiSalue(c,px,py,a,s,gauche,t){
+  /* Les mêmes mesures que `drawChar` — le bras part de l'épaule, pas d'un
+     point écrit à la main. Un bras posé en dur tombe au milieu du ventre
+     sur un « costaud » et dans le vide sur un « élancé ».
+
+     **La main doit passer au-dessus de la tête**, et c'est ce qui fixe les
+     deux nombres. Le crâne est un rond de 10,5 de rayon centré à `-H-9,5`,
+     donc son sommet est 24 unités au-dessus de l'épaule : un bras de 16
+     n'y arrive pas, il s'arrête à hauteur d'oreille et le salut se lit
+     comme un bras tendu qui montre quelque chose. Mesuré à l'écran, pas
+     déduit — le premier jet désignait le large. */
+  const W = a.body==='costaud'?13.5 : a.body==='élancé'?8.5 : 11;
+  const H = a.body==='élancé'?25 : a.body==='costaud'?19 : 21;
+  c.save(); c.translate(px,py); c.scale(s,s);
+  if(gauche) c.scale(-1,1);
+  c.translate(W*0.80,-H*0.92); c.rotate(0.40+Math.sin(t/230)*0.16);
+  c.strokeStyle='rgba(11,60,93,.4)'; c.lineWidth=1.5;
+  c.fillStyle=a.outfit;
+  rr(c,-2.3,-20,4.6,21,2.3); c.fill(); c.stroke();      // la manche
+  c.beginPath(); c.arc(0,-21,3.3,0,Math.PI*2);          // la main
+  c.fillStyle=a.skin; c.fill(); c.stroke();
+  c.restore();
+}
 let target=null;
 
 // Le monde part en base ; `mots` et les clés locales restent hors du jsonb.
@@ -2436,7 +2592,12 @@ function motsDe(w){ return (w.mots||[]).filter(m=>!m.masque); }
 function replanter(w){
   w.objects=(w.objects||[]).filter(o=>o.t!=='panneau');
   motsDe(w).forEach(m=>{
-    w.objects.push({t:'panneau',x:m.case_x,y:m.case_y,c:'#FDFBF2',txt:m.texte,by:m.auteur_nom});
+    // `rep` voyage avec le panneau pour que la bulle du pas de côté la
+    // dise sans retourner chercher le mot : c'est la même raison que
+    // `txt` et `by`, qui sont déjà des copies. Les panneaux sont exclus
+    // de `mondeNu()`, donc rien de tout ça ne part en base.
+    w.objects.push({t:'panneau',x:m.case_x,y:m.case_y,c:'#FDFBF2',
+      txt:m.texte,by:m.auteur_nom,rep:m.reponse||''});
   });
 }
 
@@ -2911,6 +3072,51 @@ const DRAW={
         c.beginPath(); c.arc(p[0]-3.1,p[1]-h*0.42-1,1,0,Math.PI*2); c.fill(); }
     });
   },
+  /* La dalle qui chante. `etat` est le degré lu par `etatObjet()`, de 0 à
+     9 : cinq degrés sur deux octaves.
+
+     **La hauteur se voit**, un point par degré et la dalle plus claire à
+     l'octave du haut. Un instrument dont on ne peut pas lire les notes se
+     joue au hasard, et il y a des appareils où le son ne sort pas du
+     tout — la rangée doit se lire à l'œil.
+
+     `etat` absent vaut zéro, comme pour le potager et la girouette : la
+     vignette de l'atelier montre donc la première note, jamais une dalle
+     vide. */
+  dalle(c,C,etat){
+    // `haut` doit suivre l'octave de `noteDeDalle()`, qui est
+    // `1+floor(i/5)` : la bascule est à **5**, pas à 4. Écrite à 4, la
+    // teinte et la note se contredisaient sur une dalle sur dix.
+    const i=Math.max(0,Math.min(9,etat|0)), haut=i>=5, d=i%5;
+    const g=C||'#72D6D0', W=15, H=7.8, E=3.4;
+    // Le flanc d'abord : c'est lui qui pose la dalle sur le sol plutôt que
+    // de la coller dessus.
+    c.fillStyle=shade(g,-34); c.beginPath();
+    c.moveTo(-W,0); c.lineTo(0,H); c.lineTo(W,0); c.lineTo(W,E); c.lineTo(0,H+E); c.lineTo(-W,E);
+    c.closePath(); c.fill();
+    // Les deux octaves s'écartent de part et d'autre de la couleur choisie
+    // plutôt que l'une au-dessus : à +20 contre 0, mesuré à l'écran, une
+    // rangée de dix se lisait d'un seul ton et l'octave ne se voyait pas.
+    c.fillStyle=haut?shade(g,26):shade(g,-12); c.beginPath();
+    c.moveTo(0,-H); c.lineTo(W,0); c.lineTo(0,H); c.lineTo(-W,0); c.closePath(); c.fill();
+    c.strokeStyle='rgba(11,60,93,.30)'; c.lineWidth=1.3; c.stroke();
+    /* Les points suivent l'arête nord-est, comme les sillons du potager :
+       une rangée horizontale à l'écran ne suivrait aucun des deux axes de
+       la grille et se lirait comme une rayure.
+
+       Un point du segment nord→est vaut `u*(W,H)`, et il est dans le
+       losange tant que `|u| <= 0,5` : on s'arrête à 0,36 pour garder de la
+       marge au bord. **C'est cette borne qui manquait au premier jet** —
+       les cinq points tenaient dans quatre pixels et se lisaient comme un
+       seul. Une dalle à cinq points et une dalle à un point rendaient la
+       même image, donc la hauteur ne se voyait pas du tout. */
+    c.fillStyle=shade(g,-46);
+    const n=d+1;
+    for(let k=0;k<n;k++){
+      const u = n===1 ? 0 : -0.36 + 0.72*k/(n-1);
+      c.beginPath(); c.ellipse(u*W, u*H, 1.9, 1.2, 0, 0, Math.PI*2); c.fill();
+    }
+  },
   buisson(c,C){
     const g=C||LEAF;
     c.fillStyle=shade(g,-20); c.beginPath(); c.ellipse(-7,-6,9,7,0,0,Math.PI*2); c.fill();
@@ -3367,7 +3573,7 @@ const OBJ_GROUPS=[
   ['Nature',[['arbre','Arbre à fleurs'],['palmier','Palmier'],['sapin','Sapin'],['buisson','Buisson'],['cactus','Cactus'],['fleur','Fleur','f'],['rocher','Rocher'],['mare','Mare aux canards','f'],['puits','Puits'],['potager','Potager']]],
   ['Village',[['boutique','Échoppe','f'],['phare','Phare'],['ponton','Ponton'],['lampe','Lampadaire'],['banc','Banc'],['barriere','Barrière','f'],['cloture','Clôture','f'],['coffre','Coffre'],['fontaine','Fontaine','f'],['moulin','Moulin'],['statue','Statue','f'],['girouette','Girouette','f'],['carillon','Carillon'],['boitelettres','Boîte aux lettres','f']]],
   ['Bâtiments',[['ferme','Ferme','f'],['ecole','École','f'],['coiffeur','Coiffeur'],['supermarche','Supermarché'],['restaurant','Restaurant'],['culte','Lieu de culte']]],
-  ['Dehors',[['feudecamp','Feu de camp'],['hamac','Hamac'],['tente','Tente','f'],['balancoire','Balançoire','f'],['toboggan','Toboggan'],['cabane','Cabane perchée','f'],['montgolfiere','Montgolfière','f']]],
+  ['Dehors',[['feudecamp','Feu de camp'],['hamac','Hamac'],['tente','Tente','f'],['balancoire','Balançoire','f'],['toboggan','Toboggan'],['dalle','Dalle qui chante','f'],['cabane','Cabane perchée','f'],['montgolfiere','Montgolfière','f']]],
   ['Bestioles',[['chien','Chien'],['tortue','Tortue','f'],['crabe','Crabe'],['mouette','Mouette','f'],['chat','Chat'],['herisson','Hérisson'],['renard','Renard']]]
 ];
 
@@ -4236,6 +4442,28 @@ function etincelle(c,t){
     c.beginPath(); c.moveTo(-d[0]*r,-20-d[1]*r); c.lineTo(d[0]*r,-20+d[1]*r); c.stroke(); });
   c.globalAlpha=1;
 }
+/* L'onde d'une dalle frappée : deux losanges qui s'écartent et s'effacent.
+   Un losange et non un cercle, parce qu'il est couché dans le plan du sol —
+   c'est la règle de la flaque de soleil sur le plancher et du faisceau du
+   phare écrasé au rapport de la case.
+
+   Elle dure 620 ms et se déduit de `dalleFrappee.t` : rien à remettre à
+   zéro, et une dalle effacée d'un coup de gomme n'a pas d'onde puisque
+   c'est la boucle des objets qui la peint. */
+function onde(c,t){
+  const age=performance.now()-(dalleFrappee?dalleFrappee.t:0);
+  if(age<0||age>620) return;
+  const u=age/620;
+  c.strokeStyle='#FFFFFF'; c.lineWidth=2.6;
+  [0,0.28].forEach(r=>{
+    const v=u-r; if(v<0||v>1) return;
+    c.globalAlpha=(1-v)*0.75;
+    const W=15+v*17, H=7.8+v*8.8;
+    c.beginPath(); c.moveTo(0,-H); c.lineTo(W,0); c.lineTo(0,H); c.lineTo(-W,0);
+    c.closePath(); c.stroke();
+  });
+  c.globalAlpha=1;
+}
 function drawWorld(t){
   ctx.clearRect(0,0,CW,CH);
   ciel(t);
@@ -4303,7 +4531,14 @@ function drawWorld(t){
       dessinDe(ctx,o.t,o.c||'#8AA3B2',o.o,etatObjet(o,t));
       // Dans ce jeu, une chose qui brille est une chose à prendre : le
       // coffre du jour, et la boîte où un mot attend d'être lu.
-      if(plein) etincelle(ctx,t); ctx.restore();
+      if(plein) etincelle(ctx,t);
+      /* L'onde de la dalle qu'on vient de frapper. Elle est peinte **ici**
+         et non dans `DRAW.dalle`, pour la raison déjà écrite pour le
+         scintillement du coffre et pour le vent : `dessinDe()` peint aussi
+         les vignettes de l'atelier, et une vignette qui ondule se lit
+         comme une image qui tremble. */
+      if(dalleFrappee && dalleFrappee.x===o.x && dalleFrappee.y===o.y) onde(ctx,t);
+      ctx.restore();
     }});
   });
   if(visiting){
@@ -4346,6 +4581,22 @@ function drawWorld(t){
       shadowDiamond(ctx,0,saut,11);
       if(balade.face==='haut'||balade.face==='gauche') ctx.scale(-1,1);
       dessinDe(ctx,'chien',balade.o.c||'#C89A63'); ctx.restore();
+    }});
+  }
+  /* **Les habitants du village.** Ils entrent dans le même tri que tout le
+     reste, donc ils passent derrière leur bâtiment quand ils marchent au
+     nord et devant quand ils reviennent : c'est ce qui les met dans la rue
+     plutôt que sur une couche au-dessus.
+
+     Le vent ne les plie pas et rien ne les bloque : ils sont du dessin, et
+     `blocked()` ne les connaît pas. Un habitant qui barrerait un chemin
+     serait la première chose du jeu qu'on puisse rater. */
+  for(const v of habitantsAu(t)){
+    const qv=iso(v.x,v.y);
+    items.push({d:v.x+v.y, f:()=>{
+      drawChar(ctx,qv.x,qv.y-LIFT,v.a,0.9,v.face,v.marche?t:0,
+               vieDuBonhomme(t+v.o.x*900, v.marche?0:t));
+      if(v.salut) brasQuiSalue(ctx,qv.x,qv.y-LIFT,v.a,0.9,v.face==='gauche',t);
     }});
   }
   poserCompagnon(items,t,false);
@@ -5491,6 +5742,9 @@ function frame(t){
   if(!dedans){ avancerRequin(dt); avancerPoisson(dt); avancerVoilier(dt); }
   if(!dedans&&!visiting){ if(herbeAcote()) tondeuseJusqua=t+1100; tondre(); avancerLaBalade(dt);
     ramasserLaMaree(); }
+  // Chez soi **et chez les voisins** : marcher sur les dalles de quelqu'un
+  // est exactement ce pour quoi il les a posées.
+  jouerLesDalles();
   proximity();
   majCam(dt);
   if(dedans) drawInterieur(t); else drawWorld(t);
@@ -6546,6 +6800,83 @@ function boucleCarillon(){
   minuteurCarillon=setTimeout(boucleCarillon, 7000+Math.random()*13000);
 }
 
+/* ---- les dalles qui chantent ----
+   Le seul instrument du jeu, et **on en joue en marchant**. C'est la forme
+   que ce jeu donne à tout : le coffre a sorti le cadeau du jour d'un
+   panneau, l'appareil a sorti la carte postale d'un bouton, le pas de la
+   porte a sorti la commande d'une liste. Un instrument qu'on jouerait
+   avec des touches serait un piano dans une fenêtre, pas une île.
+
+   **La hauteur se déduit de la case** — `(x+y) % 10`, cinq degrés sur deux
+   octaves — donc rien ne part en base : un objet posé reste `{t,x,y,o,c}`,
+   aucune clé de plus dans `mondeNu()`, aucune migration. C'est la même
+   décision que pour la pousse du potager, qui se déduit du jour plutôt que
+   de porter une date de plantation.
+
+   Conséquence voulue, et c'est elle qui fait le jeu : **une rangée de
+   dalles monte toute seule**. On compose en posant, pas en réglant, et
+   deux enfants qui posent la même rangée entendent la même mélodie.
+
+   **Elle est gratuite**, et ça règle deux choses d'un coup. D'abord la
+   raison du potager : un instrument qu'on ne trouve qu'après trente shells
+   n'est pas un instrument, c'est une récompense — et pas de ligne de
+   `catalogue` en SQL, donc pas de migration à jouer. Ensuite `FONCTIONNEL`,
+   qui existe pour qu'une visite ne donne pas gratuitement un objet
+   **payant** qui fait quelque chose : il n'y a rien à donner ici, et
+   surtout **un visiteur doit l'entendre**, c'est tout le propos. Un
+   souvenir de dalle chante donc comme les autres. Ce n'est pas un oubli.
+
+   Elle sonne **même en ambiance `silence`**, contrairement au carillon :
+   c'est un geste et non une nappe, la famille de `son('piece')`, qui
+   sonne sur une île muette. Le bouton Son la coupe, lui, comme il coupe
+   tout.
+
+   Et il n'y a rien à rater : pas de bulle, pas de `E`, pas de bouton rose.
+   Les sept rangs d'`agir()` et de `proximity()` ne bougent pas d'une
+   ligne. */
+function degreDeDalle(o){ return (((o.x+o.y)%10)+10)%10; }
+function noteDeDalle(o){
+  const G=GAMMES[world.sky]||GAMMES.jour;
+  const i=degreDeDalle(o);
+  return G.racine*Math.pow(2, 1+Math.floor(i/5) + G.deg[i%5]/12);
+}
+/* La même cloche que la musique, mais branchée sur `echo||ambiance||maitre`
+   plutôt que sur l'ambiance seule : sans ce repli, une île en `silence`
+   n'aurait pas d'`ambiance` et la dalle ne sonnerait pas du tout. Une
+   seule expression, donc, et pas deux chemins de son à tenir d'accord. */
+function frapperUneDalle(o){
+  const c=ctxAudio(); if(!c||sonCoupe) return;
+  const t=c.currentTime, g=c.createGain(), f=noteDeDalle(o);
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(0.085,t+0.012);   // une attaque nette : on a frappé
+  g.gain.exponentialRampToValueAtTime(0.0001,t+1.5);
+  [[1,1],[2.01,0.28],[4.02,0.07]].forEach(([r,a])=>{
+    const o2=c.createOscillator(), h=c.createGain();
+    o2.type='sine'; o2.frequency.value=f*r; h.gain.value=a;
+    o2.connect(h).connect(g); o2.start(t); o2.stop(t+1.6);
+  });
+  g.connect(echo||ambiance||maitre);
+}
+/* Une note **par entrée sur la case**, jamais une par image. `dalleSous`
+   retient la case où l'on est ; il ne part pas en base et il n'y a rien à
+   mémoriser pour Ctrl+Z.
+
+   Il se remet à zéro dans `go()`, comme le viseur, et pour une raison
+   qu'on ne voit pas en lisant : sans ça, une dalle à la même case sur
+   l'île d'à côté resterait muette parce que la clé n'aurait pas changé. */
+let dalleSous=null, dalleFrappee=null;
+function jouerLesDalles(){
+  if(dedans) return;
+  // Le rayon est plus serré que celui des sondes de `proximity()` : on
+  // joue quand on est **sur** la dalle, pas quand on la frôle.
+  const d=(world.objects||[]).find(o=>o.t==='dalle' &&
+    Math.hypot(o.x+0.5-hero.x, o.y+0.5-hero.y)<0.55) || null;
+  const cle=d ? d.x+','+d.y : null;
+  if(cle===dalleSous) return;
+  dalleSous=cle;
+  if(d){ frapperUneDalle(d); dalleFrappee={x:d.x, y:d.y, t:performance.now()}; }
+}
+
 function arreterAmbiance(){
   clearTimeout(minuteurOiseaux); minuteurOiseaux=null;
   // Le minuteur des notes et la boucle de l'écho s'arrêtent ensemble. Une
@@ -6767,8 +7098,21 @@ function proximity(){
   // seul geste du jeu sans plaque : injoignable au doigt, alors que la bulle
   // réclamait une touche que le téléphone n'a pas.
   if(panneau){ boutonRose(null);
+    /* La réponse se lit **au pied du panneau**, avec le mot auquel elle
+       répond. C'est la forme que ce jeu donne à tout : le cadeau du jour
+       est dans le coffre, la commande au pas de la porte, et une réponse
+       n'a de sens qu'à côté de ce qu'elle répond. Dans un panneau, ce
+       serait une boîte de réception.
+
+       Qui a répondu dépend d'où l'on est : chez soi c'est toi, chez
+       quelqu'un c'est lui. `deQui()` élide devant une voyelle — « d'Inès »
+       et non « de Inès ». */
     bulle('sign'+panneau.x+'-'+panneau.y,
-    '<b>'+esc(panneau.by)+'</b> a écrit : « '+esc(panneau.txt)+' »'); return; }
+    '<b>'+esc(panneau.by)+'</b> a écrit : « '+esc(panneau.txt)+' »'+
+    (panneau.rep
+      ? '<br>↩ '+(visiting ? esc(world.owner||'')+' a répondu' : 'Tu as répondu')+
+        ' : « '+esc(panneau.rep)+' »'
+      : '')); return; }
   if(souvenirProche){ boutonRose('Ramener un souvenir');
     bulle('souv'+objet.x+'-'+objet.y,
     unObjet(objet.t,true,true)+' de chez '+esc(world.owner)+
@@ -7653,6 +7997,7 @@ function buildIle(){
   notes.slice(-8).forEach(m=>{
     const li=document.createElement('li');
     li.style.display='flex'; li.style.alignItems='baseline'; li.style.gap='8px';
+    li.style.flexWrap='wrap';          // la réponse passe à la ligne sous le mot
     const t=document.createElement('span'); t.style.flex='1';
     t.innerHTML='<b>'+esc(m.auteur_nom)+'</b> \u2014 '+esc(m.texte)+(m.masque?' <i style="opacity:.6">(masqu\u00e9)</i>':'');
     li.appendChild(t);
@@ -7679,6 +8024,73 @@ function buildIle(){
       };
       li.appendChild(d);
     }
+    /* ---- la réponse ----
+       Le livre d'or ne parlait que dans un sens : on plantait un mot chez
+       un ami, il le lisait, et il n'y avait plus aucune raison de
+       repasser. Or tout ce jeu tient sur « l'île grandit parce que des
+       gens sont passés », et une réponse est exactement ce qui fait
+       revenir quelqu'un.
+
+       Trois choses à ne pas défaire :
+
+       1. **Elle ne rapporte rien.** Elle s'écrit chez soi, donc c'est un
+          geste solitaire, et un geste solitaire ne paie pas dans ce jeu.
+          Ce qui paie, c'est que l'autre revienne planter un mot — et
+          c'est déjà payé.
+       2. **Même condition que la modération** (`jeModere && m.id &&
+          cible`) : sur une île de démo ou hors ligne, il n'y a pas de
+          ligne en base où écrire, et une réponse qu'on perdrait au
+          rechargement serait pire que pas de réponse.
+       3. **Un champ vide efface la réponse**, il n'en écrit pas une de
+          zéro caractère : c'est le geste qu'on attend en vidant le champ,
+          et `repondreAuMot()` rend `null` pour le dire.
+       4. **Le champ se déplie, il n'est pas là d'avance.** Huit mots à
+          l'écran font huit champs, et le livre d'or devenait un
+          formulaire. C'est la forme déjà tenue par la boutique, le viseur
+          et la carte postale : on ouvre, on voit ce qu'on fait, puis on
+          fait. Le dépli est **local** — il ne passe pas par `buildAll()`,
+          qui reconstruit le panneau entier et rangerait le champ au
+          premier caractère tapé, comme pour `textField()`. */
+    const bloc=document.createElement('div');
+    bloc.style.cssText='flex:1 1 100%';
+    if(m.reponse){
+      const r=document.createElement('div');
+      r.style.cssText='font-size:13px;color:var(--ink-2);margin-top:2px';
+      r.innerHTML='↩ <b>'+esc(world.owner||'')+'</b> a répondu : « '+esc(m.reponse)+' »';
+      bloc.appendChild(r);
+    }
+    if(jeModere&&m.id&&cible){
+      const ouvrir=document.createElement('button');
+      ouvrir.className='chip'; ouvrir.type='button';
+      ouvrir.style.cssText='padding:1px 8px;margin-top:4px';
+      ouvrir.textContent=m.reponse?'changer ma réponse':'répondre';
+      ouvrir.onclick=()=>{
+        const ligne=document.createElement('div');
+        ligne.style.cssText='display:flex;gap:6px;align-items:center;margin-top:4px';
+        const ri=document.createElement('input'); ri.type='text'; ri.maxLength=200;
+        ri.value=m.reponse||'';
+        // `placeholder` est une propriété, pas du HTML : l'échapper y
+        // afficherait « Ana&#39;s » en clair. `esc()` ne sert qu'à ce qui
+        // part en innerHTML.
+        ri.placeholder='Répondre à '+m.auteur_nom+'…';
+        ri.style.flex='1';
+        const rb=document.createElement('button'); rb.className='btn primary'; rb.type='button';
+        rb.style.padding='2px 10px'; rb.textContent='Envoyer';
+        rb.onclick=async()=>{
+          try{
+            m.reponse=await store.repondreAuMot(m.id, ri.value);
+            replanter(world); son('mot'); buildAll();
+            say(m.reponse
+              ? 'Réponse envoyée. <b>'+esc(m.auteur_nom)+'</b> la verra en repassant.'
+              : 'Réponse effacée.');
+          }catch(e){ say('Réponse impossible : '+esc(e.message||e)); }
+        };
+        ligne.appendChild(ri); ligne.appendChild(rb);
+        bloc.replaceChild(ligne, ouvrir); ri.focus();
+      };
+      bloc.appendChild(ouvrir);
+    }
+    if(bloc.childNodes.length) li.appendChild(bloc);
     ul.appendChild(li);
   });
   gf.appendChild(ul);
@@ -8300,6 +8712,7 @@ function etatObjet(o,t){
   if(o.t==='girouette'||o.t==='carillon') return t;
   if(o.t==='boitelettres') return boitePleine(o);
   if(o.t==='potager') return pousseDuPotager();
+  if(o.t==='dalle') return degreDeDalle(o);
   return coffreOuvert(o);
 }
 
@@ -9714,6 +10127,9 @@ function expliquerLesShells(n){
 async function go(slug){
   finBalade(false);                      // le chien ne suit pas jusque chez les voisins
   fermerLeViseur();
+  // Sans ça, une dalle à la même case sur l'île d'arrivée resterait muette :
+  // la clé n'aurait pas changé, donc on croirait être encore dessus.
+  dalleSous=null; dalleFrappee=null;
   // Une carte postale préparée chez soi puis envoyée depuis l'île d'un
   // autre montrerait l'île d'un autre. Le comptoir se ferme en partant,
   // comme le viseur.

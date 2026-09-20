@@ -947,5 +947,101 @@ c.titre('16. la bourse n’annonce que ce qu’un geste peut aller chercher');
   await ctx.close();
 }
 
+c.titre('17. répondre à un mot, et la réponse se lit au pied du panneau');
+{
+  /* Le livre d'or ne parlait que dans un sens : on plantait un mot chez un
+     ami, il le lisait, et il n'y avait plus aucune raison de repasser.
+
+     Quatre choses à éprouver, et la première est celle qui compte le
+     plus : **une réponse est du texte libre qui arrive sur l'écran de
+     quelqu'un d'autre.** C'est le deuxième chemin de ce genre dans tout le
+     jeu, après le mot lui-même — et celui-là, le contrôle 15 le couvre
+     depuis le 19/09. Un nouveau chemin de texte qui ne serait pas échappé
+     rouvrirait exactement le trou que ce contrôle-là surveille. */
+  const DEDANS = '<img src=x onerror="document.title=\'PERCÉ\'">';
+  // Le mot est semé **sous les pieds** — case (8,10), la même que les
+  // objets — pour que `proximity()` en fasse une bulle sans avoir à
+  // marcher jusqu'au panneau.
+  const { ctx, page, erreurs } = await ouvrir(null,
+    [['Ana', 'Ton île est belle', '', 8, 10]]);
+
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'ile');
+    if (b) b.click();
+  });
+  await attendre(700);
+
+  /* 1. **Le livre d'or n'est pas un formulaire.** Huit mots à l'écran
+        feraient huit champs ; le champ se déplie sur un geste, comme le
+        comptoir de la boutique et le viseur de l'appareil. */
+  // Relevée **avant** de répondre : comparer à un nombre écrit en dur
+  // serait un seuil calibré sur une machine, la faute du 19/09.
+  const avantSous = await page.evaluate(() =>
+    (document.getElementById('hud-sous') || {}).textContent || '');
+  const avant = await page.evaluate(() => ({
+    champs: document.querySelectorAll('#p-ile .gb li input').length,
+    chips: [...document.querySelectorAll('#p-ile .gb li button')].map(b => b.textContent),
+  }));
+  console.log('     avant le dépli : ' + avant.champs + ' champ(s) · ' + avant.chips.join(' · '));
+  c.dit(avant.chips.includes('répondre'), 'le mot d’Ana porte un bouton « répondre »');
+  c.dit(avant.champs === 0, 'et aucun champ n’est ouvert d’avance (' + avant.champs + ')');
+
+  const deplie = await page.evaluate(() => {
+    const li = [...document.querySelectorAll('#p-ile .gb li')].find(x => /Ana/.test(x.innerText));
+    const o = li && [...li.querySelectorAll('button')].find(b => b.textContent === 'répondre');
+    if (!o) return null;
+    o.click();
+    return { champs: li.querySelectorAll('input').length,
+             envoyer: !![...li.querySelectorAll('button')].find(b => b.textContent === 'Envoyer') };
+  });
+  c.dit(!!deplie && deplie.champs === 1, 'le bouton déplie exactement un champ');
+  c.dit(!!deplie && deplie.envoyer, 'et le bouton qui envoie apparaît avec lui');
+
+  /* 2. **La réponse est échappée.** On en envoie une qui essaie de
+        s'exécuter, et on demande au navigateur ce qu'il en a fait — pas à
+        une regex qui chercherait `esc(` dans la source. C'est la leçon du
+        contrôle 12, et c'est déjà la forme du contrôle 15. */
+  await page.evaluate(t => {
+    const li = [...document.querySelectorAll('#p-ile .gb li')].find(x => /Ana/.test(x.innerText));
+    li.querySelector('input').value = 'Merci ! ' + t;
+    [...li.querySelectorAll('button')].find(b => b.textContent === 'Envoyer').click();
+  }, DEDANS);
+  await attendre(900);
+
+  const vu = await page.evaluate(() => ({
+    titre: document.title,
+    images: document.querySelectorAll('#p-ile img').length,
+    ligne: ([...document.querySelectorAll('#p-ile .gb li')]
+      .find(x => /Ana/.test(x.innerText)) || {}).innerText || '',
+  }));
+  c.dit(vu.titre !== 'PERCÉ', 'la réponse ne s’exécute pas (titre : ' + vu.titre.slice(0, 28) + '…)');
+  c.dit(vu.images === 0, 'et elle ne crée aucune <img> (' + vu.images + ')');
+  c.dit(/onerror/.test(vu.ligne), 'elle s’affiche en clair, balise comprise');
+
+  /* 3. **La réponse se lit au pied du panneau**, pas seulement dans le
+        panneau. C'est la forme que ce jeu donne à tout — le cadeau est
+        dans le coffre, la commande au pas de la porte — et une réponse n'a
+        de sens qu'à côté de ce qu'elle répond. Le mot est sous les pieds,
+        donc `proximity()` en fait une bulle à l'image suivante. */
+  await attendre(600);
+  const bulle = (await etat(page)).murmure;
+  console.log('     bulle au panneau : ' + bulle.slice(0, 90));
+  c.dit(/a écrit/.test(bulle), 'la bulle du panneau dit bien ce qu’Ana a écrit');
+  c.dit(/Tu as répondu/.test(bulle), 'et elle porte la réponse juste en dessous');
+  c.dit(/onerror/.test(bulle), 'la réponse y est aussi en clair, pas exécutée');
+
+  /* 4. **Répondre ne rapporte rien.** C'est un geste solitaire, écrit chez
+        soi, et un geste solitaire ne paie pas dans ce jeu : c'est la règle
+        tenue depuis le 16/09, et le potager comme la dalle qui chante l'ont
+        tenue aussi. Ce qui paie, c'est que l'autre revienne. */
+  const apres = await page.evaluate(() =>
+    (document.getElementById('hud-sous') || {}).textContent || '');
+  console.log('     bourse après la réponse : ' + apres.trim() + ' (' + avantSous.trim() + ' avant)');
+  c.dit(apres === avantSous,
+        'la bourse n’a pas bougé — une réponse ne paie rien (' + apres.trim() + ')');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
 await nav.close(); s.fermer();
 process.exit(c.fin() ? 1 : 0);

@@ -33,6 +33,10 @@ depuis le 17/09/2026.
     supabase/2026-09-17_commande.sql  la commande du jour et le sac, rejouable
     supabase/2026-09-18_visites.sql   le crédit du jour quitte le mur, rejouable
     supabase/2026-09-18_parrainage.sql  le parrainage et les réglages, rejouable
+    supabase/2026-09-19_objets_chers.sql  trois lignes de catalogue, rejouable
+    supabase/2026-09-19_batiments.sql   six lignes de catalogue, rejouable
+    supabase/2026-09-20_slugs_reserves.sql  les huit pages publiques, rejouable
+    supabase/2026-09-20_reponses.sql  répondre à un mot — **à jouer**, rejouable
     _redirects          Cloudflare Pages : catch-all, toute adresse sert index.html
     build.sh            copie dans dist/ les seuls fichiers à publier
 
@@ -124,6 +128,25 @@ La même précaution vaut pour `bourses`, `livraisons` et `visites`. Leur
 refus à elles a été mesuré autrement — depuis le client, avec la clé
 publishable, donc en rôle `anon` pour de vrai — ce qui est équivalent et
 reste valable.
+
+### `supabase/2026-09-20_reponses.sql` — **à jouer**
+
+Répondre à un mot laissé chez soi. Deux colonnes sur `mots`, un trigger,
+**aucune policy nouvelle** : `mots_maj` ouvre déjà l'update au
+propriétaire de l'île. Rejouable.
+
+Il ferme au passage un trou qui datait du 16/09 : `mots_maj` laissait le
+propriétaire réécrire le **texte** d'un visiteur en gardant sa signature.
+`mots_figer()` gèle tout ce qui appartient à l'auteur.
+
+Son contrôle se joue **tel quel**, sans `set local role anon`, et c'est la
+différence qui compte : un trigger n'est pas une policy, donc le rôle
+`postgres` de l'éditeur ne le contourne pas. Le fichier porte les trois
+requêtes à lancer et leur rendu attendu.
+
+Tant qu'il n'est pas joué, `motsDe()` redemande les mots **sans** la
+colonne `reponse` : le livre d'or marche, sans les réponses, et rien ne se
+perd entre le déploiement du client et le passage du SQL.
 
 `supabase/2026-09-16_bourse_serveur.sql` **est joué**. Il n'a pas pu
 l'être le jour où il a été écrit, faute de Postgres sous la main, et le
@@ -306,7 +329,8 @@ rien ne touche la base de production).
     toi.mjs         reprendre son bonhomme, le nom de l'île, l'éditeur de visage
     design.mjs      la planche de couleurs, les contrastes, le voile, les icônes
     vivant.mjs      ce qui bouge tout seul : vent, phare, constellations,
-                    météo, saisons — et que rien de tout ça n'entre en base
+                    météo, saisons, les habitants du village, les dalles
+                    qui chantent — et que rien de tout ça n'entre en base
 
 Ils existent parce que les défauts qu'ils surveillent ont tous été
 trouvés à l'œil, tard, et qu'aucun n'aurait survécu à un contrôle : des
