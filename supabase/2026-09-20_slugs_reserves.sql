@@ -1,9 +1,14 @@
 -- ============================================================
 --  Les adresses des pages éditoriales deviennent des slugs réservés
---  20/09/2026
+--  20/09/2026 — **joué le 20/09/2026 au soir**
 --
 --  **Rejouable** : un seul `create or replace`. Le rejouer réécrit la même
 --  fonction, et rien d'autre.
+--
+--  Qu'il ait été joué **sur le bon projet** ne se déduit pas d'un fichier :
+--  c'est `.github/workflows/verifier-les-slugs.yml` qui le demande à la
+--  base, en lecture seule, et qui repart à chaque fois que ce dossier ou
+--  `functions/_commun.js` bougent.
 --
 --  À jouer dans l'éditeur SQL du projet **dansisland**
 --  (cgputbitzfgokpwbbind), jamais dans celui de mamash. Vérifier l'en-tête
