@@ -149,6 +149,13 @@ jobs:
             echos "   essai $i : servi $la, attendu $ici — on repatiente 12 s"
             sleep 12
           done
+          # Les contrôles suivants relisent la page servie : elle est déjà
+          # dans `/tmp/servi.html`, on ne la redemande pas. Sans cette
+          # ligne, `$page` restait **non défini** et `set -u` a tué le job
+          # juste après avoir écrit que le site était à jour — mesuré, run
+          # 104. Un pas qui casse après avoir dit la vérité est presque pire
+          # qu'un pas qui ment : on lit le rouge, pas la ligne du dessus.
+          page=$(cat /tmp/servi.html 2>/dev/null || true)
           if [ "$vu" = "1" ]; then
             echos "✅ Le site porte l'empreinte du dépôt : ce commit est en ligne."
             resume "✅ **Déployé** — la page servie porte l'empreinte \`$ici\` du dépôt."
