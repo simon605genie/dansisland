@@ -398,7 +398,7 @@ export const VAGUE = `<svg class="vague" viewBox="0 0 1200 26" preserveAspectRat
 const CINQ = [
   ['Moi', 'Crée ton personnage', '/comment-jouer',
    '<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 20c0-4.1 3.4-6.5 7.5-6.5s7.5 2.4 7.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'],
-  ['Maison', 'Construis et décore', '/construire-son-ile',
+  ['Maison', 'Construis et décore', '/comment-jouer#ta-maison',
    '<path d="M3.5 10.5 12 3.5l8.5 7M5.5 9.5V20h13V9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M10 20v-5h4v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>'],
   ['Île', 'Façonne ton paradis', '/construire-son-ile',
    '<path d="M2 19c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 15c0-3.6 3.1-5.5 7-5.5s7 1.9 7 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 10V5M12 5c-2.5-1.8-4.6-1-5.4 1 1.9-.7 3.4 0 4.1.9M12 5c2.5-1.8 4.6-1 5.4 1-1.9-.7-3.4 0-4.1.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'],
@@ -413,7 +413,28 @@ const CINQ = [
    « / » : cinq liens vers la même adresse dans une seule navigation, ce
    qui ne dit rien à un lecteur d'écran et rien à un moteur. Une carte qui
    pointe sur la page qu'on lit déjà est le même défaut d'un cran plus
-   loin, d'où le `<div>`. */
+   loin, d'où le `<div>`.
+
+   **Les cinq cibles doivent être deux à deux distinctes**, et c'est ce qui
+   fait tenir tout le reste. Il y a cinq cartes pour quatre pages : au
+   premier jet, Maison et Île pointaient toutes deux sur
+   `/construire-son-ile`, donc sur cette page **deux** cartes devenaient des
+   `<div>` — deux repères « tu es ici » côte à côte dans une rangée de cinq,
+   ce qui ne se lit pas comme « cette page parle des deux » mais comme un
+   défaut d'affichage. Et les trois autres pages y montraient deux liens
+   vers la même adresse.
+
+   Le remède n'est pas de compter les `<div>` : c'est que **deux cartes ne
+   visent jamais le même endroit**. Maison va au paragraphe qui lui répond
+   (`/comment-jouer#ta-maison` — les murs, le toit, les volets, et les trois
+   pièces), Île garde la page de la construction. Au plus un `<div>` devient
+   alors vrai par construction, et personne n'a à y penser.
+
+   Une ancre dans une cible n'est pas décorative : elle doit exister dans la
+   page visée, sinon le saut ne fait rien et rien ne le dit. Le contrôle 4 de
+   `test/robots.mjs` vérifie les deux — l'unicité des cibles et l'existence
+   de chaque ancre — et il a été éprouvé en remettant le vrai défaut. Trouvé
+   en **regardant** la page rendue, pas en relisant cette liste. */
 export function rang(ici) {
   return '<nav class="rang" aria-label="Ce qu’on fait dans le jeu">' + CINQ.map(([n, d, ou, g]) => {
     const dedans = `<span class="rond" aria-hidden="true"><svg viewBox="0 0 24 24">${g}</svg></span>` +

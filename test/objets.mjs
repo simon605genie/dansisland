@@ -885,5 +885,67 @@ c.titre('15. le livre d’or affiche le texte des autres, il ne l’exécute pas
   await ctx.close();
 }
 
+c.titre('16. la bourse n’annonce que ce qu’un geste peut aller chercher');
+{
+  /* La phrase du haut de la Boutique disait « il te reste 84 shells à
+     gagner aujourd'hui » : la somme de **tous** les plafonds. Or 49 de ces
+     84 sont `mot_recu` et `commande_recue` — ils tombent quand quelqu'un
+     vient, et aucune action du joueur ne les déclenche. Un enfant qui lit
+     84 devant un objet à 50 croit qu'il l'aura ce soir en se donnant du
+     mal ; il peut en atteindre 35.
+
+     Le contrôle ne relit pas la liste des gains, il **recompose la somme
+     depuis les jauges affichées** et la compare au nombre annoncé. Une
+     mesure qui lirait la même liste que le code mesuré hériterait de ses
+     angles morts — c'est la phrase que ce dépôt a écrite quatre fois, après
+     la regex qui cherchait des sélecteurs, le harnais qui ne connaissait que
+     les fenêtres étroites, le seuil calibré sur une police, et l'apostrophe
+     fabriquée avec le même caractère que le code éprouvé. */
+  const { ctx, page, erreurs } = await onglet(nav, { taille: { width: 1280, height: 900 } });
+  await page.goto(s.url, { waitUntil: 'load' });
+  await attendre(2000);
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'boutique');
+    if (b) b.click();
+  });
+  await attendre(800);
+
+  const v = await page.evaluate(() => {
+    const p = document.getElementById('p-boutique');
+    const phrase = [...p.querySelectorAll('p,div')].map(e => e.textContent.trim())
+      .find(t => /aujourd’hui/.test(t) && /shell/.test(t)) || '';
+    /* Les jauges disent, pour chaque gain, combien reste à prendre. Le
+       libellé « Recevoir … chez toi » est ce qui distingue les deux
+       familles à l'écran : c'est le seul signe dont dispose le lecteur, donc
+       c'est celui sur lequel la mesure s'appuie. */
+    let soi = 0, autres = 0, n = 0;
+    for (const g of p.querySelectorAll('.gain')) {
+      const nom = g.querySelector('b').textContent;
+      const [fait, plaf] = g.querySelector('.n').textContent.split('/').map(x => +x.trim());
+      if (!isFinite(fait) || !isFinite(plaf)) continue;
+      n++;
+      if (/^Recevoir/.test(nom)) autres += plaf - fait; else soi += plaf - fait;
+    }
+    return { phrase, soi, autres, n };
+  });
+
+  const nb = (v.phrase.match(/(\d+) shell/g) || []).map(x => parseInt(x, 10));
+  console.log('     phrase : ' + v.phrase);
+  console.log('     jauges : ' + v.n + ' · par un geste ' + v.soi + ' · si on passe ' + v.autres);
+  // Un contrôle qui ne dit pas combien il a lu peut passer au vert en ne
+  // regardant rien : sept jauges, ou la mesure ne vaut pas.
+  c.dit(v.n === 7, 'les sept jauges ont été lues (' + v.n + ')');
+  c.dit(v.autres > 0, 'et certaines ne dépendent que des visiteurs (' + v.autres + ')');
+  c.dit(nb.length === 2, 'la phrase annonce deux nombres, pas un (' + nb.join(' et ') + ')');
+  c.dit(nb[0] === v.soi,
+        'le premier est ce qu’un geste va chercher (' + nb[0] + ' = ' + v.soi + ')');
+  c.dit(nb[1] === v.autres,
+        'le second est ce qui dépend des visiteurs (' + nb[1] + ' = ' + v.autres + ')');
+  c.dit(nb[0] !== v.soi + v.autres,
+        'et jamais la somme des deux, qui promettrait ' + (v.soi + v.autres));
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+}
+
 await nav.close(); s.fermer();
 process.exit(c.fin() ? 1 : 0);

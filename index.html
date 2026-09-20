@@ -7284,31 +7284,47 @@ function buildBoutique(){
   // Ce qui rapporte aujourd'hui, en quatre lignes plutôt qu'en quatre
   // paragraphes. Une barre dit d'un coup d'œil ce qu'il reste à prendre ;
   // le texte, lui, disait la même chose et se sautait.
+  /* Le quatrième champ, `soi`, dit si **un geste du joueur** peut aller
+     chercher ce gain. Il ne décore pas : c'est lui qui sépare les deux
+     nombres de la phrase du haut, et sans lui elle ment.
+
+     Elle annonçait « il te reste 84 shells à gagner aujourd'hui » — la
+     somme de tous les plafonds. Or 49 de ces 84 sont `mot_recu` et
+     `commande_recue` : ils tombent quand **quelqu'un vient**, et aucune
+     action du joueur ne les déclenche. Un enfant qui lit 84 devant un
+     objet à 50 croit qu'il l'aura ce soir en se donnant du mal ; il peut
+     en atteindre 35.
+
+     La distinction existait déjà — en prose, dans les deux descriptions
+     qui disent « Rien à faire : partage l'adresse de ton île ». Une règle
+     qui ne vit que dans une phrase ne peut pas être comptée : c'est la
+     leçon de `NIVEAU`, de `FONCTIONNEL` et du `'f'` des noms féminins, et
+     elle vaut ici aussi. */
   const f=b.faits||{}, touffes=touffesSur(mine);
   const gains=[
     ['Tondre la pelouse', 'tonte', touffes
       ? ('Marche sur les hautes herbes : 1 shell la touffe, et il en reste <b>'+touffes+'</b> sur ton île.')
-      : 'La pelouse est nette. Les herbes repousseront demain.'],
+      : 'La pelouse est nette. Les herbes repousseront demain.', true],
     ['Sortir le chien', 'promenade',
-      'Va voir ton chien, sors-le, et reste près de lui le temps d’un tour de l’île. Il y en a un dans ton atelier, au rayon <b>Bestioles</b>.'],
+      'Va voir ton chien, sors-le, et reste près de lui le temps d’un tour de l’île. Il y en a un dans ton atelier, au rayon <b>Bestioles</b>.', true],
     ['Ramasser ce que la mer laisse', 'maree',
       'Deux fois par jour la mer se retire et découvre un anneau de sable mouillé au bord de l’île. '+
-      'Va y marcher : elle y laisse des choses, <b>'+GAIN_MAREE+' shells</b> chacune.'],
+      'Va y marcher : elle y laisse des choses, <b>'+GAIN_MAREE+' shells</b> chacune.', true],
     ['Laisser un mot chez quelqu’un', 'mot_pose',
-      '<b>'+GAIN_MOT_POSE+' shells</b> par personne, une fois par jour. Va dans l’onglet <b>Voisins</b>.'],
+      '<b>'+GAIN_MOT_POSE+' shells</b> par personne, une fois par jour. Va dans l’onglet <b>Voisins</b>.', true],
     ['Recevoir un mot chez toi', 'mot_recu',
-      '<b>'+GAIN_MOT_RECU+' shells</b> par personne qui passe. Rien à faire : partage l’adresse de ton île.'],
+      '<b>'+GAIN_MOT_RECU+' shells</b> par personne qui passe. Rien à faire : partage l’adresse de ton île.', false],
     ['Porter la commande du jour', 'commande',
-      'Remplis ton sac sur le sable à marée basse, puis va déposer le panier sur le pas de la porte de quelqu’un. Une fois par jour. Va dans l’onglet <b>Voisins</b>.'],
+      'Remplis ton sac sur le sable à marée basse, puis va déposer le panier sur le pas de la porte de quelqu’un. Une fois par jour. Va dans l’onglet <b>Voisins</b>.', true],
     ['Recevoir la commande chez toi', 'commande_recue',
-      '<b>'+GAIN_COMMANDE_RECUE+' shells</b> par personne qui t’en apporte une. Rien à faire : partage l’adresse de ton île.']
+      '<b>'+GAIN_COMMANDE_RECUE+' shells</b> par personne qui t’en apporte une. Rien à faire : partage l’adresse de ton île.', false]
   ];
   const fg=field('Ce qui rapporte aujourd’hui');
   const box=document.createElement('div'); box.className='gains';
-  let reste=0;
-  gains.forEach(([nom,cle,quoi])=>{
+  let reste=0, resteSiOnPasse=0;
+  gains.forEach(([nom,cle,quoi,soi])=>{
     const p0=PLAFOND[cle]||0, fait=Math.min(f[cle]||0,p0), plein=p0&&fait>=p0;
-    if(!plein) reste+=p0-fait;
+    if(!plein){ if(soi) reste+=p0-fait; else resteSiOnPasse+=p0-fait; }
     const d=document.createElement('div'); d.className='gain'+(plein?' plein':'');
     d.innerHTML='<b>'+nom+'</b><span class="n">'+fait+' / '+p0+'</span>'+
       '<div class="bar"><i style="width:'+(p0?Math.round(fait/p0*100):0)+'%"></i></div>'+
@@ -7335,10 +7351,22 @@ function buildBoutique(){
   const apres=document.createDocumentFragment();
   apres.appendChild(rule()); apres.appendChild(fg);
 
-  p.appendChild(hint(reste
-    ? ('Il te reste <b>'+reste+' shell'+(reste>1?'s':'')+'</b> à gagner aujourd’hui. Ce qui les donne est <b>en bas de cet onglet</b>.'
-       )
-    : 'Tu as pris tout ce que l’île donnait aujourd’hui. Ça repart demain — le détail est <b>en bas de cet onglet</b>.'));
+  /* Deux nombres, et jamais un seul. Le premier est ce qu'un geste va
+     chercher — c'est lui qui répond à « est-ce que je peux m'offrir ça
+     ce soir ? ». Le second ne s'obtient pas en jouant plus, il s'obtient
+     en ayant des visiteurs, et le dire ainsi n'est pas une précaution de
+     langage : c'est la règle centrale du jeu, **l'île grandit parce que
+     des gens sont passés**, énoncée à l'endroit exact où l'enfant compte
+     son argent. */
+  const sh=n=>'<b>'+n+' shell'+(n>1?'s':'')+'</b>';
+  p.appendChild(hint(
+    reste
+      ? ('Il te reste '+sh(reste)+' à aller chercher aujourd’hui. Ce qui les donne est <b>en bas de cet onglet</b>.'
+         + (resteSiOnPasse ? ' Et '+sh(resteSiOnPasse)+' de plus si des gens passent sur ton île — ça, ça ne se joue pas, ça se partage.' : ''))
+      : resteSiOnPasse
+        ? ('Tu as pris tout ce que l’île donnait aujourd’hui. Il reste '+sh(resteSiOnPasse)
+           + ' si des gens passent sur ton île : partage son adresse, dans l’onglet <b>Voisins</b>.')
+        : 'Tu as pris tout ce que l’île donnait aujourd’hui. Ça repart demain — le détail est <b>en bas de cet onglet</b>.'));
   p.appendChild(rule());
 
   const choisi = vitrine ? BOUTIQUE.find(a=>a.k===vitrine) : null;

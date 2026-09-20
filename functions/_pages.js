@@ -72,7 +72,7 @@ const CONTENU = {
     tenue, un chapeau ou une couronne. Rien n’est verrouillé&nbsp;: un garçon peut
     porter une couronne et des cheveux longs.</p>
 
-    <h2>2. Ta maison</h2>
+    <h2 id="ta-maison">2. Ta maison</h2>
     <p>Onglet <b>Maison</b>. Les murs, le toit, la porte, les volets, une cheminée.
     Tu peux la déplacer d’un clic. Et tu peux <b>entrer dedans</b>&nbsp;: trois pièces à
     décorer, un salon, une chambre, un atelier — avec des tapis, des meubles, des

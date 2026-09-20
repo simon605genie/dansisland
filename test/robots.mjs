@@ -204,5 +204,63 @@ c.titre('3. les quatre pages éditoriales, et les listes qui doivent s’accorde
         'et chacun porte le positionnement' + (sansGenre.length ? ' → ' + sansGenre.join(' / ') : ''));
 }
 
+c.titre('4. le rang des cinq — cinq cartes, cinq endroits');
+{
+  /* Ce contrôle **rend** les pages au lieu de lire la source : `rang()` et
+     `rendre()` sont des modules ES ordinaires, donc Node peut les appeler.
+     Seul Supabase manquerait, et les quatre pages éditoriales ne lui
+     demandent rien. C'est ce qui permet de vérifier le HTML qui part
+     vraiment, plutôt qu'une expression régulière sur une liste.
+
+     Le défaut qui vaut ce contrôle a été vu **sur la page rendue** : Maison
+     et Île pointaient toutes deux sur `/construire-son-ile`, donc cette
+     page-là montrait **deux** repères « tu es ici » côte à côte, et les
+     trois autres deux liens vers la même adresse. Voir le commentaire de
+     `rang()` dans `_commun.js`. */
+  const { rang, PAGES } = await import('../functions/_commun.js');
+  const { rendre } = await import('../functions/_pages.js');
+
+  const cibles = [...rang('').matchAll(/<a href="([^"]+)"/g)].map(m => m[1]);
+  console.log('     cibles   : ' + cibles.join(' · '));
+  // Un contrôle qui ne dit pas combien il a lu peut passer au vert en ne
+  // regardant presque rien. C'est la leçon des trois prénoms au lieu de vingt.
+  c.dit(cibles.length === 5, 'les cinq cartes ont été lues (' + cibles.length + ')');
+  const doublons = cibles.filter((v, i) => cibles.indexOf(v) !== i);
+  c.dit(doublons.length === 0,
+        'et elles mènent à cinq endroits différents' +
+        (doublons.length ? ' → ' + [...new Set(doublons)].join(', ') : ''));
+
+  /* L'unicité des cibles *est* la garantie « au plus un repère ». On la
+     vérifie quand même sur le rendu, parce que c'est elle qu'on voit : une
+     propriété démontrée sur la liste et fausse à l'écran ne vaut rien. */
+  const ou = [...PAGES.map(p => p.chemin), ''];
+  const trop = ou.filter(p => (rang(p).match(/<div>/g) || []).length > 1);
+  c.dit(trop.length === 0,
+        'aucune page ne montre deux repères « tu es ici »' +
+        (trop.length ? ' → ' + trop.join(', ') : ''));
+
+  const rendus = {};
+  for (const p of PAGES) rendus[p.chemin] = await (await rendre(p.chemin, {
+    next: () => new Response('next', { status: 404 }) })).text();
+  c.dit(Object.keys(rendus).length === 4,
+        'les quatre pages ont été rendues (' + Object.keys(rendus).length + ')');
+
+  /* Une cible doit exister des deux côtés : la page, et l'ancre dedans.
+     Une ancre absente ne lève rien — le saut ne fait simplement rien, et
+     personne ne peut l'expliquer au lecteur. C'est le défaut silencieux que
+     ce dépôt traque partout. */
+  const perdues = [], sansAncre = [];
+  for (const t of cibles) {
+    const [chemin, ancre] = t.split('#');
+    if (!rendus[chemin]) { perdues.push(t); continue; }
+    if (ancre && rendus[chemin].indexOf('id="' + ancre + '"') < 0) sansAncre.push(t);
+  }
+  c.dit(perdues.length === 0,
+        'chaque carte vise une page qui existe' + (perdues.length ? ' → ' + perdues.join(', ') : ''));
+  c.dit(sansAncre.length === 0,
+        'et chaque ancre existe dans la page visée' +
+        (sansAncre.length ? ' → ' + sansAncre.join(', ') : ''));
+}
+
 s.fermer();
 process.exit(c.fin() ? 1 : 0);
