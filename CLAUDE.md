@@ -3014,6 +3014,38 @@ Deux choses apprises :
    huit, et la remet en rouge en nommant le fichier. C'est, une fois de
    plus, le défaut du contrôle 9 qui ne lisait pas `GRANDS`.
 
+## Le contrôle de déploiement attendait une phrase — 20/09/2026
+
+Le site a été publié, et **le contrôle a répondu « Pas déployé »**. Six
+minutes d'attente, puis un rouge, sur un déploiement réussi.
+
+Son témoin était `Ton petit endroit pour ralentir`, **recopié en dur dans
+le workflow**. Cette phrase a quitté l'accueil le matin même, quand le `h1`
+est devenu « Construis ton île ». Le contrôle ne vérifiait donc plus le
+site : il vérifiait que personne n'avait touché à une phrase.
+
+C'est, mot pour mot, la leçon écrite une heure plus tôt pour
+`test/robots.mjs` — « une liste recopiée dans un contrôle est une liste de
+trop » — et je ne l'avais pas cherchée ici. **Une leçon apprise dans un
+fichier ne s'applique pas toute seule aux autres.**
+
+Trois témoins corrigés, et la distinction compte :
+
+1. **L'attente lit l'empreinte du dépôt.** `dist/index.html` *est* ce qu'on
+   publie, donc son sha256 répond à « ce commit est-il en ligne ? » sans
+   rien savoir de ce qu'il contient, et sans jamais se périmer. Le contrôle
+   1 ter faisait déjà exactement ça vingt lignes plus bas : il n'y avait
+   aucune raison que l'attente regarde autre chose. Les deux partagent
+   maintenant le même calcul — deux calculs de la même chose finissent par
+   diverger.
+2. **Les deux autres passent à `id="world"`**, le canvas du jeu. Là, la
+   question posée est « cet hôte sert-il **le jeu** ? » — pour distinguer
+   la page d'une fonction du repli par le catch-all — et il faut donc bien
+   une marque dans la page. Mais une marque de **structure** : une accroche
+   se réécrit un matin, un `id` sur lequel le moteur s'appuie, non.
+3. **`build.sh` ne copie pas `.github/`**, donc corriger ce fichier ne
+   change pas l'empreinte et ne demande aucun redéploiement.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
