@@ -2702,6 +2702,318 @@ C'est la même famille que les trois prénoms au lieu de vingt et que les
 îles écrites à la main : un contrôle qui ne s'assure pas d'avoir trouvé ce
 qu'il mesure passe au vert en ne regardant rien.
 
+## Les bâtiments deviennent des bâtiments — 20/09/2026
+
+**Aucune migration, aucune clé de plus dans `mondeNu()`** : un objet posé
+reste `{t,x,y,o,c}`. Une île d'hier qui porte une ferme la voit simplement
+grandir au prochain chargement.
+
+### Ce que la mesure a dit
+
+On était **plus grand qu'une ferme**. En unités du monde, le bonhomme fait
+38 et la maison 80 :
+
+    Phare               91        Lieu de culte       58
+    Montgolfière        90        Palmier             46
+    Cabane perchée      62        École               43   ← sous un arbre
+    Moulin              60        Ferme               33   ← sous le bonhomme
+                                  Restaurant          33
+
+Les six avaient été dessinés comme des objets. Et le défaut ne se corrige
+pas en hauteur seule : **une église plus grande qu'une maison ne tient pas
+dans une case.**
+
+### `EMPRISE_ILE` — un bâtiment occupe 2x2, comme la maison
+
+C'est la seule règle, et elle est mémorable : ce qui occupe quatre cases
+est un bâtiment. `EMPRISE_ILE` est une propriété du **type**, dans le
+catalogue, au même titre que `PIVOT_ILE`, `NIVEAU` et `TAILLE` — donc rien
+n'entre dans le jsonb.
+
+Six choses à ne pas défaire :
+
+1. **`empriseCases()` ne s'appelle pas `casesDe()`, et c'est la leçon de la
+   journée.** `casesDe(m)` existait déjà — la version des meubles. Deux
+   déclarations de fonction du même nom ne lèvent **aucune erreur** : la
+   dernière gagne. Écrite sous ce nom, la mienne rendait
+   `[{x:NaN,y:NaN}]` à tous ses appelants, `NaN <= rayon` est faux, et
+   **aucune des vingt îles n'a reçu son village** — sans une ligne dans la
+   console. Trouvé en comptant les refus (6075 sur 6075, tous au même
+   test), pas à la relecture.
+2. **`couvre(o,x,y)` est le seul test d'occupation.** Un `o.x===x` laisse
+   poser un arbre dans l'église. La gomme, la rotation, la crotte du chien,
+   les îles bot et `freeTile()` passent tous par lui.
+3. **Le dessin est centré sur l'emprise et se trie à ce centre**
+   (`centreDe()`), pas à la case d'ancrage : sinon un objet posé au coin
+   sud de l'emprise passerait devant le bâtiment. `ce.x+ce.y` rend
+   exactement l'ancien `o.x+o.y+1` pour une case, et la profondeur de la
+   maison pour un 2x2 — une seule expression pour les deux.
+4. **`proximity()` détecte un bâtiment à son emprise, pas à la distance.**
+   Le centre d'un 2x2 est à `+1`, donc le coin opposé est à 1,41 case du
+   centre d'ancrage : la distance ne l'aurait jamais vu, et on aurait été
+   dans l'église sans que l'église compte. Les objets d'une case gardent le
+   test de distance, qui n'a pas bougé.
+5. **Un bâtiment n'écrase pas ce qu'il couvre, il le dit.** Un 1x1 continue
+   de remplacer en silence — c'est le geste ordinaire du pinceau — mais une
+   église posée d'un clic emporterait jusqu'à quatre objets d'un coup.
+6. **La gomme prend le bâtiment par n'importe laquelle de ses quatre
+   cases.** Viser l'angle d'ancrage serait un jeu d'adresse.
+
+### `ECH_BAT` — une échelle, pas six dessins refaits
+
+Chaque bâtiment est une trentaine de coordonnées nouées entre elles : la
+porte est une fraction de la façade, le silo est à une hauteur de mur,
+l'auvent suit une arête. Les réécrire à la main, c'est trente occasions de
+se tromper par bâtiment, sans que rien ne le signale à part l'œil. Une
+**échelle uniforme** garde toutes ces relations exactes par construction,
+et elle s'applique dans `dessinDe()`, seul endroit qui peigne un objet
+d'île — vignettes comprises.
+
+Ce que ça coûte : la largeur suit la hauteur. Mesuré, ça tombe bien.
+
+    Lieu de culte   118   1,47× la maison   le plus haut de l'île
+    École            96   1,20×
+    Ferme            88   1,10×
+    Supermarché      74   0,93×
+    Restaurant       70   0,88×
+    Coiffeur         68   0,85×
+
+Les six restent entre 35 et 49 de demi-largeur, donc **tous à l'intérieur
+de leur 2x2** (56) : aucun ne mord sur la case du voisin.
+
+**`APERCU_ECH` divise par le même facteur**, et c'est calculé, pas recopié
+(`APERCU_ECH[k]=0.60/ECH_BAT[k]`). Une vignette est une icône de 60 px, pas
+une maquette : sans ça les six déborderaient de leur case dans l'atelier,
+du facteur exact dont ils ont grandi sur l'île.
+
+### Le village des îles de démonstration, et l'exception assumée
+
+Les grands bâtiments sont posés **au nord** et **en premier** : au nord
+parce que dans cette isométrie le nord est le fond du cadre — une église de
+118 posée devant cache tout ce qui est derrière — et en premier parce que
+le décor se sème ensuite sur les cases restantes.
+
+Ils sont **payants**, et la règle du 16/09 dit qu'on ne met rien de payant
+sur une île bot. Elle tient toujours, mais elle est maintenant tenue par
+**`ramasserSouvenir()`**, qui refuse un objet payant pris sur une île
+`demo` en nommant son prix, plutôt que par l'absence de l'objet. Un village
+de démonstration sans un seul bâtiment ne montre pas le jeu ; vingt îles
+infinies qui donnent une église gratuite ne laissent rien à la Boutique.
+
+**Chez un vrai voisin, rien ne change** : un souvenir d'ami reste gratuit,
+c'est le choix écrit le 19/09 et c'est ce qui donne envie d'aller chez les
+gens.
+
+Deux pièges rencontrés en posant ces bâtiments, tous deux vus **sur une
+capture** :
+
+1. **`dansLeRayon()` et pas « la tuile n'est pas de l'eau ».** Le
+   restaurant de « La Crique » flottait au nord, au-dessus de la mer : les
+   tuiles hors du rayon ne portent pas toutes la valeur eau. C'est le rayon
+   qui dit où est l'île ; la tuile ne dit que ce qui y est peint.
+2. **Une case de marge sur ce rayon.** Le balayage part du nord, donc sans
+   elle le bâtiment se pose sur la toute dernière rangée de terre et se lit
+   comme perché au bord de la falaise.
+
+### Agrandir l'île se propose là où le besoin se sent
+
+Un bâtiment refusé faute de place ne dit plus « le large ne t'appartient
+pas » : il dit qu'il faut **quatre cases**, et que l'île gagne un cran à
+chaque mot qu'on te laisse — donc d'envoyer sa carte postale. C'est le seul
+refus du jeu auquel on peut répondre quelque chose, et la réponse n'est pas
+« recommence ».
+
+### Ce que les contrôles ont appris, et ce qu'ils ne prouvent pas
+
+Le contrôle 9 lisait `THEMES` et `DEMO`. **Il est passé au vert** alors que
+six articles payants venaient d'arriver sur vingt îles, parce qu'il ne
+connaissait pas `GRANDS` — la troisième source. C'est, mot pour mot, son
+propre angle mort du 19/09, où il ne lisait que `THEMES` et ratait les îles
+écrites à la main. Un contrôle qui ne connaît pas la source qu'on vient
+d'ajouter ne dit rien : il rassure.
+
+Il croise donc maintenant les trois, et il vérifie **l'exception avec son
+garde-fou** : `GRANDS` ne pose que des bâtiments, et `ramasserSouvenir()`
+refuse bien sur une île `demo`. Ce second point est un contrôle de
+**câblage**, pas de comportement, et il faut le dire : amener le bonhomme
+sur une église d'île bot demanderait de le téléporter, et rien ici n'en
+donne le moyen.
+
+Le contrôle 9 ter mesure les proportions dans le navigateur et **imprime la
+table** — la vignette montre le dessin brut, `ECH_BAT` le remultiplie, donc
+c'est de l'arithmétique sur une mesure, pas une lecture du code. Éprouvé en
+remettant les deux vraies pannes : `ECH_BAT.ferme` à 1 rend « aucun
+bâtiment n'est plus petit que le bonhomme → **ferme** », et le garde-fou
+retiré rend sa ligne rouge.
+
+*(Et un rappel du comptage, pour la deuxième fois de la journée : ma
+première lecture d'`ECH_BAT` prenait une tranche de 300 caractères et
+comptait **huit** échelles au lieu de six, en mordant sur le code suivant.
+Un compte qui déborde ment aussi sûrement qu'un compte qui manque.)*
+
+### Ce qui reste à faire, et qui n'est pas fait
+
+**Des habitants.** Mis de côté explicitement, et rien n'a été préparé pour
+eux ici : ne pas prendre `EMPRISE_ILE` pour un premier pas vers des
+personnages qui vivraient dans les bâtiments. Le jour où ça se fera, la
+question à trancher avant d'écrire une ligne est celle de toujours — est-ce
+que ça rapporte, et si oui, dans la famille des corvées ou dans celle des
+visites ?
+
+## Ce qu'un robot lit, et ce qu'il n'a pas à lire — 20/09/2026
+
+Un audit de référencement, et **la moitié de ce qu'il décrit était déjà
+corrigé sans être déployé** : « Prototype jouable, en isométrique » n'existe
+nulle part dans le dépôt. Google montrait un instantané d'avant le 18/09.
+Premier réflexe à avoir devant un audit : vérifier que ce qu'il décrit est
+la version qu'on a, pas celle qui est indexée.
+
+L'autre moitié était vraie, et pire que ce qu'elle disait.
+
+### Rien n'est indexable par défaut, et c'est le point qui compte
+
+`page()` écrivait `index, follow` **en dur**, et `sitemap.xml.js` listait
+**toutes** les îles publiées. Une page d'île porte un prénom, le nom qu'un
+enfant a donné à son île, et le compte des mots que ses copains y ont
+laissés. Une carte postale porte en plus un message personnel dans son
+adresse.
+
+**Publier son île pour qu'un ami la visite n'est pas consentir à la
+retrouver dans Google.** Le joueur n'avait accepté que la première.
+
+Quatre choses à ne pas défaire :
+
+1. **`ROBOTS_NON` est le défaut de `page()`.** Une page qui ne demande rien
+   n'est pas indexée. Le jour où une cinquième sorte de page apparaît, elle
+   est protégée sans que personne y pense — c'est la leçon du registre
+   `VERROUS_PROX`, qui a remplacé une liste écrite à la main.
+2. **`ILES_INDEXABLES` est une liste écrite à la main**, et elle ne contient
+   que `dan`, l'île de démonstration, qui n'appartient à personne. Y ajouter
+   une île est une décision.
+3. **Une carte postale n'est jamais indexée**, sans exception. C'est une
+   lettre, pas une page.
+4. **Le plan du site ne liste que ce qui s'indexe.** Un plan qui annonce une
+   adresse que la page marque `noindex` dit deux choses contraires, et c'est
+   la première qu'un robot suit.
+
+### Le seul texte lisible du site était caché
+
+`#accueil` portait l'attribut `hidden` dans le HTML. Or c'est, par
+construction, **le seul texte qu'un robot puisse lire** : tout le reste est
+peint dans un canvas. Pour Googlebot, qui rend le JavaScript, ça passait ;
+pour WhatsApp, Signal, et tous les moteurs qui ne rendent pas, la page
+n'avait pas de contenu du tout.
+
+Il part donc **visible**, et un petit script en ligne le cache avant le
+premier affichage quand il n'a rien à faire là. En ligne et non-module
+exprès : un module est différé, donc le voile clignoterait chez tous ceux
+qui reviennent — vérifié, six relevés consécutifs après `domcontentloaded`,
+tous « caché ».
+
+`window.__accueilDu` est la **seule** réponse à « faut-il le montrer ? ».
+Le module la relit au lieu de recalculer la condition : deux endroits qui
+décident, et le jour où l'un change, l'autre ment. `dejaEntre()` a disparu
+avec.
+
+### Deux `<h1>`, et un titre écrasé au démarrage
+
+Il y en avait deux — la marque dans l'en-tête de page, la promesse dans le
+voile — et aucun ne disait de quoi parle la page. **« Dan's Island » comme
+seul titre ne répond à aucune recherche.** La marque est donc un logotype
+(`.marque-page`, `.marque`), et le `h1`, unique, est la promesse :
+*Construis ton île. Détends-toi. Partage-la.*
+
+Et `go()` faisait `document.title = 'Dan's Island'` au démarrage, donc **le
+`<title>` de la page était effacé par le jeu lui-même** — y compris pour
+Googlebot, qui rend. D'où `TITRE_SITE`, qui doit rester d'accord avec la
+balise `<title>` du haut du fichier. Chez un voisin, le nom de son île
+passe devant : c'est ce qu'on lit dans ses favoris.
+
+### Quatre pages éditoriales, et pas quarante
+
+`/comment-jouer`, `/fonctionnalites`, `/construire-son-ile`,
+`/cartes-postales` — **les chemins canoniques sont en français**, parce que
+le site l'est et que « comment jouer à » se tape en français. Les quatre
+adresses anglaises (`/how-to-play`, `/features`, `/build-your-island`,
+`/postcards`) sont des **alias** : même page, canonique pointé sur le
+français, donc un moteur consolide les deux.
+
+Pas de `noindex` sur un alias, et ce n'est pas un oubli : posé sur une page
+qui canonicalise ailleurs, il envoie deux signaux contraires et aucun
+moteur ne sait lequel suivre.
+
+Le contenu et la maquette vivent dans `functions/_pages.js` ; les **huit**
+fichiers de route ne font qu'appeler `rendre()` avec le chemin **canonique**
+— l'alias aussi, et c'est ça qui pose le canonique au bon endroit.
+
+**Les huit adresses sont réservées côté base**
+(`supabase/2026-09-20_slugs_reserves.sql`, rejouable). C'est un défaut
+trouvé avant d'écrire le français, et il valait pour l'anglais depuis la
+veille : ce sont des routes d'**un seul segment**, comme l'adresse d'une
+île. Sans réservation, un joueur prenait `comment-jouer`, la fonction
+répondait avant le catch-all, et **son île devenait inatteignable** — sans
+erreur, sans trace, et sans qu'on puisse le lui expliquer. `slug_reserve()`
+est la source unique, et le contrôle 3 de `test/robots.mjs` croise les deux
+listes.
+
+**Pourquoi quatre routes nommées et pas un `[page].js`.** Un attrape-tout à
+la racine intercepterait *toutes* les adresses d'un segment — donc `/simon`
+et chaque île de l'archipel. Son `next()` les rattraperait, mais ça met un
+aiguillage sur le chemin critique de tous les liens partagés du jeu, pour
+quatre pages dont on connaît les noms.
+
+Elles disent des choses vraies et vérifiables dans le jeu. **Ne pas en
+faire cinquante** : le moteur de ce jeu reste le partage, et une carte
+postale envoyée vaut mille mots-clés.
+
+### La carte postale nomme son expéditeur
+
+Le titre était « Une carte postale de Sable-Rose », qui se lit comme une
+page de catalogue. Il dit maintenant **« Untel t'envoie une carte postale de
+Dan's Island »**, qui se lit comme un message reçu — et c'est ce qui
+s'affiche dans l'aperçu WhatsApp.
+
+**Ce qui n'est pas fait, et qu'il ne faut pas prétendre :** l'image de
+partage reste `og.png`, la même pour toutes les cartes. Une image
+**engendrée par île** demande un rasteriseur dans le Worker (satori +
+resvg en wasm), donc un build et des dépendances — or ce dépôt n'en a
+aucun, et c'est un invariant tenu depuis le début. C'est une décision à
+prendre, pas quelque chose à glisser. À noter tout de même : sur téléphone,
+`navigator.share({files})` met déjà **la vraie image** dans la conversation
+WhatsApp ; l'`og:image` ne sert que l'aperçu du lien ailleurs.
+
+### `test/robots.mjs`, septième harnais
+
+Il prend la page **par le réseau, sans navigateur** : pas de JavaScript,
+pas de `localStorage`, exactement ce qu'un robot qui ne rend pas reçoit.
+C'est le seul harnais du dépôt qui n'ouvre pas Chromium, et c'est voulu —
+mesurer ce qu'on veut mesurer, pas ce qu'un moteur de rendu veut bien
+montrer. Mesuré : **212 mots lisibles** hors script, là où le voile caché
+n'en laissait qu'une poignée.
+
+Éprouvé en remettant les trois défauts de l'audit — `hidden` sur le voile,
+le titre court, `index, follow` en dur — et les trois lignes rougissent.
+
+Deux choses apprises :
+
+1. **`aide.mjs` ne savait pas dé-semer une clé.** `setItem(k, null)` écrit
+   la chaîne « null », qui est vraie, donc l'état le plus important du site
+   — celui de quelqu'un qui arrive pour la première fois — était le seul
+   qu'aucun harnais ne savait produire. `null` retire maintenant la clé.
+2. **Un faux positif use un contrôle autant qu'un faux négatif.** Compter
+   les `titre:` d'un fichier en comptait cinq : les quatre des pages, et
+   celui de l'appel à `page()`. La même leçon que `store.js` compté comme
+   export manquant.
+3. **Une liste recopiée dans un contrôle est une liste de trop.** La
+   section 1 cherchait `href="/how-to-play"` en dur : le jour où les
+   chemins sont passés au français, elle est devenue rouge pour rien. Elle
+   lit `PAGES` maintenant, comme tout le reste du fichier.
+4. **Un contrôle qui ne parcourt qu'un côté a l'angle mort de l'autre.**
+   « Chaque alias rend le chemin canonique » ne regardait que les alias :
+   la panne posée sur un fichier **canonique** est passée. Il parcourt les
+   huit, et la remet en rouge en nommant le fichier. C'est, une fois de
+   plus, le défaut du contrôle 9 qui ne lisait pas `GRANDS`.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

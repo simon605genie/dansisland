@@ -1,8 +1,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B3C5D">
-<title>Dan's Island — ton petit endroit pour ralentir</title>
-<meta name="description" content="Un jeu de détente. Crée ton personnage, construis ta maison et ton île, puis va découvrir celles de tes voisins. Rien à gagner, rien à perdre : un endroit où ralentir.">
+<title>Dan's Island | Jeu relaxant de construction d'île</title>
+<meta name="description" content="Jeu relaxant de construction d’île, gratuit et sans installation. Construis ton île, ta maison et ton personnage, décore-la, puis va te promener chez les voisins et envoie-leur une carte postale. Pas de score, pas de minuteur.">
 <link rel="canonical" href="https://dansisland.app/">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <!-- L'aperçu partagé (WhatsApp, Messages, Slack, Signal). Ces robots ne
@@ -14,8 +14,8 @@
 <meta property="og:site_name" content="Dan's Island">
 <meta property="og:locale" content="fr_BE">
 <meta property="og:url" content="https://dansisland.app/">
-<meta property="og:title" content="Dan's Island — ton petit endroit pour ralentir">
-<meta property="og:description" content="Un jeu de détente. Crée ton personnage, construis ta maison et ton île, puis va découvrir celles de tes voisins.">
+<meta property="og:title" content="Dan's Island | Jeu relaxant de construction d'île">
+<meta property="og:description" content="Jeu relaxant de construction d’île. Construis ton île, ta maison et ton personnage, puis va te promener chez les voisins.">
 <meta property="og:image" content="https://dansisland.app/og.png?v=2">
 <meta property="og:image:secure_url" content="https://dansisland.app/og.png?v=2">
 <meta property="og:image:type" content="image/png">
@@ -23,8 +23,8 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Une île isométrique avec sa maison, son phare et ses palmiers.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Dan's Island — ton petit endroit pour ralentir">
-<meta name="twitter:description" content="Un jeu de détente. Crée ton personnage, construis ta maison et ton île, puis va découvrir celles de tes voisins.">
+<meta name="twitter:title" content="Dan's Island | Jeu relaxant de construction d'île">
+<meta name="twitter:description" content="Jeu relaxant de construction d’île. Construis ton île, ta maison et ton personnage, puis va te promener chez les voisins.">
 <meta name="twitter:image" content="https://dansisland.app/og.png?v=2">
 <!-- Données structurées. Un jeu de navigateur, gratuit, en français : c'est
      tout ce qu'un moteur peut en dire d'utile, et rien n'y est inventé. Les
@@ -35,7 +35,7 @@
  "url":"https://dansisland.app/","inLanguage":"fr",
  "applicationCategory":"Game","gamePlatform":"Navigateur web",
  "genre":["Jeu de détente","Construction","Bac à sable"],
- "description":"Un jeu de détente. Crée ton personnage, construis ta maison et ton île, puis va découvrir celles de tes voisins.",
+ "description":"Jeu relaxant de construction d’île. Construis ton île, ta maison et ton personnage, puis va te promener chez les voisins.",
  "image":"https://dansisland.app/og.png?v=2",
  "offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}
 </script>
@@ -125,9 +125,14 @@ a{color:var(--link)}
 .brand{display:flex; align-items:center; gap:15px}
 .mark{width:58px;height:58px;flex:none;border-radius:15px}
 .word{display:flex;flex-direction:column;gap:2px}
-.word h1{font-size:clamp(32px,5.2vw,48px); font-weight:800; letter-spacing:.005em}
+.word .marque-page{font-family:"Baloo 2","Nunito",system-ui,sans-serif; line-height:1.05;
+  margin:0; font-size:clamp(32px,5.2vw,48px); font-weight:800; letter-spacing:.005em}
 .word svg{display:block;width:100%;height:11px;overflow:visible}
-.tagline{color:var(--ink-2); max-width:46ch; font-size:15.5px; margin-left:auto}
+/* Le `h1` de la page, et le seul. Il porte la promesse ; la phrase qui
+   explique vient sous lui, en plus petit. */
+.tagline-h1{font-size:clamp(19px,2.5vw,26px); font-weight:800; color:var(--teal);
+  max-width:46ch; margin-left:auto; line-height:1.2}
+.tagline{color:var(--ink-2); max-width:46ch; font-size:15px; margin:4px 0 0; margin-left:auto}
 .tagline b{color:var(--ink); font-weight:700}
 
 /* ---------- compte ---------- */
@@ -174,10 +179,10 @@ a{color:var(--link)}
    connexion mangeaient le premier tiers de l'écran et il fallait défiler
    pour voir son île. On arrive sur un jeu, pas sur une page. */
 @media (max-width:640px){
-  .tagline{display:none}
+  .tagline,.tagline-h1{display:none}
   .mast{padding:14px 0 10px; gap:10px 18px}
   .mark{width:38px; height:38px; border-radius:10px}
-  .word h1{font-size:25px}
+  .word .marque-page{font-size:25px}
   .word svg{display:none}
   .compte{padding:9px 11px; margin-bottom:11px; font-size:13px; gap:7px 9px}
   .compte input[type=text],.compte input[type=email]{min-width:150px}
@@ -544,16 +549,29 @@ textarea{
 .accueil .mark{width:74px; height:74px; margin-bottom:10px;
   animation:accueilflotte 6s ease-in-out infinite}
 @keyframes accueilflotte{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-.accueil h2{font-size:clamp(34px,8vw,54px); font-weight:800; letter-spacing:.005em}
+/* La marque n'est plus un `h2` : le `h1` de la page est la **promesse**,
+   pas le nom du produit. « Dan's Island » est déjà dans le `<title>`, dans
+   l'adresse et sur le logo juste au-dessus ; en faire le seul titre de la
+   page, c'est n'y répondre à aucune recherche. */
+.accueil .marque{font-family:"Baloo 2","Nunito",system-ui,sans-serif; line-height:1.05;
+  margin:0; font-size:clamp(30px,7vw,46px); font-weight:800; letter-spacing:.005em}
 .accueil .trait{display:block; width:min(300px,78%); height:11px; overflow:visible; margin:1px 0 14px}
+/* Même phrase que le `h1` de l'en-tête, en paragraphe : un seul h1 par page. */
 .accueil .promesse{
-  font-family:"Baloo 2",sans-serif; font-weight:700; font-size:clamp(19px,4.4vw,25px);
-  color:var(--teal); margin:0 0 10px; line-height:1.25;
+  font-family:"Baloo 2",sans-serif; font-weight:800; font-size:clamp(21px,5vw,29px);
+  color:var(--teal); margin:0 0 10px; line-height:1.2; max-width:22ch;
 }
 .accueil .dit{color:var(--ink-2); font-size:16px; max-width:40ch; margin:0 0 22px; line-height:1.55}
 .accueil .portes{display:flex; flex-wrap:wrap; gap:10px; justify-content:center}
 .accueil .portes .btn{font-size:17px; padding:13px 22px; border-radius:14px}
 .accueil .portes .btn.primary{box-shadow:0 4px 0 rgba(180,76,108,.35)}
+/* Les quatre pages éditoriales. Discrètes — ce n'est pas ce qu'on vient
+   faire ici — mais présentes dans le HTML, donc suivies par un robot qui
+   ne rend pas le JavaScript. */
+.accueil .apages{display:flex; flex-wrap:wrap; justify-content:center; gap:4px 15px;
+  margin-top:14px; font-size:13px}
+.accueil .apages a{color:var(--ink-3); text-decoration:none; border-bottom:1px solid var(--line)}
+.accueil .apages a:hover{color:var(--teal)}
 /* Ce qui se lit sous les deux portes, et que les robots lisent aussi. Trois
    lignes, pas une brochure : la section de présentation d'avant a été
    retirée le 17/09 parce qu'elle parlait par-dessus le jeu, et il ne
@@ -578,12 +596,13 @@ textarea{
 @media (orientation:landscape) and (max-height:560px){
   .accueil{padding:12px 16px}
   .accueil .mark{width:44px; height:44px; margin-bottom:4px}
-  .accueil h2{font-size:30px}
+  .accueil .marque{font-size:27px}
   .accueil .trait{height:8px; margin-bottom:8px}
-  .accueil .promesse{font-size:17px; margin-bottom:5px}
+  .accueil .promesse{font-size:18px; margin-bottom:5px}
   .accueil .dit{font-size:13.5px; margin-bottom:13px}
   .accueil .portes .btn{font-size:14.5px; padding:9px 16px}
   .accueil .socle{display:none}
+  .accueil .apages{font-size:12px; gap:3px 11px; margin-top:10px}
   .accueil .bas{margin-top:9px}
 }
 
@@ -854,13 +873,19 @@ textarea{
         <rect x="42" y="32" width="8" height="18" rx="4" fill="#FAF6EA"/>
       </svg>
       <div class="word">
-        <h1>DAN'S ISLAND</h1>
+        <!-- La marque est un **logotype**, pas le titre de la page : le `h1`
+             est la promesse, juste en dessous. « Dan's Island » est déjà dans
+             le `<title>`, dans l'adresse et sur le dessin à côté ; en faire le
+             seul titre, c'est ne répondre à aucune recherche. -->
+        <p class="marque-page">DAN'S ISLAND</p>
         <svg viewBox="0 0 300 12" preserveAspectRatio="none" aria-hidden="true">
           <path d="M2 8C28 -1 50 11 78 6s44 -9 74 -1 44 10 72 3 50 -6 72 1" fill="none" stroke="#148A9C" stroke-width="7" stroke-linecap="round"/>
         </svg>
       </div>
     </div>
-    <p class="tagline"><b>Ton petit endroit pour ralentir.</b> Crée ton personnage, construis ta maison et ton île — puis va découvrir celles de tes voisins.</p>
+    <h1 class="tagline-h1">Construis ton île. Détends-toi. Partage-la.</h1>
+    <p class="tagline">Un jeu de détente&nbsp;: crée ton personnage, construis ta maison et ton île,
+      puis va découvrir celles de tes voisins. Gratuit, dans le navigateur, rien à installer.</p>
   </header>
 
   <section class="compte" id="compte" aria-live="polite"></section>
@@ -919,7 +944,18 @@ textarea{
      texte du site qu'un robot puisse lire, puisque tout le reste est peint
      dans un canvas. Le changer, c'est changer ce que Google raconte du jeu.
      ============================================================ -->
-<div class="accueil" id="accueil" hidden>
+<!-- **Pas de `hidden` dans le HTML, et c'est un choix de référencement.**
+     Ce bloc est le seul texte du site qu'un robot puisse lire : tout le reste
+     est peint dans un canvas. Servi avec l'attribut `hidden`, il l'était
+     aussi pour les robots qui ne rendent pas le JavaScript — WhatsApp,
+     Signal, la plupart des moteurs autres que Google — et une page dont le
+     seul contenu est caché n'a pas de contenu.
+
+     Il part donc visible, et le petit script juste en dessous le cache
+     **avant le premier affichage** quand il n'a rien à faire là. Il est en
+     ligne et non-module exprès : un module est différé, donc le voile
+     clignoterait chez tous ceux qui reviennent. -->
+<div class="accueil" id="accueil">
   <main class="carte">
     <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
       <rect width="64" height="64" rx="15" fill="#0B3C5D"/>
@@ -929,11 +965,11 @@ textarea{
       <circle cx="46" cy="20" r="7" fill="#F48CA8"/>
       <rect x="42" y="32" width="8" height="18" rx="4" fill="#FAF6EA"/>
     </svg>
-    <h2>DAN’S ISLAND</h2>
+    <p class="marque">DAN’S ISLAND</p>
     <svg class="trait" viewBox="0 0 300 12" preserveAspectRatio="none" aria-hidden="true">
       <path d="M2 8C28 -1 50 11 78 6s44 -9 74 -1 44 10 72 3 50 -6 72 1" fill="none" stroke="#148A9C" stroke-width="7" stroke-linecap="round"/>
     </svg>
-    <p class="promesse">Ton petit endroit pour ralentir.</p>
+    <p class="promesse">Construis ton île. Détends-toi. Partage-la.</p>
     <p class="dit">Crée ton personnage, construis ta maison et ton île,
       puis va découvrir celles de tes voisins.</p>
     <div class="portes">
@@ -946,8 +982,36 @@ textarea{
       <div><b>Des voisins</b>Ton île a son adresse. On s’y promène, on y laisse un mot, on rapporte un souvenir.</div>
     </div>
     <p class="bas">Gratuit, sans publicité, sans achat. Ça se joue dans le navigateur, au doigt ou au clavier.</p>
+    <!-- Quatre pages qui racontent le jeu en texte, pour les moteurs comme
+         pour qui veut lire avant de cliquer. Elles sont servies par
+         `functions/` : ce sont, avec cet accueil, les seules pages du site
+         qui s'indexent. Une île appartient à quelqu'un.
+
+         Les adresses sont **françaises** : c'est le canonique, et c'est ce
+         qu'un enfant francophone tape et lit. Les alias anglais existent et
+         servent la même page. -->
+    <nav class="apages" aria-label="En savoir plus">
+      <a href="/comment-jouer">Comment jouer</a>
+      <a href="/fonctionnalites">Ce qu’on peut faire</a>
+      <a href="/construire-son-ile">Construire son île</a>
+      <a href="/cartes-postales">Les cartes postales</a>
+    </nav>
   </main>
 </div>
+<script>
+/* Le voile part **visible** dans le HTML (voir le commentaire au-dessus) :
+   ce script le cache avant le premier affichage quand il n'a pas lieu
+   d'être. Il ne s'ouvre qu'à la racine, et une seule fois dans une vie.
+
+   `__accueilDu` est la **seule** réponse à « faut-il le montrer ? » : le
+   module la relit au lieu de recalculer la condition, sinon deux endroits
+   décident et le jour où l'un change, l'autre ment. */
+window.__accueilDu = (function(){
+  try{ if(localStorage.getItem('dansisland:entre')) return false; }catch(e){ return false; }
+  return location.pathname.replace(/\/+$/,'')==='';
+})();
+if(!window.__accueilDu){ var a=document.getElementById('accueil'); if(a) a.hidden=true; }
+</script>
 
 <script type="module">
 // Chemin **absolu**, et pour la même raison que le manifest et les icônes :
@@ -1262,6 +1326,83 @@ function shadowDiamond(c,cx,cy,a){
 const PIVOT_ILE={banc:1,barriere:1,cloture:1,ponton:1,boutique:1,balancoire:1,
                  hamac:1,toboggan:1,tente:1,
                  ferme:1,ecole:1,coiffeur:1,supermarche:1,restaurant:1,culte:1};
+
+/* **Un bâtiment occupe 2x2, comme la maison.** C'est ce qui en fait un
+   bâtiment, et c'est la seule règle : une église plus grande qu'une maison
+   ne tient pas dans une case, et un lieu de culte haut sur une base d'une
+   case est une aiguille, pas une église.
+
+   Mesuré avant d'y toucher, en unités du monde (le bonhomme fait 38, la
+   maison 80) : la ferme faisait **33** et le restaurant 33 — on était plus
+   grand qu'une ferme — et l'école 43, soit moins qu'un arbre à fleurs (45).
+   Les six avaient été dessinés comme des objets.
+
+   `EMPRISE_ILE` est une propriété du **type**, dans le catalogue, au même
+   titre que `PIVOT_ILE`, `NIVEAU` et `TAILLE` : **rien n'entre dans le
+   jsonb**, un objet posé reste `{t,x,y,o,c}` et aucune migration n'est
+   demandée. Une île d'hier qui porte une ferme la voit simplement grandir.
+
+   L'emprise ne tourne pas avec le `Sens` : les six sont carrés, donc
+   `empriseIle()` n'a pas besoin de l'orientation. Le jour où un bâtiment
+   2x1 apparaît, c'est ici qu'il faudra échanger les deux axes, comme le
+   fait déjà `emprise()` pour les meubles. */
+const EMPRISE_ILE={ferme:[2,2], ecole:[2,2], coiffeur:[2,2],
+                   supermarche:[2,2], restaurant:[2,2], culte:[2,2]};
+function empriseIle(t){ return EMPRISE_ILE[t]||[1,1]; }
+function estBatiment(t){ return !!EMPRISE_ILE[t]; }
+/* `empriseCases` et non `casesDe` : **`casesDe(m)` existe déjà**, c'est la
+   version des meubles, et deux déclarations du même nom ne lèvent aucune
+   erreur — la dernière gagne, en silence. Écrite d'abord sous ce nom-là,
+   celle-ci rendait `[{x:NaN,y:NaN}]` à tous ses appelants, `NaN <= rayon`
+   est faux, et **aucune île de démonstration n'a reçu son village** sans
+   qu'une seule ligne ne le signale. Trouvé en comptant les refus, pas à la
+   relecture. */
+function empriseCases(t,x,y){ const [w,h]=empriseIle(t), out=[];
+  for(let j=0;j<h;j++) for(let i=0;i<w;i++) out.push([x+i,y+j]);
+  return out; }
+// Une case est-elle sous cet objet ? Le seul test d'occupation du jeu :
+// une comparaison `o.x===x` laisserait poser un arbre dans l'église.
+function couvre(o,x,y){ const [w,h]=empriseIle(o.t);
+  return x>=o.x && x<o.x+w && y>=o.y && y<o.y+h; }
+function objetEn(objs,x,y,avecPanneau){
+  return (objs||[]).find(o=>(avecPanneau||o.t!=='panneau')&&couvre(o,x,y))||null; }
+// Le dessin est centré sur l'emprise, pas sur la case d'ancrage — c'est ce
+// que fait déjà `drawHouse()` avec son `iso(h.x+1,h.y+1)`.
+function centreDe(t,x,y){ const [w,h]=empriseIle(t);
+  return {x:x+w/2, y:y+h/2}; }
+
+/* L'échelle d'un bâtiment, appliquée dans `dessinDe()` — le seul endroit
+   qui dessine un objet d'île, donc le seul à changer.
+
+   **Pourquoi une échelle et pas six dessins refaits.** Chaque bâtiment est
+   une trentaine de coordonnées nouées entre elles (la porte est une
+   fraction de la façade, le silo est à une hauteur de mur, l'auvent suit
+   une arête). Les réécrire à la main, c'est trente occasions de se tromper
+   par bâtiment, sans que rien ne le signale à part l'œil. Une échelle
+   uniforme garde toutes ces relations exactes par construction.
+
+   Ce que ça coûte : la largeur suit la hauteur, on ne les règle pas
+   séparément. Mesuré, ça tombe bien — les six restent entre 35 et 49 de
+   demi-largeur, donc **tous à l'intérieur de leur 2x2** (56), et aucun ne
+   déborde sur la case du voisin.
+
+   L'échelle visée, en unités du monde, contre la maison à 80 :
+
+       lieu de culte   118   1,48×   le plus haut de l'île, phare compris
+       école            96   1,20×
+       ferme            88   1,10×   une grange est haute
+       supermarché      74   0,93×
+       restaurant       70   0,88×
+       coiffeur         68   0,85×   une boutique de rue
+
+   Et contre le bonhomme, qui fait 38 : de 1,8× à 3,1×. Avant ce changement
+   la ferme faisait 33, soit **moins qu'un bonhomme**.
+
+   `APERCU_ECH` divise par le même facteur : la vignette est une icône de
+   60 px, pas une maquette à l'échelle, et sans ça les six déborderaient de
+   leur case dans l'atelier. */
+const ECH_BAT={culte:2.02, ecole:2.22, ferme:2.64,
+               supermarche:2.02, restaurant:2.10, coiffeur:1.90};
 // Ce qui éclaire la nuit, et la hauteur de la flamme. Le phare, lui, porte
 // sa lumière dans son propre dessin.
 const LUEUR={lampe:34, feudecamp:16};
@@ -1657,7 +1798,7 @@ function fairePousser(){
     if(!dansLeRayon(x,y,mine)) continue;
     if(x>=h.x-1&&x<=h.x+2&&y>=h.y-1&&y<=h.y+2) continue;
     if(seuils.some(c=>c.x===x&&c.y===y)) continue;
-    if((mine.objects||[]).some(o=>o.x===x&&o.y===y)) continue;
+    if(objetEn(mine.objects,x,y,true)) continue;
     libres.push(y*GRID+x);
   }
   let pousse=0;
@@ -1863,12 +2004,57 @@ function mkBot(i){
       acc:pick(21,['aucun','chapeau','lunettes','couronne','cape'])},
     objects:[]
   };
+  /* Les grands bâtiments au **nord**, et posés en premier.
+
+     Au nord parce que dans cette isométrie le nord est le fond du cadre :
+     une église de 118 posée devant cache tout ce qui est derrière elle,
+     posée au fond elle donne une silhouette au village. Et en premier parce
+     que le décor se sème ensuite sur les cases restantes — l'inverse
+     laisserait le hasard occuper le fond et il n'y aurait plus la place.
+
+     Ils sont **payants**, et la règle du 16/09 dit qu'on ne met rien de
+     payant sur une île bot : « on en ramène un souvenir gratuitement, et la
+     boutique ne sert plus à rien ». Elle tient toujours — mais elle est
+     maintenant tenue par `ramasserSouvenir()`, qui refuse un objet payant
+     pris sur une île de démonstration en nommant son prix, plutôt que par
+     l'absence de l'objet. C'est ce qui permet aux vingt îles d'avoir un
+     village sans ouvrir la boutique à qui va se promener.
+
+     Chez un **vrai** voisin, rien ne change : un souvenir d'ami reste
+     gratuit, c'est le choix écrit le 19/09 et c'est ce qui donne envie
+     d'aller chez les gens. */
+  const GRANDS={plage:['restaurant'], foret:['ferme'], desert:['ecole'],
+                village:['culte','ecole'], port:['supermarche','restaurant']};
+  (GRANDS[theme.n]||[]).forEach((t,n)=>{
+    // Du nord vers le sud, en balayant d'ouest en est : la première case
+    // qui porte les quatre cases du bâtiment, à terre et loin de la maison.
+    for(let y=1;y<GRID-2;y++) for(let x=1;x<GRID-2;x++){
+      const cs=empriseCases(t,x,y);
+      /* `dansLeRayon` et **pas** seulement « la tuile n'est pas de l'eau ».
+         Mesuré en regardant une capture : le restaurant de « La Crique »
+         flottait au nord, au-dessus de la mer. Les tuiles hors du rayon ne
+         portent pas toutes la valeur eau — c'est le rayon qui dit où est
+         l'île, la tuile ne dit que ce qui y est peint. */
+      // Une case de marge sur le rayon : le balayage part du nord, donc sans
+      // elle le bâtiment se pose toujours sur la toute dernière rangée de
+      // terre et se lit comme perché au bord de la falaise.
+      if(cs.some(c=>!dansLeRayon(c[0],c[1],{rayon:(w.rayon||0)-1}))) continue;
+      if(cs.some(c=>w.tiles[c[1]*GRID+c[0]]===2)) continue;
+      if(cs.some(c=>c[0]>=w.house.x-1&&c[0]<=w.house.x+2&&c[1]>=w.house.y-1&&c[1]<=w.house.y+2)) continue;
+      if(cs.some(c=>objetEn(w.objects,c[0],c[1],true))) continue;
+      // Une case de respiration autour, sinon deux bâtiments hauts se
+      // recouvrent et le village se lit comme un tas.
+      if(w.objects.some(o=>estBatiment(o.t)&&Math.abs(o.x-x)<3&&Math.abs(o.y-y)<3)) continue;
+      w.objects.push({t,x,y,c:COUL_OBJ[t]||'#FDFBF2',o:d(80+n)>0.5?'sw':'se'});
+      return;
+    }
+  });
   const combien=11+Math.floor(d(22)*8);
   for(let k=0,essais=0; k<combien && essais<260; essais++){
     const x=Math.floor(d(30+essais*2)*GRID), y=Math.floor(d(31+essais*2)*GRID);
     if(w.tiles[y*GRID+x]===2) continue;                       // pas dans l'eau
     if(x>=w.house.x-1&&x<=w.house.x+2&&y>=w.house.y-1&&y<=w.house.y+2) continue;
-    if(w.objects.some(o=>o.x===x&&o.y===y)) continue;
+    if(objetEn(w.objects,x,y,true)) continue;
     const t=theme.v[Math.floor(d(40+essais)*theme.v.length)%theme.v.length];
     const o={t,x,y,c:COUL_OBJ[t]||'#8AA3B2'};
     // Bancs, barrières et pontons tirent leur sens de la même graine : vingt
@@ -2705,6 +2891,9 @@ const DRAW={
 // un argument de plus coûte moins qu'une seconde fonction de dessin.
 function dessinDe(g,t,col,o,etat){
   g.save(); if(o==='sw') g.scale(-1,1);
+  // Un bâtiment se dessine à son échelle, et c'est ici — le seul endroit du
+  // jeu qui peigne un objet d'île, vignettes comprises.
+  const k=ECH_BAT[t]; if(k) g.scale(k,k);
   (DRAW[t]||DRAW.rocher)(g,col,etat); g.restore();
 }
 const OBJ_GROUPS=[
@@ -3446,7 +3635,11 @@ function drawWorld(t){
   items.push({d:(world.house.x+1)+(world.house.y+1), f:()=>drawHouse(ctx,world.house,t)});
   world.objects.forEach(o=>{
     if(balade&&o===balade.o) return;      // il a quitté sa case : il est plus bas
-    const c0=ctr(o.x,o.y);
+    // Un bâtiment est centré sur son 2x2, et il se trie à ce centre — pas à
+    // sa case d'ancrage, sinon un arbre posé dans le coin sud de son emprise
+    // lui passerait devant. C'est ce que fait `drawHouse()` depuis toujours.
+    const ce=centreDe(o.t,o.x,o.y), bat=estBatiment(o.t);
+    const c0=bat ? iso(ce.x,ce.y) : ctr(o.x,o.y);
     // Le coffre est le seul objet dont le dessin dépend de l'état du jeu.
     // Fermé et scintillant, il dit qu'il a quelque chose ; ouvert et vide,
     // qu'on est déjà passé. Chez un voisin, il reste fermé : ce serait ta
@@ -3455,9 +3648,11 @@ function drawWorld(t){
     // qui le dit. Sans lui il faudrait un `if` par objet ici, et le
     // prochain en ajouterait un cinquième.
     const plein = coffrePlein(o) || boitePleine(o);
-    items.push({d:o.x+o.y+1, f:()=>{
+    // `ce.x+ce.y` rend exactement l'ancien `o.x+o.y+1` pour une case
+    // (centre en +0,5) et la profondeur de la maison pour un 2x2 (+1).
+    items.push({d:ce.x+ce.y, f:()=>{
       ctx.save(); ctx.translate(c0.x,c0.y-LIFT);
-      shadowDiamond(ctx,0,0,12);
+      shadowDiamond(ctx,0,0,bat?26:12);
       dessinDe(ctx,o.t,o.c||'#8AA3B2',o.o,etatObjet(o,t));
       // Dans ce jeu, une chose qui brille est une chose à prendre : le
       // coffre du jour, et la boîte où un mot attend d'être lu.
@@ -4307,17 +4502,15 @@ cv.addEventListener('click',e=>{
     memoriser(); world.tiles[q.y*GRID+q.x]=tool.kind; son('pinceau');
   }
   else if(tool.mode==='gomme'){
-    if(!world.objects.some(o=>o.t!=='panneau'&&o.x===q.x&&o.y===q.y)) return;
-    memoriser(); world.objects=world.objects.filter(o=>o.t==='panneau'||!(o.x===q.x&&o.y===q.y)); son('gomme');
+    // La gomme prend le bâtiment par n'importe laquelle de ses quatre cases :
+    // viser l'angle d'ancrage serait un jeu d'adresse, et on effacerait
+    // l'arbre d'à côté en croyant prendre l'église.
+    const vise=objetEn(world.objects,q.x,q.y);
+    if(!vise) return;
+    memoriser(); world.objects=world.objects.filter(o=>o!==vise); son('gomme');
   }
   else if(tool.mode==='objet'){
-    if(world.tiles[q.y*GRID+q.x]===2){ say("On ne plante rien dans l'eau."); return; }
-    if(q.x>=world.house.x&&q.x<=world.house.x+1&&q.y>=world.house.y&&q.y<=world.house.y+1){ say('La maison occupe déjà cette case.'); return; }
-    memoriser();
-    world.objects=world.objects.filter(o=>!(o.x===q.x&&o.y===q.y));
-    const neuf={t:tool.kind,x:q.x,y:q.y,c:tool.color};
-    if(PIVOT_ILE[tool.kind]) neuf.o=tool.orient;
-    world.objects.push(neuf); son('poser');
+    if(!poserObjet(q.x,q.y)) return;
   }
   else if(tool.mode==='tourner'){ tournerSurIle(q.x,q.y); }
   else if(tool.mode==='maison'){ poserMaison(q.x,q.y); guideFait(2); }
@@ -4327,8 +4520,55 @@ cv.addEventListener('click',e=>{
 
 // Tourner ce qui est déjà posé : un sens qu'on ne choisit qu'au moment de
 // poser oblige à effacer pour se corriger.
+/* Poser un objet, et pour un bâtiment ses quatre cases.
+
+   Rend `true` si quelque chose a changé — c'est l'appelant qui sauvegarde,
+   comme pour les autres pinceaux.
+
+   Trois refus, et chacun dit quoi faire **là où est le doigt** : c'est la
+   leçon de la boutique du 16/09, et elle vaut d'autant plus ici qu'un
+   bâtiment refusé sans un mot se lit comme un clic mort.
+
+   Un bâtiment n'écrase pas ce qu'il couvre, il le dit. Un 1x1 continue de
+   remplacer en silence, comme avant : remplacer un buisson par un autre est
+   le geste ordinaire du pinceau, alors qu'une église posée d'un clic
+   emporterait jusqu'à quatre objets d'un coup. */
+function poserObjet(x,y){
+  const t=tool.kind, cases=empriseCases(t,x,y), bat=estBatiment(t);
+  if(bat && (x>GRID-2||y>GRID-2)){ say(unObjet(t,true,true)+' déborderait de la grille.'); return false; }
+  // Le rayon d'abord : c'est le seul refus auquel on peut répondre quelque
+  // chose, et la réponse est « fais venir du monde », pas « recommence ».
+  const dehors=cases.filter(c=>!dansLeRayon(c[0],c[1]));
+  if(dehors.length){
+    if(!bat) return false;              // le clic hors rayon a déjà parlé
+    say('Il faut <b>quatre cases</b> à '+unObjet(t,false,true)+', et ton île '+
+        'n’est pas encore assez large ici. Essaie plus près du centre — ou '+
+        '<b>agrandis ton île</b> : elle gagne un cran à chaque mot qu’on te laisse. '+
+        'Envoie ta carte postale, onglet <b>Voisins</b>.', 0, 5600);
+    return false;
+  }
+  if(cases.some(c=>world.tiles[c[1]*GRID+c[0]]===2)){
+    say(bat ? 'On ne bâtit pas sur l’eau : les quatre cases doivent être à terre.'
+            : "On ne plante rien dans l'eau."); return false; }
+  const h=world.house;
+  if(cases.some(c=>c[0]>=h.x&&c[0]<=h.x+1&&c[1]>=h.y&&c[1]<=h.y+1)){
+    say('La maison occupe déjà cette case.'); return false; }
+  if(bat){
+    const gene=(world.objects||[]).find(o=>cases.some(c=>couvre(o,c[0],c[1])));
+    if(gene){ say(gene.t==='panneau'
+      ? 'Un mot du livre d’or est planté là. Choisis un autre endroit.'
+      : 'Il y a '+unObjet(gene.t,false,true)+' sous '+unObjet(t,false,true)+
+        '. Efface-le d’abord, ou pose plus loin.'); return false; }
+  }
+  memoriser();
+  if(!bat) world.objects=world.objects.filter(o=>!couvre(o,x,y));
+  const neuf={t,x,y,c:tool.color};
+  if(PIVOT_ILE[t]) neuf.o=tool.orient;
+  world.objects.push(neuf); son('poser');
+  return true;
+}
 function tournerSurIle(x,y){
-  const o=(world.objects||[]).find(k=>k.t!=='panneau'&&k.x===x&&k.y===y);
+  const o=objetEn(world.objects,x,y);
   if(!o){ say('Rien à tourner ici.'); return; }
   if(!PIVOT_ILE[o.t]){ say(unObjet(o.t,true,true)+' n’a pas de sens : il est pareil des deux côtés.'); return; }
   memoriser(); o.o = o.o==='sw' ? 'se' : 'sw'; son('poser'); saveMine(); buildAll();
@@ -5099,7 +5339,7 @@ function leChienSarrete(){
   if(!dansLeRayon(x,y)||!terre(x,y)) return;
   // Jamais deux au même endroit, et jamais sur un objet déjà posé : une
   // crotte sous un buisson ne se voit pas, donc ne se nettoie pas.
-  if((mine.objects||[]).some(o=>o.x===x&&o.y===y)) return;
+  if(objetEn(mine.objects,x,y,true)) return;
   mine.objects.push({t:'crotte', x, y});
   saveMine(); son('chien');
   say('Le chien s’arrête un instant. <b>Il faudra nettoyer</b> — marche dessus et appuie sur <b>E</b>.', 0, 3400);
@@ -5569,7 +5809,14 @@ function proximity(){
   if(dedans){ proximiteDedans(); return; }
   let panneau=null, objet=null;
   world.objects.forEach(o=>{
-    if(Math.hypot(o.x+0.5-hero.x,o.y+0.5-hero.y)>=0.95) return;
+    /* Un objet d'une case se détecte à la distance, comme depuis toujours.
+       Un bâtiment se détecte à son **emprise** : son centre est à `+1`, donc
+       le coin opposé est à 1,41 case du centre d'ancrage et la distance ne
+       l'aurait jamais vu. On serait dans l'église sans que l'église compte. */
+    if(estBatiment(o.t)){
+      if(!couvre(o,Math.floor(hero.x),Math.floor(hero.y))) return;
+    }
+    else if(Math.hypot(o.x+0.5-hero.x,o.y+0.5-hero.y)>=0.95) return;
     if(o.t==='panneau'){ if(o.txt) panneau=o; } else objet=o;
   });
   // Une crotte n'est pas un souvenir. Chez un voisin, tout objet sous les
@@ -5732,10 +5979,31 @@ function proximity(){
 // visitée n'est pas touchée, et la tienne garde la trace de qui tu as vu.
 function ramasserSouvenir(){
   const o=souvenirProche; if(!o||!visiting) return;
+  /* Sur une **île de démonstration**, un objet payant se regarde et ne se
+     ramène pas. C'est la règle du 16/09 — « on en ramène un souvenir
+     gratuitement, et la boutique ne sert plus à rien » — tenue là où elle
+     se joue plutôt que par l'absence de l'objet sur ces îles.
+
+     Les vingt îles bot sont infinies et toujours ouvertes : une église
+     gratuite à qui va s'y promener, et les 58 shells de la Boutique ne
+     veulent plus rien dire. Chez un **vrai** voisin, rien ne change : un
+     souvenir d'ami reste gratuit, c'est ce qui donne envie d'aller chez les
+     gens, et c'est le choix écrit le 19/09.
+
+     Le refus tombe au moment du ramassage — le seul instant où le doigt est
+     sur l'objet — et il nomme le prix, donc il apprend quelque chose au lieu
+     de gronder. */
+  const payant=world.demo && BOUTIQUE.find(x=>x.k===o.t);
+  if(payant){ say('Ici, c’est une île de démonstration : '+unObjet(o.t,false,true)+
+    ' ne se ramène pas. Le tien est à la <b>Boutique</b>, '+payant.prix+' shells — '+
+    'et chez un vrai voisin, un souvenir reste un cadeau.', 0, 5200); return; }
   if((mine.objects||[]).some(x=>x.de===world.owner&&x.t===o.t)){
     say('Tu as déjà ce souvenir de chez <b>'+esc(world.owner)+'</b>.'); return; }
-  const spot=freeTile(mine);
-  if(!spot){ say('Plus une case libre chez toi pour poser un souvenir.'); return; }
+  const spot=freeTile(mine,o.t);
+  if(!spot){ say(estBatiment(o.t)
+    ? 'Il faut <b>quatre cases libres</b> chez toi pour '+unObjet(o.t,false,true)+
+      ', et ton île n’en a plus. Fais de la place, ou agrandis-la.'
+    : 'Plus une case libre chez toi pour poser un souvenir.'); return; }
   mine.objects.push({t:o.t,x:spot.x,y:spot.y,c:o.c,de:world.owner});
   saveMine(); son('poser'); buildAll();
   // Le moment du ramassage est le seul où le doigt est sur l'objet : c'est
@@ -6330,8 +6598,14 @@ function apercuToi(g,t,col){
 }
 // Un objet plus haut qu'une case déborde de sa vignette et se fait couper la
 // tête. L'ombre, elle, reste à la taille de la case : c'est le sol, pas l'objet.
+/* L'échelle d'une vignette. Une vignette est une **icône de 60 px**, pas une
+   maquette : chacune est réglée pour remplir sa case sans déborder, et c'est
+   pour ça que le phare et la fleur y font la même taille.
+   Les bâtiments divisent donc par leur `ECH_BAT`, sinon ils sortiraient de
+   la vignette du facteur exact dont ils ont grandi sur l'île. */
 const APERCU_ECH={phare:0.44, moulin:0.50, cabane:0.44, montgolfiere:0.40,
                   puits:0.50, statue:0.50, toboggan:0.54};
+Object.keys(ECH_BAT).forEach(k=>{ APERCU_ECH[k]=0.60/ECH_BAT[k]; });
 function apercuObjet(g,t,col,o){
   g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,60,60);
   g.save(); g.translate(30,45);
@@ -7317,7 +7591,11 @@ async function demarrer(){
   // sinon on voit une seconde d'interface complète, et c'est exactement ce
   // qu'on essaie d'éviter. Il ne s'ouvre qu'à la racine — qui arrive par le
   // lien d'une île vient voir cette île, pas une page de présentation.
-  if(!dejaEntre() && location.pathname.replace(/\/+$/,'')==='') ouvrirAccueil();
+  // La condition n'est **pas** recalculée ici : c'est le petit script en
+  // ligne, tout en haut, qui a tranché avant le premier affichage, et il
+  // a laissé sa réponse dans `__accueilDu`. Deux endroits qui décident,
+  // et le jour où l'un change, l'autre ment.
+  if(window.__accueilDu) ouvrirAccueil();
   peindreCompte();
   if(store.configure){
     store.surChangementDeCompte(async(u)=>{
@@ -7409,12 +7687,19 @@ async function chargerMonCompte(){
   }catch(e){ say('Compte charg\u00e9 partiellement : '+esc(e.message||e)); }
 }
 
-function freeTile(w){
+/* Une place libre pour poser quelque chose. `t` dit quoi : un bâtiment
+   demande ses quatre cases, et sans ce paramètre un souvenir d'église se
+   posait sur une case en en recouvrant trois autres — dont, un jour, la
+   maison. Sans `t`, une case, comme avant. */
+function freeTile(w,t){
+  const cases=(x,y)=>empriseCases(t||'rocher',x,y);
   for(let k=0;k<300;k++){
     const x=Math.floor(Math.random()*GRID), y=Math.floor(Math.random()*GRID);
-    if(w.tiles[y*GRID+x]===2) continue;
-    if(x>=w.house.x-1&&x<=w.house.x+2&&y>=w.house.y-1&&y<=w.house.y+2) continue;
-    if(w.objects.some(o=>o.x===x&&o.y===y)) continue;
+    const cs=cases(x,y);
+    if(cs.some(c=>c[0]>=GRID||c[1]>=GRID)) continue;
+    if(cs.some(c=>w.tiles[c[1]*GRID+c[0]]===2)) continue;
+    if(cs.some(c=>c[0]>=w.house.x-1&&c[0]<=w.house.x+2&&c[1]>=w.house.y-1&&c[1]<=w.house.y+2)) continue;
+    if(cs.some(c=>objetEn(w.objects,c[0],c[1],true))) continue;
     return {x,y};
   }
   return null;
@@ -7842,6 +8127,9 @@ function carteComptoir(){
    fois, et s'efface au quatrième. Le parrainage relie l'île qui naît à la
    carte postale qui l'a fait naître. */
 
+// Le titre de la page, écrit une fois. Il doit rester d'accord avec la
+// balise <title> du haut du fichier : deux endroits, une seule phrase.
+const TITRE_SITE="Dan's Island | Jeu relaxant de construction d'île";
 const ACC_VU='dansisland:entre';
 const GUIDE_OU='dansisland:guide';
 const PARRAIN='dansisland:parrain';
@@ -7854,7 +8142,6 @@ const inviteEl=document.getElementById('invite');
    Il ne bloque rien : le jeu tourne derrière, la mer bouge, les mouettes
    passent. C'est un voile, pas une page — et c'est ce qui dit ce qu'est le
    jeu mieux qu'un paragraphe. Il ne revient pas : `dansisland:entre`. */
-function dejaEntre(){ try{ return !!localStorage.getItem(ACC_VU); }catch(e){ return true; } }
 function ouvrirAccueil(){ if(accueilEl) accueilEl.hidden=false; }
 function fermerAccueil(){
   if(!accueilEl||accueilEl.hidden) return;
@@ -8090,7 +8377,13 @@ async function go(slug){
   // L'onglet du navigateur dit chez qui on est : c'est ce qu'on lit dans
   // ses favoris et dans l'historique, et « Dan's Island » partout ne
   // distingue rien.
-  document.title = visiting ? ((world.name||'Une île')+' · Dan’s Island') : 'Dan’s Island';
+  /* **Le titre complet quand on est chez soi.** Cette ligne écrivait
+     « Dan's Island » tout court, donc le `<title>` de la page — celui qui
+     porte les mots qu'on tape dans un moteur — était effacé dès que le jeu
+     démarrait. Googlebot rend le JavaScript : il lisait le titre court.
+     Chez un voisin, le nom de son île passe devant, et c'est voulu : c'est
+     ce qu'on lit dans ses favoris et dans son historique. */
+  document.title = visiting ? ((world.name||'Une île')+' · Dan’s Island') : TITRE_SITE;
   camSauter();                            // on débarque, on ne glisse pas
   // Le quatrième pas du guide, c'est **être** chez quelqu'un. Il se coche
   // ici, avant le message d'arrivée, pour que les deux tiennent dans une

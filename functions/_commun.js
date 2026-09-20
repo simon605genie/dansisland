@@ -32,6 +32,50 @@ const CLE_DEFAUT = 'sb_publishable_3V1nUy5JTTqXw2CfGdFtrQ_3VG0iIP2';
 export const SITE = 'https://dansisland.app';
 export const SLUG = /^[a-z0-9][a-z0-9-]{1,23}$/;
 
+/* **Rien n'est indexable par défaut.** Une île est faite par quelqu'un, et
+   souvent par un enfant : elle porte son prénom, le nom qu'il a donné à son
+   île, et le livre d'or où ses copains ont écrit. Une carte postale porte en
+   plus un message personnel dans son adresse.
+
+   Jusqu'au 20/09, `page()` écrivait `index, follow` en dur et le plan du
+   site listait **toutes** les îles publiées. Publier une île pour qu'un ami
+   la visite et la retrouver dans Google sont deux choses différentes, et le
+   joueur n'avait consenti qu'à la première.
+
+   Ce qui s'indexe est donc une liste **écrite à la main**, courte, et faite
+   de pages éditoriales — plus l'île de démonstration, qui n'appartient à
+   personne. Ajouter une île ici est une décision, pas un effet de bord. */
+export const ROBOTS_OUI = 'index, follow, max-image-preview:large';
+export const ROBOTS_NON = 'noindex, follow, max-image-preview:large';
+export const ILES_INDEXABLES = ['dan'];
+
+/* Les pages éditoriales. Une seule liste : le plan du site les énumère, le
+   pied de page les relie, et chaque page sait laquelle elle est. Deux listes
+   qui divergent, et le plan annonce une adresse qui n'existe pas — le piège
+   déjà nommé pour les prix SQL et pour les rayons de l'atelier.
+
+   **`chemin` est français, et c'est le canonique.** Le site est en français
+   et pour des enfants francophones : « comment jouer à » se tape en
+   français, pas en anglais, et une adresse qu'on ne sait pas lire ne se
+   partage pas de vive voix.
+
+   **`alias` est l'adresse anglaise**, servie à l'identique, canonique
+   pointé sur le français. Ce n'est pas un doublon : c'est la même page à
+   deux portes, et un moteur consolide les deux sur une seule. Un `noindex`
+   sur l'alias, lui, contredirait son propre canonique — les deux signaux
+   ne se posent pas ensemble.
+
+   **Les huit adresses sont réservées côté base** (`slug_reserve()`,
+   `supabase/2026-09-20_slugs_reserves.sql`) : sans ça, un joueur pouvait
+   prendre `comment-jouer` comme adresse d'île, et sa page de fonction
+   aurait masqué son île sans que rien ne le signale. */
+export const PAGES = [
+  { chemin: '/comment-jouer',      alias: '/how-to-play',       nom: 'Comment jouer' },
+  { chemin: '/fonctionnalites',    alias: '/features',          nom: 'Ce qu’on peut faire' },
+  { chemin: '/construire-son-ile', alias: '/build-your-island', nom: 'Construire son île' },
+  { chemin: '/cartes-postales',    alias: '/postcards',         nom: 'Les cartes postales' }
+];
+
 function base(env) {
   return {
     url: (env && env.SUPABASE_URL) || URL_DEFAUT,
@@ -120,7 +164,7 @@ export function page(o) {
 <title>${ech(o.titre)}</title>
 <meta name="description" content="${ech(o.desc)}">
 <link rel="canonical" href="${ech(url)}">
-<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="robots" content="${ech(o.robots || ROBOTS_NON)}">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Dan's Island">
 <meta property="og:locale" content="fr_BE">
@@ -175,7 +219,20 @@ h1{font-size:clamp(26px,6.4vw,36px);font-weight:800}
 .btn.p{background:var(--pink);border-color:var(--pink);color:#0B3C5D}
 .socle{margin-top:26px;color:var(--ink-3);font-size:13.5px;line-height:1.5}
 .socle h2{font-size:15px;color:var(--ink-2);margin:0 0 5px}
+.liens{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px}
+.liens a{font-weight:600}
 .mono{font-family:"DM Mono",ui-monospace,monospace;font-size:13px}
+/* Les pages éditoriales : du texte long, pas une carte. Elles partagent le
+   papier et la typo du jeu, et rien d'autre n'a eu à changer. */
+.page h1{font-size:clamp(28px,6.8vw,40px);font-weight:800;margin-bottom:6px}
+.page .chapo{color:var(--ink-2);font-size:17.5px;margin:0 0 26px}
+.page h2{font-size:21px;font-weight:800;margin:30px 0 7px}
+.page p{margin:0 0 13px}
+.page ul{margin:0 0 13px;padding-left:19px}
+.page li{margin:0 0 6px}
+.page .encart{background:var(--card);border:1.5px solid var(--line);border-radius:16px;
+  padding:17px 19px;margin:24px 0}
+.page .encart p:last-child{margin:0}
 </style>
 <div class="wrap">
   <header class="haut">
@@ -197,6 +254,8 @@ h1{font-size:clamp(26px,6.4vw,36px);font-weight:800}
     des autres. Pas de score, pas de minuteur, pas de partie ratée&nbsp;: la mer
     monte et descend, les mouettes traversent le ciel, et on revient quand on
     veut. <a href="/">Créer mon île</a>.</p>
+    <nav class="liens">${PAGES.map(p =>
+      '<a href="' + p.chemin + '">' + ech(p.nom) + '</a>').join('')}</nav>
   </section>
 </div>
 `;

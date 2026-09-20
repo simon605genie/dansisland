@@ -88,8 +88,18 @@ export async function onglet(nav, { taille = { width: 1280, height: 900 }, memoi
   });
   const erreurs = [];
   ctx.on('weberror', e => erreurs.push(String(e.error())));
+  /* `null` **retire** la clé au lieu de l'écrire. Sans ça, un harnais qui
+     veut éprouver le tout premier visiteur ne peut pas : les graines par
+     défaut existent pour que l'accueil ne gêne pas les autres contrôles, et
+     `setItem(k, null)` écrit la chaîne « null », qui est vraie. On ne pouvait
+     donc que semer, jamais dé-semer — et l'état le plus important du site,
+     celui de quelqu'un qui arrive pour la première fois, était le seul
+     qu'aucun contrôle ne savait produire. */
   await ctx.addInitScript(m => {
-    try { Object.entries(m).forEach(([k, v]) => localStorage.setItem(k, v)); } catch (e) {}
+    try {
+      Object.entries(m).forEach(([k, v]) =>
+        v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v));
+    } catch (e) {}
   }, { 'dansisland:entre': '1', 'dansisland:guide': '4', 'dansisland:tourne': '1', ...memoire });
   const page = await ctx.newPage();
   page.on('pageerror', e => erreurs.push(String(e)));

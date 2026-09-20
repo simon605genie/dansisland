@@ -306,6 +306,124 @@ c.titre('9. les îles de démonstration ne portent rien de payant');
   if (durs.length) console.log('     ' + durs.join(', '));
   c.dit(durs.length === 0,
         'aucune île écrite à la main ne porte un objet payant' + (durs.length ? ' → ' + durs.join(', ') : ''));
+
+  /* Et la **troisième** source, née le 20/09 : `GRANDS`, les bâtiments posés
+     au nord des îles bot. Ceux-là sont payants **exprès**, et c'est la seule
+     exception à la règle du 16/09 — un village de démonstration sans un seul
+     bâtiment ne montre pas le jeu.
+
+     Ce qui la rend acceptable n'est pas leur absence, c'est le refus de
+     `ramasserSouvenir()` sur une île `demo`. Donc ce contrôle vérifie
+     l'exception **et son garde-fou ensemble** : si quelqu'un retire le
+     refus, les vingt îles deviennent une boutique gratuite.
+
+     Écrire ce bloc était le vrai travail : mon premier jet ne lisait que
+     `THEMES` et `DEMO`, exactement comme le 19/09, et il est **passé au
+     vert** alors que six articles payants venaient d'arriver sur vingt îles.
+     Un contrôle qui ne connaît pas la source qu'on vient d'ajouter ne dit
+     rien — il rassure. */
+  const gr = src.slice(src.indexOf('const GRANDS='), src.indexOf('const combien='));
+  const grands = [...new Set([...gr.matchAll(/'([a-z]+)'\s*[,\]]/g)].map(m => m[1])
+    .filter(x => payants.includes(x)))];
+  console.log('     GRANDS : ' + (grands.join(' · ') || '(aucun)'));
+  c.dit(grands.length >= 4, 'les bâtiments des îles bot ont été lus (' + grands.length + ')');
+
+  // Seuls des **bâtiments** ont droit à l'exception : un phare ou une
+  // échoppe posés là se ramèneraient toujours, et la règle repartirait.
+  const emprise = src.slice(src.indexOf('const EMPRISE_ILE='), src.indexOf('function empriseIle'));
+  const bat = [...emprise.matchAll(/([a-z]+):\s*\[2,\s*2\]/g)].map(m => m[1]);
+  c.dit(bat.length === 6, 'les six bâtiments 2x2 ont été lus (' + bat.length + ')');
+  const horsBat = grands.filter(t => !bat.includes(t));
+  c.dit(horsBat.length === 0,
+        'GRANDS ne pose que des bâtiments' + (horsBat.length ? ' → ' + horsBat.join(', ') : ''));
+
+  /* Le garde-fou lui-même. C'est un contrôle de **câblage**, pas de
+     comportement, et il faut le dire : amener le bonhomme sur une église
+     d'île bot demanderait de le téléporter, et rien ici n'en donne le
+     moyen. Ce qui est vérifié, c'est que le refus lit bien `world.demo` et
+     qu'il nomme le prix — pas qu'il s'affiche. */
+  const rs = src.slice(src.indexOf('function ramasserSouvenir'),
+                       src.indexOf('function ramasserSouvenir') + 1800);
+  c.dit(/world\.demo\s*&&\s*BOUTIQUE\.find/.test(rs),
+        'ramasserSouvenir() refuse un objet payant sur une île de démonstration');
+  c.dit(/payant\.prix/.test(rs), 'et son refus nomme le prix, donc il apprend quelque chose');
+}
+
+c.titre('9 ter. les six bâtiments : une emprise de 2x2, et des proportions');
+{
+  /* Mesuré avant d'y toucher, en unités du monde : la ferme faisait **33**
+     et le bonhomme en fait 38 — on était plus grand qu'une ferme — et
+     l'école 43, moins qu'un arbre à fleurs. Les six avaient été dessinés
+     comme des objets, pas comme des bâtiments.
+
+     La vignette est peinte dans un repère connu, et `dessinDe()` applique
+     `ECH_BAT` **à l'intérieur** pendant qu'`APERCU_ECH` divise par le même
+     facteur : ce que la vignette montre est donc le dessin **brut**, et la
+     taille réelle sur l'île se retrouve en le remultipliant. C'est de
+     l'arithmétique sur une mesure du navigateur, pas une lecture du code. */
+  const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  // La déclaration seule, coupée à son `};` : une tranche de longueur fixe
+  // mordait sur le code suivant et comptait huit échelles au lieu de six.
+  // Un compte qui déborde ment aussi sûrement qu'un compte qui manque.
+  const d0 = src.indexOf('const ECH_BAT=');
+  const eb = src.slice(d0, src.indexOf('};', d0));
+  const ECH = {};
+  [...eb.matchAll(/([a-z]+):\s*([\d.]+)/g)].forEach(m => { ECH[m[1]] = parseFloat(m[2]); });
+  c.dit(Object.keys(ECH).length === 6, 'les six échelles ont été lues (' + Object.keys(ECH).length + ')');
+  c.dit(/APERCU_ECH\[k\]\s*=\s*0\.60\s*\/\s*ECH_BAT\[k\]/.test(src),
+        'la vignette divise par la même échelle — sinon elle déborde de sa case');
+
+  const { ctx, page, erreurs } = await ouvrir(null);
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'boutique');
+    if (b) b.click();
+  });
+  await attendre(700);
+  const brut = await page.evaluate(() => {
+    const out = {};
+    document.querySelectorAll('#p-boutique .objs .obj').forEach(b => {
+      const cv = b.querySelector('canvas'), nom = b.querySelector('span');
+      if (!cv || !nom) return;
+      const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+      let x0 = 1e9, x1 = -1e9, y0 = 1e9, n = 0;
+      for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++)
+        if (d[(y * cv.width + x) * 4 + 3] > 200) {
+          n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; }
+      if (n) out[nom.textContent.trim()] = { demi: Math.max(60 - x0, x1 - 60), haut: 90 - y0 };
+    });
+    return out;
+  });
+  const NOM = { ferme: 'Ferme', ecole: 'École', coiffeur: 'Coiffeur',
+    supermarche: 'Supermarché', restaurant: 'Restaurant', culte: 'Lieu de culte' };
+  // pixels de vignette = monde_brut x 1,2  (2 du setTransform x 0,60 d'échelle)
+  const taille = {};
+  Object.keys(NOM).forEach(k => { const m = brut[NOM[k]];
+    if (m) taille[k] = { demi: m.demi / 1.2 * ECH[k], haut: m.haut / 1.2 * ECH[k] }; });
+  c.dit(Object.keys(taille).length === 6, 'les six ont été mesurés dans la vitrine');
+
+  console.log('     la maison fait 80 de haut et 56 de demi-largeur · le bonhomme 38');
+  Object.keys(NOM).forEach(k => { const t = taille[k]; if (!t) return;
+    console.log('       ' + NOM[k].padEnd(14) + 'demi-larg. ' + t.demi.toFixed(0).padStart(3) +
+      '   hauteur ' + t.haut.toFixed(0).padStart(4) + '   ' + (t.haut / 80).toFixed(2) + '× la maison'); });
+
+  // Le défaut d'origine, nommé : plus personne ne doit être plus grand qu'un
+  // bâtiment, et une église doit dominer la maison.
+  const petits = Object.keys(taille).filter(k => taille[k].haut <= 38);
+  c.dit(petits.length === 0,
+        'aucun bâtiment n’est plus petit que le bonhomme' + (petits.length ? ' → ' + petits.join(', ') : ''));
+  c.dit(taille.culte && taille.culte.haut > 80, 'le lieu de culte dépasse la maison (' +
+        (taille.culte ? taille.culte.haut.toFixed(0) : '?') + ' contre 80)');
+  c.dit(taille.ecole && taille.ecole.haut > 45,
+        'l’école dépasse un arbre à fleurs (45), ce qui n’était pas le cas');
+  c.dit(taille.culte && Object.keys(taille).every(k => taille[k].haut <= taille.culte.haut),
+        'et le clocher est le plus haut des six');
+  // Ils sont larges, mais pas au point de mordre sur la case du voisin :
+  // un 2x2 a 56 de demi-largeur, comme la maison.
+  const larges = Object.keys(taille).filter(k => taille[k].demi > 56);
+  c.dit(larges.length === 0,
+        'aucun ne déborde de son 2x2' + (larges.length ? ' → ' + larges.join(', ') : ''));
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
 }
 
 c.titre('9 bis. un souvenir décore, il ne fonctionne pas');
