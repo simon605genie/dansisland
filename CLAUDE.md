@@ -2702,6 +2702,164 @@ C'est la même famille que les trois prénoms au lieu de vingt et que les
 îles écrites à la main : un contrôle qui ne s'assure pas d'avoir trouvé ce
 qu'il mesure passe au vert en ne regardant rien.
 
+## Les bâtiments deviennent des bâtiments — 20/09/2026
+
+**Aucune migration, aucune clé de plus dans `mondeNu()`** : un objet posé
+reste `{t,x,y,o,c}`. Une île d'hier qui porte une ferme la voit simplement
+grandir au prochain chargement.
+
+### Ce que la mesure a dit
+
+On était **plus grand qu'une ferme**. En unités du monde, le bonhomme fait
+38 et la maison 80 :
+
+    Phare               91        Lieu de culte       58
+    Montgolfière        90        Palmier             46
+    Cabane perchée      62        École               43   ← sous un arbre
+    Moulin              60        Ferme               33   ← sous le bonhomme
+                                  Restaurant          33
+
+Les six avaient été dessinés comme des objets. Et le défaut ne se corrige
+pas en hauteur seule : **une église plus grande qu'une maison ne tient pas
+dans une case.**
+
+### `EMPRISE_ILE` — un bâtiment occupe 2x2, comme la maison
+
+C'est la seule règle, et elle est mémorable : ce qui occupe quatre cases
+est un bâtiment. `EMPRISE_ILE` est une propriété du **type**, dans le
+catalogue, au même titre que `PIVOT_ILE`, `NIVEAU` et `TAILLE` — donc rien
+n'entre dans le jsonb.
+
+Six choses à ne pas défaire :
+
+1. **`empriseCases()` ne s'appelle pas `casesDe()`, et c'est la leçon de la
+   journée.** `casesDe(m)` existait déjà — la version des meubles. Deux
+   déclarations de fonction du même nom ne lèvent **aucune erreur** : la
+   dernière gagne. Écrite sous ce nom, la mienne rendait
+   `[{x:NaN,y:NaN}]` à tous ses appelants, `NaN <= rayon` est faux, et
+   **aucune des vingt îles n'a reçu son village** — sans une ligne dans la
+   console. Trouvé en comptant les refus (6075 sur 6075, tous au même
+   test), pas à la relecture.
+2. **`couvre(o,x,y)` est le seul test d'occupation.** Un `o.x===x` laisse
+   poser un arbre dans l'église. La gomme, la rotation, la crotte du chien,
+   les îles bot et `freeTile()` passent tous par lui.
+3. **Le dessin est centré sur l'emprise et se trie à ce centre**
+   (`centreDe()`), pas à la case d'ancrage : sinon un objet posé au coin
+   sud de l'emprise passerait devant le bâtiment. `ce.x+ce.y` rend
+   exactement l'ancien `o.x+o.y+1` pour une case, et la profondeur de la
+   maison pour un 2x2 — une seule expression pour les deux.
+4. **`proximity()` détecte un bâtiment à son emprise, pas à la distance.**
+   Le centre d'un 2x2 est à `+1`, donc le coin opposé est à 1,41 case du
+   centre d'ancrage : la distance ne l'aurait jamais vu, et on aurait été
+   dans l'église sans que l'église compte. Les objets d'une case gardent le
+   test de distance, qui n'a pas bougé.
+5. **Un bâtiment n'écrase pas ce qu'il couvre, il le dit.** Un 1x1 continue
+   de remplacer en silence — c'est le geste ordinaire du pinceau — mais une
+   église posée d'un clic emporterait jusqu'à quatre objets d'un coup.
+6. **La gomme prend le bâtiment par n'importe laquelle de ses quatre
+   cases.** Viser l'angle d'ancrage serait un jeu d'adresse.
+
+### `ECH_BAT` — une échelle, pas six dessins refaits
+
+Chaque bâtiment est une trentaine de coordonnées nouées entre elles : la
+porte est une fraction de la façade, le silo est à une hauteur de mur,
+l'auvent suit une arête. Les réécrire à la main, c'est trente occasions de
+se tromper par bâtiment, sans que rien ne le signale à part l'œil. Une
+**échelle uniforme** garde toutes ces relations exactes par construction,
+et elle s'applique dans `dessinDe()`, seul endroit qui peigne un objet
+d'île — vignettes comprises.
+
+Ce que ça coûte : la largeur suit la hauteur. Mesuré, ça tombe bien.
+
+    Lieu de culte   118   1,47× la maison   le plus haut de l'île
+    École            96   1,20×
+    Ferme            88   1,10×
+    Supermarché      74   0,93×
+    Restaurant       70   0,88×
+    Coiffeur         68   0,85×
+
+Les six restent entre 35 et 49 de demi-largeur, donc **tous à l'intérieur
+de leur 2x2** (56) : aucun ne mord sur la case du voisin.
+
+**`APERCU_ECH` divise par le même facteur**, et c'est calculé, pas recopié
+(`APERCU_ECH[k]=0.60/ECH_BAT[k]`). Une vignette est une icône de 60 px, pas
+une maquette : sans ça les six déborderaient de leur case dans l'atelier,
+du facteur exact dont ils ont grandi sur l'île.
+
+### Le village des îles de démonstration, et l'exception assumée
+
+Les grands bâtiments sont posés **au nord** et **en premier** : au nord
+parce que dans cette isométrie le nord est le fond du cadre — une église de
+118 posée devant cache tout ce qui est derrière — et en premier parce que
+le décor se sème ensuite sur les cases restantes.
+
+Ils sont **payants**, et la règle du 16/09 dit qu'on ne met rien de payant
+sur une île bot. Elle tient toujours, mais elle est maintenant tenue par
+**`ramasserSouvenir()`**, qui refuse un objet payant pris sur une île
+`demo` en nommant son prix, plutôt que par l'absence de l'objet. Un village
+de démonstration sans un seul bâtiment ne montre pas le jeu ; vingt îles
+infinies qui donnent une église gratuite ne laissent rien à la Boutique.
+
+**Chez un vrai voisin, rien ne change** : un souvenir d'ami reste gratuit,
+c'est le choix écrit le 19/09 et c'est ce qui donne envie d'aller chez les
+gens.
+
+Deux pièges rencontrés en posant ces bâtiments, tous deux vus **sur une
+capture** :
+
+1. **`dansLeRayon()` et pas « la tuile n'est pas de l'eau ».** Le
+   restaurant de « La Crique » flottait au nord, au-dessus de la mer : les
+   tuiles hors du rayon ne portent pas toutes la valeur eau. C'est le rayon
+   qui dit où est l'île ; la tuile ne dit que ce qui y est peint.
+2. **Une case de marge sur ce rayon.** Le balayage part du nord, donc sans
+   elle le bâtiment se pose sur la toute dernière rangée de terre et se lit
+   comme perché au bord de la falaise.
+
+### Agrandir l'île se propose là où le besoin se sent
+
+Un bâtiment refusé faute de place ne dit plus « le large ne t'appartient
+pas » : il dit qu'il faut **quatre cases**, et que l'île gagne un cran à
+chaque mot qu'on te laisse — donc d'envoyer sa carte postale. C'est le seul
+refus du jeu auquel on peut répondre quelque chose, et la réponse n'est pas
+« recommence ».
+
+### Ce que les contrôles ont appris, et ce qu'ils ne prouvent pas
+
+Le contrôle 9 lisait `THEMES` et `DEMO`. **Il est passé au vert** alors que
+six articles payants venaient d'arriver sur vingt îles, parce qu'il ne
+connaissait pas `GRANDS` — la troisième source. C'est, mot pour mot, son
+propre angle mort du 19/09, où il ne lisait que `THEMES` et ratait les îles
+écrites à la main. Un contrôle qui ne connaît pas la source qu'on vient
+d'ajouter ne dit rien : il rassure.
+
+Il croise donc maintenant les trois, et il vérifie **l'exception avec son
+garde-fou** : `GRANDS` ne pose que des bâtiments, et `ramasserSouvenir()`
+refuse bien sur une île `demo`. Ce second point est un contrôle de
+**câblage**, pas de comportement, et il faut le dire : amener le bonhomme
+sur une église d'île bot demanderait de le téléporter, et rien ici n'en
+donne le moyen.
+
+Le contrôle 9 ter mesure les proportions dans le navigateur et **imprime la
+table** — la vignette montre le dessin brut, `ECH_BAT` le remultiplie, donc
+c'est de l'arithmétique sur une mesure, pas une lecture du code. Éprouvé en
+remettant les deux vraies pannes : `ECH_BAT.ferme` à 1 rend « aucun
+bâtiment n'est plus petit que le bonhomme → **ferme** », et le garde-fou
+retiré rend sa ligne rouge.
+
+*(Et un rappel du comptage, pour la deuxième fois de la journée : ma
+première lecture d'`ECH_BAT` prenait une tranche de 300 caractères et
+comptait **huit** échelles au lieu de six, en mordant sur le code suivant.
+Un compte qui déborde ment aussi sûrement qu'un compte qui manque.)*
+
+### Ce qui reste à faire, et qui n'est pas fait
+
+**Des habitants.** Mis de côté explicitement, et rien n'a été préparé pour
+eux ici : ne pas prendre `EMPRISE_ILE` pour un premier pas vers des
+personnages qui vivraient dans les bâtiments. Le jour où ça se fera, la
+question à trancher avant d'écrire une ligne est celle de toujours — est-ce
+que ça rapporte, et si oui, dans la famille des corvées ou dans celle des
+visites ?
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

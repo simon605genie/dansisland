@@ -1262,6 +1262,83 @@ function shadowDiamond(c,cx,cy,a){
 const PIVOT_ILE={banc:1,barriere:1,cloture:1,ponton:1,boutique:1,balancoire:1,
                  hamac:1,toboggan:1,tente:1,
                  ferme:1,ecole:1,coiffeur:1,supermarche:1,restaurant:1,culte:1};
+
+/* **Un bâtiment occupe 2x2, comme la maison.** C'est ce qui en fait un
+   bâtiment, et c'est la seule règle : une église plus grande qu'une maison
+   ne tient pas dans une case, et un lieu de culte haut sur une base d'une
+   case est une aiguille, pas une église.
+
+   Mesuré avant d'y toucher, en unités du monde (le bonhomme fait 38, la
+   maison 80) : la ferme faisait **33** et le restaurant 33 — on était plus
+   grand qu'une ferme — et l'école 43, soit moins qu'un arbre à fleurs (45).
+   Les six avaient été dessinés comme des objets.
+
+   `EMPRISE_ILE` est une propriété du **type**, dans le catalogue, au même
+   titre que `PIVOT_ILE`, `NIVEAU` et `TAILLE` : **rien n'entre dans le
+   jsonb**, un objet posé reste `{t,x,y,o,c}` et aucune migration n'est
+   demandée. Une île d'hier qui porte une ferme la voit simplement grandir.
+
+   L'emprise ne tourne pas avec le `Sens` : les six sont carrés, donc
+   `empriseIle()` n'a pas besoin de l'orientation. Le jour où un bâtiment
+   2x1 apparaît, c'est ici qu'il faudra échanger les deux axes, comme le
+   fait déjà `emprise()` pour les meubles. */
+const EMPRISE_ILE={ferme:[2,2], ecole:[2,2], coiffeur:[2,2],
+                   supermarche:[2,2], restaurant:[2,2], culte:[2,2]};
+function empriseIle(t){ return EMPRISE_ILE[t]||[1,1]; }
+function estBatiment(t){ return !!EMPRISE_ILE[t]; }
+/* `empriseCases` et non `casesDe` : **`casesDe(m)` existe déjà**, c'est la
+   version des meubles, et deux déclarations du même nom ne lèvent aucune
+   erreur — la dernière gagne, en silence. Écrite d'abord sous ce nom-là,
+   celle-ci rendait `[{x:NaN,y:NaN}]` à tous ses appelants, `NaN <= rayon`
+   est faux, et **aucune île de démonstration n'a reçu son village** sans
+   qu'une seule ligne ne le signale. Trouvé en comptant les refus, pas à la
+   relecture. */
+function empriseCases(t,x,y){ const [w,h]=empriseIle(t), out=[];
+  for(let j=0;j<h;j++) for(let i=0;i<w;i++) out.push([x+i,y+j]);
+  return out; }
+// Une case est-elle sous cet objet ? Le seul test d'occupation du jeu :
+// une comparaison `o.x===x` laisserait poser un arbre dans l'église.
+function couvre(o,x,y){ const [w,h]=empriseIle(o.t);
+  return x>=o.x && x<o.x+w && y>=o.y && y<o.y+h; }
+function objetEn(objs,x,y,avecPanneau){
+  return (objs||[]).find(o=>(avecPanneau||o.t!=='panneau')&&couvre(o,x,y))||null; }
+// Le dessin est centré sur l'emprise, pas sur la case d'ancrage — c'est ce
+// que fait déjà `drawHouse()` avec son `iso(h.x+1,h.y+1)`.
+function centreDe(t,x,y){ const [w,h]=empriseIle(t);
+  return {x:x+w/2, y:y+h/2}; }
+
+/* L'échelle d'un bâtiment, appliquée dans `dessinDe()` — le seul endroit
+   qui dessine un objet d'île, donc le seul à changer.
+
+   **Pourquoi une échelle et pas six dessins refaits.** Chaque bâtiment est
+   une trentaine de coordonnées nouées entre elles (la porte est une
+   fraction de la façade, le silo est à une hauteur de mur, l'auvent suit
+   une arête). Les réécrire à la main, c'est trente occasions de se tromper
+   par bâtiment, sans que rien ne le signale à part l'œil. Une échelle
+   uniforme garde toutes ces relations exactes par construction.
+
+   Ce que ça coûte : la largeur suit la hauteur, on ne les règle pas
+   séparément. Mesuré, ça tombe bien — les six restent entre 35 et 49 de
+   demi-largeur, donc **tous à l'intérieur de leur 2x2** (56), et aucun ne
+   déborde sur la case du voisin.
+
+   L'échelle visée, en unités du monde, contre la maison à 80 :
+
+       lieu de culte   118   1,48×   le plus haut de l'île, phare compris
+       école            96   1,20×
+       ferme            88   1,10×   une grange est haute
+       supermarché      74   0,93×
+       restaurant       70   0,88×
+       coiffeur         68   0,85×   une boutique de rue
+
+   Et contre le bonhomme, qui fait 38 : de 1,8× à 3,1×. Avant ce changement
+   la ferme faisait 33, soit **moins qu'un bonhomme**.
+
+   `APERCU_ECH` divise par le même facteur : la vignette est une icône de
+   60 px, pas une maquette à l'échelle, et sans ça les six déborderaient de
+   leur case dans l'atelier. */
+const ECH_BAT={culte:2.02, ecole:2.22, ferme:2.64,
+               supermarche:2.02, restaurant:2.10, coiffeur:1.90};
 // Ce qui éclaire la nuit, et la hauteur de la flamme. Le phare, lui, porte
 // sa lumière dans son propre dessin.
 const LUEUR={lampe:34, feudecamp:16};
@@ -1657,7 +1734,7 @@ function fairePousser(){
     if(!dansLeRayon(x,y,mine)) continue;
     if(x>=h.x-1&&x<=h.x+2&&y>=h.y-1&&y<=h.y+2) continue;
     if(seuils.some(c=>c.x===x&&c.y===y)) continue;
-    if((mine.objects||[]).some(o=>o.x===x&&o.y===y)) continue;
+    if(objetEn(mine.objects,x,y,true)) continue;
     libres.push(y*GRID+x);
   }
   let pousse=0;
@@ -1863,12 +1940,57 @@ function mkBot(i){
       acc:pick(21,['aucun','chapeau','lunettes','couronne','cape'])},
     objects:[]
   };
+  /* Les grands bâtiments au **nord**, et posés en premier.
+
+     Au nord parce que dans cette isométrie le nord est le fond du cadre :
+     une église de 118 posée devant cache tout ce qui est derrière elle,
+     posée au fond elle donne une silhouette au village. Et en premier parce
+     que le décor se sème ensuite sur les cases restantes — l'inverse
+     laisserait le hasard occuper le fond et il n'y aurait plus la place.
+
+     Ils sont **payants**, et la règle du 16/09 dit qu'on ne met rien de
+     payant sur une île bot : « on en ramène un souvenir gratuitement, et la
+     boutique ne sert plus à rien ». Elle tient toujours — mais elle est
+     maintenant tenue par `ramasserSouvenir()`, qui refuse un objet payant
+     pris sur une île de démonstration en nommant son prix, plutôt que par
+     l'absence de l'objet. C'est ce qui permet aux vingt îles d'avoir un
+     village sans ouvrir la boutique à qui va se promener.
+
+     Chez un **vrai** voisin, rien ne change : un souvenir d'ami reste
+     gratuit, c'est le choix écrit le 19/09 et c'est ce qui donne envie
+     d'aller chez les gens. */
+  const GRANDS={plage:['restaurant'], foret:['ferme'], desert:['ecole'],
+                village:['culte','ecole'], port:['supermarche','restaurant']};
+  (GRANDS[theme.n]||[]).forEach((t,n)=>{
+    // Du nord vers le sud, en balayant d'ouest en est : la première case
+    // qui porte les quatre cases du bâtiment, à terre et loin de la maison.
+    for(let y=1;y<GRID-2;y++) for(let x=1;x<GRID-2;x++){
+      const cs=empriseCases(t,x,y);
+      /* `dansLeRayon` et **pas** seulement « la tuile n'est pas de l'eau ».
+         Mesuré en regardant une capture : le restaurant de « La Crique »
+         flottait au nord, au-dessus de la mer. Les tuiles hors du rayon ne
+         portent pas toutes la valeur eau — c'est le rayon qui dit où est
+         l'île, la tuile ne dit que ce qui y est peint. */
+      // Une case de marge sur le rayon : le balayage part du nord, donc sans
+      // elle le bâtiment se pose toujours sur la toute dernière rangée de
+      // terre et se lit comme perché au bord de la falaise.
+      if(cs.some(c=>!dansLeRayon(c[0],c[1],{rayon:(w.rayon||0)-1}))) continue;
+      if(cs.some(c=>w.tiles[c[1]*GRID+c[0]]===2)) continue;
+      if(cs.some(c=>c[0]>=w.house.x-1&&c[0]<=w.house.x+2&&c[1]>=w.house.y-1&&c[1]<=w.house.y+2)) continue;
+      if(cs.some(c=>objetEn(w.objects,c[0],c[1],true))) continue;
+      // Une case de respiration autour, sinon deux bâtiments hauts se
+      // recouvrent et le village se lit comme un tas.
+      if(w.objects.some(o=>estBatiment(o.t)&&Math.abs(o.x-x)<3&&Math.abs(o.y-y)<3)) continue;
+      w.objects.push({t,x,y,c:COUL_OBJ[t]||'#FDFBF2',o:d(80+n)>0.5?'sw':'se'});
+      return;
+    }
+  });
   const combien=11+Math.floor(d(22)*8);
   for(let k=0,essais=0; k<combien && essais<260; essais++){
     const x=Math.floor(d(30+essais*2)*GRID), y=Math.floor(d(31+essais*2)*GRID);
     if(w.tiles[y*GRID+x]===2) continue;                       // pas dans l'eau
     if(x>=w.house.x-1&&x<=w.house.x+2&&y>=w.house.y-1&&y<=w.house.y+2) continue;
-    if(w.objects.some(o=>o.x===x&&o.y===y)) continue;
+    if(objetEn(w.objects,x,y,true)) continue;
     const t=theme.v[Math.floor(d(40+essais)*theme.v.length)%theme.v.length];
     const o={t,x,y,c:COUL_OBJ[t]||'#8AA3B2'};
     // Bancs, barrières et pontons tirent leur sens de la même graine : vingt
@@ -2705,6 +2827,9 @@ const DRAW={
 // un argument de plus coûte moins qu'une seconde fonction de dessin.
 function dessinDe(g,t,col,o,etat){
   g.save(); if(o==='sw') g.scale(-1,1);
+  // Un bâtiment se dessine à son échelle, et c'est ici — le seul endroit du
+  // jeu qui peigne un objet d'île, vignettes comprises.
+  const k=ECH_BAT[t]; if(k) g.scale(k,k);
   (DRAW[t]||DRAW.rocher)(g,col,etat); g.restore();
 }
 const OBJ_GROUPS=[
@@ -3446,7 +3571,11 @@ function drawWorld(t){
   items.push({d:(world.house.x+1)+(world.house.y+1), f:()=>drawHouse(ctx,world.house,t)});
   world.objects.forEach(o=>{
     if(balade&&o===balade.o) return;      // il a quitté sa case : il est plus bas
-    const c0=ctr(o.x,o.y);
+    // Un bâtiment est centré sur son 2x2, et il se trie à ce centre — pas à
+    // sa case d'ancrage, sinon un arbre posé dans le coin sud de son emprise
+    // lui passerait devant. C'est ce que fait `drawHouse()` depuis toujours.
+    const ce=centreDe(o.t,o.x,o.y), bat=estBatiment(o.t);
+    const c0=bat ? iso(ce.x,ce.y) : ctr(o.x,o.y);
     // Le coffre est le seul objet dont le dessin dépend de l'état du jeu.
     // Fermé et scintillant, il dit qu'il a quelque chose ; ouvert et vide,
     // qu'on est déjà passé. Chez un voisin, il reste fermé : ce serait ta
@@ -3455,9 +3584,11 @@ function drawWorld(t){
     // qui le dit. Sans lui il faudrait un `if` par objet ici, et le
     // prochain en ajouterait un cinquième.
     const plein = coffrePlein(o) || boitePleine(o);
-    items.push({d:o.x+o.y+1, f:()=>{
+    // `ce.x+ce.y` rend exactement l'ancien `o.x+o.y+1` pour une case
+    // (centre en +0,5) et la profondeur de la maison pour un 2x2 (+1).
+    items.push({d:ce.x+ce.y, f:()=>{
       ctx.save(); ctx.translate(c0.x,c0.y-LIFT);
-      shadowDiamond(ctx,0,0,12);
+      shadowDiamond(ctx,0,0,bat?26:12);
       dessinDe(ctx,o.t,o.c||'#8AA3B2',o.o,etatObjet(o,t));
       // Dans ce jeu, une chose qui brille est une chose à prendre : le
       // coffre du jour, et la boîte où un mot attend d'être lu.
@@ -4307,17 +4438,15 @@ cv.addEventListener('click',e=>{
     memoriser(); world.tiles[q.y*GRID+q.x]=tool.kind; son('pinceau');
   }
   else if(tool.mode==='gomme'){
-    if(!world.objects.some(o=>o.t!=='panneau'&&o.x===q.x&&o.y===q.y)) return;
-    memoriser(); world.objects=world.objects.filter(o=>o.t==='panneau'||!(o.x===q.x&&o.y===q.y)); son('gomme');
+    // La gomme prend le bâtiment par n'importe laquelle de ses quatre cases :
+    // viser l'angle d'ancrage serait un jeu d'adresse, et on effacerait
+    // l'arbre d'à côté en croyant prendre l'église.
+    const vise=objetEn(world.objects,q.x,q.y);
+    if(!vise) return;
+    memoriser(); world.objects=world.objects.filter(o=>o!==vise); son('gomme');
   }
   else if(tool.mode==='objet'){
-    if(world.tiles[q.y*GRID+q.x]===2){ say("On ne plante rien dans l'eau."); return; }
-    if(q.x>=world.house.x&&q.x<=world.house.x+1&&q.y>=world.house.y&&q.y<=world.house.y+1){ say('La maison occupe déjà cette case.'); return; }
-    memoriser();
-    world.objects=world.objects.filter(o=>!(o.x===q.x&&o.y===q.y));
-    const neuf={t:tool.kind,x:q.x,y:q.y,c:tool.color};
-    if(PIVOT_ILE[tool.kind]) neuf.o=tool.orient;
-    world.objects.push(neuf); son('poser');
+    if(!poserObjet(q.x,q.y)) return;
   }
   else if(tool.mode==='tourner'){ tournerSurIle(q.x,q.y); }
   else if(tool.mode==='maison'){ poserMaison(q.x,q.y); guideFait(2); }
@@ -4327,8 +4456,55 @@ cv.addEventListener('click',e=>{
 
 // Tourner ce qui est déjà posé : un sens qu'on ne choisit qu'au moment de
 // poser oblige à effacer pour se corriger.
+/* Poser un objet, et pour un bâtiment ses quatre cases.
+
+   Rend `true` si quelque chose a changé — c'est l'appelant qui sauvegarde,
+   comme pour les autres pinceaux.
+
+   Trois refus, et chacun dit quoi faire **là où est le doigt** : c'est la
+   leçon de la boutique du 16/09, et elle vaut d'autant plus ici qu'un
+   bâtiment refusé sans un mot se lit comme un clic mort.
+
+   Un bâtiment n'écrase pas ce qu'il couvre, il le dit. Un 1x1 continue de
+   remplacer en silence, comme avant : remplacer un buisson par un autre est
+   le geste ordinaire du pinceau, alors qu'une église posée d'un clic
+   emporterait jusqu'à quatre objets d'un coup. */
+function poserObjet(x,y){
+  const t=tool.kind, cases=empriseCases(t,x,y), bat=estBatiment(t);
+  if(bat && (x>GRID-2||y>GRID-2)){ say(unObjet(t,true,true)+' déborderait de la grille.'); return false; }
+  // Le rayon d'abord : c'est le seul refus auquel on peut répondre quelque
+  // chose, et la réponse est « fais venir du monde », pas « recommence ».
+  const dehors=cases.filter(c=>!dansLeRayon(c[0],c[1]));
+  if(dehors.length){
+    if(!bat) return false;              // le clic hors rayon a déjà parlé
+    say('Il faut <b>quatre cases</b> à '+unObjet(t,false,true)+', et ton île '+
+        'n’est pas encore assez large ici. Essaie plus près du centre — ou '+
+        '<b>agrandis ton île</b> : elle gagne un cran à chaque mot qu’on te laisse. '+
+        'Envoie ta carte postale, onglet <b>Voisins</b>.', 0, 5600);
+    return false;
+  }
+  if(cases.some(c=>world.tiles[c[1]*GRID+c[0]]===2)){
+    say(bat ? 'On ne bâtit pas sur l’eau : les quatre cases doivent être à terre.'
+            : "On ne plante rien dans l'eau."); return false; }
+  const h=world.house;
+  if(cases.some(c=>c[0]>=h.x&&c[0]<=h.x+1&&c[1]>=h.y&&c[1]<=h.y+1)){
+    say('La maison occupe déjà cette case.'); return false; }
+  if(bat){
+    const gene=(world.objects||[]).find(o=>cases.some(c=>couvre(o,c[0],c[1])));
+    if(gene){ say(gene.t==='panneau'
+      ? 'Un mot du livre d’or est planté là. Choisis un autre endroit.'
+      : 'Il y a '+unObjet(gene.t,false,true)+' sous '+unObjet(t,false,true)+
+        '. Efface-le d’abord, ou pose plus loin.'); return false; }
+  }
+  memoriser();
+  if(!bat) world.objects=world.objects.filter(o=>!couvre(o,x,y));
+  const neuf={t,x,y,c:tool.color};
+  if(PIVOT_ILE[t]) neuf.o=tool.orient;
+  world.objects.push(neuf); son('poser');
+  return true;
+}
 function tournerSurIle(x,y){
-  const o=(world.objects||[]).find(k=>k.t!=='panneau'&&k.x===x&&k.y===y);
+  const o=objetEn(world.objects,x,y);
   if(!o){ say('Rien à tourner ici.'); return; }
   if(!PIVOT_ILE[o.t]){ say(unObjet(o.t,true,true)+' n’a pas de sens : il est pareil des deux côtés.'); return; }
   memoriser(); o.o = o.o==='sw' ? 'se' : 'sw'; son('poser'); saveMine(); buildAll();
@@ -5099,7 +5275,7 @@ function leChienSarrete(){
   if(!dansLeRayon(x,y)||!terre(x,y)) return;
   // Jamais deux au même endroit, et jamais sur un objet déjà posé : une
   // crotte sous un buisson ne se voit pas, donc ne se nettoie pas.
-  if((mine.objects||[]).some(o=>o.x===x&&o.y===y)) return;
+  if(objetEn(mine.objects,x,y,true)) return;
   mine.objects.push({t:'crotte', x, y});
   saveMine(); son('chien');
   say('Le chien s’arrête un instant. <b>Il faudra nettoyer</b> — marche dessus et appuie sur <b>E</b>.', 0, 3400);
@@ -5569,7 +5745,14 @@ function proximity(){
   if(dedans){ proximiteDedans(); return; }
   let panneau=null, objet=null;
   world.objects.forEach(o=>{
-    if(Math.hypot(o.x+0.5-hero.x,o.y+0.5-hero.y)>=0.95) return;
+    /* Un objet d'une case se détecte à la distance, comme depuis toujours.
+       Un bâtiment se détecte à son **emprise** : son centre est à `+1`, donc
+       le coin opposé est à 1,41 case du centre d'ancrage et la distance ne
+       l'aurait jamais vu. On serait dans l'église sans que l'église compte. */
+    if(estBatiment(o.t)){
+      if(!couvre(o,Math.floor(hero.x),Math.floor(hero.y))) return;
+    }
+    else if(Math.hypot(o.x+0.5-hero.x,o.y+0.5-hero.y)>=0.95) return;
     if(o.t==='panneau'){ if(o.txt) panneau=o; } else objet=o;
   });
   // Une crotte n'est pas un souvenir. Chez un voisin, tout objet sous les
@@ -5732,10 +5915,31 @@ function proximity(){
 // visitée n'est pas touchée, et la tienne garde la trace de qui tu as vu.
 function ramasserSouvenir(){
   const o=souvenirProche; if(!o||!visiting) return;
+  /* Sur une **île de démonstration**, un objet payant se regarde et ne se
+     ramène pas. C'est la règle du 16/09 — « on en ramène un souvenir
+     gratuitement, et la boutique ne sert plus à rien » — tenue là où elle
+     se joue plutôt que par l'absence de l'objet sur ces îles.
+
+     Les vingt îles bot sont infinies et toujours ouvertes : une église
+     gratuite à qui va s'y promener, et les 58 shells de la Boutique ne
+     veulent plus rien dire. Chez un **vrai** voisin, rien ne change : un
+     souvenir d'ami reste gratuit, c'est ce qui donne envie d'aller chez les
+     gens, et c'est le choix écrit le 19/09.
+
+     Le refus tombe au moment du ramassage — le seul instant où le doigt est
+     sur l'objet — et il nomme le prix, donc il apprend quelque chose au lieu
+     de gronder. */
+  const payant=world.demo && BOUTIQUE.find(x=>x.k===o.t);
+  if(payant){ say('Ici, c’est une île de démonstration : '+unObjet(o.t,false,true)+
+    ' ne se ramène pas. Le tien est à la <b>Boutique</b>, '+payant.prix+' shells — '+
+    'et chez un vrai voisin, un souvenir reste un cadeau.', 0, 5200); return; }
   if((mine.objects||[]).some(x=>x.de===world.owner&&x.t===o.t)){
     say('Tu as déjà ce souvenir de chez <b>'+esc(world.owner)+'</b>.'); return; }
-  const spot=freeTile(mine);
-  if(!spot){ say('Plus une case libre chez toi pour poser un souvenir.'); return; }
+  const spot=freeTile(mine,o.t);
+  if(!spot){ say(estBatiment(o.t)
+    ? 'Il faut <b>quatre cases libres</b> chez toi pour '+unObjet(o.t,false,true)+
+      ', et ton île n’en a plus. Fais de la place, ou agrandis-la.'
+    : 'Plus une case libre chez toi pour poser un souvenir.'); return; }
   mine.objects.push({t:o.t,x:spot.x,y:spot.y,c:o.c,de:world.owner});
   saveMine(); son('poser'); buildAll();
   // Le moment du ramassage est le seul où le doigt est sur l'objet : c'est
@@ -6330,8 +6534,14 @@ function apercuToi(g,t,col){
 }
 // Un objet plus haut qu'une case déborde de sa vignette et se fait couper la
 // tête. L'ombre, elle, reste à la taille de la case : c'est le sol, pas l'objet.
+/* L'échelle d'une vignette. Une vignette est une **icône de 60 px**, pas une
+   maquette : chacune est réglée pour remplir sa case sans déborder, et c'est
+   pour ça que le phare et la fleur y font la même taille.
+   Les bâtiments divisent donc par leur `ECH_BAT`, sinon ils sortiraient de
+   la vignette du facteur exact dont ils ont grandi sur l'île. */
 const APERCU_ECH={phare:0.44, moulin:0.50, cabane:0.44, montgolfiere:0.40,
                   puits:0.50, statue:0.50, toboggan:0.54};
+Object.keys(ECH_BAT).forEach(k=>{ APERCU_ECH[k]=0.60/ECH_BAT[k]; });
 function apercuObjet(g,t,col,o){
   g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,60,60);
   g.save(); g.translate(30,45);
@@ -7409,12 +7619,19 @@ async function chargerMonCompte(){
   }catch(e){ say('Compte charg\u00e9 partiellement : '+esc(e.message||e)); }
 }
 
-function freeTile(w){
+/* Une place libre pour poser quelque chose. `t` dit quoi : un bâtiment
+   demande ses quatre cases, et sans ce paramètre un souvenir d'église se
+   posait sur une case en en recouvrant trois autres — dont, un jour, la
+   maison. Sans `t`, une case, comme avant. */
+function freeTile(w,t){
+  const cases=(x,y)=>empriseCases(t||'rocher',x,y);
   for(let k=0;k<300;k++){
     const x=Math.floor(Math.random()*GRID), y=Math.floor(Math.random()*GRID);
-    if(w.tiles[y*GRID+x]===2) continue;
-    if(x>=w.house.x-1&&x<=w.house.x+2&&y>=w.house.y-1&&y<=w.house.y+2) continue;
-    if(w.objects.some(o=>o.x===x&&o.y===y)) continue;
+    const cs=cases(x,y);
+    if(cs.some(c=>c[0]>=GRID||c[1]>=GRID)) continue;
+    if(cs.some(c=>w.tiles[c[1]*GRID+c[0]]===2)) continue;
+    if(cs.some(c=>c[0]>=w.house.x-1&&c[0]<=w.house.x+2&&c[1]>=w.house.y-1&&c[1]<=w.house.y+2)) continue;
+    if(cs.some(c=>objetEn(w.objects,c[0],c[1],true))) continue;
     return {x,y};
   }
   return null;
