@@ -2923,6 +2923,15 @@ seul titre ne répond à aucune recherche.** La marque est donc un logotype
 (`.marque-page`, `.marque`), et le `h1`, unique, est la promesse :
 *Construis ton île. Détends-toi. Partage-la.*
 
+*(Ce que le `h1` **dit** a changé le soir même, avec la planche d'identité :
+il porte maintenant deux lignes, « Ton île. Ton rythme. » puis « Construis
+ton île, regarde-la vivre, partage-la. » — voir « Le site prend une
+identité ». Ce qui est écrit ici tient toujours, et c'est le seul point qui
+comptait : **un seul `h1`, et c'est la promesse, pas la marque.** La
+formulation est restée là exprès plutôt que d'être réécrite, parce que
+c'est celle qui a été demandée par l'audit, et qu'un dépôt qui efface ses
+propres versions successives ne raconte plus comment il en est arrivé là.)*
+
 Et `go()` faisait `document.title = 'Dan's Island'` au démarrage, donc **le
 `<title>` de la page était effacé par le jeu lui-même** — y compris pour
 Googlebot, qui rend. D'où `TITRE_SITE`, qui doit rester d'accord avec la
@@ -3237,6 +3246,12 @@ Quatre choses à ne pas défaire :
    « partage ». Un seul `h1`, donc une seule réponse à « de quoi parles-tu ».
    Ne pas remonter « Ton île. Ton rythme. » seul en `h1` : il ne répond à
    aucune recherche.
+
+   Il **remplace** la phrase que l'audit du matin avait demandée, « Construis
+   ton île. Détends-toi. Partage-la. » — donc ce n'est pas un détail de mise
+   en forme, c'est une consigne écartée. Signalée comme telle, et arbitrée :
+   les deux lignes restent. La section « Ce qu'un robot lit » garde la
+   formulation d'origine avec sa note, plutôt que d'être réécrite.
 3. **La coupure du titre est un `<br>`, pas une largeur.** À 12 caractères
    de large, « Ton île. Ton » tient et la coupure tombait après « Ton ».
    Une largeur qui donne la bonne coupure à une taille la donne fausse à la
