@@ -3046,6 +3046,116 @@ Trois témoins corrigés, et la distinction compte :
 3. **`build.sh` ne copie pas `.github/`**, donc corriger ce fichier ne
    change pas l'empreinte et ne demande aucun redéploiement.
 
+## Trois retours d'usage, et un visage qu'on peint — 20/09/2026
+
+**Aucune migration, aucune clé de plus dans `mondeNu()`** : le visage vit
+dans `me.face`, et `me` y est déjà. L'avatar voyage avec l'île, le visage
+voyage avec l'avatar — la ligne déjà écrite pour le compagnon et `me.genre`.
+
+Ce que les trois ont en commun : **le jeu ne répondait pas à ce que le
+joueur venait de faire.**
+
+### Reprendre son bonhomme
+
+Un pinceau armé confisque le clic sur l'île. On pose un arbre, on veut
+marcher — et le seul moyen était de rouvrir l'onglet Île pour y retrouver
+« ✋ Marcher », à un écran de défilement, loin du doigt qui vient de poser.
+C'est la leçon de la boutique du 16/09 : **la réponse tombe là où est le
+doigt.**
+
+Le bouton est le quatrième rond du bord droit, avec le zoom et l'appareil.
+Deux choses à tenir :
+
+1. **Il n'apparaît que quand un outil est armé**, et s'en va dès qu'on
+   marche. Toujours là, il serait mort neuf fois sur dix — la règle déjà
+   tenue pour l'appareil photo.
+2. **Il remet l'atelier d'accord** (`buildAll()`), sinon la puce
+   « ✋ Marcher » et la réalité disent deux choses différentes.
+
+### Le nom de l'île suivait « Dan »
+
+Signalé : on change son prénom, et l'île s'appelle toujours « L'île de
+Dan ». « Dan » est le nom de démonstration de `defaultWorld()`, et rien ne
+le reliait à `me.name` : un enfant qui s'appelle Léa habitait chez Dan.
+
+**On ne renomme que ce qui n'a pas été choisi.** Le test est une égalité
+avec la valeur *dérivée de l'ancien prénom* : si l'île s'appelle exactement
+« L'île de Dan » et que le prénom était « Dan », c'est le nom par défaut et
+il suit. Dès qu'on l'a renommée, l'égalité tombe et on n'y touche plus
+jamais. Pas de clé de plus pour retenir « ce nom a-t-il été choisi ? » : la
+question se déduit. C'est la règle du cadre glissé contre le mur plutôt
+qu'effacé — on ne reprend pas ce qui a été choisi.
+
+Deux pièges tenus :
+
+1. **L'apostrophe est la droite**, comme dans `defaultWorld()`. Le reste du
+   jeu écrit des apostrophes typographiques, mais c'est avec cette
+   chaîne-là qu'il faut tomber d'accord, sinon l'égalité échoue en silence.
+2. **`rafraichirChamps()`**, parce que `textField` ne reconstruit pas les
+   panneaux pendant qu'on tape — le champ en cours perdrait le focus à
+   chaque lettre. Mesuré : la plaque disait « L'île de Léa » et le champ du
+   panneau Île affichait encore « L'île de Dan ». Retaper dedans aurait
+   réécrit le vieux nom par-dessus le neuf. Chaque champ porte son chemin
+   et se relit — **sauf celui qui a le focus**, qu'on n'écrit jamais sous
+   les doigts.
+
+### Le visage se peint
+
+Cinq réglages donnent cinq cents bonshommes ; un pinceau en donne autant
+qu'il y a d'enfants. C'est le seul endroit du jeu où l'on dessine vraiment
+quelque chose plutôt que de choisir dans une liste.
+
+Six choses à ne pas défaire :
+
+1. **Une chaîne, pas un tableau.** 12x12 cases, un caractère par case,
+   l'index dans `FACE_COUL` en base 36 et `.` pour « rien ». Un tableau de
+   144 nombres dans un jsonb que chaque sauvegarde réécrit pèse dix fois ça
+   pour rien.
+2. **Treize couleurs au maximum**, parce qu'un caractère par case. Une
+   quatorzième demanderait deux caractères, et **toutes les chaînes déjà
+   enregistrées se reliraient de travers** — c'est mot pour mot le piège
+   d'`encode()` et des valeurs de tuile.
+3. **Le rond passe devant la coiffure**, et c'est une mesure qui l'a
+   décidé. Peint avant, il ne se voyait que dans la moitié basse : toutes
+   les coiffures sauf « Rasé » couvrent le demi-cercle du haut
+   (`arc(0,hy,10.6,π,2π)`). Quatre cases peintes à hauteur des yeux
+   rendaient **zéro** pixel sur le bonhomme, les mêmes à hauteur de bouche
+   en rendaient 174. Le rond **est** la tête : il passe devant. La
+   coiffure garde ce qui dépasse du crâne — chignon, mèches, piquants —
+   puisque la peinture est découpée au cercle. Le chapeau et la couronne
+   restent au-dessus : ils se posent sur le crâne, pas sur la figure.
+4. **Il remplace le regard, pas les cheveux.** Deux yeux dessinés
+   par-dessus un visage qui en porte déjà, ça fait quatre yeux.
+5. **La découpe reste sur le crâne, le dessin glisse dedans.** Les yeux
+   dessinés se décalent quand le bonhomme regarde de côté ; un visage
+   planté au milieu se lirait comme un masque collé.
+6. **L'éditeur ne passe pas par `buildAll()`.** Reconstruire le panneau à
+   chaque case détruirait le canvas et le doigt lâcherait sa trace au
+   premier pixel — la discipline de `textField()`. Et `touch-action:none`
+   sur le canvas : sans lui, un doigt qui trace fait défiler le panneau et
+   ne peint rien.
+
+### `test/toi.mjs`, huitième harnais, et le témoin qui se vérifiait lui-même
+
+Ma première assertion comptait les pixels **sombres** de l'aperçu et
+passait au vert à 4084 — sauf que le bonhomme a les cheveux noirs. Elle
+serait restée verte avec l'éditeur débranché : elle se vérifiait
+elle-même. C'est la leçon du « shell » cherché dans sa propre bulle, du
+19/09.
+
+Le témoin est donc le **violet** `#9B6BC9`, qui n'est ni dans les teints,
+ni dans les cheveux, ni dans les tenues : s'il apparaît sur la tête, il
+vient du pinceau et de nulle part ailleurs. Le contrôle vérifie d'abord
+qu'il y en a **zéro** avant de peindre — un témoin sale ne prouve rien.
+
+Et c'est ce témoin-là qui a trouvé le défaut de la coiffure : avec le
+noir, il ne se voyait pas.
+
+*(Un piège de sonde de plus, et il vaut pour tout ce panneau : **le canvas
+doit être amené à l'écran avant qu'on clique.** Le panneau défile, un clic
+à des coordonnées hors cadre ne touche rien, et la première version
+peignait zéro case sans rien dire.)*
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

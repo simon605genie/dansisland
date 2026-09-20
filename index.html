@@ -565,6 +565,20 @@ textarea{
 .accueil .portes{display:flex; flex-wrap:wrap; gap:10px; justify-content:center}
 .accueil .portes .btn{font-size:17px; padding:13px 22px; border-radius:14px}
 .accueil .portes .btn.primary{box-shadow:0 4px 0 rgba(180,76,108,.35)}
+/* L'éditeur de visage. `touch-action:none` est la ligne qui compte : sans
+   elle, un doigt qui trace fait défiler le panneau et ne peint rien — le
+   navigateur confisque le geste, exactement comme il confisquait le
+   pincement sur le cadre du jeu avant `pan-y`. */
+.visage{display:block; width:min(264px,100%); height:auto; margin:0 auto 10px;
+  background:#FDFBF0; border-radius:50%; cursor:crosshair; touch-action:none;
+  box-shadow:0 1px 0 rgba(11,60,93,.06), 0 10px 26px -18px rgba(11,60,93,.6)}
+.visage-coul{justify-content:center}
+/* La gomme est une pastille de la rangée, pas un mode à part : un damier,
+   signe universel du « rien », et rien à armer ni à désarmer. */
+.sw .gomme-case{background:
+  linear-gradient(45deg,#CBD5DC 25%,transparent 25%,transparent 75%,#CBD5DC 75%),
+  linear-gradient(45deg,#CBD5DC 25%,#FFF 25%,#FFF 75%,#CBD5DC 75%);
+  background-size:10px 10px; background-position:0 0,5px 5px}
 /* Les quatre pages éditoriales. Discrètes — ce n'est pas ce qu'on vient
    faire ici — mais présentes dans le HTML, donc suivies par un robot qui
    ne rend pas le JavaScript. */
@@ -907,6 +921,15 @@ textarea{
         <button type="button" id="zoom-plus" aria-label="Voir de plus près">+</button>
         <button type="button" id="zoom-moins" aria-label="Voir toute l’île">−</button>
         <button type="button" id="photo-btn" aria-label="Appareil photo" hidden>📷</button>
+        <!-- Reprendre la main. Il n'apparaît **que** quand un pinceau est
+             armé : un bouton toujours là serait un bouton mort neuf fois
+             sur dix, et c'est la règle déjà tenue pour l'appareil photo.
+             Ici, dans la colonne du bord droit, parce que c'est le seul
+             endroit libre du cadre — le pad tient le coin bas-gauche, le
+             murmure la bande du bas, les plaques celle du haut — et
+             surtout parce que **c'est là qu'est le doigt** : le pinceau
+             s'est armé dans un panneau, à un écran de là. -->
+        <button type="button" id="marche-btn" aria-label="Reprendre ton bonhomme" hidden>✋</button>
       </div>
       <button class="tourne" id="tourne" type="button" hidden><span>⟳</span>
         <em style="font-style:normal"><b class="mieux">Dan’s Island se joue mieux en paysage.</b>
@@ -2156,6 +2179,75 @@ function replanter(w){
 // `saut` soulève le bonhomme sans emporter son ombre : elle reste au sol et
 // rétrécit, c'est elle qui dit qu'il a décollé. Le paramètre est optionnel,
 // les vignettes des panneaux appellent drawChar sans lui.
+/* ================= le visage peint ==================
+   Un rond, des couleurs, et on remplit des pixels. C'est le seul endroit
+   du jeu où l'on dessine vraiment quelque chose plutôt que de choisir
+   dans une liste, et c'est pour ça qu'il vaut la peine : cinq réglages
+   donnent cinq cents bonshommes, un pinceau en donne autant qu'il y a
+   d'enfants.
+
+   **Aucune migration, aucune clé de plus dans `mondeNu()`** : il vit dans
+   `me.face`, et `me` y est déjà. L'avatar voyage avec l'île, le visage
+   voyage avec l'avatar — la ligne déjà écrite pour le compagnon et pour
+   `me.genre`.
+
+   **Une chaîne, pas un tableau.** `FACE_N` x `FACE_N` cases, un caractère
+   par case, l'index dans `FACE_COUL` en base 36 et `.` pour « rien ».
+   Un tableau de 144 nombres dans un jsonb que chaque sauvegarde réécrit
+   pèse dix fois ça pour rien, et une chaîne se compare d'un `===` — ce
+   qui est exactement ce dont `paintPreview()` a besoin pour ne pas
+   repeindre à vide.
+
+   **Ce qui est peint remplace le regard, pas les cheveux.** Un visage
+   peint et deux yeux dessinés par-dessus, ce sont quatre yeux ; mais on
+   veut garder la coiffure, le chapeau et la couronne, qui se posent
+   au-dessus du crâne et pas sur le visage. Le rond est donc peint après
+   la peau, avant les yeux — et les yeux sautent quand il y a un visage.
+
+   **Le dessin est découpé au rond de la tête** (`clip`) : une case du
+   coin de la grille déborderait du crâne, et le bonhomme aurait des
+   oreilles carrées.
+
+   Il ne rapporte rien, ne coûte rien, ne se perd pas : c'est la ligne
+   déjà écrite pour les mouettes. */
+const FACE_N = 12;
+const FACE_COUL = ['#1B1714','#FFFFFF','#E05252','#F48CA8','#F2A93B','#F4D6A0',
+                   '#3FBF8F','#148A9C','#45CFE8','#0B3C5D','#9B6BC9','#8B5E3C','#8F98A6'];
+const FACE_VIDE = '.'.repeat(FACE_N*FACE_N);
+// `c` est l'index dans FACE_COUL, en base 36 : un caractère par case, donc
+// treize couleurs au maximum. Au-delà, il faudrait deux caractères et
+// toutes les chaînes déjà enregistrées se reliraient de travers — c'est le
+// piège de `encode()` et des valeurs de tuile, transposé.
+const faceCar = i => (i<0 ? '.' : i.toString(36));
+function faceLue(a){
+  const f = a && typeof a.face==='string' ? a.face : '';
+  return f.length===FACE_N*FACE_N ? f : null;
+}
+/* Le visage peint, découpé au crâne. `r` est le rayon de la tête, `dx`/`dy`
+   le décalage du regard.
+
+   **La découpe reste sur le crâne, le dessin glisse dedans.** Les yeux
+   dessinés se décalent quand le bonhomme regarde de côté (`fx`), et un
+   visage peint qui resterait planté au milieu se lirait comme un masque
+   collé : la tête tournerait, la figure non. En décalant à l'intérieur du
+   `clip`, le bord du visage passe sous le bord du crâne — ce qui est
+   exactement ce que fait une joue qui se tourne. */
+function peindreVisage(c, cx, cy, r, f, dx, dy){
+  const pas = (r*2)/FACE_N;
+  c.save();
+  c.beginPath(); c.arc(cx,cy,r-0.4,0,Math.PI*2); c.clip();
+  c.translate(dx||0, dy||0);
+  for(let j=0;j<FACE_N;j++) for(let i=0;i<FACE_N;i++){
+    const k = parseInt(f[j*FACE_N+i],36);
+    if(!(k>=0) || k>=FACE_COUL.length) continue;
+    c.fillStyle = FACE_COUL[k];
+    // +0,5 de recouvrement : sans ça, deux cases voisines de la même
+    // couleur laissent un cheveu de peau entre elles, et le visage se lit
+    // comme un grillage.
+    c.fillRect(cx-r+i*pas, cy-r+j*pas, pas+0.5, pas+0.5);
+  }
+  c.restore();
+}
 function drawChar(c,px,py,a,s,face,t,saut){
   const h=saut||0;
   c.save(); c.translate(px,py); c.scale(s,s);
@@ -2188,8 +2280,12 @@ function drawChar(c,px,py,a,s,face,t,saut){
   c.beginPath(); c.arc(0,hy,10.5,0,Math.PI*2); c.fillStyle=a.skin; c.fill(); c.stroke();
   const fx = face==='gauche'?-2.6 : face==='droite'?2.6 : 0;
   const fy = face==='haut'?-2 : 0;
+  // Un visage peint remplace le regard : deux yeux dessinés par-dessus un
+  // visage qui en porte déjà, ça fait quatre yeux.
+  const vis = faceLue(a);
   c.fillStyle='#1B1714';
-  if(a.eyes==='endormi'){
+  if(vis){ /* peint : on ne redessine ni yeux ni joues */ }
+  else if(a.eyes==='endormi'){
     c.lineWidth=1.7; c.strokeStyle='#1B1714';
     c.beginPath(); c.arc(-3.4+fx,hy+1+fy,2,0.15*Math.PI,0.85*Math.PI); c.stroke();
     c.beginPath(); c.arc(3.4+fx,hy+1+fy,2,0.15*Math.PI,0.85*Math.PI); c.stroke();
@@ -2203,7 +2299,7 @@ function drawChar(c,px,py,a,s,face,t,saut){
     c.beginPath(); c.arc(-3.4+fx,hy+fy,1.9,0,Math.PI*2); c.fill();
     c.beginPath(); c.arc(3.4+fx,hy+fy,1.9,0,Math.PI*2); c.fill();
   }
-  if(face!=='haut'){ c.fillStyle='rgba(244,140,168,.5)';
+  if(!vis && face!=='haut'){ c.fillStyle='rgba(244,140,168,.5)';
     c.beginPath(); c.arc(-7+fx*0.4,hy+3.6,2.2,0,Math.PI*2); c.fill();
     c.beginPath(); c.arc(7+fx*0.4,hy+3.6,2.2,0,Math.PI*2); c.fill(); }
   c.fillStyle=a.hairC;
@@ -2211,6 +2307,22 @@ function drawChar(c,px,py,a,s,face,t,saut){
   else if(a.hair==='chignon'){ c.beginPath(); c.arc(0,hy,10.6,Math.PI,Math.PI*2); c.fill(); c.beginPath(); c.arc(0,hy-11,4.6,0,Math.PI*2); c.fill(); }
   else if(a.hair==='piquants'){ c.beginPath(); c.moveTo(-10.5,hy-1); for(let i=0;i<5;i++){const bx=-10.5+i*5.2; c.lineTo(bx+2.6,hy-9-((i%2)?2.5:0)); c.lineTo(bx+5.2,hy-1);} c.closePath(); c.fill(); }
   else if(a.hair==='longs'){ c.beginPath(); c.arc(0,hy,10.6,Math.PI,Math.PI*2); c.fill(); c.fillRect(-11.2,hy-1,4,16); c.fillRect(7.2,hy-1,4,16); }
+  /* **Le visage peint passe après les cheveux**, et c'est une mesure qui l'a
+     décidé, pas un avis. Peint avant, il ne se voyait que dans la moitié
+     basse du rond : toutes les coiffures sauf « Rasé » couvrent le demi-
+     cercle du haut (`arc(0,hy,10.6,π,2π)`). Mesuré : quatre cases peintes
+     à hauteur des yeux rendaient **zéro** pixel sur le bonhomme, les mêmes
+     à hauteur de bouche en rendaient 174. Un enfant qui peint des yeux ne
+     voyait rien, et rien ne le lui disait.
+
+     Le rond est **la tête** — c'est ce qu'on a demandé — donc il passe
+     devant la coiffure. La coiffure garde ce qui dépasse du crâne (le
+     chignon, les mèches longues, les piquants), puisque la peinture est
+     découpée au cercle : la silhouette reste celle qu'on a choisie.
+
+     Le chapeau et la couronne, eux, restent **au-dessus** : ils se posent
+     sur le crâne et non sur la figure. */
+  if(vis) peindreVisage(c, 0, hy, 10.5, vis, fx*0.75, fy*0.75);
   if(a.acc==='chapeau'){ c.fillStyle=shade(a.outfit,-55); c.beginPath(); c.ellipse(0,hy-7,15,4,0,0,Math.PI*2); c.fill(); rr(c,-7.5,hy-16,15,10,[5,5,1,1]); c.fill(); }
   else if(a.acc==='lunettes'){ c.strokeStyle='#1B1714'; c.lineWidth=1.6;
     c.beginPath(); c.arc(-3.6+fx,hy+fy,3.4,0,Math.PI*2); c.stroke();
@@ -4639,6 +4751,14 @@ function majZoomBtn(){
   m.disabled = z <= zPlancher()+0.005;
 }
 document.getElementById('photo-btn').addEventListener('click',()=>basculerViseur());
+/* Reprendre son bonhomme. Le même geste que « ✋ Marcher » de l'atelier,
+   posé là où le pinceau vient de servir. `buildAll()` remet la puce de
+   l'atelier d'accord avec la réalité, et `hudSync()` fait disparaître le
+   bouton : un bouton qui reste après avoir fait son travail se reclique. */
+document.getElementById('marche-btn').addEventListener('click',()=>{
+  tool.mode='marche'; tool.kind=null; buildAll(); hudSync();
+  say('Tu as repris ton bonhomme. <b>Clique</b> où tu veux aller.');
+});
 document.getElementById('zoom-plus').addEventListener('click',()=>zoomer(1.22));
 document.getElementById('zoom-moins').addEventListener('click',()=>zoomer(1/1.22));
 cv.addEventListener('wheel',e=>{ e.preventDefault(); zoomer(e.deltaY<0?1.11:1/1.11); },{passive:false});
@@ -6051,15 +6171,177 @@ function swatches(label,path,list){
   pick.onchange=()=>buildAll();
   box.appendChild(pick); f.appendChild(box); return f;
 }
+/* Le nom de l'île et l'enseigne **suivent le prénom**, tant qu'on ne les a
+   pas écrits soi-même.
+
+   Signalé : on change son prénom, et l'île s'appelle toujours « L'île de
+   Dan ». Elle le faisait pour tout le monde, parce que « Dan » est le nom
+   de démonstration de `defaultWorld()` et que rien ne le reliait à
+   `me.name`. Un enfant qui s'appelle Léa habitait chez Dan.
+
+   **On ne renomme que ce qui n'a pas été choisi.** Le test est une
+   égalité avec la valeur *dérivée de l'ancien prénom* : si l'île s'appelle
+   exactement « L'île de Dan » et que le prénom était « Dan », c'est le nom
+   par défaut et il suit. Dès qu'on l'a renommée, l'égalité tombe et on n'y
+   touche plus jamais. Pas de clé de plus dans `mondeNu()` pour retenir
+   « ce nom a-t-il été choisi ? » : la question se déduit.
+
+   Et ça suit **à chaque frappe**, puisque `oninput` passe ici lettre par
+   lettre : « L'île de Dan » → « L'île de Da » → … → « L'île de Léa ». La
+   chaîne tient parce qu'à chaque appel l'ancien prénom est celui d'avant
+   la lettre, pas celui du début.
+
+   L'apostrophe est la **droite**, comme dans `defaultWorld()` : le reste du
+   jeu écrit des apostrophes typographiques, mais c'est avec cette
+   chaîne-là qu'il faut tomber d'accord, sinon l'égalité échoue et rien ne
+   suit. */
+const nomIleDe = n => n ? ("L'île de " + n) : 'Mon île';
+const enseigneDe = n => n ? ('Chez ' + n) : 'Chez moi';
+function suivreLePrenom(avant, apres){
+  if(avant === apres) return;
+  if(mine.name === nomIleDe(avant)) mine.name = nomIleDe(apres);
+  if(mine.house && mine.house.sign === enseigneDe(avant)) mine.house.sign = enseigneDe(apres);
+}
+/* Un champ dont la valeur a changé **derrière son dos** doit se remettre à
+   jour, et il n'y a que `buildAll()` pour le faire — or on ne peut pas
+   reconstruire les panneaux pendant qu'on tape : le champ en cours perdrait
+   le focus à chaque lettre.
+
+   Mesuré : après « Dan » → « Léa », la plaque disait « L'île de Léa » et le
+   champ du panneau Île, lui, affichait encore « L'île de Dan ». Retaper
+   dedans aurait réécrit le vieux nom par-dessus le neuf.
+
+   D'où ce rafraîchissement ciblé : chaque champ porte son chemin, et on
+   relit la valeur — **sauf celui qui a le focus**, qu'on n'écrit jamais
+   sous les doigts. */
+function rafraichirChamps(){
+  document.querySelectorAll('input[data-chemin]').forEach(i=>{
+    if(i===document.activeElement) return;
+    const v=get(i.dataset.chemin);
+    if(i.value!==v) i.value=v;
+  });
+}
 function textField(label,path,ph){
   const f=field(label), i=document.createElement('input'); i.type='text'; i.value=get(path); i.placeholder=ph||''; i.maxLength=22;
-  i.oninput=e=>{const k=path.split('.'),l=k.pop(); k.reduce((o,x)=>o[x],mine)[l]=e.target.value;
-    saveMine(); hudSync(); paintPreview(); peindreMaison();};
+  i.dataset.chemin=path;
+  i.oninput=e=>{const k=path.split('.'),l=k.pop(), obj=k.reduce((o,x)=>o[x],mine);
+    const avant=obj[l]; obj[l]=e.target.value;
+    if(path==='me.name') suivreLePrenom(avant, e.target.value);
+    saveMine(); hudSync(); rafraichirChamps(); paintPreview(); peindreMaison();};
   f.appendChild(i); return f;
 }
 function hint(t){const p=document.createElement('p'); p.className='hint'; p.innerHTML=t; return p;}
 function rule(){const h=document.createElement('hr'); h.className='rule'; return h;}
 
+/* ---- l'éditeur de visage ----
+   Un rond, une rangée de couleurs, et on remplit des cases au doigt.
+
+   Trois choses à ne pas défaire :
+
+   1. **Il ne passe pas par `buildAll()`.** Peindre une case reconstruirait
+      le panneau, donc le canvas, donc le doigt lâcherait sa trace au
+      premier pixel. Il écrit dans `mine.me.face`, se redessine lui-même,
+      et prévient l'aperçu — exactement la discipline de `textField()`,
+      qui ne reconstruit pas non plus pendant qu'on tape.
+   2. **`touch-action:none` sur le canvas.** Sans ça, un doigt qui trace
+      fait défiler le panneau et ne peint rien : le navigateur confisque
+      le geste. C'est la même raison que le `pan-y` du cadre du jeu.
+   3. **La gomme est une couleur de la rangée**, pas un mode à part. Un
+      mode qu'on arme et qu'on oublie, c'est le pinceau armé au mauvais
+      endroit — le défaut que ce jeu corrige partout ailleurs.
+
+   Le quadrillage ne se voit qu'ici : sur l'île, le visage est peint plein,
+   sans grille. Un enfant a besoin de voir les cases pour viser ; personne
+   n'a besoin de les voir sur un bonhomme de 38 unités. */
+let facePinceau = 0;
+function visageActuel(){ return faceLue(mine.me) || FACE_VIDE; }
+function dessinerEditeurVisage(cv){
+  const g=cv.getContext('2d'), D=cv.width, r=D/2-4, cx=D/2, cy=D/2;
+  const f=visageActuel(), pas=(r*2)/FACE_N;
+  g.clearRect(0,0,D,D);
+  // La peau derrière, pour qu'on peigne sur ce qu'on verra vraiment et
+  // pas sur du blanc : un nez brun sur fond blanc n'a pas la même tête
+  // une fois posé sur un teint foncé.
+  g.save(); g.beginPath(); g.arc(cx,cy,r,0,Math.PI*2); g.clip();
+  g.fillStyle=mine.me.skin||'#F4D6A0'; g.fillRect(0,0,D,D);
+  for(let j=0;j<FACE_N;j++) for(let i=0;i<FACE_N;i++){
+    const k=parseInt(f[j*FACE_N+i],36);
+    if(k>=0 && k<FACE_COUL.length){
+      g.fillStyle=FACE_COUL[k];
+      g.fillRect(cx-r+i*pas, cy-r+j*pas, pas+0.5, pas+0.5);
+    }
+  }
+  g.strokeStyle='rgba(11,60,93,.16)'; g.lineWidth=1;
+  for(let i=0;i<=FACE_N;i++){
+    g.beginPath(); g.moveTo(cx-r+i*pas,cy-r); g.lineTo(cx-r+i*pas,cy+r); g.stroke();
+    g.beginPath(); g.moveTo(cx-r,cy-r+i*pas); g.lineTo(cx+r,cy-r+i*pas); g.stroke();
+  }
+  g.restore();
+  g.strokeStyle='rgba(11,60,93,.55)'; g.lineWidth=2;
+  g.beginPath(); g.arc(cx,cy,r,0,Math.PI*2); g.stroke();
+}
+function peindreCase(cv, ev){
+  const b=cv.getBoundingClientRect(), D=cv.width, r=D/2-4;
+  // Le canvas est peint en 264 et affiché plus petit : on ramène le point
+  // dans le repère du dessin avant de chercher la case, sinon on vise à
+  // côté dès que la colonne rétrécit.
+  const x=(ev.clientX-b.left)*(D/b.width), y=(ev.clientY-b.top)*(D/b.height);
+  const pas=(r*2)/FACE_N;
+  const i=Math.floor((x-(D/2-r))/pas), j=Math.floor((y-(D/2-r))/pas);
+  if(i<0||j<0||i>=FACE_N||j>=FACE_N) return false;
+  const k=j*FACE_N+i, f=visageActuel(), car=faceCar(facePinceau);
+  if(f[k]===car) return false;                      // rien à changer, rien à sauver
+  mine.me.face = f.slice(0,k)+car+f.slice(k+1);
+  return true;
+}
+function champVisage(){
+  const f=field('Son visage, à peindre');
+  const cv=document.createElement('canvas'); cv.className='visage'; cv.width=264; cv.height=264;
+  cv.setAttribute('role','img'); cv.setAttribute('aria-label','Le visage de ton bonhomme, à peindre case par case');
+  // La note change de sens à la première case peinte — « tant que tu n'as
+  // rien peint » devient faux — et l'éditeur ne reconstruit pas le panneau.
+  // Elle se réécrit donc ici, sinon elle reste à mentir jusqu'au prochain
+  // clic ailleurs. Même famille que le champ du nom d'île resté périmé.
+  const note=hint('');
+  const direLaNote=()=>{ note.innerHTML = faceLue(mine.me)
+    ? 'Ce que tu peins ici remplace les yeux dessinés — les cheveux, le chapeau et la couronne restent. <b>Tout effacer</b> te rend le regard d’avant.'
+    : 'Choisis une couleur, puis remplis des cases dans le rond. Tant que tu n’as rien peint, c’est le <b>Regard</b> au-dessus qui décide.'; };
+  const redessine=()=>{ dessinerEditeurVisage(cv); direLaNote(); saveMine(); paintPreview(); };
+  let trace=false;
+  const poser=ev=>{ if(peindreCase(cv,ev)) redessine(); };
+  cv.addEventListener('pointerdown',ev=>{ trace=true; cv.setPointerCapture(ev.pointerId); poser(ev); ev.preventDefault(); });
+  cv.addEventListener('pointermove',ev=>{ if(trace) poser(ev); });
+  const fini=()=>{ trace=false; };
+  cv.addEventListener('pointerup',fini); cv.addEventListener('pointercancel',fini);
+  f.appendChild(cv);
+
+  const box=document.createElement('div'); box.className='sw visage-coul';
+  FACE_COUL.forEach((col,i)=>{
+    const b=document.createElement('button'); b.type='button'; b.style.background=col;
+    b.setAttribute('aria-label','Peindre en '+col);
+    b.setAttribute('aria-pressed',String(facePinceau===i));
+    b.onclick=()=>{ facePinceau=i; buildAll(); };
+    box.appendChild(b);
+  });
+  // La gomme est la treizième pastille, damier plutôt que couleur : c'est
+  // le signe universel du « rien », et il n'y a pas de mode à armer.
+  const g=document.createElement('button'); g.type='button'; g.className='gomme-case';
+  g.setAttribute('aria-label','Effacer des cases');
+  g.setAttribute('aria-pressed',String(facePinceau===-1));
+  g.onclick=()=>{ facePinceau=-1; buildAll(); };
+  box.appendChild(g);
+  f.appendChild(box);
+
+  const r=document.createElement('div'); r.className='row';
+  const vider=document.createElement('button'); vider.className='btn'; vider.type='button';
+  vider.textContent='Tout effacer';
+  vider.onclick=()=>{ mine.me.face=FACE_VIDE; saveMine(); buildAll(); };
+  r.appendChild(vider); f.appendChild(r);
+
+  direLaNote(); f.appendChild(note);
+  dessinerEditeurVisage(cv);
+  return f;
+}
 function buildToi(){
   const p=document.getElementById('p-toi'); p.innerHTML='';
   const c=document.createElement('canvas'); c.id='preview'; c.width=660; c.height=304; p.appendChild(c);
@@ -6070,6 +6352,7 @@ function buildToi(){
   p.appendChild(chips('Cheveux','me.hair',[['aucun','Rasé'],['vague','Vague'],['chignon','Chignon'],['piquants','Piquants'],['longs','Longs']]));
   p.appendChild(swatches('Couleur de cheveux','me.hairC',HAIRS));
   p.appendChild(chips('Regard','me.eyes',[['rond','Rond'],['joyeux','Joyeux'],['malin','Malin'],['calme','Calme'],['endormi','Endormi']]));
+  p.appendChild(champVisage());
   p.appendChild(swatches('Tenue','me.outfit',CLOTH));
   p.appendChild(chips('Accessoire','me.acc',[['aucun','Aucun'],['chapeau','Chapeau'],['lunettes','Lunettes'],['couronne','Couronne'],['cape','Cape']]));
   /* Cette phrase disait : « Les pastilles sont les couleurs de la charte.
@@ -8476,6 +8759,17 @@ function hudSync(){
   // objets verrouillés de l'atelier.
   const pb=document.getElementById('photo-btn');
   if(pb){ pb.hidden=!appareilEnMain(); pb.setAttribute('aria-pressed',String(viseurOn)); }
+  /* **Reprendre la main.** Un pinceau armé confisque le clic : on pose un
+     arbre, on veut marcher, et le seul moyen était de rouvrir l'onglet Île
+     et d'y retrouver « ✋ Marcher » — à un écran de défilement, et loin du
+     doigt qui vient de poser. Le bouton apparaît dès qu'un outil est armé
+     et s'en va quand on marche : jamais mort, jamais en trop.
+
+     Il vit dans la colonne du bord droit, avec le zoom et l'appareil,
+     parce que c'est le seul endroit libre du cadre — le pad tient le coin
+     bas-gauche, le murmure la bande du bas, les plaques celle du haut. */
+  const mb=document.getElementById('marche-btn');
+  if(mb) mb.hidden = (tool.mode==='marche');
   cv.classList.toggle('walking', tool.mode==='marche');
 }
 // L'onglet ouvert est un état du jeu, pas seulement un clic : franchir une
