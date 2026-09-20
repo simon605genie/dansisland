@@ -72,7 +72,11 @@ jobs:
                    https://dansisland.pages.dev \
                    https://main.dansisland.pages.dev; do
             t=$(curl -sS --max-time 20 "$h/" 2>/dev/null | grep -o '<title>[^<]*' | head -1 || true)
-            n=$(curl -sS --max-time 20 "$h/" 2>/dev/null | grep -c 'Ton petit endroit pour ralentir' || true)
+            # `id="world"` et pas une phrase d'accroche : c'est le canvas du
+            # jeu, donc une marque de **structure**. Une accroche se réécrit
+            # un matin, et le diagnostic se met à mentir — c'est arrivé le
+            # 20/09, voir le pas suivant.
+            n=$(curl -sS --max-time 20 "$h/" 2>/dev/null | grep -c 'id="world"' || true)
             r=$(curl -sS -o /dev/null -w '%{content_type}' --max-time 20 "$h/robots.txt" 2>/dev/null || true)
             printf '%-42s titre=%-52s neuf=%s robots=%s\n' "$h" "${t:-(rien)}" "$n" "${r:-(rien)}"
           done
@@ -116,26 +120,41 @@ jobs:
           # celles qui n'existent pas. Un `/robots.txt` à 200 ne prouvait
           # donc rien du tout — il servait la page du jeu.
           #
-          # Le témoin est du **contenu** : la phrase de l'accueil, qui est
-          # écrite en dur dans `index.html` et n'existait pas avant. Elle,
-          # le catch-all ne peut pas l'inventer. Cloudflare met une minute
-          # ou deux, donc on attend au lieu de conclure trop vite.
-          echos "→ On attend que le déploiement soit en ligne (témoin : la phrase de l'accueil)"
+          # **Le témoin est l'empreinte du dépôt, et surtout pas une phrase
+          # recopiée ici.** Il l'a été : `Ton petit endroit pour ralentir`,
+          # écrite en dur dans ce fichier. Le 20/09 cette phrase a quitté
+          # l'accueil — le `h1` est devenu « Construis ton île » — et ce
+          # contrôle a déclaré « Pas déployé » **six minutes après un
+          # déploiement réussi**. Un témoin recopié ne vérifie pas le site,
+          # il vérifie que personne n'a touché à une phrase.
+          #
+          # `dist/index.html` **est** ce qu'on publie, et Cloudflare le sert
+          # tel quel : son empreinte répond à « le dernier commit est-il en
+          # ligne ? » sans rien savoir de ce qu'il contient, et sans jamais
+          # se périmer. C'est déjà le contrôle 1 ter ci-dessous ; il n'y a
+          # aucune raison que l'attente regarde autre chose.
+          #
+          # `build.sh` ne copie pas `.github/`, donc un commit qui ne touche
+          # qu'un workflow ne change pas l'empreinte : pas de rouge pour rien.
+          # Cloudflare met une minute ou deux, donc on attend au lieu de
+          # conclure trop vite.
+          bash build.sh > /dev/null
+          ici=$(sha256sum dist/index.html | cut -c1-16)
+          echos "→ On attend que le site porte l'empreinte du dépôt ($ici)"
           vu=0
           for i in $(seq 1 30); do
-            page=$(curl -sS --max-time 20 "$SITE/" || true)
-            if contient 'Ton petit endroit pour ralentir' "$page"; then
-              vu=1; break
-            fi
-            echos "   essai $i : c'est encore l'ancienne page — on repatiente 12 s"
+            curl -sS --max-time 20 -o /tmp/servi.html "$SITE/" || true
+            la=$(sha256sum /tmp/servi.html | cut -c1-16)
+            if [ "$ici" = "$la" ]; then vu=1; break; fi
+            echos "   essai $i : servi $la, attendu $ici — on repatiente 12 s"
             sleep 12
           done
           if [ "$vu" = "1" ]; then
-            echos "✅ L'accueil porte sa promesse : le build de ce changement est en ligne."
-            resume "✅ **Déployé** — « Ton petit endroit pour ralentir » est servi en dur dans le HTML."
+            echos "✅ Le site porte l'empreinte du dépôt : ce commit est en ligne."
+            resume "✅ **Déployé** — la page servie porte l'empreinte \`$ici\` du dépôt."
           else
-            echos "❌ Six minutes plus tard, le site sert toujours l'ancienne page."
-            resume "❌ **Pas déployé** — le site sert encore l'ancienne page six minutes après. Regarde les Deployments du projet Pages : le build a échoué, ou il n'a pas été déclenché."
+            echos "❌ Six minutes plus tard, le site sert toujours autre chose."
+            resume "❌ **Pas déployé** — six minutes après, la page servie porte \`$la\` et non \`$ici\`. Regarde les Deployments du projet Pages : le build a échoué, ou il n'a pas été déclenché."
             duro=1
           fi
 
@@ -184,11 +203,10 @@ jobs:
           # `build.sh` ne copie pas `.github/`, donc un commit qui ne touche
           # qu'un workflow ne change pas l'empreinte : ce contrôle ne vire
           # pas au rouge pour rien.
-          bash build.sh > /dev/null
-          ici=$(sha256sum dist/index.html | cut -c1-16)
-          # Sans --compressed : on veut les octets tels quels, pas décodés.
-          curl -sS --max-time 25 -o /tmp/servi.html "$SITE/" || true
-          la=$(sha256sum /tmp/servi.html | cut -c1-16)
+          # `ici` et `la` ont été calculés par le pas d'attente ci-dessus :
+          # c'est la même mesure, et deux calculs de la même chose finissent
+          # par diverger. Sans --compressed là-haut : on veut les octets tels
+          # quels, pas décodés.
           echos "   empreinte du dépôt : $ici   ($(wc -c < dist/index.html) octets)"
           echos "   empreinte servie   : $la   ($(wc -c < /tmp/servi.html) octets)"
           if [ "$ici" = "$la" ]; then
@@ -251,7 +269,7 @@ jobs:
             if contient 'sur Dan’s Island' "$page"; then
               echos "✅ $ad rend sa page publique (les fonctions sont servies)."
               resume "✅ **Lien partagé** — \`$ad\` rend sa page publique : les Pages Functions sont servies."
-            elif contient 'Ton petit endroit pour ralentir' "$page"; then
+            elif contient 'id="world"' "$page"; then
               echos "✅ $ad mène au jeu (les fonctions ne sont pas servies, le catch-all a pris le relais)."
               resume "✅ **Lien partagé** — \`$ad\` mène au jeu ; les Pages Functions ne sont pas servies, le catch-all a pris le relais."
             else
