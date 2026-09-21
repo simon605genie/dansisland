@@ -6512,6 +6512,26 @@ function avancerMaree(){
 }
 function direLaMaree(){
   if(dedans) return;
+  /* **Elle cède le pas à ce qui est déjà dit**, et c'est un vrai défaut
+     qui se ferme ici, pas une politesse.
+
+     `avancerMaree()` annonce la marée basse à la **première image**, donc
+     à chaque chargement où la mer est basse — environ trois heures
+     quarante-cinq sur douze vingt-cinq, soit une fois sur trois. Le
+     message d'accueil, lui, arrive de la base quelques centaines de
+     millisecondes plus tôt : « <b>3 nouveaux mots</b> depuis ton dernier
+     passage » ou « <b>Lila</b> t'a répondu ». Mesuré : la marée le
+     recouvrait dans la seconde, et il n'y avait plus rien à 2,4 s.
+
+     Donc une fois sur trois, on ouvrait le jeu, quelqu'un avait écrit, et
+     on ne le savait jamais. C'est la faute que ce fichier nomme depuis le
+     18/09 — « le « +1 shell » était recouvert avant d'avoir été lu » —
+     et elle vaut d'autant plus ici que le message parle de **quelqu'un**.
+
+     La marée ne perd rien : elle se dit dans le panneau Île le reste du
+     temps, c'est sa règle écrite depuis le 17/09, et elle reparlera toute
+     seule quand elle tournera pour de vrai. */
+  if(whisper.classList.contains('on')) return;
   say(visiting
     ? '<b>Marée basse.</b> Le sable du bord est praticable, ici aussi.'
     : '<b>Marée basse.</b> Va voir le sable mouillé au bord de l’île : la mer y laisse des choses.');
@@ -9027,9 +9047,17 @@ function buildBoutique(){
       fc.appendChild(hint('Tu n’as pas de coffre sur ton île. Pose-en un (il est gratuit, au rayon <b>Village</b> de ton atelier), et c’est lui qui portera le cadeau, chaque jour.'));
     }
     p.appendChild(fc);
+    /* **Rien ici ne presse, et c'est le point.** La note disait « tu es
+       venu N jours d'affilée » et « reviens demain » : une série à
+       protéger, donc quelque chose à perdre. Elle dit maintenant où on en
+       est et ce qui attend — un tirage vers l'avant, pas une laisse. */
     p.appendChild(hint(b.serie
-      ? ('Tu es venu <b>'+b.serie+' jour'+(b.serie>1?'s':'')+'</b> d’affilée. Chaque jour de plus grossit le cadeau, et le septième, la boutique t’offre un objet.')
-      : 'Reviens demain, et le cadeau sera plus gros. Sept jours d’affilée, et la boutique t’offre un objet.'));
+      ? ('Tu en as déjà ouvert <b>'+b.serie+'</b>. Chaque fois il grossit un peu, '+
+         'et tous les <b>sept</b>, la boutique t’en offre un — '+
+         (7-(b.serie%7)===7 ? 'le prochain est le bon.' :
+          'plus que <b>'+(7-(b.serie%7))+'</b>.')+
+         ' Sauter des jours ne t’enlève rien.')
+      : 'Ouvre-le quand tu veux : il grossit à chaque fois, et au septième la boutique t’offre un objet. Sauter des jours ne t’enlève rien.'));
     p.appendChild(rule());
   }
 
@@ -9251,9 +9279,15 @@ async function acheter(a){
 /* ---- le cadeau du jour ----
    Revenir doit valoir quelque chose, et se voir. Le cadeau ne tombe pas
    tout seul dans la bourse : on l'ouvre, sinon il n'y a pas de moment.
-   La série compte les jours d'affilée et grossit le cadeau ; elle repart à
-   un dès qu'un jour est sauté. Le septième jour donne un objet plutôt que
-   des shells : c'est le seul endroit où la boutique donne. */
+   `serie` compte les cadeaux **ouverts**, et grossit le cadeau jusqu'à dix
+   shells. Elle comptait les jours d'affilée et repartait à un dès qu'un
+   jour était sauté : c'était le seul endroit du jeu où l'on perdait
+   quelque chose, et c'est parti le 21/09 — voir
+   `supabase/2026-09-21_cadeau_sans_perte.sql`. Le nom de la colonne est
+   resté, elle porte un commentaire en base qui dit ce qu'elle compte.
+
+   Un cadeau sur sept donne un objet plutôt que des shells : c'est le seul
+   endroit où la boutique donne. */
 function jourDecale(n){
   const d=new Date(); d.setDate(d.getDate()+n);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -9264,6 +9298,21 @@ function jourDecale(n){
 function jourDuJeu(){ return bourseJourVu || aujourdhui(); }
 function cadeauDispo(){ return mine.bourse && mine.bourse.cadeau!==jourDuJeu(); }
 function nomArticle(k){ const a=BOUTIQUE.find(x=>x.k===k); return a?a.n:k; }
+/* Ce qu'on dit après avoir ouvert, et **à un seul endroit** : le chemin
+   serveur et le repli hors ligne l'écrivaient chacun le leur, avec les
+   mêmes mots à la virgule près. Deux orthographes d'une même idée
+   divergent au premier réglage — c'est la leçon de `laPiece()` et des
+   trois phrases qui recollaient leur article à la main.
+
+   Elle tire **vers l'avant** : ce qui vient, jamais ce qu'on risque de
+   perdre. « Reviens demain, il grossit encore » était une laisse ; « plus
+   que trois » est une chose à attendre. */
+function phraseCadeau(serie){
+  const reste=7-(serie%7);
+  if(serie<=1) return 'Ouvre-le quand tu veux : il grossit \u00e0 chaque fois.';
+  if(reste===7) return 'Le prochain, la boutique t\u2019offre un objet.';
+  return 'Encore <b>'+reste+'</b> et la boutique t\u2019offre un objet.';
+}
 async function ouvrirCadeau(surLeCoffre){
   if(!cadeauDispo()) return;
   const b=mine.bourse;
@@ -9274,25 +9323,38 @@ async function ouvrirCadeau(surLeCoffre){
     catch(e){ say('Le cadeau n’a pas pu s’ouvrir : '+esc(e.message||e)); return; }
     if(r.deja){ appliquerBourse(r); return; }
     msg = r.offert
-      ? ('<b>Sept jours d’affilée.</b> La boutique t’offre <b>'+esc(nomArticle(r.offert))+
+      ? ('<b>Ton septième cadeau.</b> La boutique t’offre <b>'+esc(nomArticle(r.offert))+
          '</b>, sans rien prendre dans ta bourse.')
-      : ('<b>Cadeau du jour : +'+r.gain+' shell'+(r.gain>1?'s':'')+'.</b> '+((r.serie|0)>1
-          ? (r.serie+' jours d’affilée — reviens demain, il grossit encore.')
-          : 'Reviens demain et il sera plus gros.'));
+      : ('<b>Cadeau du jour : +'+r.gain+' shell'+(r.gain>1?'s':'')+'.</b> '+
+         phraseCadeau(r.serie|0));
     appliquerBourse(r);
   }else{
-    b.serie = (b.cadeau===jourDecale(-1)) ? (b.serie||0)+1 : 1;
+    /* **Le compte des cadeaux ouverts, jamais des jours d'affilée.** Il
+       lisait `b.cadeau===jourDecale(-1) ? serie+1 : 1`, donc rater un
+       jour renvoyait à 1 : le cadeau retombait de 10 shells à 4 et le
+       septième reculait d'une semaine. C'était le seul endroit du jeu où
+       l'on perdait quelque chose, contre la règle tenue partout ailleurs
+       — le chien qui s'assied, la mer qui repose le bonhomme à terre, le
+       potager qui ne meurt jamais.
+
+       Le joueur régulier n'y perd rien : il arrive à 10 et à son objet
+       aussi vite qu'avant. L'irrégulier avance plus lentement dans le
+       calendrier, ce qui est son rythme et non une punition.
+
+       Ce miroir doit dire **la même chose que `bourse_cadeau()`** : deux
+       calculs de la même idée finissent par diverger, et celui-ci est ce
+       que voit un enfant sans compte. Voir
+       `supabase/2026-09-21_cadeau_sans_perte.sql`. */
+    b.serie = (b.serie||0)+1;
     b.cadeau = aujourdhui();
     const offert = (b.serie%7===0)
       ? BOUTIQUE.filter(a=>!achete(a.k)).sort((x,y)=>x.prix-y.prix)[0] : null;
     if(offert){
       mine.achats.push(offert.k);
-      msg='<b>Sept jours d’affilée.</b> La boutique t’offre <b>'+esc(offert.n)+'</b>, sans rien prendre dans ta bourse.';
+      msg='<b>Ton septième cadeau.</b> La boutique t’offre <b>'+esc(offert.n)+'</b>, sans rien prendre dans ta bourse.';
     }else{
       const n=CADEAU_BASE+Math.min(b.serie,7); b.shells+=n;
-      msg='<b>Cadeau du jour : +'+n+' shell'+(n>1?'s':'')+'.</b> '+(b.serie>1
-        ? (b.serie+' jours d’affilée — reviens demain, il grossit encore.')
-        : 'Reviens demain et il sera plus gros.');
+      msg='<b>Cadeau du jour : +'+n+' shell'+(n>1?'s':'')+'.</b> '+phraseCadeau(b.serie);
     }
     garderBourseLocale();
   }

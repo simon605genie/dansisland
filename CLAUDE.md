@@ -5061,6 +5061,110 @@ faisaient qu'un et le sentier ne posait qu'une lanterne. Le jeu avait
 raison — « une personne, une lanterne » — c'est le faux qui mentait. La
 leçon de `bourseCadeau()`, du 19/09, pour la deuxième fois.)*
 
+## Le cadeau du jour ne se perd plus — 21/09/2026
+
+`supabase/2026-09-21_cadeau_sans_perte.sql`, **à jouer**, rejouable :
+un seul `create or replace`, et **une ligne change**.
+
+    b.serie := case when b.cadeau = j - 1 then b.serie + 1 else 1 end;
+    b.serie := b.serie + 1;
+
+C'était le **seul endroit du jeu où l'on perdait quelque chose**. Rater un
+jour renvoyait la série à 1, donc le cadeau retombait de 10 shells à 4 et
+le septième — celui qui offre un objet — reculait d'une semaine entière.
+Tout le reste tient la règle inverse, et elle est écrite partout dans ce
+fichier : le chien qui s'assied n'échoue pas, la mer repose le bonhomme à
+terre au lieu de le noyer, le potager ne meurt jamais, on ne reprend pas ce
+qui a été posé. « Ce jeu n'a pas besoin qu'on y perde quelque chose, il a
+besoin qu'il s'y passe des choses. »
+
+Et c'est la promesse que le compte Instagram va publier trente et une fois :
+« un jeu où personne ne perd ». Une série qui punit l'enfant parti en
+vacances aurait fait mentir la première carte.
+
+Quatre choses à tenir :
+
+1. **Le plafond ne bouge pas** : `3 + least(serie, 7)`, donc dix shells au
+   maximum. Personne ne gagne plus qu'avant, c'est le **plancher** qui
+   monte. Ne pas profiter de ce chantier pour relever ce nombre — faire
+   monter un gain qui tombe tout seul est exactement ce que le 16/09
+   refuse.
+2. **Le joueur régulier n'y perd rien** : il atteint dix shells et son
+   objet du septième aussi vite qu'avant. L'irrégulier avance plus
+   lentement dans le calendrier, ce qui est son rythme et non une
+   punition. C'est le potager, transposé.
+3. **Le miroir hors ligne dit la même chose que le serveur.** Deux calculs
+   de la même idée divergent, et celui-là est ce que voit un enfant sans
+   compte. Le contrôle 22 lit les deux sources.
+4. **Le nom de la colonne reste `serie`**, mais elle porte maintenant un
+   `comment on column` qui dit qu'elle compte les cadeaux **ouverts**. La
+   renommer demanderait de toucher le client, le repli et la reprise du
+   jsonb pour un gain nul ; la laisser mentir, c'est le piège de `pieces`
+   contre `shells`, qui avait déjà coûté une relecture.
+
+**Les phrases tirent vers l'avant, plus vers l'arrière.** « Tu es venu
+N jours d'affilée — reviens demain, il grossit encore » était une série à
+protéger, donc quelque chose à perdre. Elles disent maintenant où on en
+est et ce qui vient : « Tu en as déjà ouvert 5 … plus que 2. Sauter des
+jours ne t'enlève rien. » puis « Encore 1 et la boutique t'offre un
+objet. » `phraseCadeau()` est écrite **une fois** et lue par les deux
+chemins : ils l'écrivaient chacun le leur, aux mêmes mots près — la leçon
+de `laPiece()`.
+
+## La marée recouvrait « quelqu'un t'a répondu » — 21/09/2026
+
+Trouvé par un contrôle qui est devenu rouge **sans qu'une ligne du jeu ait
+changé**, vingt minutes après avoir été vert. Premier geste, comme le
+20/09 : chercher ce qui avait bougé d'autre que le code. C'était l'heure.
+
+`avancerMaree()` annonce la mer basse à la **première image**
+(`if(premier){ if(e.basse) direLaMaree(); }`). Le message d'accueil, lui,
+arrive de la base quelques centaines de millisecondes plus tôt. Mesuré au
+relevé, toutes les 300 ms :
+
+    300 ms   Marée basse. Va voir le sable mouillé…
+    2400 ms  (rien)
+
+Donc **une fois sur trois** — la mer est basse environ 3 h 45 sur 12 h 25 —
+on ouvrait le jeu, quelqu'un avait écrit ou répondu, et on ne l'apprenait
+jamais. Ça valait aussi pour « **3 nouveaux mots** depuis ton dernier
+passage », qui existe depuis bien plus longtemps que les réponses.
+
+C'est la faute nommée depuis le 18/09 — « le « +1 shell » était recouvert
+avant d'avoir été lu » — et elle vaut d'autant plus ici que le message
+parle de **quelqu'un**.
+
+**`direLaMaree()` cède donc le pas à ce qui est déjà dit.** Elle ne perd
+rien : la marée se dit dans le panneau Île le reste du temps — sa règle
+écrite depuis le 17/09 — et elle reparlera toute seule quand elle tournera
+pour de vrai. Éprouvé en remettant la panne, à marée basse forcée : le
+murmure redevient « Marée basse » dès 300 ms.
+
+### `faux-store.js` fige la mer haute, et c'est son garde-fou le plus important
+
+`maree()` rendait `null`, donc le jeu retombait sur le cycle local calculé
+depuis l'horloge réelle. **Un contrôle dont le verdict dépend de l'heure
+n'est pas un contrôle, c'est un oracle** — c'est mot pour mot ce que
+`vivant.mjs` a dû faire avec `NEUTRE` pour la saison et la météo, et
+`objets.mjs` avait le même trou sans le savoir.
+
+`niveau = (1 - cos(2π·phase)) / 2`, donc **phase 0,5 est le sommet de la
+mer haute** et phase 0 le creux. Mon premier jet prenait 0,25, qui tombe à
+mi-hauteur, près de la bascule : un seuil posé au bord de son nuage, le
+défaut que ce fichier a déjà nommé quatre fois. `test:maree` sème une autre
+phase pour qui veut éprouver le sable mouillé — **on le demande, on ne
+l'attend pas.**
+
+### Et une erreur de sonde, pour mémoire
+
+Le contrôle 22 cherchait le bouton « 🎁 Ouvrir mon cadeau » du panneau
+Boutique. Il n'existe que sur une île **sans coffre** — la règle du 17/09,
+« le bouton du panneau ne disparaît que s'il y a un coffre » — et l'île de
+départ en porte un. Clic dans le vide, murmure vide, trois assertions
+rouges qui ne disaient rien du jeu. Il ouvre maintenant le cadeau par le
+**vrai geste**, un coffre sous les pieds et la touche `E`, et sa première
+assertion refuse de mesurer si le coffre ne s'est pas ouvert.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

@@ -186,13 +186,42 @@ export async function economie() {
                     parrainage: 25, bienvenue: 15 } };
 }
 export async function parrainage() { return { parrain: 25, filleul: 15 }; }
-export async function maree() { return null; }
+/* **La marée est figée, et c'est le garde-fou le plus important de ce
+   faux.** Elle rendait `null`, donc le jeu retombait sur le cycle local,
+   calculé à partir de l'horloge réelle : la mer était basse environ trois
+   heures quarante-cinq sur douze vingt-cinq, et à marée basse
+   `avancerMaree()` parle à la première image.
+
+   Conséquence mesurée : le contrôle 21 était vert le matin et rouge
+   l'après-midi **sans qu'une ligne du jeu ait changé**, parce que la
+   marée recouvrait le message d'accueil qu'il lisait. C'est mot pour mot
+   ce que `vivant.mjs` a dû faire avec `NEUTRE` pour la saison et la
+   météo : **un contrôle dont le verdict dépend de l'heure n'est pas un
+   contrôle, c'est un oracle.**
+
+   `niveau = (1 - cos(2π·phase)) / 2`, donc **phase 0,5 est le sommet de
+   la mer haute** et phase 0 le creux. On prend 0,5 : le plus loin possible
+   du seuil des deux côtés, là où 0,25 tombait à mi-hauteur, près de la
+   bascule. Un seuil choisi au bord de son nuage, c'est le défaut que ce
+   dépôt a déjà nommé quatre fois.
+
+   `test:maree` en sème une autre pour qui veut éprouver le sable mouillé :
+   il faut alors la **demander**, pas l'attendre. */
+export async function maree() { return lu('test:maree', { phase: 0.5, numero: 1000 }); }
 export async function commande() { return null; }
 
-/* La bourse d'avant le parrainage : dix shells, rien d'autre. */
+/* La bourse d'avant le parrainage : dix shells, rien d'autre.
+
+   `test:bourse` en sème une autre, fusionnée par-dessus. C'est ce qui
+   permet de fabriquer **l'enfant parti en vacances** — `cadeau` à une
+   semaine d'ici et `serie` à 5 — qui est le seul état où l'ancienne
+   règle mordait, et donc le seul qui éprouve qu'elle est partie. Un
+   harnais qui ne sait pas produire un état doit le fabriquer et le dire,
+   pas faire comme si : c'est la leçon du champ remis à la main dans la
+   carte de connexion, le 19/09. */
 const BOURSE0 = { shells: 10, jour: '2026-09-19', faits: {}, pousse: '', cadeau: '',
                   serie: 0, sac: {}, achats: [] };
-let bourse = JSON.parse(JSON.stringify(BOURSE0));
+let bourse = Object.assign(JSON.parse(JSON.stringify(BOURSE0)), lu('test:bourse', {}));
 
 export async function bourseDuJour() { return JSON.parse(JSON.stringify(bourse)); }
 export async function bourseGagner() { return JSON.parse(JSON.stringify(bourse)); }
@@ -207,9 +236,14 @@ export async function bourseAcheter() { return JSON.parse(JSON.stringify(bourse)
 export async function bourseCadeau() {
   if (bourse.cadeau === bourse.jour) return { ...JSON.parse(JSON.stringify(bourse)), deja: true };
   bourse.cadeau = bourse.jour;
+  /* **Jamais de remise à un**, exactement comme `bourse_cadeau()` depuis
+     le 21/09 : le compte est celui des cadeaux ouverts, pas des jours
+     d'affilée. Un faux qui garderait l'ancienne règle éprouverait le
+     monde d'hier. */
   bourse.serie = (bourse.serie | 0) + 1;
-  bourse.shells += 5;
-  return { ...JSON.parse(JSON.stringify(bourse)), gain: 5, serie: bourse.serie };
+  const gain = 3 + Math.min(bourse.serie, 7);
+  bourse.shells += gain;
+  return { ...JSON.parse(JSON.stringify(bourse)), gain, serie: bourse.serie };
 }
 export async function bourseRepousse() { return JSON.parse(JSON.stringify(bourse)); }
 export async function bourseRamasser() { return JSON.parse(JSON.stringify(bourse)); }

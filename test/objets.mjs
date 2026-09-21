@@ -1660,6 +1660,145 @@ c.titre('21. « Lila t’a répondu » — la boucle qui était coupée');
   c.dit(z.pastille === false, 'et la pastille reste éteinte');
   c.dit(o0.erreurs.length === 0, 'aucune erreur de console');
   await o0.ctx.close();
+
+  /* **À marée basse aussi**, et c'est le défaut que cette section a
+     elle-même révélé en devenant rouge sans qu'une ligne du jeu ait
+     changé. `avancerMaree()` annonce la mer basse à la **première
+     image** ; le message d'accueil arrive de la base quelques centaines
+     de millisecondes plus tôt, donc la marée le recouvrait. Une fois sur
+     trois — la mer est basse environ 3 h 45 sur 12 h 25 — quelqu'un
+     avait écrit et on ne l'apprenait jamais.
+
+     Le faux fige désormais la mer **haute** pour tous les contrôles, ce
+     qui ôte l'oracle. Celui-ci force donc la mer **basse** : ce qu'on
+     veut mesurer, on le demande, on ne l'attend pas. `niveau =
+     (1 - cos(2π·phase))/2`, donc phase 0 est le creux. */
+  const bas = await onglet(nav, {
+    taille: { width: 1200, height: 860 },
+    memoire: { 'test:reponses': JSON.stringify(REPS),
+               'test:maree': JSON.stringify({ phase: 0, numero: 1000 }),
+               'dansisland:entre': '1', 'dansisland:guide': '4', 'dansisland:muet': '1' },
+  });
+  await bas.page.goto(s.url, { waitUntil: 'load' });
+  await attendre(1200);
+  const vb = await etat(bas.page);
+  console.log('     à marée basse : ' + (vb.murmure || '(rien)'));
+  c.dit(/Lila/.test(vb.murmure),
+        'la marée basse ne recouvre plus « Lila t’a répondu »');
+  c.dit(!/Marée basse/.test(vb.murmure),
+        'elle se tait quand le murmure porte déjà quelque chose');
+  c.dit(bas.erreurs.length === 0, 'aucune erreur de console');
+  await bas.ctx.close();
+}
+
+c.titre('22. le cadeau du jour ne se perd plus');
+{
+  /* C'était le **seul endroit du jeu où l'on perdait quelque chose** :
+     `serie` comptait les jours d'affilée et repartait à 1 dès qu'un jour
+     était sauté, donc le cadeau retombait de 10 shells à 4 et le septième
+     — celui qui offre un objet — reculait d'une semaine entière.
+
+     Tout le reste du jeu tient la règle inverse : le chien qui s'assied
+     n'échoue pas, la mer repose le bonhomme à terre, le potager ne meurt
+     jamais, on ne reprend pas ce qui a été posé.
+
+     Le contrôle fabrique **l'enfant parti en vacances** — dernier cadeau
+     il y a une semaine, cinq déjà ouverts — parce que c'est le seul état
+     où l'ancienne règle mordait, donc le seul qui prouve qu'elle est
+     partie. */
+  /* On ouvre le cadeau par le **vrai geste** : un coffre sous les pieds
+     et la touche `E`. Le bouton du panneau n'existe que sur une île **sans
+     coffre** — la règle du 17/09, « le bouton du panneau ne disparaît que
+     s'il y a un coffre » — et mon premier essai le cherchait sur une île
+     qui en porte un : clic dans le vide, murmure vide, trois assertions
+     rouges qui ne disaient rien du jeu. D'où la première assertion
+     ci-dessous, qui refuse de mesurer si le coffre ne s'est pas ouvert. */
+  const COFFRE = [{ t: 'coffre', x: 8, y: 10, c: '#B8823C' }];
+  const ouvrirCad = async bourse => {
+    const o = await onglet(nav, {
+      taille: { width: 1200, height: 860 },
+      memoire: { 'test:bourse': JSON.stringify(bourse),
+                 'test:objets': JSON.stringify(COFFRE), 'dansisland:entre': '1',
+                 'dansisland:guide': '4', 'dansisland:muet': '1' },
+    });
+    await o.page.goto(s.url, { waitUntil: 'load' });
+    await attendre(2600);
+    return o;
+  };
+  const noteEtGain = async page => {
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'boutique');
+      if (b) b.click();
+    });
+    await attendre(600);
+    const note = await page.evaluate(() => {
+      const f = [...document.querySelectorAll('#p-boutique .field')]
+        .find(x => /cadeau/i.test(x.textContent));
+      const p = f && [...f.parentNode.children];
+      const i = p ? p.indexOf(f) : -1;
+      return (i >= 0 && p[i + 1] ? p[i + 1].innerText : '').replace(/\s+/g, ' ').trim();
+    });
+    await page.keyboard.press('e');
+    await attendre(900);
+    return { note, murmure: (await etat(page)).murmure };
+  };
+
+  // Cinq cadeaux déjà ouverts, le dernier il y a une semaine.
+  const vacances = { serie: 5, cadeau: '2026-09-12', jour: '2026-09-19', shells: 10 };
+  const a = await ouvrirCad(vacances);
+  const va = await noteEtGain(a.page);
+  console.log('     note   : ' + va.note);
+  console.log('     après E : ' + va.murmure);
+  c.dit(/shell/.test(va.murmure),
+        'le coffre s’est bien ouvert — sinon rien de ce qui suit ne mesure quoi que ce soit');
+
+  /* **Le câblage d'abord** : ni la source du jeu ni celle du faux ne
+     doivent porter la remise à un. Deux chemins pour la même idée — le
+     serveur et le miroir hors ligne — et c'est celui-là que voit un
+     enfant sans compte. */
+  const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const sql = readFileSync(new URL('../supabase/2026-09-21_cadeau_sans_perte.sql',
+                                   import.meta.url), 'utf8');
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
+  c.dit(/b\.serie\s*=\s*\(b\.serie\|\|0\)\+1/.test(code),
+        'le miroir hors ligne incrémente sans condition');
+  c.dit(!/jourDecale\(-1\)\s*\)\s*\?/.test(code),
+        'et la remise à un a disparu du miroir');
+  // Le SQL porte l'ancienne ligne **en commentaire**, pour dire ce qui a
+  // changé : on retire les commentaires avant de chercher, sinon
+  // l'assertion tombe sur l'explication. C'est le « shell » cherché dans
+  // sa propre bulle, du 19/09.
+  const sqlNu = sql.split('\n').filter(l => !/^\s*--/.test(l)).join('\n');
+  c.dit(/b\.serie\s*:=\s*b\.serie\s*\+\s*1\s*;/.test(sqlNu),
+        'et `bourse_cadeau()` fait la même chose côté serveur');
+  c.dit(!/else\s+1\s+end/.test(sqlNu), 'la remise à un a disparu du SQL aussi');
+
+  /* Puis ce qu'un enfant voit. Le gain est la preuve la plus directe :
+     à la sixième ouverture il vaut 9 (3+6), là où l'ancienne règle
+     l'aurait renvoyé à 4 (3+1). */
+  c.dit(/\+9 shells/.test(va.murmure),
+        'six cadeaux ouverts donnent 9 shells, pas les 4 d’une série cassée');
+  c.dit(!/affilée/i.test(va.note + ' ' + va.murmure),
+        'plus un mot de « jours d’affilée » à l’écran');
+  c.dit(!/reviens demain/i.test(va.note + ' ' + va.murmure),
+        'ni de « reviens demain » : ce qui tire est devant, pas derrière');
+  c.dit(/n’enlève rien|enlève rien/.test(va.note),
+        'la note dit que sauter des jours ne coûte rien');
+  c.dit(/Encore <?b?>?1|Encore 1/.test(va.murmure.replace(/<[^>]*>/g, '')),
+        'et elle annonce ce qui vient : encore 1 avant l’objet');
+  c.dit(a.erreurs.length === 0, 'aucune erreur de console');
+  await a.ctx.close();
+
+  // Et le tout premier cadeau reste doux : pas de compte à tenir.
+  const b = await ouvrirCad({ serie: 0, cadeau: '', jour: '2026-09-19', shells: 10 });
+  const vb = await noteEtGain(b.page);
+  console.log('     premier : ' + vb.murmure);
+  c.dit(/\+4 shells/.test(vb.murmure), 'le premier cadeau vaut 4 shells');
+  c.dit(!/affilée|reviens demain/i.test(vb.note + ' ' + vb.murmure),
+        'et rien n’y presse non plus');
+  c.dit(b.erreurs.length === 0, 'aucune erreur de console');
+  await b.ctx.close();
 }
 
 await nav.close(); s.fermer();
