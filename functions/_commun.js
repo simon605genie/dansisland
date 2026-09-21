@@ -73,7 +73,18 @@ export const PAGES = [
   { chemin: '/comment-jouer',      alias: '/how-to-play',       nom: 'Comment jouer',       court: 'Jouer' },
   { chemin: '/fonctionnalites',    alias: '/features',          nom: 'Ce qu’on peut faire', court: 'Le jeu' },
   { chemin: '/construire-son-ile', alias: '/build-your-island', nom: 'Construire son île',  court: 'Construire' },
-  { chemin: '/cartes-postales',    alias: '/postcards',         nom: 'Les cartes postales', court: 'Cartes postales' }
+  { chemin: '/cartes-postales',    alias: '/postcards',         nom: 'Les cartes postales', court: 'Cartes postales' },
+  /* La cinquième, et la seule d'une autre nature : les quatre premières
+     disent *comment*, celle-ci dit *pourquoi*, et c'est la seule qui
+     cite des sources.
+
+     `_pages.js` écrit « ne pas en faire cinquante », et la consigne
+     tient : ce n'est pas une ferme à contenu, c'est la page qu'un parent
+     cherche quand il arbitre. Son `court` est volontairement d'un mot —
+     à 1100 px, quatre noms longs poussaient déjà « Créer mon île » à la
+     ligne, et un cinquième nom long rouvrirait ce défaut. Mesuré, pas
+     supposé : voir la section 5 de `test/robots.mjs`. */
+  { chemin: '/pourquoi-un-jeu-calme', alias: '/why-calm-games',  nom: 'Pourquoi un jeu calme', court: 'Pourquoi' }
 ];
 
 function base(env) {
@@ -224,7 +235,29 @@ a{color:var(--teal)}
 .haut .menu a{color:var(--ink-2);text-decoration:none;font-weight:600}
 .haut .menu a:hover,.haut .menu a[aria-current]{color:var(--corail-ecrit)}
 .haut .btn{padding:9px 16px;font-size:15px}
-@media (max-width:640px){.haut .menu{display:none}.haut .btn{margin-left:auto}}
+/* **Le menu se cache là où il se replierait, pas à une largeur ronde.**
+
+   (Pas d'accent grave dans ce commentaire : on est dans un littéral de
+   gabarit, et une apostrophe inversée y ferme la chaîne — le module ne
+   se charge alors plus du tout. C'est écrit depuis le 20/09 pour les
+   commentaires HTML de ce fichier, et je viens de le rouvrir ici.)
+
+   Il disparaissait sous 640 px. Mesuré le 21/09, sur la hauteur de
+   .haut : avec quatre pages, l'en-tête se repliait déjà de 641 à
+   720 px — une porte corail tombée sous son propre menu, exactement le
+   défaut que le champ "court" existait pour empêcher, et que personne
+   n'avait mesuré parce que le seuil avait l'air raisonnable. La
+   cinquième page n'a fait qu'élargir la bande jusqu'à 780.
+
+   Resserrer la police et les gouttières a été éprouvé et ne suffit pas :
+   la bande 641-720 reste repliée. Seul le seuil relevé tient une ligne
+   à toutes les largeurs — vérifié sur quinze, de 390 à 1440.
+
+   Ce que ça coûte, et ce n'est pas une perte : entre 640 et 860 px le
+   menu du haut s'en va, mais **le pied porte la liste complète**, avec
+   les noms longs. On ne perd donc aucune page, on perd un raccourci qui
+   était de toute façon cassé à ces largeurs-là. */
+@media (max-width:860px){.haut .menu{display:none}.haut .btn{margin-left:auto}}
 
 /* ---- la carte d'une île, d'une carte postale ---- */
 .carte{background:var(--card);border:1.5px solid var(--line);border-radius:20px;overflow:hidden;

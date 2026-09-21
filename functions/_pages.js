@@ -242,6 +242,140 @@ const CONTENU = {
       shells — et il faut vraiment qu’il fasse son île, ouvrir un compte ne compte
       pas.</p>
     </div>` + CTA
+  },
+
+  /* ── La cinquième page ───────────────────────────────────────────────
+   *
+   * Les quatre autres disent *comment*. Celle-ci dit *pourquoi*, et c'est
+   * la **seule page du site qui cite des travaux publiés**. Ça lui impose
+   * une discipline que les autres n'ont pas.
+   *
+   * **Trois règles, et elles ne se négocient pas :**
+   *
+   * 1. **Aucune étude citée ne porte sur ce jeu-ci.** On rapporte ce
+   *    qu'elles ont mesuré, avec auteurs, revue, année et effectif, et le
+   *    jeu se place à côté. Écrire « des études montrent que Dan's Island
+   *    aide votre enfant » serait faux, invérifiable, et ce serait
+   *    exactement le genre de promesse qu'on fait à des parents parce
+   *    qu'ils ne vont pas vérifier.
+   *
+   * 2. **On cite ce qui dérange autant que ce qui arrange.** La plus
+   *    grosse étude du lot (38 935 joueurs) ne trouve *aucun* lien causal
+   *    entre temps de jeu et bien-être — pas même positif. La citer
+   *    renforce le propos au lieu de l'affaiblir, parce que le propos
+   *    n'est pas « les jeux font du bien », c'est « le temps n'est pas la
+   *    bonne question ». Un dossier qui ne garderait que les résultats
+   *    flatteurs se reconnaît à ça, et un parent qui vérifie une source
+   *    vérifie les autres.
+   *
+   * 3. **On dit sur qui ont porté les études.** Trois des quatre portent
+   *    sur des adultes. C'est écrit dans la page, parce que le lecteur ne
+   *    peut pas le deviner et que l'omettre ferait passer des résultats
+   *    d'adultes pour des résultats d'enfants.
+   *
+   * Les liens sortent vers les revues par leur DOI, pas vers des articles
+   * qui les résument : une source qu'on ne peut pas ouvrir n'est pas une
+   * source.
+   *
+   * Et le chapô porte la phrase qui a donné cette page : « un écran pour
+   * se détendre, enfin ». */
+  '/pourquoi-un-jeu-calme': {
+    titre: 'Pourquoi un jeu où personne ne gagne | Dan’s Island',
+    h1: 'Pourquoi un jeu calme',
+    desc: 'Un jeu sans score, sans minuteur et sans partie perdue — et ce que ' +
+          'disent vraiment les travaux publiés sur le temps d’écran, le jeu ' +
+          'coopératif et le bien-être. Sources citées.',
+    chapo: 'Un écran pour se détendre, enfin. Voilà les choix qu’il y a derrière, ' +
+           'et ce que dit la recherche — y compris quand elle ne nous arrange pas.',
+    corps: `
+    <p>Dan’s Island n’a pas de score, pas de minuteur, pas de niveau à finir et
+    aucune façon de perdre. Ce n’est pas une fonctionnalité manquante&nbsp;: c’est
+    la décision de départ, et tout le reste en découle.</p>
+
+    <h2>Personne ne gagne, personne ne perd</h2>
+    <p>Il n’y a pas d’adversaire. On ne peut pas rater une partie, casser son île,
+    se faire attraper, ni prendre du retard sur quelqu’un. Un requin passe au large
+    et ne peut attraper personne. Le chien qu’on promène, s’il est trop loin,
+    <b>s’assied et attend</b> — il ne gronde pas, il n’y a pas de compte à rebours.
+    La mer qui remonte repose le bonhomme à terre au lieu de le noyer.</p>
+    <p>Ça se voit jusque dans les petits refus&nbsp;: quand un geste n’est pas
+    possible, le jeu dit <i>pourquoi</i> et <i>quoi faire</i>, à l’endroit exact où
+    est le doigt. Il ne dit jamais «&nbsp;perdu&nbsp;».</p>
+
+    <h2>Tout se partage</h2>
+    <p>La seule façon d’agrandir son île, c’est que <b>quelqu’un soit passé</b> —
+    un mot laissé sur ton livre d’or, une commande portée chez toi, un copain qui
+    crée son île par ton lien. Jamais parce que le temps passe, jamais parce qu’on
+    a joué longtemps.</p>
+    <p>C’est la règle qui tranche tous les arbitrages du jeu, et elle a une
+    conséquence qui vaut d’être dite&nbsp;: <b>inviter est la seule façon de
+    progresser.</b> Le jeu pousse à partager sans jamais le demander.</p>
+
+    <h2>Ce que dit la recherche — et ce qu’elle ne dit pas</h2>
+    <p><b>Aucune de ces études ne porte sur Dan’s Island.</b> Elles sont citées pour
+    ce qu’elles ont mesuré, pas comme une preuve sur ce jeu. Et trois des quatre
+    portent sur des adultes&nbsp;: c’est précisé à chaque fois.</p>
+
+    <h3>Le temps d’écran n’est pas la bonne question</h3>
+    <p>En 2025, une équipe de l’Oxford Internet Institute a croisé les données de jeu
+    réelles de <b>703 joueurs adultes</b> sur 150 jeux — plus de 140&nbsp;000 heures —
+    avec leur bien-être déclaré. Le nombre d’heures jouées <b>n’était pas lié</b> au
+    bien-être. Ce qui l’était, c’est la valeur que les joueurs accordaient à ce
+    temps-là.</p>
+    <p>Ballou, Vuorre, Hakman, Magnusson et Przybylski (2025).
+    <a href="https://doi.org/10.1098/rsos.241174" rel="nofollow noopener">Perceived value
+    of video games, but not hours played, predicts mental well-being in casual adult
+    Nintendo players</a>. <i>Royal Society Open Science</i> 12(3), 241174.</p>
+
+    <h3>La plus grosse étude ne trouve aucun effet, dans aucun sens</h3>
+    <p>La même équipe avait suivi <b>38&nbsp;935 joueurs</b> sur sept jeux pendant six
+    semaines, en reliant le temps de jeu mesuré par les éditeurs au bien-être
+    déclaré. Conclusion&nbsp;: <b>peu ou pas de lien causal</b>, ni dans un sens ni
+    dans l’autre. Nous la citons parce qu’elle ne nous arrange pas, et parce que
+    c’est elle qui rend la précédente intéressante&nbsp;: si la durée ne fait rien,
+    reste ce qu’on y fait.</p>
+    <p>Vuorre, Johannes, Magnusson et Przybylski (2022).
+    <a href="https://doi.org/10.1098/rsos.220411" rel="nofollow noopener">Time spent
+    playing video games is unlikely to impact well-being</a>.
+    <i>Royal Society Open Science</i> 9(7), 220411. Joueurs adultes.</p>
+
+    <h3>Coopérer, pas s’affronter</h3>
+    <p>C’est la seule des quatre qui porte sur des enfants. <b>96 enfants de 4 à
+    5&nbsp;ans</b> ont joué au même jeu, les uns de façon coopérative, les autres de
+    façon compétitive. On a ensuite observé ce qu’ils partageaient avec des enfants
+    qui n’avaient pas joué. Ceux qui avaient joué de façon <b>compétitive
+    partageaient moins</b>. Jouer seul donnait un résultat intermédiaire.</p>
+    <p>Toppe, Hardecker et Haun (2019).
+    <a href="https://doi.org/10.1371/journal.pone.0221092" rel="nofollow noopener">Playing
+    a cooperative game promotes preschoolers’ sharing with third-parties, but not social
+    inclusion</a>. <i>PLOS ONE</i> 14(8), e0221092.</p>
+
+    <h3>Et la première du genre</h3>
+    <p>En 2021, la même équipe avait trouvé une <b>petite corrélation positive</b>
+    entre temps de jeu et bien-être, chez des joueurs adultes d’<i>Animal Crossing</i>
+    et de <i>Plants vs. Zombies</i>, en utilisant là encore les données réelles des
+    éditeurs plutôt que des durées déclarées de mémoire.</p>
+    <p>Johannes, Vuorre et Przybylski (2021).
+    <a href="https://doi.org/10.1098/rsos.202049" rel="nofollow noopener">Video game play
+    is positively correlated with well-being</a>.
+    <i>Royal Society Open Science</i> 8(2), 202049. Joueurs adultes.</p>
+
+    <div class="encart">
+      <p><b>Ce qu’on en retient, et rien de plus&nbsp;:</b> compter les minutes
+      renseigne mal, et la nature de ce qu’on fait devant l’écran pèse plus lourd
+      que sa durée. Dan’s Island est construit du côté calme, coopératif et créatif
+      de cette distinction. Ça ne veut pas dire qu’il «&nbsp;fait du bien&nbsp;» —
+      personne ne l’a mesuré, et nous ne le prétendrons pas.</p>
+    </div>
+
+    <h2>Ce qu’il n’y a pas, et n’y aura pas</h2>
+    <p>Pas de publicité. <b>Aucun paiement réel</b>, et il n’y en aura jamais&nbsp;:
+    la monnaie du jeu, le shell, se gagne en jouant et ne s’achète pas. Pas de
+    classement, pas de série à ne pas briser, pas de notification qui rappelle de
+    revenir. Pas de messagerie privée&nbsp;: on laisse un mot sur le livre d’or
+    d’une île, et le propriétaire peut le retirer.</p>
+    <p>Et rien à installer&nbsp;: ça s’ouvre dans le navigateur, sur un téléphone
+    comme sur un ordinateur.</p>` + CTA
   }
 };
 

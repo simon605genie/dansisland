@@ -257,5 +257,85 @@ c.titre('4. les icônes sont celles du logo, pas celles d’hier');
   await ctx.close();
 }
 
+/* ── 5 ─────────────────────────────────────────────────────────────────
+ *
+ * **L'en-tête des pages publiques tient sur une ligne.**
+ *
+ * `PAGES` porte un champ `court` pour une raison mesurée le 20/09 : à
+ * 1100 px, les quatre noms longs poussaient la porte corail à la ligne,
+ * et une porte tombée sous son propre menu n'est plus une porte.
+ *
+ * C'était une **consigne**, donc quelque chose que personne ne relit —
+ * et le 21/09 la cinquième page l'a rouverte. Pire : la mesure a montré
+ * que l'en-tête se repliait **déjà** de 641 à 720 px avec quatre pages,
+ * sous un seuil de 640 qui avait l'air raisonnable et ne l'était pas.
+ * Personne ne l'avait vu parce que personne ne l'avait mesuré.
+ *
+ * Deux pièges de sonde rencontrés en écrivant cette section, et les deux
+ * rendaient des chiffres **stables et faux** :
+ *
+ *   1. `document.querySelector('header')` attrape `<header
+ *      class="banniere">`, le bandeau de titre — qui répond 43 px à
+ *      toutes les largeurs sans rien dire du menu. Le repère est
+ *      `header.haut`.
+ *   2. Compter les ordonnées distinctes des liens rendait « 3 rangées »
+ *      sur un en-tête de 43 px de haut, ce qui ne peut pas être vrai :
+ *      le logo, les liens et la porte n'ont ni la même police ni le même
+ *      alignement, donc leurs boîtes commencent à trois hauteurs
+ *      différentes **sur la même ligne**. Ce qui se mesure, c'est la
+ *      hauteur de l'en-tête.
+ */
+c.titre('5. l’en-tête des pages publiques tient sur une ligne');
+{
+  const { rendre } = await import('../functions/_pages.js');
+  const { PAGES } = await import('../functions/_commun.js');
+  c.dit(PAGES.length >= 4, 'PAGES a été lu (' + PAGES.length + ' pages)');
+
+  // Chaque page, pas seulement la première : c'est le nom le plus long
+  // qui décide, et ce n'est pas forcément celui de la page qu'on teste.
+  // « trois tours qui rendent trois fois le même nombre ne mesurent
+  // peut-être qu'une chose » — la leçon de dedans.mjs, 19/09.
+  const LARGEURS = [1440, 1200, 1100, 1000, 900, 880, 861, 860, 820, 780,
+                    760, 720, 700, 660, 641, 600, 480, 390];
+  const plies = [];
+  let mesures = 0, menuVu = 0;
+
+  for (const p of PAGES) {
+    const html = await (await rendre(p.chemin,
+      { next: () => new Response('', { status: 404 }) })).text();
+    for (const w of LARGEURS) {
+      const ctx = await nav.newContext({ viewport: { width: w, height: 900 } });
+      const pg = await ctx.newPage();
+      await pg.setContent(html, { waitUntil: 'load' });
+      await pg.evaluate(() => document.fonts.ready);
+      const r = await pg.evaluate(() => {
+        const h = document.querySelector('header.haut');
+        if (!h) return null;
+        const m = document.querySelector('.haut .menu');
+        return { h: Math.round(h.getBoundingClientRect().height),
+                 menu: !!(m && m.offsetParent !== null),
+                 debord: document.documentElement.scrollWidth > window.innerWidth + 1 };
+      });
+      await ctx.close();
+      if (!r) { plies.push(p.chemin + '@' + w + ' (pas de header.haut)'); continue; }
+      mesures++;
+      if (r.menu) menuVu++;
+      if (r.h > 50 || r.debord) plies.push(p.chemin + ' @ ' + w + ' px (' + r.h + ' px)');
+    }
+  }
+
+  console.log('     ' + mesures + ' mesures · menu visible sur ' + menuVu +
+              ' d’entre elles · ' + plies.length + ' repli(s)');
+  // Un compte qui déborde ment aussi sûrement qu'un compte qui manque.
+  c.dit(mesures === PAGES.length * LARGEURS.length,
+        'toutes les pages ont été mesurées à toutes les largeurs (' + mesures + ')');
+  // Si le menu n'était visible nulle part, « une ligne partout » serait
+  // vrai sans rien prouver : c'est le repère absent qui absout au lieu
+  // de faire échouer, nommé le 20/09 pour le rayon Bâtiments.
+  c.dit(menuVu > 0, 'le menu est visible à au moins une largeur (' + menuVu + ')');
+  if (plies.length) console.log('     ' + plies.slice(0, 6).join('\n     '));
+  c.dit(plies.length === 0, 'aucun repli de l’en-tête, à aucune largeur');
+}
+
 await nav.close(); s.fermer();
 process.exit(c.fin() ? 1 : 0);
