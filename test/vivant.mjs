@@ -665,8 +665,30 @@ c.titre('6 bis. chez un voisin, l’hôte fait les cent pas');
      cycle) : sur 1,6 s il ne parcourt qu'un tiers de case, ce qui est vrai
      mais indétectable. Une fenêtre d'échantillonnage se choisit sur la
      durée du geste qu'on mesure, pas au jugé. */
+  /* **21/09 — ce contrôle clignotait, et c'était la quatrième fois.** Trois
+     exécutions d'affilée sur un dépôt **inchangé** ont rendu 1,5x · 1,5x ·
+     1,7x contre un seuil à 1,5 : un vert, un rouge, un vert. Repéré comme
+     le 20/09, en relançant le harnais sur le commit d'avant dans un
+     worktree — un rouge qui existe déjà sur la version précédente n'est
+     pas une régression, et il n'y avait rien à chercher dans le code du
+     jour.
+
+     La cause tenait aux deux défauts que ce fichier nomme déjà :
+
+     1. **La fenêtre ne couvrait pas la période du phénomène.** 4,4 s d'un
+        cycle de 11 s, donc l'aller seul, et deux pauses tombées où elles
+        voulaient. À 8,8 s le relevé du côté « assis » passe de 5429–6344
+        (17 % d'écart) à 11855–12092 (2 %) : c'est la mer qui scintille et
+        la mouette qui passe, et il faut assez de relevés pour qu'elles se
+        moyennent.
+     2. **Le seuil était posé dans le nuage**, et non entre les deux. Le
+        rapport vrai vaut 1,42 · 1,44 · 1,45 sur trois tours, et il vaut 1,0
+        par construction quand l'hôte reste assis — les deux côtés peignent
+        alors la même scène. 1,5 était **au-dessus** du nuage vrai.
+
+     1,25 tombe entre 1,0 et 1,42, au bord d'aucun des deux. */
   const DEVANT = { x0: 0.38, y0: 0.48, x1: 0.50, y1: 0.62 };
-  const TRAJET = { pas: 550, duree: 4400 };
+  const TRAJET = { pas: 550, duree: 8800 };
 
   const s = await servir(8291, avecEte());
   const a = await aller(s);
@@ -684,8 +706,8 @@ c.titre('6 bis. chez un voisin, l’hôte fait les cent pas');
   await b.o.ctx.close(); p.fermer();
 
   console.log('     chemin devant la maison : ' + avec.total + ' avec · ' + sans.total + ' sans');
-  c.dit(avec.total > sans.total * 1.5,
-        'l’hôte marche vraiment (' + (sans.total ? (avec.total / sans.total).toFixed(1) : '∞') + 'x)');
+  c.dit(avec.total > sans.total * 1.25,
+        'l’hôte marche vraiment (' + (sans.total ? (avec.total / sans.total).toFixed(2) : '∞') + 'x)');
 
   /* **Le repli est ce qui compte le plus ici**, et il ne se voit pas à
      l'œil : une maison au bord de l'île peut avoir la mer devant sa porte,

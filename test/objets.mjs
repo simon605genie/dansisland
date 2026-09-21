@@ -312,10 +312,14 @@ c.titre('9. les îles de démonstration ne portent rien de payant');
      exception à la règle du 16/09 — un village de démonstration sans un seul
      bâtiment ne montre pas le jeu.
 
-     Ce qui la rend acceptable n'est pas leur absence, c'est le refus de
-     `ramasserSouvenir()` sur une île `demo`. Donc ce contrôle vérifie
-     l'exception **et son garde-fou ensemble** : si quelqu'un retire le
-     refus, les vingt îles deviennent une boutique gratuite.
+     Ce qui la rendait acceptable était le refus de `ramasserSouvenir()` sur
+     une île `demo` : un garde-fou, donc une chose qui peut être retirée.
+     Depuis le 21/09 il n'y a plus rien à garder — **on ne ramène plus
+     rien**, on prend une photo, et une photo d'église n'entre dans aucune
+     liste d'objets. L'exception n'a plus besoin de son exception.
+
+     Le contrôle lit donc l'invariant qui l'a remplacée, et il est plus
+     fort : `photographier()` n'écrit que dans `interieur`. Voir plus bas.
 
      Écrire ce bloc était le vrai travail : mon premier jet ne lisait que
      `THEMES` et `DEMO`, exactement comme le 19/09, et il est **passé au
@@ -337,16 +341,41 @@ c.titre('9. les îles de démonstration ne portent rien de payant');
   c.dit(horsBat.length === 0,
         'GRANDS ne pose que des bâtiments' + (horsBat.length ? ' → ' + horsBat.join(', ') : ''));
 
-  /* Le garde-fou lui-même. C'est un contrôle de **câblage**, pas de
-     comportement, et il faut le dire : amener le bonhomme sur une église
-     d'île bot demanderait de le téléporter, et rien ici n'en donne le
-     moyen. Ce qui est vérifié, c'est que le refus lit bien `world.demo` et
-     qu'il nomme le prix — pas qu'il s'affiche. */
-  const rs = src.slice(src.indexOf('function ramasserSouvenir'),
-                       src.indexOf('function ramasserSouvenir') + 1800);
-  c.dit(/world\.demo\s*&&\s*BOUTIQUE\.find/.test(rs),
-        'ramasserSouvenir() refuse un objet payant sur une île de démonstration');
-  c.dit(/payant\.prix/.test(rs), 'et son refus nomme le prix, donc il apprend quelque chose');
+  /* L'invariant qui remplace le garde-fou, et qui le vaut mieux : **une
+     visite n'ajoute rien à `mine.objects`.** Tant que c'était vrai « parce
+     qu'un refus le disait », il suffisait de retirer le refus ; c'est vrai
+     maintenant parce qu'il n'y a plus une seule ligne qui pousse quoi que
+     ce soit dans cette liste au retour d'une visite.
+
+     C'est un contrôle de **câblage**, pas de comportement, et il faut le
+     dire : amener le bonhomme sur une église d'île bot demanderait de le
+     téléporter, et rien ici n'en donne le moyen. */
+  const corpsDe = nom => {
+    const i = src.indexOf('function ' + nom + '(');
+    if (i < 0) return '';
+    let prof = 0, ouvert = false;
+    for (let j = i; j < src.length; j++) {
+      if (src[j] === '{') { prof++; ouvert = true; }
+      else if (src[j] === '}' && --prof === 0 && ouvert) return src.slice(i, j + 1);
+    }
+    return '';
+  };
+  const ph = corpsDe('photographier');
+  c.dit(ph.length > 400, 'photographier() a été lu (' + ph.length + ' caractères)');
+  c.dit(/mine\.interieur\.pieces\[[^\]]+\]\.meubles\.push\(/.test(ph),
+        'photographier() accroche un cadre dans la maison');
+  c.dit(!/objects\s*\.?\s*push/.test(ph) && !/mine\.objects/.test(ph),
+        'et il ne touche jamais à `mine.objects` : rien de payant ne se ramène');
+  /* Et le compte, parce qu'un contrôle qui ne dit pas ce qu'il a lu peut
+     passer au vert en ne regardant rien. Cinq lignes poussent un objet
+     d'île, et **pas une** ne signe du nom d'un hôte : les îles bot (deux),
+     les mots replantés en panneau, le pinceau, la crotte du chien. */
+  const pushs = [...src.matchAll(/\bobjects\.push\(/g)];
+  c.dit(pushs.length === 5, 'cinq lignes posent un objet d’île (' + pushs.length + ')');
+  const signe = [...src.matchAll(/objects\.push\([^;]{0,160}?de\s*:/g)];
+  c.dit(signe.length === 0,
+        'aucune ne signe du nom de l’hôte : un objet de voisin ne se copie plus (' +
+        signe.length + ')');
 }
 
 c.titre('9 ter. les six bâtiments : une emprise de 2x2, et des proportions');
@@ -464,19 +493,21 @@ c.titre('9 bis. un souvenir décore, il ne fonctionne pas');
     await ctx.close();
   }
 
-  /* Le carillon n'a pas de bulle : il se dit par le son, et un son absent
-     ne s'explique pas au pied de l'objet. C'est donc au **ramassage** que
-     la phrase tombe — vérifié ici sur la source, faute de pouvoir visiter
-     un voisin dans ce harnais. */
   const src0 = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   c.dit(/FONCTIONNEL=\{girouette:1, carillon:1, boitelettres:1\}/.test(src0),
         'les trois objets fonctionnels sont déclarés ensemble');
-  c.dit(/aUnCarillon\(\)\{[^}]*!estSouvenir\(o\)/.test(src0),
-        'un carillon souvenir ne sonne pas');
-  // Le fichier porte l'apostrophe en **échappement** `\u2019`, pas en
-  // caractère : chercher le caractère ne trouve rien. Mesuré, pas deviné.
-  c.dit(/ramasserSouvenir[^]*?est un souvenir/.test(src0),
-        'le ramassage dit lui-même qu’un souvenir ne fait pas le travail');
+  /* La phrase qui l'expliquait au ramassage est partie avec le ramassage :
+     depuis le 21/09 on ne ramène plus rien, on photographie, et il n'y a
+     plus de souvenir **neuf** à qui dire qu'il ne fonctionne pas.
+
+     Ce qui reste — et c'est tout l'objet de cette section — ce sont les
+     souvenirs **déjà posés**, que ce changement ne reprend à personne.
+     `estSouvenir()` continue de les gouverner, et les trois sondes le
+     lisent toujours : c'est la règle du cadre glissé contre le mur
+     plutôt qu'effacé. */
+  for (const s of ['boiteProche', 'girouetteProche', 'aUnCarillon'])
+    c.dit(new RegExp('function ' + s + '\\([^]{0,340}?!estSouvenir\\(').test(src0),
+          s + '() écarte encore un souvenir déjà posé');
 }
 
 c.titre('10. `agir()` et `proximity()` listent les mêmes sondes, dans le même ordre');
@@ -486,7 +517,7 @@ c.titre('10. `agir()` et `proximity()` listent les mêmes sondes, dans le même 
      amener le bonhomme devant chaque chose, et un chien se promène.
 
      Celui-ci le prend par la source. Les deux fonctions doivent appeler
-     les mêmes sondes dans le même ordre — souvenir, chien, crotte, coffre,
+     les mêmes sondes dans le même ordre — photo, chien, crotte, coffre,
      boîte, girouette, porte. C'est exactement ce que veut dire « les deux
      doivent rester d'accord », et ça se lit sans faire un pas.
 
@@ -510,7 +541,7 @@ c.titre('10. `agir()` et `proximity()` listent les mêmes sondes, dans le même 
   // Les commentaires citent les sondes sans les appeler : les retirer,
   // sinon c'est la prose qu'on éprouve et pas le code.
   const sansNotes = t => t.replace(/\/\*[^]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
-  const SONDES = ['souvenirProche', 'chienProche', 'crotteProche', 'coffreProche',
+  const SONDES = ['photoProche', 'chienProche', 'crotteProche', 'coffreProche',
                   'boiteProche', 'girouetteProche', 'devantLaPorte'];
   const ordre = nom => {
     const b = sansNotes(corps(nom)), vus = [];
@@ -707,7 +738,7 @@ c.titre('14. personne ne colle « un » devant un nom d’objet');
   const colles = [...code.matchAll(/['’ ](?:[Uu]n|[Uu]ne|[TtSs]on|[Tt]a)\s*(?:<[^>]*>)?\s*'\s*\+\s*\(?\s*NOM_OBJ\[/g)];
   c.dit(colles.length === 0, 'aucune phrase ne colle un article devant NOM_OBJ (' + colles.length + ')');
   for (const [q, re] of [
-    ['le souvenir chez un voisin', /unObjet\(objet\.t,true,true\)\+' de chez '/],
+    ['l’objet qu’on photographie chez un voisin', /unObjet\(objet\.t,true,true\)\+' de chez '/],
     ['l’objet sous la maison', /'Il y a '\+unObjet\(gene\.t,false,true\)\+' sous la maison/],
     ['l’objet qu’on ne peut pas tourner', /say\(unObjet\(o\.t,true,true\)\+' n’a pas de sens/],
     ['le compagnon qui te suit', /tonObjet\(k\)\+' te suit maintenant partout/],
@@ -1268,6 +1299,174 @@ c.titre('18 ter. chez un voisin, on ne peint pas son sol');
   c.dit(!!v && v.eteintes === v.total, 'et toutes ses pastilles sont éteintes');
   c.dit(erreurs.length === 0, 'aucune erreur de console');
   await ctx.close();
+}
+
+c.titre('19. on ne ramène plus un objet, on en rapporte une photo');
+{
+  /* Trois reproches, rapportés en jouant, et le mot « souvenir » les
+     portait tous les trois : « je ramène un souvenir, il ne disparaît pas
+     de l'autre île, je ne le vois pas sur la mienne ». Il disait qu'on
+     **prend** quelque chose, et on ne prenait rien.
+
+     Ce contrôle mesure ce qui l'a remplacé, de bout en bout : on va chez
+     quelqu'un, on se met sur un objet, on appuie sur `E`, on rentre, on
+     entre dans la maison, et on regarde le cadre. Pas une assertion sur la
+     source : ce qui compte ici est ce qu'un enfant voit.
+
+     Le bonhomme est **posé** sur un objet du voisin plutôt que marché
+     jusque-là : viser une case demanderait de refaire la caméra, et `pt()`
+     est seul à avoir le droit de défaire cette transformation. C'est le
+     même choix que le `SOUS` du haut de ce fichier, et la sonde le dit :
+     `__poser` ne fait que déplacer le bonhomme, tout le reste — la plaque,
+     `proximity()`, `E`, `agir()` — est le vrai chemin. */
+  const s2 = await servir(8156, src => remplacer(src,
+    /function proximity\(\)\{/,
+    'window.__poser=()=>{ const o=(world.objects||[]).find(x=>x.t!==\'panneau\'&&x.t!==\'crotte\');' +
+    ' if(!o) return null; hero.x=o.x+0.5; hero.y=o.y+0.5; target=null; return o.t; };\n' +
+    'window.__compte=()=>({ owner:world.owner, lui:(world.objects||[]).length,' +
+    ' moi:(mine.objects||[]).length });\n' +
+    'window.__base=()=>Object.keys(mondeNu(mine)).sort().join(\' \');\n' +
+    'window.__code=()=>encode(mine);\n' +
+    'window.__devantLeCadre=()=>{ const k=(pieceData().meubles||[]).find(m=>m.t===\'tableau\'&&m.photo);' +
+    ' if(!k) return null; hero.x=k.x+0.5; hero.y=k.y+0.5; target=null; return k.photo; };\n' +
+    'window.__cadres=()=>{ const r=[]; PIECES.forEach(q=>((mine.interieur.pieces[q.k]||{}).meubles||[])' +
+    '.forEach(m=>{ if(m.t===\'tableau\') r.push({p:q.k,photo:m.photo||null,de:m.de||null,pc:m.pc||null}); })); return r; };\n' +
+    'function proximity(){'));
+  const o = await onglet(nav, {
+    taille: { width: 1200, height: 860 },
+    memoire: { 'dansisland:entre': '1', 'dansisland:guide': '1', 'dansisland:muet': '1' },
+  });
+  const { ctx, page, erreurs } = o;
+  await page.goto(s2.url, { waitUntil: 'load' });
+  await attendre(2500);
+
+  // Chez un voisin.
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'voisins');
+    if (b) b.click();
+  });
+  await attendre(700);
+  const parti = await page.evaluate(() => {
+    const n = [...document.querySelectorAll('#p-voisins .neighbor')][1];
+    const b = n && [...n.querySelectorAll('button,a')].find(x => /Visiter/i.test(x.textContent));
+    if (!b) return false;
+    b.click(); return true;
+  });
+  await attendre(2200);
+  c.dit(parti, 'on est bien arrivé chez un voisin');
+
+  const avant = await page.evaluate(() => window.__cadres().length);
+  /* `world` dans une page de test n'est **pas** le monde du jeu : un
+     élément à `id` devient une globale, et `#world` est le canvas. Donc
+     `world.objects` vaut `undefined` et compte zéro sans rien prouver.
+     C'est le piège de sonde écrit le 19/09, et c'est pour ça que le compte
+     passe par le crochet et pas par `page.evaluate` en direct. */
+  const n0 = await page.evaluate(() => window.__compte());
+  const sujet = await page.evaluate(() => window.__poser());
+  await attendre(700);
+  const v = await etat(page);
+  console.log('     sur ' + sujet + ' : ' + (v.plaque || '(pas de plaque)') + ' · ' + v.murmure);
+  c.dit(!!sujet, 'un objet du voisin a été trouvé (' + sujet + ')');
+  c.dit(!!v.plaque && /photo/i.test(v.plaque), 'la plaque rose propose de prendre une photo');
+  c.dit(/photo/i.test(v.murmure), 'et la bulle dit la même chose que la plaque');
+  // Le mot qui disait qu'on prenait quelque chose ne doit plus s'y trouver.
+  c.dit(!/souvenir/i.test(v.plaque + ' ' + v.murmure),
+        'ni l’une ni l’autre ne promet qu’on ramène quelque chose');
+
+  await page.keyboard.press('e');
+  await attendre(600);
+  const ap = await etat(page);
+  console.log('     après E : ' + ap.murmure);
+  const cadres = await page.evaluate(() => window.__cadres());
+  const neuf = cadres.filter(k => k.photo);
+  console.log('     cadres : ' + JSON.stringify(neuf));
+  c.dit(cadres.length === avant + 1, 'un cadre de plus dans la maison (' + avant + ' → ' + cadres.length + ')');
+  c.dit(neuf.length === 1 && neuf[0].photo === sujet,
+        'il porte le **type** de l’objet photographié, pas des pixels (' +
+        (neuf[0] ? neuf[0].photo : '—') + ')');
+  c.dit(!!neuf[0] && !!neuf[0].de, 'et il est signé du nom de l’hôte (' + (neuf[0] || {}).de + ')');
+  c.dit(!!neuf[0] && !!neuf[0].pc,
+        'il garde la couleur qu’avait l’objet : un phare rouge n’est pas bleu au mur');
+  // La phrase nomme la pièce, sinon « il t'attend chez toi » ne dit pas où.
+  c.dit(new RegExp(neuf[0] ? neuf[0].p : 'zzz', 'i').test(ap.murmure),
+        'la phrase nomme la pièce où il est accroché (' + (neuf[0] || {}).p + ')');
+
+  /* Les deux premiers reproches se mesurent, et c'est tout l'objet de ce
+     bloc : « il ne disparaît pas de l'autre île » — il n'a jamais eu à
+     disparaître, on n'a rien pris ; « je ne le vois pas sur mon île » —
+     il n'y est pas, et c'est maintenant ce que la phrase annonce. */
+  const n1 = await page.evaluate(() => window.__compte());
+  const bilan = { owner: n1.owner, chezLui: n1.lui, avant: n0.lui,
+                  chezMoi: n1.moi, moiAvant: n0.moi };
+  console.log('     chez ' + bilan.owner + ' : ' + bilan.chezLui + ' objets (' +
+              bilan.avant + ' avant) · chez moi : ' + bilan.chezMoi);
+  c.dit(bilan.chezLui === bilan.avant,
+        'l’île visitée n’a pas perdu un objet (' + bilan.avant + ' → ' + bilan.chezLui + ')');
+  c.dit(bilan.chezMoi === bilan.moiAvant,
+        'et la mienne n’en a pas gagné (' + bilan.moiAvant + ' → ' + bilan.chezMoi + ')');
+
+  /* **Les deux chemins.** `mondeNu()` et `encode()` sont deux routes pour
+     la même donnée, donc deux occasions de l'oublier — c'est écrit depuis
+     le 16/09, et le code de sauvegarde ne passe que par la seconde. Un
+     harnais qui ne regarde qu'une des deux dit « tout va bien » sur la
+     moitié de la question. */
+  const base = await page.evaluate(() => window.__base());
+  console.log('     en base : ' + base);
+  c.dit(!/\bphoto\b|\bcadre/.test(base),
+        'aucune clé de plus au premier niveau : le cadre est un meuble, et ' +
+        '`interieur` y était déjà');
+  c.dit(/\binterieur\b/.test(base), 'et `interieur` part bien en base');
+  const dansLeCode = await page.evaluate(() => {
+    const o = JSON.parse(decodeURIComponent(escape(atob(window.__code()))));
+    const ms = ((o.i && o.i.pieces && o.i.pieces.salon) || {}).meubles || [];
+    const k = ms.find(m => m.t === 'tableau' && m.photo);
+    return k ? { photo: k.photo, de: k.de, pc: k.pc } : null;
+  });
+  console.log('     dans le code de sauvegarde : ' + JSON.stringify(dansLeCode));
+  c.dit(!!dansLeCode && dansLeCode.photo === sujet,
+        'le code de sauvegarde porte le cadre, sa signature et sa couleur');
+
+  /* Et enfin ce qu'un enfant voit : on rentre, on entre, on se met devant,
+     et le cadre **dit de qui vient sa photo**. Sans ça c'est un rectangle
+     de plus au mur, et la visite n'aura rien rapporté. */
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'ile');
+    if (b) b.click();
+  });
+  await attendre(500);
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('#p-ile button')].find(x => /Rentrer chez toi/.test(x.textContent));
+    if (b) b.click();
+  });
+  await attendre(2200);
+  const entre = await page.evaluate(() => {
+    const t = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'maison');
+    if (t) t.click();
+    return true;
+  });
+  await attendre(600);
+  /* Cliquer un bouton d'un panneau qui défile fait bouger la page, et le
+     clic part à côté : on l'amène sous la vue d'abord. Trois heures
+     perdues là-dessus le 20/09. */
+  await page.evaluate(async () => {
+    const b = [...document.querySelectorAll('#p-maison button')].find(x => /Entrer/.test(x.textContent));
+    if (!b) return;
+    b.scrollIntoView({ block: 'center' });
+    await new Promise(r => setTimeout(r, 200));
+    b.click();
+  });
+  await attendre(1400);
+  const vu = await page.evaluate(() => window.__devantLeCadre());
+  await attendre(800);
+  const d = await etat(page);
+  console.log('     devant le cadre : ' + (d.murmure || '(rien)'));
+  c.dit(entre && vu === sujet, 'on est rentré, entré, et le cadre est là (' + vu + ')');
+  c.dit(/Lila/.test(d.murmure), 'la bulle nomme de chez qui vient la photo');
+  c.dit(/photo/i.test(d.murmure), 'et elle dit que c’est une photo, pas l’objet');
+  c.dit(d.plaque === null, 'pas de plaque rose : un cadre se regarde, il ne se prend pas');
+
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close(); s2.fermer();
 }
 
 await nav.close(); s.fermer();

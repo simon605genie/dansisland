@@ -4748,6 +4748,164 @@ littéraux de gabarit**, et leurs commentaires aussi.
 
 Une consigne écrite dans un fichier ne protège pas les autres fichiers.
 
+## On ne ramène plus un souvenir, on rapporte une photo — 21/09/2026
+
+**Aucune migration, aucune clé de plus dans `mondeNu()`.** Le cadre est un
+meuble, `interieur` était déjà dans la liste **et** dans `encode()`, et
+`normaliserInterieur()` mute les meubles en place au lieu de les
+reconstruire — donc `photo`, `pc` et `de` survivent. Vérifié avant
+d'écrire, pas après.
+
+Trois reproches, rapportés en jouant, et **le mot « souvenir » les portait
+tous les trois** : « je ramène un souvenir, il ne disparaît pas de l'autre
+île, je ne le vois pas sur la mienne ». Il dit qu'on **prend** quelque
+chose, et on ne prenait rien — on posait une copie sur une case tirée au
+sort parmi cent cinquante.
+
+Une photo dit exactement ce qui se passe. On n'ôte rien à personne, et elle
+finit dans un cadre au mur : un endroit où l'on a **choisi** d'aller.
+
+Sept choses à ne pas défaire.
+
+1. **Le cadre porte un type d'objet, jamais des pixels** —
+   `{t:'tableau', x, y, o, c, photo:'phare', pc:'#C9453B', de:'Lila'}`.
+   Des pixels n'ont rien à faire dans un jsonb que chaque sauvegarde
+   réécrit, c'est écrit depuis le 17/09 pour l'album. Mais `dessinDe()`
+   sait déjà peindre un phare à n'importe quelle taille : le cadre coûte
+   **un nom**. Il suit donc d'un appareil à l'autre et il part dans le code
+   de sauvegarde, là où l'album vit dans un `localStorage`. **Un visiteur,
+   lui, ne le voit pas** : on ne visite que le dehors, et ce chantier
+   n'ouvre pas les maisons — écrit ici parce que je l'avais d'abord
+   promis en commentaire, et que c'était faux.
+2. **`pc` est la couleur qu'avait l'objet chez le voisin.** Sans elle le
+   phare rouge de Lila serait bleu au mur, c'est-à-dire la photo d'autre
+   chose. Trois octets, et une seule sorte de meuble la porte.
+3. **Les sept rangs ne bougent pas.** `souvenirProche` devient
+   `photoProche` et rien d'autre ne change : photo, chien, crotte, coffre,
+   boîte, girouette, porte, dans `agir()` comme dans `proximity()`. Le
+   contrôle 10 les lit toujours.
+4. **Le geste pose lui-même la clé de la bulle**, et c'est `clePhoto(o)`,
+   écrite une fois et lue des deux côtés. L'état d'après est le même objet
+   sous les pieds, donc la même clé — sans ça `proximity()` recouvre la
+   confirmation par l'invitation à l'image suivante. La règle du 17/09
+   pour `porterLaCommande()`, rouverte pour la troisième fois, et c'est
+   `test/objets.mjs` qui l'a trouvée, pas la relecture.
+5. **Un cadre se regarde, il ne se prend pas.** Pas de plaque rose, pas de
+   `E`, aucun rang de plus : la règle du potager. Mais il **dit de qui
+   vient sa photo**, au pied du cadre — sinon c'est un rectangle de plus
+   au mur et la visite n'a rien rapporté.
+6. **Le cadre neuf brille jusqu'à ce qu'on soit venu devant** (`cadreNeuf`,
+   une référence d'identité comme `balade.o`). Nommer la pièce ne suffit
+   pas : le salon a treize murs. Rien en base, rien pour Ctrl+Z, et tout
+   ce qui refait la liste des meubles casse la référence — c'est le bon
+   défaut.
+7. **Ce qui est déjà posé reste posé.** Les souvenirs ramenés avant ce
+   changement ne bougent pas, `estSouvenir()` et `FONCTIONNEL` continuent
+   de les gouverner. On ne reprend pas ce qui a été donné : la règle du
+   cadre glissé contre le mur plutôt qu'effacé.
+
+### Ce que ça ferme, sans que ce fût le but
+
+**Le garde-fou des îles bot n'a plus rien à garder.** Depuis le 20/09,
+`ramasserSouvenir()` refusait un objet payant pris sur une île `demo` en
+nommant son prix : un garde-fou, donc une chose qu'on peut retirer. Une
+photo d'église n'est pas une église, n'entre dans aucune liste d'objets et
+ne fait rien — l'exception du village de démonstration n'a plus besoin de
+son exception. L'invariant qui la remplace est plus fort et se mesure en
+une ligne : **`photographier()` n'écrit que dans `interieur`.**
+
+De même, `FONCTIONNEL` n'a plus rien à expliquer au ramassage : une photo
+de carillon qui ne sonne pas ne surprend personne. Le trou du 19/09 — une
+visite qui donnait gratuitement les trois articles les plus chers — se
+referme par la forme du geste, pas par un test.
+
+### Le dessin, et l'invariant que j'ai rouvert sans le voir
+
+Le premier rendu montrait un palmier vert foncé sur du bois foncé :
+**le panneau d'un `tableau` prend la couleur du meuble**, et le cadre naît
+en `#8B5E3C`. C'est l'invariant du 16/09, celui qui donne `#FDFBF0` aux
+vignettes de l'atelier — *les objets sont dessinés pour le papier clair du
+jeu* — et je l'ai rouvert par la porte de derrière. **Il a fallu regarder
+une capture** ; quinze relectures n'auraient rien dit. C'est la règle du
+lit et des six bâtiments : ça ne se voit que rendu.
+
+Le tirage est donc sur du papier, et le panneau reste le passe-partout que
+le joueur choisit — deux pixels tout autour.
+
+Trois choses mesurées plutôt que supposées :
+
+1. **Le panneau ne faisait que 64 % de la largeur du bois** qui l'entoure
+   (19,8 px contre 31) : l'œil lisait un grand cadre marron avec un timbre
+   dedans. Il en fait 24, soit 3,5 px de moulure de chaque côté.
+2. **La taille d'un sujet se mesure, elle ne se recopie pas.** D'un rocher
+   de 14 unités à une montgolfière de 90, une échelle unique donne soit un
+   timbre soit une image coupée en deux ; une échelle par type, ce sont
+   trente-sept nombres à tenir d'accord avec des dessins qu'on retouche,
+   c'est-à-dire la liste recopiée que ce dépôt refuse partout.
+   `mesureDessin()` peint l'objet une fois dans un canevas jeté et lit sa
+   boîte ; le résultat est retenu. Le jour où un dessin change, la mesure
+   change avec lui. **`ECH_BAT` disparaît de cet endroit** : mesurer rend
+   inutile la division à la main que faisait la première version.
+3. **La découpe reste**, pour ce que la mesure ne peut pas savoir. Un sujet
+   qui déborde est cadré — comme une photo.
+
+### `murLibre()`, et ce qu'il refuse
+
+Le salon d'abord, parce que c'est la plus grande pièce et la première où
+l'on entre. Plus un mur libre : le refus dit **quoi faire** (la Gomme
+décroche un cadre), comme le bâtiment qui demande quatre cases. Une photo
+par objet et par île, et le refus **nomme la pièce** où est déjà la
+première.
+
+### Le contrôle 19, mesuré de bout en bout
+
+Il ne lit pas la source : il va chez quelqu'un, se met sur un objet, appuie
+sur `E`, rentre, entre dans la maison, et regarde le cadre. Relevé :
+
+    chez Lila   13 objets avant, 13 après   — rien n'en part
+    chez moi    18 objets avant, 18 après   — rien n'y arrive
+    en base     ambiance house interieur me name objects pal rayon sky tiles
+    code        {"photo":"palmier","de":"Lila","pc":"#2E7D5B"}
+
+**Les deux chemins**, parce que `mondeNu()` et `encode()` sont deux routes
+pour la même donnée et que le code de sauvegarde ne passe que par la
+seconde. Un harnais qui n'en regarde qu'une dit « tout va bien » sur la
+moitié de la question.
+
+Éprouvé en remettant deux vraies pannes, **et chacune n'a fait rougir que
+sa propre ligne** : `photographier()` qui repousse dans `mine.objects`
+(quatre rouges, dont « la mienne n'en a pas gagné : 18 → 19 »), et `pc`
+oublié (un rouge). Le défaut de la clé de bulle, lui, a été trouvé par le
+contrôle **avant** d'être corrigé.
+
+*(Un piège de sonde rappelé au passage : `world` dans une page de test n'est
+pas le monde du jeu mais le **canvas** — un élément à `id` devient une
+globale. `world.objects` vaut `undefined` et compte zéro sans rien prouver.
+Les comptes passent donc par un crochet, pas par `page.evaluate` en
+direct.)*
+
+## Un contrôle qui clignotait, et le commit d'avant qui l'a dit — 21/09/2026
+
+`vivant.mjs` a rendu un rouge sur « l'hôte marche vraiment ». **Premier
+geste, et c'est lui qui a tout tranché :** relancer le harnais sur le
+commit précédent, dans un worktree. Trois tours sur un dépôt **inchangé** :
+**1,5x · 1,5x · 1,7x**, contre un seuil à 1,5 — un vert, un rouge, un vert.
+Un rouge qui existe déjà sur la version d'avant n'est pas une régression,
+et il n'y avait rien à chercher dans le code du jour.
+
+Les deux défauts sont ceux que ce fichier a déjà nommés le 20/09, et c'est
+la **quatrième** fois :
+
+1. **La fenêtre ne couvrait pas la période du phénomène.** 4,4 s d'un cycle
+   de 11 s, donc l'aller seul. À 8,8 s le relevé du côté « assis » passe
+   de 5429–6344 (17 % d'écart) à 11855–12092 (2 %) : c'est la mer qui
+   scintille et la mouette qui passe, et il faut assez de relevés pour
+   qu'elles se moyennent.
+2. **Le seuil était posé dans le nuage.** Le rapport vrai vaut
+   1,42 · 1,44 · 1,45, et 1,0 par construction quand l'hôte reste assis.
+   1,5 était **au-dessus** du nuage vrai. Il vaut 1,25, entre les deux, au
+   bord d'aucun.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

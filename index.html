@@ -2336,15 +2336,13 @@ function mkBot(i){
 
      Ils sont **payants**, et la règle du 16/09 dit qu'on ne met rien de
      payant sur une île bot : « on en ramène un souvenir gratuitement, et la
-     boutique ne sert plus à rien ». Elle tient toujours — mais elle est
-     maintenant tenue par `ramasserSouvenir()`, qui refuse un objet payant
-     pris sur une île de démonstration en nommant son prix, plutôt que par
-     l'absence de l'objet. C'est ce qui permet aux vingt îles d'avoir un
-     village sans ouvrir la boutique à qui va se promener.
-
-     Chez un **vrai** voisin, rien ne change : un souvenir d'ami reste
-     gratuit, c'est le choix écrit le 19/09 et c'est ce qui donne envie
-     d'aller chez les gens. */
+     boutique ne sert plus à rien ». Elle tient toujours, et depuis le
+     21/09 elle n'a plus rien à garder ici : **on ne ramène plus rien**,
+     on prend une photo. Une photo d'église n'est pas une église, elle
+     n'entre pas dans `objects` et elle ne fait rien — donc les vingt îles
+     peuvent avoir un village sans ouvrir la boutique à qui va se
+     promener, et le refus qui nommait le prix a disparu avec sa raison
+     d'être. Voir `photographier()`. */
   const GRANDS={plage:['restaurant'], foret:['ferme'], desert:['ecole'],
                 village:['culte','ecole'], port:['supermarche','restaurant']};
   (GRANDS[theme.n]||[]).forEach((t,n)=>{
@@ -4652,11 +4650,12 @@ function drawWorld(t){
     // Quatre objets lisent un état, et `etatObjet()` est le seul endroit
     // qui le dit. Sans lui il faudrait un `if` par objet ici, et le
     // prochain en ajouterait un cinquième.
-    /* Ce qui brille : le coffre du jour, la boîte où un mot attend — et
-       le souvenir qu'on vient de ramener, tant qu'on ne l'a pas trouvé.
-       Les trois disent la même chose, « il y a quelque chose ici pour
-       toi », et c'est pour ça qu'ils partagent le même geste. */
-    const plein = coffrePlein(o) || boitePleine(o) || (!visiting && o===souvenirNeuf);
+    /* Ce qui brille : le coffre du jour, la boîte où un mot attend. Les
+       deux disent la même chose, « il y a quelque chose ici pour toi »,
+       et c'est pour ça qu'ils partagent le même geste. Le cadre qu'on
+       vient d'accrocher le dit aussi, mais il est dedans : voir
+       `cadreNeuf` et `drawInterieur()`. */
+    const plein = coffrePlein(o) || boitePleine(o);
     // `ce.x+ce.y` rend exactement l'ancien `o.x+o.y+1` pour une case
     // (centre en +0,5) et la profondeur de la maison pour un 2x2 (+1).
     items.push({d:ce.x+ce.y, f:()=>{
@@ -4899,6 +4898,53 @@ function faceRect(c,u,v,y0,t0,t1,k0,k1,col){
   c.moveTo(a.x,a.y); c.lineTo(b.x,b.y); c.lineTo(d.x,d.y); c.lineTo(e.x,e.y); c.closePath(); c.fill();
 }
 
+/* L'arête basse de la **face qu'on voit** du panneau d'un cadre, dans le
+   repère où `tableau` a déjà fait son `dec()`.
+
+   Un pavé isométrique montre deux flancs ; lequel est le grand dépend de
+   l'orientation. Pour `se` c'est W→S, pour `sw` c'est S→E — l'autre ne
+   fait que 1,8 px de large. Deux fois les mêmes quatre lignes que `pave()`,
+   mais elles sont ici parce que `pave()` peint et ne rend rien : le jour où
+   il rendrait sa géométrie, c'est à lui qu'il faudrait la demander. */
+const CADRE_L=0.62, CADRE_EP=0.05, CADRE_H=28, CADRE_Y=35;
+/* **La taille d'un dessin se mesure, elle ne se recopie pas.**
+
+   Le sujet d'un cadre va d'un rocher de 14 unités à une montgolfière de
+   90. Une échelle unique donne soit un timbre, soit une image coupée en
+   deux ; une échelle par type, ce sont trente-sept nombres à tenir
+   d'accord avec des dessins qu'on retouche — c'est-à-dire la liste
+   recopiée que ce dépôt refuse partout.
+
+   On peint donc l'objet une fois dans un canevas jeté, et on lit sa boîte.
+   Le résultat est **retenu** : c'est un seul rendu par type photographié,
+   la première fois qu'on entre dans la pièce. Le jour où un dessin change,
+   la mesure change avec lui, sans que personne y pense.
+
+   `ECH_BAT` n'entre pas ici, et c'est le point : mesurer rend l'échelle
+   des bâtiments inutile à cet endroit, là où la version d'avant la
+   divisait à la main. */
+const MESURES=new Map();
+function mesureDessin(t){
+  if(MESURES.has(t)) return MESURES.get(t);
+  const R=160, cv2=document.createElement('canvas'); cv2.width=cv2.height=2*R;
+  const g=cv2.getContext('2d'); g.translate(R,R+R*0.55);
+  try{ (DRAW[t]||DRAW.rocher)(g,'#000000',0); }catch(e){}
+  const d=g.getImageData(0,0,2*R,2*R).data;
+  let x0=2*R, x1=-1, y0=2*R, y1=-1;
+  for(let y=0;y<2*R;y++) for(let x=0;x<2*R;x++){
+    if(d[(y*2*R+x)*4+3]<8) continue;
+    if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+  }
+  const m = x1<0 ? {w:40,h:40} : {w:x1-x0+1, h:y1-y0+1};
+  MESURES.set(t,m); return m;
+}
+function faceCadre(o){
+  const sw=(o==='sw'), u=sw?CADRE_EP:CADRE_L, v=sw?CADRE_L:CADRE_EP;
+  const E={x:(u+v)*HX/2, y:(u-v)*HY/2-CADRE_Y},
+        S={x:(u-v)*HX/2, y:(u+v)*HY/2-CADRE_Y},
+        W={x:-(u+v)*HX/2, y:(v-u)*HY/2-CADRE_Y};
+  return sw ? {a:S, b:E} : {a:W, b:S};
+}
 const DRAWM={
   canape(c,C,s,o){
     pave(c,s[0]-0.22,s[1]-0.22,16,C);
@@ -5031,11 +5077,86 @@ const DRAWM={
   // occupait donc une case où l'on ne passait plus : un cadre au mur qui
   // barre le passage n'est pas un cadre au mur. Il part maintenant à 34 du
   // sol et s'arrête à 68, sous le haut de la paroi (`MURH` vaut 86).
-  tableau(c,C,s,o){
+  /* Le cinquième paramètre est **ce qu'il y a dans le cadre**, et il est
+     optionnel : absent, c'est le tableau d'avant, un panneau de couleur.
+     C'est la règle des `||0` de la girouette et du `saut` de `drawChar()` —
+     un dessin qui exigerait son état ne pourrait plus servir de vignette
+     dans l'atelier.
+
+     **Le cadre porte un type d'objet, jamais des pixels.** Une photo, ce
+     sont des pixels, et des pixels n'ont rien à faire dans un jsonb que
+     chaque sauvegarde réécrit — c'est écrit depuis le 17/09 pour l'album.
+     Mais `dessinDe()` sait déjà peindre un phare à n'importe quelle
+     taille, puisque c'est lui qui fait les vignettes : le cadre coûte donc
+     **un nom**.
+
+     Ce que ça donne, et **pas un mot de plus** : il suit d'un appareil à
+     l'autre et il part dans le code de sauvegarde, là où l'album du 17/09
+     vit dans un `localStorage` et l'a toujours dit lui-même. Il est aussi
+     dans le jsonb public, donc rien de sensible n'y va — la règle de la
+     porte fermée, du 16/09. **Un visiteur ne le voit pas** : on ne visite
+     que le dehors, et ce n'est pas ce chantier qui ouvre les maisons. */
+  tableau(c,C,s,o,m){
+    const photo=m&&m.photo;
     adosse(c,[0.9,0.9],o,0.1,34,BROWN,34);
     c.save();
-    if(o==='sw'){ dec(c,-0.34,0); pave(c,0.05,0.5,26,C,38); }
-    else        { dec(c,0,-0.34); pave(c,0.5,0.05,26,C,38); }
+    /* Le panneau ne faisait que **64 %** de la largeur du bois qui
+       l'entoure, et l'œil lisait un grand cadre marron avec un timbre
+       dedans. Mesuré : bois 31 px, panneau 19,8. Il en fait 24 maintenant,
+       ce qui laisse 3,5 px de bois de chaque côté — une moulure, pas une
+       marge. Vu sur le rendu, comme le lit et les six bâtiments. */
+    if(o==='sw'){ dec(c,-0.34,0); pave(c,CADRE_EP,CADRE_L,CADRE_H,C,CADRE_Y); }
+    else        { dec(c,0,-0.34); pave(c,CADRE_L,CADRE_EP,CADRE_H,C,CADRE_Y); }
+    if(photo && DRAW[photo]){
+      /* **Le sujet est découpé au cadre**, et ce n'est pas une précaution :
+         une montgolfière fait 90 unités de haut et un rocher 14. Une
+         échelle unique qui contiendrait la première rendrait le second
+         invisible ; une échelle par objet, c'est trente-sept nombres à
+         tenir. On cadre, donc — comme une photo. Ce qui dépasse est coupé,
+         ce qui est petit reste lisible.
+
+         Le premier jet posait le sujet à `(0,-38)` sans découpe : mesuré sur
+         le rendu, il tombait dans le quart haut-gauche du cadre, gros comme
+         un grain, et les trois quarts du panneau restaient vides. Ça ne se
+         voit que rendu — la règle des six bâtiments et du lit. */
+      /* **La photo est sur du papier clair, jamais sur le panneau.**
+
+         C'est l'invariant du 16/09, celui qui donne son fond `#FDFBF0` aux
+         vignettes de l'atelier : *les objets sont dessinés pour le papier
+         clair du jeu*, et posés sur un fond sombre ils ne se devinent plus.
+         Je l'ai rouvert sans le voir — le cadre naît en `#8B5E3C`, donc le
+         premier rendu montrait un palmier vert foncé sur du bois foncé. Il
+         a fallu **regarder une capture** pour s'en apercevoir ; la
+         relecture n'a rien dit.
+
+         Le panneau reste ce que le joueur choisit, et il se voit : c'est le
+         passe-partout, deux pixels tout autour du tirage. */
+      const bas=faceCadre(o), MRG=2.2;
+      const dx=bas.b.x-bas.a.x, dy=bas.b.y-bas.a.y, L=Math.hypot(dx,dy)||1;
+      const ix=dx/L*MRG, iy=dy/L*MRG, HH=CADRE_H-2*MRG;
+      const A={x:bas.a.x+ix, y:bas.a.y+iy-MRG}, B={x:bas.b.x-ix, y:bas.b.y-iy-MRG};
+      c.beginPath(); c.moveTo(A.x,A.y); c.lineTo(B.x,B.y);
+      c.lineTo(B.x,B.y-HH); c.lineTo(A.x,A.y-HH); c.closePath();
+      c.clip(); c.fillStyle='#FDFBF0'; c.fill();
+      // Posé sur le bord bas du tirage, légèrement rentré : un dessin
+      // d'île part de sa base et monte, donc c'est par le bas qu'il se cale.
+      c.translate((A.x+B.x)/2, (A.y+B.y)/2-1);
+      /* L'échelle vient de la mesure, et la plus serrée des deux gagne :
+         une montgolfière est bornée par la hauteur, un banc par la largeur.
+         Le plafond à 0,9 empêche un rocher de 14 unités de remplir tout le
+         cadre : au-delà de 1,3 un caillou de 14 unités devient une masse
+         grise qu'on ne reconnaît plus. La découpe reste, pour ce que la
+         mesure ne peut pas savoir — un dessin qui déborderait sur le
+         côté. */
+      const M=mesureDessin(photo), larg=Math.abs(B.x-A.x);
+      const e=Math.min(1.3, (HH-3)/Math.max(M.h,1), (larg-3)/Math.max(M.w,1));
+      c.scale(e,e);
+      // `pc` est la couleur qu'avait l'objet chez le voisin. Sans elle, le
+      // phare rouge de Lila serait bleu au mur — c'est-à-dire la photo
+      // d'autre chose. Une clé de trois octets, et une seule sorte de
+      // meuble la porte.
+      (DRAW[photo]||DRAW.rocher)(c, (m&&m.pc)||OBJ_COLORS[0]||'#8AA3B2', 0);
+    }
     c.restore();
   },
   vase(c,C){
@@ -5509,7 +5630,12 @@ function dessinerMeuble(m,h){
   // accroché au mur n'en a pas : elle mentirait sur la hauteur.
   if(niv!=='plat' && niv!=='mur' && !h){ ctx.globalAlpha=0.2; ctx.fillStyle='#0B3C5D';
     ctx.beginPath(); ctx.ellipse(0,0,s[0]*HX*0.5,s[1]*HY*0.62,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
-  (DRAWM[m.t]||DRAWM.malle)(ctx,m.c||'#8B5E3C',s,m.o||'se');
+  // Le cinquième paramètre est **le meuble lui-même**, et il est
+  // optionnel : la vignette de l'atelier n'en passe pas, et rend donc le
+  // dessin nu. Un meuble plutôt qu'une clé de plus, parce que le cadre
+  // en lit deux — ce qu'il montre et de quelle couleur — et qu'une
+  // sixième, puis une septième position se lisent de moins en moins.
+  (DRAWM[m.t]||DRAWM.malle)(ctx,m.c||'#8B5E3C',s,m.o||'se',m);
   ctx.restore();
 }
 function drawInterieur(t){
@@ -5560,7 +5686,18 @@ function drawInterieur(t){
 
   // Les cadres et les guirlandes sont sur la paroi du fond : ils passent
   // avant tout ce qui est au sol, puisque tout le reste est devant eux.
-  (d.meubles||[]).filter(m=>niveau(m.t)==='mur').forEach(m=>dessinerMeuble(m));
+  (d.meubles||[]).filter(m=>niveau(m.t)==='mur').forEach(m=>{
+    dessinerMeuble(m);
+    /* Le cadre qu'on vient d'accrocher brille jusqu'à ce qu'on soit venu
+       devant. Peint **ici** et non dans `DRAWM.tableau`, pour la raison
+       déjà écrite pour le coffre et pour le vent : `dessinerMeuble()` sert
+       aussi aux vignettes de l'atelier, et une vignette qui scintille se
+       lit comme une image qui tremble. */
+    if(cadreNeuf && !visiting && m===cadreNeuf.m){
+      const s=emprise(m.t,m.o), q=iso(m.x+s[0]/2, m.y+s[1]/2);
+      ctx.save(); ctx.translate(q.x,q.y-34); etincelle(ctx,t); ctx.restore();
+    }
+  });
   (d.meubles||[]).filter(m=>niveau(m.t)==='plat').forEach(m=>dessinerMeuble(m));
 
   const items=[];
@@ -5918,7 +6055,7 @@ function frame(t){
     ramasserLaMaree(); }
   // Chez soi **et chez les voisins** : marcher sur les dalles de quelqu'un
   // est exactement ce pour quoi il les a posées.
-  trouverLeSouvenir();
+  trouverLeCadre();
   jouerLesDalles();
   proximity();
   majCam(dt);
@@ -7040,15 +7177,18 @@ function frapperUneDalle(o){
    qu'on ne voit pas en lisant : sans ça, une dalle à la même case sur
    l'île d'à côté resterait muette parce que la clé n'aurait pas changé. */
 let dalleSous=null, dalleFrappee=null;
-/* On a trouvé le souvenir quand on marche dessus : il cesse de briller,
-   et rien d'autre ne se passe. Pas de bulle, pas de gain — c'est une
-   chose qu'on cherchait, pas une chose qu'on gagne.
+/* On a trouvé le cadre quand on est venu jusque devant : il cesse de
+   briller, et rien d'autre ne se passe. Pas de bulle, pas de gain — c'est
+   une chose qu'on cherchait, pas une chose qu'on gagne.
 
-   Le rayon est celui des dalles, plus serré que celui de `proximity()` :
-   on l'a trouvé quand on est **dessus**, pas quand on passe à côté. */
-function trouverLeSouvenir(){
-  if(!souvenirNeuf || visiting || dedans) return;
-  if(Math.hypot(souvenirNeuf.x+0.5-hero.x, souvenirNeuf.y+0.5-hero.y) < 0.8) souvenirNeuf=null;
+   Un cadre est **au mur** : on ne peut pas marcher dessus, donc le rayon
+   est celui de `proximity()` et non celui, plus serré, des dalles. Et il
+   faut être dans la bonne pièce : deux cadres à la même case dans deux
+   pièces différentes éteindraient le mauvais. */
+function trouverLeCadre(){
+  if(!cadreNeuf || visiting || !dedans || piece!==cadreNeuf.p) return;
+  const m=cadreNeuf.m;
+  if(Math.hypot(m.x+0.5-hero.x, m.y+0.5-hero.y) < 1.6) cadreNeuf=null;
 }
 
 function jouerLesDalles(){
@@ -7186,7 +7326,7 @@ function tonObjet(t){
 // Elle n'est dans aucun rayon, donc son genre ne peut pas venir du
 // catalogue : il se pose ici, à côté de son nom, et pas ailleurs.
 NOM_OBJ.crotte='crotte'; FEM_OBJ.crotte=1;
-let souvenirProche=null;
+let photoProche=null;
 // Le bouton rose du cadre et la touche E sont le même geste. Il ne dit pas
 // toujours la même chose : ce qui est sous la main décide.
 /* ---- tourne ton téléphone ----
@@ -7206,16 +7346,17 @@ function boutonRose(l){
   if(l){ if(roseEl.textContent!==l) roseEl.textContent=l; roseEl.hidden=false; }
   else roseEl.hidden=true;
 }
-// L'ordre compte : un souvenir sous la main passe avant le chien, le chien
-// avant le coffre, et le coffre avant la porte : sur le seuil, on entre en
-// marchant de toute façon. Le même ordre est tenu dans `proximity()` :
+// L'ordre compte : un objet à photographier sous la main passe avant le
+// chien, le chien avant le coffre, et le coffre avant la porte : sur le
+// seuil, on entre en marchant de toute façon. Le même ordre est tenu dans
+// `proximity()` :
 // sinon le bouton rose annonce un geste et la touche en fait un autre.
 //
 // La commande se dépose sur le pas de la porte du voisin, donc au rang de
 // la porte et pas avant : chez soi ce rang fait entrer, chez l'autre il ne
 // faisait rien du tout.
 function agir(){
-  if(souvenirProche){ ramasserSouvenir(); return true; }
+  if(photoProche){ photographier(); return true; }
   if(!visiting&&!dedans){
     if(balade){
       if(Math.hypot(balade.x-hero.x, balade.y-hero.y)<1.15){ finBalade(false); return true; }
@@ -7242,13 +7383,37 @@ function agir(){
   if(dedans||devantLaPorte()){ actionPorte(); return true; }
   return false;
 }
+/* Le cadre le plus proche qui porte une photo. Les guirlandes et les
+   tableaux de couleur n'en portent pas : ils décorent, ils ne racontent
+   rien, et une bulle sur un aplat marron serait du bruit.
+
+   Un cadre est **au mur** : on peut se tenir sur sa case, donc la
+   distance vaut zéro quand on est pile devant. Le rayon est celui de
+   `proximity()` dehors, pour que les deux se ressemblent. */
+function cadreProche(){
+  const d=pieceData(); if(!d) return null;
+  return (d.meubles||[]).find(m=>m.t==='tableau' && m.photo &&
+    Math.hypot(m.x+0.5-hero.x, m.y+0.5-hero.y) < 1.2) || null;
+}
 // Dedans, la seule chose à portée est une porte : le paillasson pour
-// ressortir, une embrasure pour changer de pièce.
+// ressortir, une embrasure pour changer de pièce. Et un cadre, qui se
+// **regarde** : pas de plaque rose, pas de `E`, aucun rang dans `agir()`
+// — c'est la règle du potager, et les sept rangs ne bougent pas d'une
+// ligne.
 function proximiteDedans(){
-  souvenirProche=null;
+  photoProche=null;
   const p=porteSousLesPieds();
   if(!p){ sasArme=true; boutonRose(null);
-    if(wLock.indexOf('porte')===0){ whisper.classList.remove('on'); wLock=''; }
+    /* Un cadre qui ne dit pas de qui vient sa photo est un rectangle de
+       plus au mur, et la visite n'aura rien rapporté. C'est tout ce que
+       la photo a ramené : il faut que ça se lise, et ça se lit **au pied
+       du cadre**, comme la réponse se lit au pied du panneau. */
+    const k=cadreProche();
+    if(k){ const cle='cadre'+piece+k.x+'-'+k.y+k.o;
+      if(wLock!==cle) say('📷 '+unObjet(k.photo,true,true)+' '+deQui(k.de)+
+        ', rapporté en photo.', cle);
+      return; }
+    if(wLock.indexOf('porte')===0||wLock.indexOf('cadre')===0){ whisper.classList.remove('on'); wLock=''; }
     return; }
   if(sasArme){ franchir(); return; }
   const cle='porte'+piece+p.mur+p.i;
@@ -7271,18 +7436,18 @@ function proximity(){
     else if(Math.hypot(o.x+0.5-hero.x,o.y+0.5-hero.y)>=0.95) return;
     if(o.t==='panneau'){ if(o.txt) panneau=o; } else objet=o;
   });
-  // Une crotte n'est pas un souvenir. Chez un voisin, tout objet sous les
-  // pieds en devient un — celle-là ferait un cadeau qu'on ne veut pas, et
-  // elle n'a de toute façon pas de nom dans `NOM_OBJ`.
-  souvenirProche = (visiting && objet && objet.t!=='crotte') ? objet : null;
+  // Une crotte ne se photographie pas. Chez un voisin, tout objet sous les
+  // pieds est à prendre en photo — celle-là ferait un cadre qu'on ne veut
+  // pas au mur, et elle n'a de toute façon pas de nom dans `NOM_OBJ`.
+  photoProche = (visiting && objet && objet.t!=='crotte') ? objet : null;
   const bulle=(k,html)=>{ verrouProx(k); if(wLock!==k) say(html,k); };
   // Ces deux branches sortent avant le ménage de la fin : elles doivent
   // donc dire elles-mêmes ce que porte la plaque rose. Sans ça, elle garde
   // le libellé d'avant — « Déposer la commande » devant un objet du voisin —
   // et elle annonce un geste pendant qu'`agir()` en fait un autre. C'est ce
-  // que le commentaire au-dessus d'`agir()` interdit. Le souvenir était le
-  // seul geste du jeu sans plaque : injoignable au doigt, alors que la bulle
-  // réclamait une touche que le téléphone n'a pas.
+  // que le commentaire au-dessus d'`agir()` interdit. La photo est le seul
+  // geste du jeu qui ait été un jour sans plaque : injoignable au doigt,
+  // alors que la bulle réclamait une touche que le téléphone n'a pas.
   if(panneau){ boutonRose(null);
     /* La réponse se lit **au pied du panneau**, avec le mot auquel elle
        répond. C'est la forme que ce jeu donne à tout : le cadeau du jour
@@ -7299,10 +7464,11 @@ function proximity(){
       ? '<br>↩ '+(visiting ? esc(world.owner||'')+' a répondu' : 'Tu as répondu')+
         ' : « '+esc(panneau.rep)+' »'
       : '')); return; }
-  if(souvenirProche){ boutonRose('Ramener un souvenir');
-    bulle('souv'+objet.x+'-'+objet.y,
+  if(photoProche){ boutonRose('📷 Prendre en photo');
+    bulle(clePhoto(objet),
     unObjet(objet.t,true,true)+' de chez '+esc(world.owner)+
-    '. Appuie sur <b>E</b> ou touche le bouton rose pour en ramener un souvenir.'); return; }
+    '. <b>E</b> ou le bouton rose pour en prendre une <b>photo</b> — '+
+    'le cadre t’attendra dans ta maison.'); return; }
   /* Le chien, puis ce qu'il a laissé.
 
      **Ces deux branches passent par `chienProche()` et `crotteProche()`**,
@@ -7451,88 +7617,130 @@ function proximity(){
      chien. La règle survit au changement, sans une ligne pour la tenir. */
   if(VERROUS_PROX.has(wLock)){ whisper.classList.remove('on'); wLock=''; }
 }
-// On ne vole rien : on ramène une copie, signée du nom de l'hôte. L'île
-// visitée n'est pas touchée, et la tienne garde la trace de qui tu as vu.
-/* Où une case tombe sur l'île, dit en français plutôt qu'en coordonnées.
-   « au nord-ouest » se comprend sans rien apprendre ; « en (4,3) » demande
-   de savoir de quel coin on compte. Le centre est un cas à part : dire
-   « au centre-nord » d'une case à deux pas du milieu serait plus précis et
-   moins utile. */
-function ouSurLile(x,y){
-  const c=(GRID-1)/2, dx=x-c, dy=y-c;
-  if(Math.hypot(dx,dy) < 2) return 'au milieu';
-  const ns = dy < -1.2 ? 'au nord' : dy > 1.2 ? 'au sud' : '';
-  const eo = dx < -1.2 ? 'ouest'  : dx > 1.2 ? 'est'    : '';
-  if(ns && eo) return ns + '-' + eo;
-  if(ns) return ns;
-  return 'à l’' + (eo === 'est' ? 'est' : 'ouest');
+
+/* Le cadre qu'on vient d'accrocher, tant qu'on ne l'a pas trouvé.
+   `{p, m}` : la pièce où il est, et une **référence d'identité** dans ses
+   meubles, comme `balade.o`. Rien en base, rien pour Ctrl+Z, et tout ce
+   qui refait cette liste la casse — auquel cas le scintillement s'arrête,
+   ce qui est le bon défaut. */
+let cadreNeuf=null;
+
+/* ── Un mur libre, pour y accrocher un cadre ───────────────────────────
+ *
+ * `se` s'accroche à la rangée 0, `sw` à la colonne 0 : ce sont les deux
+ * seules parois dessinées, et c'est déjà ce que dit `accrocherAuMur()`.
+ * On saute (0,0) en `sw` parce que la case est déjà offerte en `se` et
+ * que deux cadres s'y recouvriraient au coin.
+ *
+ * Les pièces sont parcourues dans l'ordre de `PIECES` — salon, chambre,
+ * atelier. Le salon est la plus grande et la première où l'on entre :
+ * c'est là qu'on cherchera. */
+function murLibre(w){
+  const it = w.interieur && w.interieur.pieces ? w.interieur : null;
+  if(!it) return null;
+  for(const q of PIECES){
+    const d=it.pieces[q.k]; if(!d) continue;
+    const ms=d.meubles||[];
+    const pris=(x,y,o)=>ms.some(m=>niveau(m.t)==='mur' && (m.o||'se')===o && m.x===x && m.y===y);
+    for(let x=0;x<q.w;x++) if(!pris(x,0,'se'))  return {piece:q.k, x, y:0, o:'se'};
+    for(let y=1;y<q.h;y++) if(!pris(0,y,'sw'))  return {piece:q.k, x:0, y, o:'sw'};
+  }
+  return null;
 }
 
-/* Le souvenir qu'on vient de ramener, tant qu'on ne l'a pas trouvé.
-   Une **référence d'identité** dans `mine.objects`, comme `balade.o` :
-   rien en base, rien pour Ctrl+Z, et tout ce qui refait cette liste la
-   casse — auquel cas le scintillement s'arrête, ce qui est le bon
-   défaut. */
-let souvenirNeuf=null;
+/* ── On photographie, on ne ramasse plus ───────────────────────────────
+ *
+ * Le souvenir était une **copie** de l'objet du voisin, posée sur une
+ * case libre de ta propre île. Rapporté en jouant, et c'était juste :
+ * « je ramène un souvenir, il ne disparaît pas de l'autre île, je ne le
+ * vois pas sur la mienne ». Trois reproches, et le mot « souvenir » les
+ * portait tous les trois — il dit qu'on **prend** quelque chose, et on ne
+ * prenait rien.
+ *
+ * Une photo dit exactement ce qui se passe. On en prend une, on ne l'ôte
+ * à personne, et elle finit dans un cadre au mur — c'est-à-dire dans un
+ * endroit où l'on a choisi d'aller, pas sur une case tirée au sort parmi
+ * cent cinquante.
+ *
+ * Quatre choses que ça règle d'un coup, et qui n'étaient pas le but :
+ *
+ * 1. **Plus rien de payant ne se ramène gratuitement.** Le refus sur les
+ *    îles de démonstration disparaît avec sa raison d'être : une photo de
+ *    phare n'est pas un phare. On peut donc photographier partout.
+ * 2. **`FONCTIONNEL` n'a plus rien à expliquer au ramassage.** Une photo
+ *    de carillon qui ne sonne pas ne surprend personne.
+ * 3. **Le cadre suit le joueur d'un appareil à l'autre**, et il part dans
+ *    le code de sauvegarde — ce qu'un album de pixels dans `localStorage`
+ *    n'a jamais permis. Un **visiteur**, lui, ne le voit pas : on ne
+ *    visite que le dehors, et ce chantier n'ouvre pas les maisons.
+ * 4. **Aucune clé de plus dans `mondeNu()`** : le cadre est un meuble,
+ *    `interieur` y est déjà, et `normaliserInterieur()` mute les meubles
+ *    en place au lieu de les reconstruire — donc `photo` et `de`
+ *    survivent. Vérifié avant d'écrire, pas après.
+ *
+ * **Ce qui est déjà posé reste posé.** Les souvenirs ramenés avant ce
+ * changement ne bougent pas, `estSouvenir()` et `FONCTIONNEL` continuent
+ * de les gouverner : on ne reprend pas ce qui a été donné, c'est la règle
+ * du cadre glissé contre le mur plutôt qu'effacé. */
+/* La clé de bulle de l'objet qu'on vise, écrite **une fois** et lue des
+   deux côtés. `proximity()` la pose à chaque image ; `photographier()`
+   écrit sa réponse dessous, et c'est ce qui empêche l'invitation de
+   recouvrir la confirmation au battement suivant.
 
-function ramasserSouvenir(){
-  const o=souvenirProche; if(!o||!visiting) return;
-  /* Sur une **île de démonstration**, un objet payant se regarde et ne se
-     ramène pas. C'est la règle du 16/09 — « on en ramène un souvenir
-     gratuitement, et la boutique ne sert plus à rien » — tenue là où elle
-     se joue plutôt que par l'absence de l'objet sur ces îles.
+   C'est la règle écrite le 19/09 pour `porterLaCommande()` et rouverte
+   deux fois depuis : **chaque geste pose lui-même la clé de l'état
+   d'après.** Ici l'état d'après est le même objet sous les pieds, donc la
+   même clé — et `test/objets.mjs` l'a trouvé avant moi, encore. */
+function clePhoto(o){ return 'photo'+o.x+'-'+o.y; }
+function photographier(){
+  const o=photoProche; if(!o||!visiting) return;
+  const qui=world.owner||'', cle=clePhoto(o);
+  /* Une photo par objet et par île. Deux cadres identiques côte à côte se
+     lisent comme un défaut d'affichage, et le refus **nomme ce qui est
+     là** plutôt que de dire non : c'est la règle de la pose d'un meuble
+     sur une case prise, écrite le 17/09. */
+  const deja=PIECES.map(q=>({q, m:(((mine.interieur&&mine.interieur.pieces[q.k])||{}).meubles||[])
+      .find(m=>m.t==='tableau' && m.photo===o.t && m.de===qui)}))
+    .find(r=>r.m);
+  if(deja){ say('Tu as d\u00e9j\u00e0 '+unObjet(o.t,false,true)+' '+deQui(qui)+
+    ' au mur, dans '+laPiece(deja.q.k,false,true)+'.', cle); return; }
+  /* Plus un mur libre, et le refus dit quoi faire. La **Gomme** de
+     l'atelier décroche un cadre : on ne perd rien, on choisit lequel on
+     garde. C'est le refus auquel on peut répondre quelque chose, comme
+     celui du bâtiment qui demande quatre cases. */
+  const mur=murLibre(mine);
+  if(!mur){ say('Tous tes murs portent d\u00e9j\u00e0 un cadre. D\u00e9croches-en un chez toi '+
+    'avec la <b>Gomme</b> de l\u2019atelier, et reviens le prendre en photo.', cle); return; }
+  /* `memoriser()` porte déjà `i:mine.interieur` : Ctrl+Z décroche donc le
+     cadre sans une ligne de plus. Vérifié avant d'écrire, pas après. */
+  memoriser();
+  const neuf={t:'tableau', x:mur.x, y:mur.y, o:mur.o, c:'#8B5E3C',
+              photo:o.t, pc:o.c||null, de:qui};
+  mine.interieur.pieces[mur.piece].meubles.push(neuf);
+  /* **Le cadre qui vient d'arriver brille jusqu'à ce qu'on l'ait trouvé.**
 
-     Les vingt îles bot sont infinies et toujours ouvertes : une église
-     gratuite à qui va s'y promener, et les 58 shells de la Boutique ne
-     veulent plus rien dire. Chez un **vrai** voisin, rien ne change : un
-     souvenir d'ami reste gratuit, c'est ce qui donne envie d'aller chez les
-     gens, et c'est le choix écrit le 19/09.
+     Nommer la pièce ne suffit pas : le salon fait huit cases sur six,
+     donc treize murs, et le cadre neuf y ressemble aux autres. C'est la
+     règle déjà écrite pour le coffre et la boîte aux lettres, étendue
+     d'un cran : *dans ce jeu, une chose qui brille est une chose à
+     prendre* — ici, une chose qui brille est une chose qui vient
+     d'arriver.
 
-     Le refus tombe au moment du ramassage — le seul instant où le doigt est
-     sur l'objet — et il nomme le prix, donc il apprend quelque chose au lieu
-     de gronder. */
-  const payant=world.demo && BOUTIQUE.find(x=>x.k===o.t);
-  if(payant){ say('Ici, c’est une île de démonstration : '+unObjet(o.t,false,true)+
-    ' ne se ramène pas. Le tien est à la <b>Boutique</b>, '+payant.prix+' shells — '+
-    'et chez un vrai voisin, un souvenir reste un cadeau.', 0, 5200); return; }
-  if((mine.objects||[]).some(x=>x.de===world.owner&&x.t===o.t)){
-    say('Tu as déjà ce souvenir de chez <b>'+esc(world.owner)+'</b>.'); return; }
-  const spot=freeTile(mine,o.t);
-  if(!spot){ say(estBatiment(o.t)
-    ? 'Il faut <b>quatre cases libres</b> chez toi pour '+unObjet(o.t,false,true)+
-      ', et ton île n’en a plus. Fais de la place, ou agrandis-la.'
-    : 'Plus une case libre chez toi pour poser un souvenir.'); return; }
-  const neuf={t:o.t,x:spot.x,y:spot.y,c:o.c,de:world.owner};
-  mine.objects.push(neuf);
-  /* **Ce qui vient d'arriver brille jusqu'à ce qu'on l'ait trouvé.**
-
-     Le défaut, rapporté en jouant : « je ramène un souvenir, je ne le
-     vois pas sur mon île ». Il y était pourtant — `freeTile()` le pose
-     sur une case libre — mais une case tirée au hasard parmi les 150
-     d'une île neuve est **introuvable**, et « il t'attend sur ton île »
-     ne dit pas où. On rentre chez soi, il y a un objet de plus parmi
-     dix-huit, et rien ne le désigne.
-
-     C'est la règle déjà écrite pour le coffre et la boîte aux lettres,
-     étendue d'un cran : *dans ce jeu, une chose qui brille est une
-     chose à prendre* — ici, une chose qui brille est une chose qui
-     vient d'arriver.
-
-     `souvenirNeuf` est une **référence d'identité** dans `mine.objects`,
-     comme `balade.o` : rien en base, aucune clé de plus dans
-     `mondeNu()`, rien pour Ctrl+Z. Tout ce qui refait cette liste casse
-     la référence, et le scintillement s'arrête — c'est le bon défaut. */
-  souvenirNeuf=neuf;
-  saveMine(); son('poser'); buildAll();
-  // Le moment du ramassage est le seul où le doigt est sur l'objet : c'est
-  // là qu'il faut dire qu'un souvenir de carillon ne sonnera pas, sinon on
-  // le pose chez soi et on attend un son qui ne vient jamais.
-  const art=BOUTIQUE.find(x=>x.k===o.t && FONCTIONNEL[x.k]);
-  say('Tu ramènes <b>'+(NOM_OBJ[o.t]||'un objet')+'</b> de chez '+esc(world.owner)+
-      '. Il brille '+ouSurLile(spot.x,spot.y)+' de ton île.'+(art
-        ? ' <b>C\u2019est un souvenir</b> : il décore, il ne fait pas ce que fait le vrai. '+
-          'Le tien est à la Boutique, '+art.prix+' shells.'
-        : ''), 0, art?5200:2200);
+     `cadreNeuf.m` est une **référence d'identité** dans les meubles de la
+     pièce, comme `balade.o` : rien en base, aucune clé de plus dans
+     `mondeNu()`, rien pour Ctrl+Z. Tout ce qui refait cette liste —
+     `annuler()`, un chargement, la gomme — casse la référence et le
+     scintillement s'arrête. C'est le bon défaut. */
+  cadreNeuf={p:mur.piece, m:neuf};
+  son('poser'); saveMine();
+  /* Le moment de la photo est le seul où le doigt est sur l'objet : c'est
+     là que la phrase doit dire où va le cadre. Elle ne promet que ce qui
+     est vraiment peint — un cadre au mur, dans une pièce nommée, qui
+     brille — et rien de plus : promettre un détail qu'on ne peint pas,
+     c'est envoyer un enfant le chercher. */
+  say('\ud83d\udcf7 Tu prends '+unObjet(o.t,false,true)+' '+deQui(qui)+
+      ' en photo. Le cadre t\u2019attend dans '+laPiece(mur.piece,false,true)+
+      ' de ta maison, et il brille.', cle);
 }
 
 /* ================= panneaux ================= */
