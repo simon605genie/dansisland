@@ -122,7 +122,13 @@ export async function marquerVu() {}
    avoir le droit de défaire cette transformation. */
 export async function motsDe() {
   return lu('test:mots', []).map((m, i) => ({
-    id: 'm' + i, auteur: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    /* **Un compte par prénom**, et pas un seul pour tout le monde.
+       Le faux donnait le même `auteur` à tous les mots sèmés : douze
+       visiteurs n'en faisaient qu'un, et le sentier des visiteurs ne
+       posait qu'une lanterne. Le jeu avait raison — « une personne, une
+       lanterne » — c'est le faux qui mentait. Un faux trop simple
+       n'éprouve rien, c'est la leçon de `bourseCadeau()`. */
+    id: 'm' + i, auteur: 'auteur:' + m[0],
     auteur_nom: m[0], texte: m[1], masque: false,
     reponse: m[2] || null,
     reponse_le: m[2] ? new Date().toISOString() : null,
@@ -145,6 +151,29 @@ export async function masquerMot() {}
 export async function repondreAuMot(id, reponse) {
   return (reponse || '').trim() || null;
 }
+/* `test:reponses` sème ce qu'on t'a répondu **ailleurs** :
+   `['Lila', 'lila', 'Ton île est belle', 'Merci !', joursEnArriere]`.
+
+   Le faux tient le contrat du vrai — il rend les champs à plat, pas la
+   jointure imbriquée de PostgREST, exactement comme `mesReponses()` les
+   rend après son `.map()`. Un faux qui rendrait la forme brute
+   éprouverait la jointure au lieu du jeu, et `index.html` ne la voit
+   jamais. */
+export async function mesReponses() {
+  return lu('test:reponses', []).map((r, i) => ({
+    id: 'r' + i, qui: r[0], slug: r[1], ile: 'L\u2019\u00eele de ' + r[0],
+    texte: r[2], reponse: r[3],
+    reponse_le: new Date(Date.now() - (r[4] || 0) * 86400000).toISOString(),
+  }));
+}
+/* Il **retient** l'appel plutôt que de ne rien faire : le contrôle porte
+   sur ce qui se passe *après* — la pastille doit s'éteindre — donc le
+   faux doit changer d'état comme le vrai. C'est la leçon de
+   `bourseCadeau()`, du 19/09. */
+export async function marquerReponsesVues() {
+  try { window.__reponsesVues = (window.__reponsesVues || 0) + 1; } catch (e) {}
+}
+
 export async function archipel() { return []; }
 export async function livraisonsDe() { return []; }
 export async function livrer() { return null; }

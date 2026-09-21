@@ -100,6 +100,22 @@ export async function marquerVu(id) {
   if (error) throw error;
 }
 
+/* Le même geste, pour l'autre question : « depuis quand n'ai-je pas
+   regardé les réponses qu'on m'a faites **ailleurs** ». Deux dates parce
+   que ce sont deux questions — `vu_le` est remis à l'heure à chaque
+   chargement, donc s'en servir ici ferait perdre le signal à qui ouvre le
+   jeu sans regarder. Voir `2026-09-21_reponses_vues.sql`.
+
+   Elle **avale son erreur** : tant que la colonne n'existe pas, la liste
+   des réponses s'affiche quand même en tête de Voisins, seule la pastille
+   manque. C'est le repli déjà tenu par `ramasser()` face à
+   `bourse_ramasser`. */
+export async function marquerReponsesVues(id) {
+  try {
+    await sb.from('iles').update({ vu_reponses: new Date().toISOString() }).eq('id', id);
+  } catch (e) { /* la migration n'est pas encore jouée */ }
+}
+
 export async function archipel(limite = 40) {
   const { data, error } = await sb.from('archipel').select('*').limit(limite);
   if (error) throw error;
@@ -278,6 +294,52 @@ export async function motsDe(ileId) {
     .eq('ile', ileId).order('cree_le', { ascending: true });
   if (error) throw error;
   return data || [];
+}
+
+/* ── La boucle des réponses, refermée ───────────────────────────────────
+ *
+ * `motsDe()` interroge **par île**. Donc quand on plante un mot chez
+ * quelqu'un et qu'il répond, l'auteur ne l'apprend jamais : sa réponse ne
+ * s'affiche que s'il retourne là-bas **et** marche jusqu'à son propre
+ * panneau. Personne ne fait ça, puisque rien ne l'annonce.
+ *
+ * C'était donc une migration jouée pour une fonctionnalité que le joueur
+ * qui en bénéficie ne voyait pas — et c'est la seule boucle du jeu qui
+ * fasse **revenir** quelqu'un : je plante, il répond, je reviens lire.
+ *
+ * Ici on interroge par **auteur**. `mots_lecture` le permet déjà sans une
+ * ligne de policy : elle ouvre le select sur toute île publiée dont le mot
+ * n'est pas masqué. Un mot que l'hôte a masqué n'annonce donc rien, et
+ * c'est le bon défaut : masquer, c'est justement retirer de la vue.
+ *
+ * Trois choses à ne pas défaire :
+ *
+ * 1. **Ça ne doit jamais empêcher le jeu de démarrer.** C'est un appel de
+ *    confort au chargement : toute erreur rend une liste vide et se tait.
+ *    Un livre d'or qui casse l'île serait un très mauvais marché.
+ * 2. **Le repli de `motsAvecReponse` vaut ici aussi.** Tant que
+ *    `2026-09-20_reponses.sql` n'est pas joué, la colonne n'existe pas :
+ *    on rend une liste vide plutôt que de lever, comme `motsDe()`.
+ * 3. **On lit le pseudo par le même chemin que `chargerIle()`**
+ *    (`profils:proprietaire(pseudo)`), et pas une seconde façon : deux
+ *    orthographes de la même jointure finissent par diverger. */
+export async function mesReponses(limite = 20) {
+  if (!motsAvecReponse) return [];
+  let u = null;
+  try { u = await utilisateur(); } catch (e) { return []; }
+  if (!u) return [];
+  try {
+    const { data, error } = await sb.from('mots')
+      .select('id, texte, reponse, reponse_le, iles!inner(slug, nom, profils:proprietaire(pseudo))')
+      .eq('auteur', u.id).not('reponse', 'is', null)
+      .order('reponse_le', { ascending: false }).limit(limite);
+    if (error) throw error;
+    return (data || []).map(m => ({
+      id: m.id, texte: m.texte, reponse: m.reponse, reponse_le: m.reponse_le,
+      slug: m.iles && m.iles.slug, ile: m.iles && m.iles.nom,
+      qui: (m.iles && m.iles.profils && m.iles.profils.pseudo) || 'Quelqu\u2019un',
+    })).filter(m => m.slug);
+  } catch (e) { return []; }
 }
 
 /* Répondre à un mot laissé chez soi. Aucune policy nouvelle : `mots_maj`

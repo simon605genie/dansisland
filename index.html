@@ -2399,6 +2399,12 @@ relireBourseLocale();        // sans compte, la bourse tient dans le navigateur
 let moi=null, ileId=null, monSlug=null, monPseudo=null;
 let voisins=DEMO;               // l'archipel public, ou les îles de démo
 let etatSauvegarde='', motsNouveaux=0, compteCharge=false;
+/* Ce qu'on t'a répondu ailleurs, et combien depuis ton dernier coup
+   d'œil. Rien en base côté monde : `mesReponses` est une liste chargée au
+   démarrage, pas une clé de `mondeNu()`. Elle est vide sans compte, hors
+   ligne, et chez un voisin — elle parle de **toi**, pas de l'île qu'on
+   regarde. */
+let mesReponses=[], reponsesNouvelles=0;
 let world=mine, visiting=null;
 let tool={mode:'marche',kind:null,color:OBJ_COLORS[0],orient:'se'};
 const hero={x:9.5,y:11.5,face:'bas',moving:false,immobile:0};
@@ -2535,6 +2541,130 @@ function avatarHabitant(o){
    Les objets, eux, ne bloquent pas : `blocked()` ne les connaît pas, et
    le bonhomme leur marche dessus aussi. Un habitant qui contournerait
    chaque buisson demanderait un chemin, donc un état. */
+/* ── Le sentier des visiteurs ─────────────────────────────────
+ *
+ * Une lanterne par **personne distincte** qui a laissé un mot ici. Le jeu
+ * dit depuis le 16/09 que « l'île grandit parce que des gens sont passés » ;
+ * jusqu'ici ça se lisait dans un compteur de rayon, c'est-à-dire nulle
+ * part. Maintenant ça se voit, ça se visite, et **la nuit ça éclaire**.
+ *
+ * Six choses à ne pas défaire.
+ *
+ * 1. **Rien en base.** Tout se déduit de `world.mots`, qui est déjà
+ *    chargé. Aucune clé de plus dans `mondeNu()`, rien dans `encode()`,
+ *    rien pour Ctrl+Z — la ligne déjà écrite pour les habitants, le sable
+ *    de la marée et la pousse du potager.
+ * 2. **Elle ne s'achète pas, ne se pose pas, ne s'efface pas.** C'est ce
+ *    qui en fait un témoin plutôt qu'une décoration : une lanterne qu'on
+ *    pourrait poser soi-même ne dirait plus que quelqu'un est venu. Elle
+ *    n'est donc dans aucun rayon de l'atelier et la gomme ne la voit pas.
+ * 3. **Une personne, une lanterne**, quel que soit le nombre de mots :
+ *    c'est une liste d'amis, pas un compteur de messages. La clé est le
+ *    compte (`auteur`) et non le pseudo, sinon deux enfants qui se
+ *    renomment pareil n'en feraient qu'un — et le pseudo ne sert que de
+ *    repli pour un compte supprimé.
+ * 4. **L'ordre est celui des premières visites**, et la position ne
+ *    dépend que du rang : le dixième ami n'a jamais déplacé le premier.
+ * 5. **Elles ne bloquent rien.** `blocked()` ne les connaît pas. Une
+ *    lanterne qui barrerait un chemin serait la première chose du jeu
+ *    qu'on puisse rater, et elle est arrivée toute seule.
+ * 6. **Les îles bot n'en ont pas** : leurs `mots` sont vides, donc la
+ *    liste l'est aussi, sans une ligne pour le dire. Et c'est très bien
+ *    — le nouveau venu visite vingt îles sans lanterne, reçoit son
+ *    premier mot, et la sienne s'allume. Personne n'avait besoin de le
+ *    lui expliquer.
+ *
+ * Le calcul est **retenu** : il tournerait soixante fois par seconde pour
+ * un résultat qui change quand quelqu'un passe. La clé compte les amis,
+ * le rayon et les objets — déplacer un objet sans changer leur nombre
+ * peut donc laisser une lanterne dessous jusqu'au prochain changement.
+ * C'est cosmétique, ça se répare tout seul, et ça coûte moins qu'une
+ * signature recalculée à chaque image. */
+const LANT_PAR_TOUR=12, LANT_MARGE=1.15, ANGLE_OR=Math.PI*(3-Math.sqrt(5));
+let lanternesCache={cle:'\u0000', v:[]};
+function amisDe(w){
+  const vus=new Set(), r=[];
+  (w.mots||[]).forEach(m=>{
+    if(m.masque) return;
+    const k=m.auteur||('nom:'+(m.auteur_nom||''));
+    if(w.proprietaire && m.auteur===w.proprietaire) return;   // ses propres mots
+    if(vus.has(k)) return;
+    vus.add(k); r.push({nom:m.auteur_nom||'Quelqu\u2019un', quand:m.cree_le});
+  });
+  return r;
+}
+function lanternesDe(w){
+  w=w||world;
+  const amis=amisDe(w);
+  const cle=(w.id||'')+'|'+amis.length+'|'+(w.rayon||RAYON0)+'|'+(w.objects||[]).length;
+  if(lanternesCache.cle===cle) return lanternesCache.v;
+  const c=(GRID-1)/2, pris=new Set(), out=[];
+  const libre=(x,y)=>{
+    if(x<0||y<0||x>=GRID||y>=GRID) return false;
+    if(pris.has(y*GRID+x)) return false;
+    if(!dansLeRayon(x,y,w)) return false;
+    if((w.tiles||[])[y*GRID+x]===2) return false;             // pas dans une mare
+    const h=w.house;
+    if(h && x>=h.x && x<=h.x+1 && y>=h.y && y<=h.y+1) return false;
+    return !(w.objects||[]).some(o=>couvre(o,x,y));
+  };
+  amis.forEach((a,i)=>{
+    const tour=Math.floor(i/LANT_PAR_TOUR), j=i%LANT_PAR_TOUR;
+    /* **Le cercle est accroché à `RAYON0`, jamais au rayon du jour.**
+       Mesuré : avec le rayon courant, un sixième ami déplaçait les cinq
+       premières lanternes — jusqu'à deux cases — parce que chaque mot
+       reçu fait grandir l'île, donc le cercle, donc l'arrondi de chaque
+       case, et la cascade des cases déjà prises faisait le reste. Une île
+       dont les lumières bougent à chaque visite ne se reconnaît plus.
+
+       Ancré à l'île de départ, c'est stable par construction — et ça
+       raconte quelque chose : elles marquent le rivage qu'on avait quand
+       on était seul, et la terre gagnée depuis s'étend **derrière** elles.
+       `RAYON0 - LANT_MARGE` vaut 5,85, donc toujours dans le rayon, qui ne
+       descend jamais sous 7,0. */
+    const R0=RAYON0-LANT_MARGE-tour*1.4;
+    /* **L'angle d'or, et pas un douzième de tour.** Mesuré sur le rendu :
+       avec un pas régulier, cinq amis remplissaient 150° et se serraient
+       tous du même côté de l'île — on ne lisait pas un sentier, on lisait
+       un tas. 137,5° répartit dès la première : trois amis font trois
+       lumières écartées, douze ferment le cercle.
+
+       L'angle ne dépend que du rang, donc la stabilité tient toujours :
+       le sixième ami n'a pas d'angle à prendre à quelqu'un. Et on part du
+       sud, le devant de l'île, pour que la première se voie.
+
+       Si la case est prise, on décale puis on rentre : une lanterne
+       déplacée vaut mieux qu'une absente, et une dans l'eau ne vaut rien. */
+    const a0=Math.PI/2 + j*ANGLE_OR;
+    let mis=null;
+    for(let k=0;k<14 && !mis;k++){
+      const ang=a0 + (k%7)*0.09*(k%2?1:-1), R=R0 - Math.floor(k/7)*1.2;
+      const x=Math.round(c+Math.cos(ang)*R), y=Math.round(c+Math.sin(ang)*R);
+      if(libre(x,y)) mis={x,y,nom:a.nom,quand:a.quand};
+    }
+    if(mis){ pris.add(mis.y*GRID+mis.x); out.push(mis); }
+  });
+  lanternesCache={cle, v:out};
+  return out;
+}
+/* Le dessin : un poteau, une cage, une flamme. Peint **ici** et jamais
+   dans `DRAW.*` — ce n'est pas un objet du catalogue, il n'y a pas de
+   vignette à en faire, et la règle du scintillement du coffre dit de
+   garder hors des dessins ce qui lit l'état du jeu. La flamme se déduit
+   de `t` et de la case : deux lanternes ne battent pas au pas. */
+function dessinerLanterne(c,t,ph){
+  const v=0.5+0.5*Math.sin(t/620+ph);
+  c.fillStyle='#4A3A2E'; c.fillRect(-1.6,-20,3.2,20);
+  c.fillStyle=shade('#4A3A2E',18); c.beginPath();
+  c.ellipse(0,0,5.2,2.4,0,0,Math.PI*2); c.fill();
+  c.fillStyle='#6B5340';
+  c.beginPath(); c.moveTo(-4.4,-20); c.lineTo(4.4,-20); c.lineTo(3.2,-31);
+  c.lineTo(-3.2,-31); c.closePath(); c.fill();
+  c.fillStyle='rgba(255,'+(214+Math.round(v*24))+',150,'+(0.72+v*0.28).toFixed(2)+')';
+  c.beginPath(); c.ellipse(0,-25.5,2.5,3.6+v*0.7,0,0,Math.PI*2); c.fill();
+  c.fillStyle='#4A3A2E'; c.fillRect(-4.8,-33,9.6,2);
+}
+
 function cheminHabitant(o,cible){
   const a=centreDe(o.t,o.x,o.y);
   const dx=cible.x-a.x, dy=cible.y-a.y, L=Math.hypot(dx,dy);
@@ -4635,6 +4765,17 @@ function drawWorld(t){
     items.push({d:c.x+c.y+1, f:()=>{
       ctx.save(); ctx.translate(q.x,q.y+3); dessinTrouvaille(ctx,c.t,t); ctx.restore(); }});
   });
+  /* Les lanternes des visiteurs. Triées avec le reste, donc cachées
+     derrière un arbre qui passe devant — elles appartiennent à l'île, pas
+     à une couche au-dessus. Rien ici n'est un objet de l'île. */
+  lanternesDe(world).forEach(l=>{
+    const q=ctr(l.x,l.y);
+    items.push({d:l.x+l.y+0.5, f:()=>{
+      ctx.save(); ctx.translate(q.x,q.y-LIFT);
+      shadowDiamond(ctx,0,0,7);
+      dessinerLanterne(ctx,t,(l.x*0.7+l.y*1.3));
+      ctx.restore(); }});
+  });
   items.push({d:(world.house.x+1)+(world.house.y+1), f:()=>drawHouse(ctx,world.house,t)});
   world.objects.forEach(o=>{
     if(balade&&o===balade.o) return;      // il a quitté sa case : il est plus bas
@@ -4786,6 +4927,14 @@ function drawWorld(t){
       ctx.fillStyle=g; ctx.beginPath(); ctx.arc(gx,gy,r,0,Math.PI*2); ctx.fill(); };
     world.objects.forEach(o=>{ if(LUEUR[o.t]){ const q=ctr(o.x,o.y);
       glow(q.x,q.y-LIFT-LUEUR[o.t],72,world.sky==='nuit'?0.5:0.3); } });
+    /* **La nuit, ce sont tes amis qui éclairent ton île.** La lueur est
+       peinte ici et non dans le dessin : le `lighter` et le `clip()` sur
+       la mer sont déjà posés, donc elle **ajoute** de la lumière au lieu
+       d'en peindre par-dessus — la raison déjà écrite pour le faisceau
+       du phare. Plus petite que celle d'une lampe (72) : une lanterne de
+       sentier balise, elle n'éclaire pas une place. */
+    lanternesDe(world).forEach(l=>{ const q=ctr(l.x,l.y);
+      glow(q.x,q.y-LIFT-26,46,world.sky==='nuit'?0.42:0.24); });
     /* Le phare balaie l'eau. Il est peint **ici**, dans la section de nuit,
        pour deux raisons qui tiennent ensemble : le `clip()` sur `seaPath()`
        est déjà posé, donc le faisceau s'arrête au bord de la mer au lieu de
@@ -7598,6 +7747,28 @@ function proximity(){
       : 'Ta porte. Monte sur le seuil, ou <b>E</b> pour rentrer chez toi.'); return;
   }
   sasArme=true; boutonRose(null);
+  /* Une lanterne se **regarde**, elle ne se prend pas : pas de plaque
+     rose, pas de `E`, aucun rang de plus dans `agir()` — la règle du
+     potager, et c'est ce qui permet de ne pas toucher à l'accord des
+     sept rangs. Elle passe **après** le réarmement du seuil, sinon en
+     sortant de chez soi sur une lanterne on ne pourrait plus rentrer.
+
+     Et elle dit **qui**, parce que c'est tout le propos : une lumière
+     anonyme au bord de l'île serait une décoration de plus. Chez un
+     voisin aussi — ce sont ses amis à lui, et les voir donne envie
+     d'être le suivant. */
+  const lan=lanterneProche();
+  if(lan){
+    /* **Aucun accord de genre sur un prénom.** « Lila est passée » et
+       « Tom est passé » ne s'écrivent pas pareil, et un prénom est du
+       texte libre : rien ne dit lequel des deux on a. `deQui()` élide en
+       prime devant une voyelle — la règle du 19/09, « La porte de Adam
+       est fermée ». */
+    bulle('lanterne'+lan.x+'-'+lan.y,
+      'Un mot '+deQui(lan.nom)+(lan.quand?', '+leJourDit(lan.quand):'')+
+      '. Sa lanterne \u00e9claire ton \u00eele la nuit.');
+    return;
+  }
   /* Le ménage. Il était une **liste de préfixes écrite à la main**, et
      c'est exactement ce que ce fichier interdit ailleurs : deux listes qui
      divergent. Le 19/09, trois clés neuves — `crotte`, `boite:*`,
@@ -9260,6 +9431,27 @@ function pousseDuPotager(){
    déplace, il se donne à voir. Il ne fait simplement pas le travail de
    celui qu'on achète. La branche « souvenir rapporté » de `proximity()`
    le dit, avec le prix, là où est le doigt. */
+/* La lanterne sous les pieds. Elle passe par une sonde comme toutes les
+   autres — « les deux passent par `crotteProche()` » — même si elle n'a
+   pas de rang dans `agir()` : le jour où elle en aurait un, il n'y aurait
+   rien à réécrire. */
+function lanterneProche(){
+  if(dedans) return null;
+  return lanternesDe(world).find(l=>
+    Math.hypot(l.x+0.5-hero.x, l.y+0.5-hero.y) < 0.95) || null;
+}
+/* « le 3 mars », « aujourd'hui », « hier ». Une date complète au pied
+   d'une lanterne se lit comme un reçu ; ce qu'on veut savoir, c'est si
+   c'était récent. */
+function leJourDit(iso){
+  const d=new Date(iso); if(isNaN(d)) return '';
+  const j=Math.floor((Date.now()-d.getTime())/86400000);
+  if(j<=0) return 'aujourd\u2019hui';
+  if(j===1) return 'hier';
+  if(j<7) return 'il y a '+j+' jours';
+  try{ return 'le '+d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'}); }
+  catch(e){ return ''; }
+}
 function estSouvenir(o){ return !!(o && o.de); }
 function boitePleine(o){ return !visiting && o.t==='boitelettres' && !estSouvenir(o) && motsNouveaux>0; }
 function boiteProche(){
@@ -9420,8 +9612,44 @@ function carteCommande(){
   }
   return f;
 }
+/* ↩ Ce qu'on t'a répondu, et c'est **en tête de l'onglet**.
+
+   La commande garde d'habitude la première place — c'est la raison d'y
+   aller *aujourd'hui*, et elle se périme à minuit. Une réponse passe
+   devant pour une seule raison : ce n'est pas une corvée du jour, c'est
+   **quelqu'un qui te parle**, et ça n'arrive pas tous les jours. Le bloc
+   n'existe pas quand il n'y a rien : l'onglet est alors exactement celui
+   d'avant.
+
+   Chaque réponse porte le bouton qui **emmène chez la personne**. Sans
+   lui, on saurait qu'on a une réponse sans savoir où la lire — et c'est
+   tout le défaut qu'on corrige : l'information existait, le chemin
+   manquait. C'est la règle de la boutique du 16/09, transposée. */
+function carteReponses(){
+  const f=field('↩ On t’a répondu');
+  mesReponses.slice(0,4).forEach((r,i)=>{
+    const l=document.createElement('div'); l.className='row';
+    const t=document.createElement('p'); t.className='hint'; t.style.flex='1 1 60%';
+    t.innerHTML=(i<reponsesNouvelles?'<b>·</b> ':'')+
+      '<b>'+esc(r.qui)+'</b> a répondu à ton mot : « '+esc(r.reponse)+' »';
+    const b=document.createElement('button'); b.className='btn'+(i<reponsesNouvelles?' primary':'');
+    b.textContent='Aller chez '+r.qui;
+    b.onclick=()=>go(r.slug);
+    l.appendChild(t); l.appendChild(b); f.appendChild(l);
+  });
+  if(mesReponses.length>4)
+    f.appendChild(hint('Et '+(mesReponses.length-4)+' autre'+(mesReponses.length>5?'s':'')+
+      ', plus anciennes.'));
+  f.appendChild(hint('Un mot planté chez quelqu’un peut recevoir une réponse. '+
+    'C’est la seule chose du jeu qui vienne te chercher.'));
+  return f;
+}
 function buildVoisins(){
   const p=document.getElementById('p-voisins'); p.innerHTML='';
+  /* Chez un voisin, ce bloc n'a rien à faire là : il parle de **toi**, et
+     le panneau Voisins qu'on lit en visite montre l'archipel. C'est la
+     même ligne que le coffre fermé chez l'hôte. */
+  if(!visiting && mesReponses.length){ p.appendChild(carteReponses()); p.appendChild(rule()); }
   p.appendChild(carteCommande());
   p.appendChild(rule());
 
@@ -9835,6 +10063,7 @@ async function chargerMonCompte(){
       mine.house.roofShape=ROOFMAP[mine.house.roofShape]||'pointu';
       if(!GROUNDS.find(g=>g.k===(mine.pal&&mine.pal.k))) mine.pal=GROUNDS[0];
       mine.mots = await store.motsDe(ile.id);
+      mine.proprietaire = ile.proprietaire;   // voir `amisDe()` : pas de lanterne pour soi
       // Qui t'a porté la commande aujourd'hui. Le trigger a déjà crédité :
       // ceci ne sert qu'à mettre un nom dessus. Un gain anonyme se lit
       // comme une bizarrerie du compteur, pas comme une visite.
@@ -9842,9 +10071,38 @@ async function chargerMonCompte(){
       // Ce qui s'est passé pendant ton absence, avant de remettre le compteur à zéro.
       const vu = ile.vu_le ? new Date(ile.vu_le).getTime() : 0;
       motsNouveaux = mine.mots.filter(m=>m.auteur!==moi.id && new Date(m.cree_le).getTime()>vu).length;
-      if(motsNouveaux) say('<b>'+motsNouveaux+' nouveau'+(motsNouveaux>1?'x mots':' mot')+
-        '</b> depuis ton dernier passage, et des <b>shells</b> avec. '+
-        'Va les lire dans l\u2019onglet \u00cele.');
+      /* **Ce qu'on t'a répondu ailleurs.** `motsDe()` interroge par île,
+         donc jusqu'ici l'auteur d'un mot n'apprenait jamais qu'on lui
+         avait répondu : la seule boucle du jeu qui fasse *revenir*
+         quelqu'un était coupée à son troisième pas.
+
+         `vu_reponses` est une **seconde** date, et pas `vu_le` : celle-là
+         est remise à l'heure à chaque chargement, donc ouvrir le jeu sans
+         regarder aurait perdu le signal pour toujours. Tant que la
+         migration n'est pas jouée, elle vaut `undefined` : tout est
+         nouveau une fois, et la liste s'affiche quand même. */
+      mesReponses = await store.mesReponses();
+      const vuRep = ile.vu_reponses ? new Date(ile.vu_reponses).getTime() : 0;
+      reponsesNouvelles = mesReponses.filter(r=>new Date(r.reponse_le).getTime()>vuRep).length;
+      /* **Une seule bulle pour les deux.** Deux `say()` coup sur coup, et
+         c'est le premier qui est perdu — la règle déjà écrite pour le
+         quatrième pas du guide et le message d'arrivée. */
+      const nouvelles=[];
+      if(motsNouveaux) nouvelles.push('<b>'+motsNouveaux+' nouveau'+(motsNouveaux>1?'x mots':' mot')+
+        '</b> sur ton \u00eele, et des <b>shells</b> avec');
+      /* **Ça nomme toujours quelqu'un.** Le premier jet disait « 2
+         réponses à tes mots » dès qu'il y en avait deux : un compteur, là
+         où tout l'intérêt est que *quelqu'un te parle*. Trouvé par le
+         contrôle 21, qui cherchait le prénom et ne le trouvait pas. */
+      if(reponsesNouvelles){
+        const q=mesReponses.slice(0,reponsesNouvelles).map(r=>'<b>'+esc(r.qui)+'</b>');
+        nouvelles.push(q.length===1 ? q[0]+' t\u2019a r\u00e9pondu'
+          : q.length===2 ? q[0]+' et '+q[1]+' t\u2019ont r\u00e9pondu'
+          : q[0]+' et '+(q.length-1)+' autres t\u2019ont r\u00e9pondu');
+      }
+      if(nouvelles.length) say('Depuis ton dernier passage : '+nouvelles.join(' \u00b7 ')+'. '+
+        (reponsesNouvelles ? 'C\u2019est dans l\u2019onglet <b>Voisins</b>.'
+                           : 'Va les lire dans l\u2019onglet <b>\u00cele</b>.'), 0, 4200);
       try{ await store.marquerVu(ile.id); }catch(e){}
       const grandi=rayonPour(mine.mots.length);
       if(grandi>(mine.rayon||RAYON0)){ mine.rayon=grandi; }
@@ -10656,7 +10914,10 @@ async function go(slug){
       if(!w){ say('Cette \u00eele n\u2019existe pas, ou elle n\u2019est pas publi\u00e9e.'); return; }
       const v=Object.assign({}, w.monde, {
         id:w.id, slug:w.slug, name:w.nom, owner:w.proprietaire_nom,
-        mots:w.mots, aMoi:(moi&&w.proprietaire===moi.id)
+        // `proprietaire` sert à une seule chose : écarter ses propres mots
+        // du sentier des visiteurs. Il ne part nulle part — `mondeNu()` ne
+        // le connaît pas, comme `mots`, `slug` et `owner` avant lui.
+        mots:w.mots, proprietaire:w.proprietaire, aMoi:(moi&&w.proprietaire===moi.id)
       });
       recentrer(v);
       if(v.house) v.house.roofShape=ROOFMAP[v.house.roofShape]||'pointu';
@@ -10765,8 +11026,11 @@ function hudSync(){
   // fond du sac. La pastille ne s'allume que quand il y a vraiment quelque
   // chose à faire : sinon elle devient une décoration, et on ne la regarde
   // plus le jour où elle compte.
+  // Une réponse non lue allume la même pastille : les deux disent « il y a
+  // quelque chose à faire dans cet onglet », et deux pastilles côte à côte
+  // ne diraient pas deux fois mieux.
   const ov=[...document.querySelectorAll('.tabs button')].find(x=>x.dataset.tab==='voisins');
-  if(ov) ov.classList.toggle('cadeau', commandeAPorter());
+  if(ov) ov.classList.toggle('cadeau', commandeAPorter() || (!visiting && reponsesNouvelles>0));
   // Le troisième bouton rond n'apparaît qu'une fois l'appareil acheté :
   // un bouton mort n'apprend rien, c'est la règle déjà tenue pour les
   // objets verrouillés de l'atelier.
@@ -10797,6 +11061,18 @@ function ongletOuvert(){
 function ouvrirOnglet(nom){
   document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.tab===nom)));
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p-'+nom));
+  /* **La pastille s'éteint quand on a eu la liste sous les yeux**, pas au
+     chargement. C'est tout l'intérêt de `vu_reponses` : marquer au
+     chargement, c'est perdre le signal pour qui ouvre le jeu sans
+     regarder — exactement le défaut que ce chantier corrige.
+
+     `marquerReponsesVues()` avale son erreur : tant que la migration
+     n'est pas jouée, la liste s'affiche et la pastille reste. Rien ne
+     casse, et le jour où le SQL passe, tout se met en place. */
+  if(nom==='voisins' && !visiting && reponsesNouvelles){
+    reponsesNouvelles=0; hudSync();
+    if(mine.id&&mine.id!=='me') store.marquerReponsesVues(mine.id);
+  }
 }
 document.querySelectorAll('.tabs button').forEach(b=>{ b.onclick=()=>ouvrirOnglet(b.dataset.tab); });
 document.getElementById('son-btn').onclick=()=>couperLeSon(!sonCoupe);

@@ -4906,6 +4906,153 @@ la **quatrième** fois :
    1,5 était **au-dessus** du nuage vrai. Il vaut 1,25, entre les deux, au
    bord d'aucun.
 
+## La boucle qui était coupée, et les lumières de tes amis — 21/09/2026
+
+Question posée : « rendre le jeu addictif ». La réponse tient en une
+distinction, et elle est écrite ici parce qu'elle se repose à chaque
+chantier : **compulsif** (une série qu'on perd, un minuteur qui punit, une
+récompense aléatoire, une notification qui relance) détruirait à la fois
+la promesse du jeu et la campagne qui dit « pas de score, personne ne
+perd » en citant des études — un parent qui vérifie une source vérifie les
+autres. **Avoir envie d'y revenir**, en revanche, se mesure : c'est ce qui
+suit.
+
+*(Noté au passage, et pas encore traité : le cadeau du jour a une `serie`
+et le septième jour d'affilée donne un objet, donc **casser la série
+renvoie au jour 1**. C'est doux, mais c'est de l'aversion à la perte, et
+c'est le seul endroit du jeu où l'on perd quelque chose — contre la règle
+tenue partout ailleurs.)*
+
+### Le trou : `motsDe()` interroge par île, donc l'auteur n'apprend rien
+
+Les réponses sont arrivées le 20/09, avec leur migration. Le chemin complet
+devrait être : *je plante un mot chez Lila → Lila répond → je reviens lire
+→ j'en replante un*. C'est **la** boucle qui fait revenir quelqu'un, et
+elle était coupée au troisième pas : `motsDe(ileId)` filtre par `ile`, donc
+rien ne disait à l'auteur qu'on lui avait répondu. Sa réponse ne
+s'affichait que s'il retournait là-bas **et** marchait jusqu'à son propre
+panneau. Personne ne fait ça, puisque rien ne l'annonce.
+
+Une migration jouée pour une fonctionnalité que le bénéficiaire ne voit
+pas. Mesuré dans le code avant d'écrire une ligne, pas supposé.
+
+`mesReponses()` interroge par **auteur**. `mots_lecture` le permet depuis le
+16/09 sans une ligne de policy : elle ouvre le select sur toute île publiée
+dont le mot n'est pas masqué — donc un mot masqué n'annonce rien, et c'est
+le bon défaut, masquer c'est justement retirer de la vue.
+
+Six choses à ne pas défaire :
+
+1. **Ça ne doit jamais empêcher le jeu de démarrer.** C'est un appel de
+   confort au chargement : toute erreur rend une liste vide et se tait. Un
+   livre d'or qui casse l'île serait un très mauvais marché.
+2. **Une seule bulle pour tout ce qui s'est passé.** Deux `say()` coup sur
+   coup, et c'est le premier qui est perdu — la règle déjà écrite pour le
+   quatrième pas du guide. Les mots reçus et les réponses tiennent dans la
+   même phrase.
+3. **Ça nomme toujours quelqu'un.** Le premier jet disait « 2 réponses à
+   tes mots » dès qu'il y en avait deux : un compteur, là où tout
+   l'intérêt est que *quelqu'un te parle*. Trouvé par le contrôle 21, qui
+   cherchait le prénom et ne le trouvait pas.
+4. **Le bloc est en tête de Voisins, et porte le bouton qui emmène.** Sans
+   lui on saurait qu'on a une réponse sans savoir où la lire — exactement
+   le défaut qu'on corrige. La commande du jour perd la première place
+   pour une seule raison : elle est une corvée du jour, une réponse est
+   quelqu'un qui parle. Sans réponse, le bloc n'existe pas et l'onglet est
+   exactement celui d'avant.
+5. **La pastille s'éteint quand on a eu la liste sous les yeux**, pas au
+   chargement — d'où `vu_reponses`, une **seconde** date. `vu_le` est remis
+   à l'heure à chaque chargement : s'en servir ici ferait perdre le signal
+   pour qui ouvre le jeu sans regarder, c'est-à-dire rouvrir le défaut
+   qu'on vient de fermer. Deux questions, deux dates.
+6. **Chez un voisin, le bloc disparaît** : il parle de toi, pas de l'île
+   qu'on regarde. La même ligne que le coffre fermé chez l'hôte.
+
+`supabase/2026-09-21_reponses_vues.sql`, **à jouer**, rejouable : une
+colonne, pas de table, pas de fonction, pas de policy — `iles_maj` ouvre
+déjà l'update au propriétaire. **Sans elle, le jeu marche** : les réponses
+s'affichent, seule la pastille attend, et `marquerReponsesVues()` avale son
+erreur comme `ramasser()` le fait pour `bourse_ramasser`.
+
+### Le sentier des visiteurs
+
+« L'île grandit parce que des gens sont passés » est écrit depuis le 16/09,
+et ça ne se lisait que dans un compteur de rayon — c'est-à-dire nulle part.
+Une **lanterne par personne distincte** qui a laissé un mot, et la nuit,
+elles éclairent.
+
+**Aucune migration, aucune clé de plus dans `mondeNu()` ni dans
+`encode()`** : tout se déduit de `world.mots`, déjà chargé. La ligne déjà
+écrite pour les habitants, le sable de la marée et la pousse du potager.
+
+Six choses à ne pas défaire :
+
+1. **Elle ne s'achète pas, ne se pose pas, ne s'efface pas.** C'est ce qui
+   en fait un témoin plutôt qu'une décoration : une lanterne qu'on pourrait
+   poser soi-même ne dirait plus que quelqu'un est venu. Elle n'est dans
+   aucun rayon de l'atelier et la gomme ne la voit pas.
+2. **Une personne, une lanterne**, quel que soit le nombre de mots : c'est
+   une liste d'amis, pas un compteur de messages. La clé est le **compte**
+   et non le pseudo ; le pseudo ne sert que de repli pour un compte
+   supprimé.
+3. **Elle ne bloque rien**, `blocked()` ne la connaît pas. Une lanterne qui
+   barrerait un chemin serait la première chose du jeu qu'on puisse rater,
+   et elle est arrivée toute seule.
+4. **Elle se regarde**, comme le potager : pas de plaque rose, pas de `E`,
+   aucun rang de plus — les sept rangs d'`agir()` et de `proximity()` ne
+   bougent pas d'une ligne. Mais elle **dit qui**, sinon c'est une lumière
+   anonyme de plus. La bulle passe **après** le réarmement du seuil : sinon
+   en sortant de chez soi sur une lanterne, on ne pourrait plus rentrer.
+5. **Pas d'accord de genre sur un prénom.** « Lila est passée » et « Tom
+   est passé » ne s'écrivent pas pareil, et un prénom est du texte libre.
+   La bulle dit « Un mot **de Lila** », et `deQui()` élide — c'est la règle
+   du 19/09, « La porte de Adam est fermée ».
+6. **Les îles bot n'en ont pas**, leurs `mots` sont vides. Et c'est très
+   bien : le nouveau venu visite vingt îles sans lanterne, reçoit son
+   premier mot, et la sienne s'allume. Personne n'a eu à le lui expliquer.
+
+### Les deux choses que seul le rendu a dites
+
+**Le cercle suivait le rayon du jour, donc tout bougeait.** Mesuré par le
+contrôle : un sixième ami déplaçait les cinq premières lanternes, jusqu'à
+**deux cases**. Chaque mot reçu fait grandir l'île, donc le cercle, donc
+l'arrondi de chaque case — et la cascade des cases déjà prises faisait le
+reste. Une île dont les lumières bougent à chaque visite ne se reconnaît
+plus.
+
+Le cercle est donc ancré à **`RAYON0`**, l'île de départ : stable par
+construction, et ça raconte quelque chose — les lumières marquent le
+rivage qu'on avait quand on était seul, et la terre gagnée depuis s'étend
+derrière elles.
+
+**Le pas angulaire régulier serrait tout du même côté.** Vu sur une
+capture : cinq amis remplissaient 150° et se tassaient à l'ouest — on ne
+lisait pas un sentier, on lisait un tas. L'**angle d'or** (137,5°) répartit
+dès la première : trois amis font trois lumières écartées, douze ferment
+le cercle. Et comme l'angle ne dépend que du rang, la stabilité tient.
+
+Les deux ne se voyaient pas à la relecture. C'est la règle du lit, des six
+bâtiments et du cadre-photo : **ça ne se voit que rendu.**
+
+### Ce que les contrôles 20 et 21 mesurent
+
+Le 20 ne lit pas la source pour les positions : il demande au jeu où les
+lanternes sont tombées et vérifie **chacune** contre le rayon, l'eau, la
+maison et les objets. Une lanterne dans la mer serait le défaut qu'on ne
+découvre qu'à la dix-septième île. Il éprouve aussi les **deux chemins**,
+`mondeNu()` et `encode()`.
+
+Éprouvés en remettant trois vraies pannes, **chacune ne faisant rougir que
+ses propres lignes** : le cercle rendu au rayon du jour (1 rouge, la
+stabilité), le bloc des réponses retiré de la tête de Voisins (4), la
+pastille qui ne s'éteint jamais (2).
+
+*(Et un faux trop simple, rattrapé par le rendu : `faux-store.js` donnait
+le **même compte** à tous les mots sémés, donc douze visiteurs n'en
+faisaient qu'un et le sentier ne posait qu'une lanterne. Le jeu avait
+raison — « une personne, une lanterne » — c'est le faux qui mentait. La
+leçon de `bourseCadeau()`, du 19/09, pour la deuxième fois.)*
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

@@ -1469,5 +1469,198 @@ c.titre('19. on ne ramène plus un objet, on en rapporte une photo');
   await ctx.close(); s2.fermer();
 }
 
+c.titre('20. le sentier des visiteurs — une lanterne par personne, rien en base');
+{
+  /* « L'île grandit parce que des gens sont passés » est écrit depuis le
+     16/09, et ça ne se lisait que dans un compteur de rayon — c'est-à-dire
+     nulle part. Une lanterne par personne distincte rend la phrase
+     physique : on la voit, on marche dessus, elle dit qui, et la nuit
+     elle éclaire.
+
+     Ce contrôle ne lit pas la source pour les positions : il demande au
+     jeu où elles sont tombées et vérifie chacune contre le rayon, l'eau,
+     la maison et les objets. Une lanterne dans la mer serait le défaut
+     qu'on ne découvre qu'à la dix-septième île. */
+  const PANNE = src => remplacer(src, /function cheminHabitant\(o,cible\)\{/,
+    'window.__lant=()=>lanternesDe(world).map(l=>({x:l.x,y:l.y,nom:l.nom}));\n' +
+    'window.__ok=(x,y)=>({ rayon:dansLeRayon(x,y,world),' +
+    ' eau:(world.tiles||[])[y*GRID+x]===2,' +
+    ' maison:(x>=world.house.x&&x<=world.house.x+1&&y>=world.house.y&&y<=world.house.y+1),' +
+    ' objet:(world.objects||[]).some(o=>couvre(o,x,y)) });\n' +
+    'window.__code=()=>encode(mine);\n' +
+    'window.__base=()=>Object.keys(mondeNu(mine)).sort().join(\' \');\n' +
+    'window.__poserSur=(k)=>{ const l=lanternesDe(world)[k]; if(!l) return null;' +
+    ' hero.x=l.x+0.5; hero.y=l.y+0.5; target=null; return l.nom; };\n' +
+    'function cheminHabitant(o,cible){');
+
+  // Cinq prénoms, et **trois mots de plus signés Lila** : une personne,
+  // une lanterne, quel que soit le nombre de mots qu'elle a laissés.
+  const CINQ = [['Lila','coucou'], ['Nour','joli'], ['Yann','salut'],
+                ['Inès','bravo'], ['Tom','super'],
+                ['Lila','je repasse'], ['Lila','encore moi'], ['Lila','et hop']];
+
+  const s2 = await servir(8157, PANNE);
+  const o = await onglet(nav, {
+    taille: { width: 1200, height: 860 },
+    memoire: { 'test:mots': JSON.stringify(CINQ), 'dansisland:entre': '1',
+               'dansisland:guide': '4', 'dansisland:muet': '1' },
+  });
+  const { ctx, page, erreurs } = o;
+  await page.goto(s2.url, { waitUntil: 'load' });
+  await attendre(2600);
+
+  const lant = await page.evaluate(() => window.__lant());
+  console.log('     lanternes : ' + lant.map(l => l.nom + '(' + l.x + ',' + l.y + ')').join(' · '));
+  c.dit(lant.length === 5,
+        'cinq personnes distinctes, cinq lanternes — pas huit (' + lant.length + ')');
+  const noms = new Set(lant.map(l => l.nom));
+  c.dit(noms.size === 5 && noms.has('Lila'), 'chacune porte un prénom, et Lila n’en a qu’une');
+
+  /* Chaque case, vérifiée contre les quatre choses qui la rendraient
+     fausse. C'est la leçon du restaurant de « La Crique » qui flottait au
+     nord : `dansLeRayon()` dit où est l'île, la tuile ne dit que ce qui y
+     est peint — il faut les deux. */
+  const mauvaises = [];
+  for (const l of lant) {
+    const v = await page.evaluate(([x, y]) => window.__ok(x, y), [l.x, l.y]);
+    if (!v.rayon || v.eau || v.maison || v.objet)
+      mauvaises.push(l.nom + ' ' + JSON.stringify(v));
+  }
+  c.dit(mauvaises.length === 0,
+        'aucune n’est dans l’eau, hors du rayon, sous la maison ou sur un objet' +
+        (mauvaises.length ? ' → ' + mauvaises.join(' ; ') : ''));
+
+  // Rien en base, et **les deux chemins** : `mondeNu()` et `encode()`.
+  const base = await page.evaluate(() => window.__base());
+  const code = await page.evaluate(() => {
+    const o = JSON.parse(decodeURIComponent(escape(atob(window.__code()))));
+    return Object.keys(o).sort().join(' ');
+  });
+  console.log('     en base : ' + base);
+  c.dit(!/lanterne|ami|visiteur/i.test(base + ' ' + code),
+        'aucune clé de plus, ni dans mondeNu() ni dans le code de sauvegarde');
+  c.dit(!/lanterne/i.test(JSON.stringify(await page.evaluate(() => window.__lant()))
+        .replace(/lanternes?/gi, '')), 'le repère est la liste, pas une clé du monde');
+
+  // Elle se **regarde** : une bulle qui nomme la personne, pas de plaque.
+  const qui = await page.evaluate(() => window.__poserSur(0));
+  await attendre(800);
+  const v = await etat(page);
+  console.log('     sur la lanterne de ' + qui + ' : ' + (v.murmure || '(rien)'));
+  c.dit(new RegExp(qui).test(v.murmure), 'la bulle nomme la personne qui est passée');
+  // Pas d'accord de genre sur un prénom : « est passée » / « est passé »
+  // ne se choisit pas quand le prénom est du texte libre.
+  c.dit(/laissé un mot|Un mot d/.test(v.murmure), 'et elle dit ce que c’est');
+  c.dit(!/passée?\b/.test(v.murmure), 'sans accorder quoi que ce soit à un prénom');
+  c.dit(v.plaque === null,
+        'pas de plaque rose : une lanterne se regarde, elle ne se prend pas');
+
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close(); s2.fermer();
+
+  /* **La stabilité**, et c'est elle qui compte le plus : le dixième ami ne
+     doit jamais déplacer le premier. Une île dont les lumières bougent à
+     chaque visite ne se reconnaît plus. On re-sème les cinq plus un
+     sixième et on compare les cinq premières positions. */
+  const s3 = await servir(8158, PANNE);
+  const o3 = await onglet(nav, {
+    taille: { width: 1200, height: 860 },
+    memoire: { 'test:mots': JSON.stringify(CINQ.concat([['Maya', 'hello']])),
+               'dansisland:entre': '1', 'dansisland:guide': '4', 'dansisland:muet': '1' },
+  });
+  await o3.page.goto(s3.url, { waitUntil: 'load' });
+  await attendre(2600);
+  const lant6 = await o3.page.evaluate(() => window.__lant());
+  const pos = a => a.slice(0, 5).map(l => l.nom + ':' + l.x + ',' + l.y).join(' ');
+  console.log('     à cinq : ' + pos(lant));
+  console.log('     à six  : ' + pos(lant6));
+  c.dit(lant6.length === 6, 'un ami de plus, une lanterne de plus (' + lant6.length + ')');
+  c.dit(pos(lant) === pos(lant6), 'et les cinq premières n’ont pas bougé d’une case');
+  c.dit(o3.erreurs.length === 0, 'aucune erreur de console');
+  await o3.ctx.close(); s3.fermer();
+}
+
+c.titre('21. « Lila t’a répondu » — la boucle qui était coupée');
+{
+  /* `motsDe()` interroge par **île**. Donc l'auteur d'un mot n'apprenait
+     jamais qu'on lui avait répondu : la réponse ne s'affichait que s'il
+     retournait là-bas **et** marchait jusqu'à son propre panneau. C'est
+     la seule boucle du jeu qui fasse *revenir* quelqu'un, et elle était
+     coupée à son troisième pas — donc une migration jouée le 20/09 pour
+     une fonctionnalité que le bénéficiaire ne voyait pas. */
+  const REPS = [['Lila', 'lila', 'Ton île est belle', 'Merci, reviens quand tu veux !', 0],
+                ['Nour', 'nour', 'Joli phare', 'Il est neuf :)', 2]];
+  const ouvrirRep = async reps => {
+    const o = await onglet(nav, {
+      taille: { width: 1200, height: 860 },
+      memoire: { 'test:reponses': JSON.stringify(reps), 'dansisland:entre': '1',
+                 'dansisland:guide': '4', 'dansisland:muet': '1' },
+    });
+    await o.page.goto(s.url, { waitUntil: 'load' });
+    await attendre(2600);
+    return o;
+  };
+  const voisins = page => page.evaluate(() => {
+    const p = document.getElementById('p-voisins');
+    const f = p.querySelector('.field');
+    const onglet = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'voisins');
+    return {
+      premier: f ? f.innerText.replace(/\s+/g, ' ').trim().slice(0, 150) : '',
+      pastille: !!(onglet && onglet.classList.contains('cadeau')),
+      boutons: [...p.querySelectorAll('.field')][0]
+        ? [...[...p.querySelectorAll('.field')][0].querySelectorAll('button')].map(b => b.textContent.trim())
+        : [],
+    };
+  });
+
+  const { ctx, page, erreurs } = await ouvrirRep(REPS);
+  const v = await etat(page);
+  console.log('     au chargement : ' + (v.murmure || '(rien)'));
+  c.dit(/Lila/.test(v.murmure), 'le message d’accueil nomme qui a répondu');
+  c.dit(/répondu/.test(v.murmure), 'et dit que c’est une réponse');
+  // Une seule bulle pour les deux nouvelles : deux `say()` coup sur coup,
+  // et c'est le premier qui est perdu.
+  c.dit((v.murmure.match(/Depuis ton dernier passage/g) || []).length === 1,
+        'une seule bulle, pas deux messages coup sur coup');
+
+  const a = await voisins(page);
+  console.log('     en tête de Voisins : ' + a.premier);
+  console.log('     boutons : ' + a.boutons.join(' · '));
+  c.dit(/répondu/i.test(a.premier), 'le bloc des réponses est **en tête** de l’onglet');
+  c.dit(/Lila/.test(a.premier) && /Merci/.test(a.premier),
+        'il porte le prénom et le texte de la réponse');
+  /* Le bouton qui **emmène** : sans lui on saurait qu'on a une réponse
+     sans savoir où la lire, et c'est exactement le défaut qu'on corrige.
+     La règle de la boutique du 16/09 : la réponse tombe là où est le doigt. */
+  c.dit(a.boutons.some(b => /Lila/.test(b)), 'et le bouton qui emmène chez elle');
+  c.dit(a.pastille === true, 'la pastille de l’onglet Voisins est allumée');
+
+  // Elle s'éteint quand on a eu la liste **sous les yeux**, pas au
+  // chargement : marquer au chargement, c'est perdre le signal pour qui
+  // ouvre le jeu sans regarder.
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.tabs button')].find(x => x.dataset.tab === 'voisins');
+    if (b) b.click();
+  });
+  await attendre(500);
+  const b = await voisins(page);
+  const vues = await page.evaluate(() => window.__reponsesVues || 0);
+  c.dit(b.pastille === false, 'et elle s’éteint quand on ouvre l’onglet');
+  c.dit(vues === 1, 'le serveur a retenu le coup d’œil (' + vues + ')');
+  c.dit(/répondu/i.test(b.premier), 'le bloc, lui, reste : ce n’est pas une notification');
+  c.dit(erreurs.length === 0, 'aucune erreur de console');
+  await ctx.close();
+
+  // Sans réponse, l'onglet est **exactement** celui d'avant.
+  const o0 = await ouvrirRep([]);
+  const z = await voisins(o0.page);
+  console.log('     sans réponse, en tête : ' + z.premier.slice(0, 60));
+  c.dit(/commande/i.test(z.premier),
+        'sans réponse, la commande du jour reprend la tête');
+  c.dit(z.pastille === false, 'et la pastille reste éteinte');
+  c.dit(o0.erreurs.length === 0, 'aucune erreur de console');
+  await o0.ctx.close();
+}
+
 await nav.close(); s.fermer();
 process.exit(c.fin() ? 1 : 0);
