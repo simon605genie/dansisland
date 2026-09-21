@@ -4652,7 +4652,11 @@ function drawWorld(t){
     // Quatre objets lisent un état, et `etatObjet()` est le seul endroit
     // qui le dit. Sans lui il faudrait un `if` par objet ici, et le
     // prochain en ajouterait un cinquième.
-    const plein = coffrePlein(o) || boitePleine(o);
+    /* Ce qui brille : le coffre du jour, la boîte où un mot attend — et
+       le souvenir qu'on vient de ramener, tant qu'on ne l'a pas trouvé.
+       Les trois disent la même chose, « il y a quelque chose ici pour
+       toi », et c'est pour ça qu'ils partagent le même geste. */
+    const plein = coffrePlein(o) || boitePleine(o) || (!visiting && o===souvenirNeuf);
     // `ce.x+ce.y` rend exactement l'ancien `o.x+o.y+1` pour une case
     // (centre en +0,5) et la profondeur de la maison pour un 2x2 (+1).
     items.push({d:ce.x+ce.y, f:()=>{
@@ -4693,8 +4697,28 @@ function drawWorld(t){
        peut rien rater. */
     const b=hoteAu(t);
     const hx=b?b.x:world.house.x+2.1, hy=b?b.y:world.house.y+1.4, q=iso(hx,hy);
-    items.push({d:hx+hy, f:()=>drawChar(ctx,q.x,q.y-LIFT,world.me,0.95,
-      b?b.face:'bas', b&&b.marche?t:0, vieDuBonhomme(t, b&&b.marche?0:t))});
+    /* **L'hôte te salue quand tu t'approches.**
+
+       Rapporté en jouant : « je visite une île, pas d'interaction avec
+       les autres joueurs, même pas un bonjour ? » — et c'était juste.
+       L'hôte faisait les cent pas devant chez lui sans jamais rien
+       remarquer, ce qui se lit comme un décor plutôt que comme
+       quelqu'un.
+
+       **Il salue en marchant, il ne s'arrête pas**, et c'est la règle
+       déjà écrite pour les habitants : sa position se déduit de `t`, donc
+       la figer demanderait un état, et dès qu'on s'éloigne il se
+       téléporterait au milieu de son allée. On tourne la tête et on lève
+       le bras en croisant quelqu'un — on ne se plante pas.
+
+       Quatre cases : assez loin pour qu'il salue avant qu'on soit sur
+       lui, assez près pour que ce soit clairement à nous qu'il le fait. */
+    const salue = visiting && Math.hypot(hx-hero.x, hy-hero.y) < 4;
+    items.push({d:hx+hy, f:()=>{
+      drawChar(ctx,q.x,q.y-LIFT,world.me,0.95,
+        b?b.face:'bas', b&&b.marche?t:0, vieDuBonhomme(t, b&&b.marche?0:t));
+      if(salue) brasQuiSalue(ctx,q.x,q.y-LIFT,world.me,0.95,hx>hero.x,t);
+    }});
     // Le compagnon de l'hôte, assis à côté de lui. On lit `world.me` sans
     // pouvoir vérifier ses achats : la RLS ne montre pas la bourse du
     // voisin, et ce n'est pas grave : c'est du dessin, il n'y a rien à
@@ -5894,6 +5918,7 @@ function frame(t){
     ramasserLaMaree(); }
   // Chez soi **et chez les voisins** : marcher sur les dalles de quelqu'un
   // est exactement ce pour quoi il les a posées.
+  trouverLeSouvenir();
   jouerLesDalles();
   proximity();
   majCam(dt);
@@ -7015,6 +7040,17 @@ function frapperUneDalle(o){
    qu'on ne voit pas en lisant : sans ça, une dalle à la même case sur
    l'île d'à côté resterait muette parce que la clé n'aurait pas changé. */
 let dalleSous=null, dalleFrappee=null;
+/* On a trouvé le souvenir quand on marche dessus : il cesse de briller,
+   et rien d'autre ne se passe. Pas de bulle, pas de gain — c'est une
+   chose qu'on cherchait, pas une chose qu'on gagne.
+
+   Le rayon est celui des dalles, plus serré que celui de `proximity()` :
+   on l'a trouvé quand on est **dessus**, pas quand on passe à côté. */
+function trouverLeSouvenir(){
+  if(!souvenirNeuf || visiting || dedans) return;
+  if(Math.hypot(souvenirNeuf.x+0.5-hero.x, souvenirNeuf.y+0.5-hero.y) < 0.8) souvenirNeuf=null;
+}
+
 function jouerLesDalles(){
   if(dedans) return;
   // Le rayon est plus serré que celui des sondes de `proximity()` : on
@@ -7417,6 +7453,28 @@ function proximity(){
 }
 // On ne vole rien : on ramène une copie, signée du nom de l'hôte. L'île
 // visitée n'est pas touchée, et la tienne garde la trace de qui tu as vu.
+/* Où une case tombe sur l'île, dit en français plutôt qu'en coordonnées.
+   « au nord-ouest » se comprend sans rien apprendre ; « en (4,3) » demande
+   de savoir de quel coin on compte. Le centre est un cas à part : dire
+   « au centre-nord » d'une case à deux pas du milieu serait plus précis et
+   moins utile. */
+function ouSurLile(x,y){
+  const c=(GRID-1)/2, dx=x-c, dy=y-c;
+  if(Math.hypot(dx,dy) < 2) return 'au milieu';
+  const ns = dy < -1.2 ? 'au nord' : dy > 1.2 ? 'au sud' : '';
+  const eo = dx < -1.2 ? 'ouest'  : dx > 1.2 ? 'est'    : '';
+  if(ns && eo) return ns + '-' + eo;
+  if(ns) return ns;
+  return 'à l’' + (eo === 'est' ? 'est' : 'ouest');
+}
+
+/* Le souvenir qu'on vient de ramener, tant qu'on ne l'a pas trouvé.
+   Une **référence d'identité** dans `mine.objects`, comme `balade.o` :
+   rien en base, rien pour Ctrl+Z, et tout ce qui refait cette liste la
+   casse — auquel cas le scintillement s'arrête, ce qui est le bon
+   défaut. */
+let souvenirNeuf=null;
+
 function ramasserSouvenir(){
   const o=souvenirProche; if(!o||!visiting) return;
   /* Sur une **île de démonstration**, un objet payant se regarde et ne se
@@ -7444,14 +7502,34 @@ function ramasserSouvenir(){
     ? 'Il faut <b>quatre cases libres</b> chez toi pour '+unObjet(o.t,false,true)+
       ', et ton île n’en a plus. Fais de la place, ou agrandis-la.'
     : 'Plus une case libre chez toi pour poser un souvenir.'); return; }
-  mine.objects.push({t:o.t,x:spot.x,y:spot.y,c:o.c,de:world.owner});
+  const neuf={t:o.t,x:spot.x,y:spot.y,c:o.c,de:world.owner};
+  mine.objects.push(neuf);
+  /* **Ce qui vient d'arriver brille jusqu'à ce qu'on l'ait trouvé.**
+
+     Le défaut, rapporté en jouant : « je ramène un souvenir, je ne le
+     vois pas sur mon île ». Il y était pourtant — `freeTile()` le pose
+     sur une case libre — mais une case tirée au hasard parmi les 150
+     d'une île neuve est **introuvable**, et « il t'attend sur ton île »
+     ne dit pas où. On rentre chez soi, il y a un objet de plus parmi
+     dix-huit, et rien ne le désigne.
+
+     C'est la règle déjà écrite pour le coffre et la boîte aux lettres,
+     étendue d'un cran : *dans ce jeu, une chose qui brille est une
+     chose à prendre* — ici, une chose qui brille est une chose qui
+     vient d'arriver.
+
+     `souvenirNeuf` est une **référence d'identité** dans `mine.objects`,
+     comme `balade.o` : rien en base, aucune clé de plus dans
+     `mondeNu()`, rien pour Ctrl+Z. Tout ce qui refait cette liste casse
+     la référence, et le scintillement s'arrête — c'est le bon défaut. */
+  souvenirNeuf=neuf;
   saveMine(); son('poser'); buildAll();
   // Le moment du ramassage est le seul où le doigt est sur l'objet : c'est
   // là qu'il faut dire qu'un souvenir de carillon ne sonnera pas, sinon on
   // le pose chez soi et on attend un son qui ne vient jamais.
   const art=BOUTIQUE.find(x=>x.k===o.t && FONCTIONNEL[x.k]);
   say('Tu ramènes <b>'+(NOM_OBJ[o.t]||'un objet')+'</b> de chez '+esc(world.owner)+
-      '. Il t\u2019attend sur ton île.'+(art
+      '. Il brille '+ouSurLile(spot.x,spot.y)+' de ton île.'+(art
         ? ' <b>C\u2019est un souvenir</b> : il décore, il ne fait pas ce que fait le vrai. '+
           'Le tien est à la Boutique, '+art.prix+' shells.'
         : ''), 0, art?5200:2200);
@@ -9578,12 +9656,26 @@ async function chargerMonCompte(){
    demande ses quatre cases, et sans ce paramètre un souvenir d'église se
    posait sur une case en en recouvrant trois autres — dont, un jour, la
    maison. Sans `t`, une case, comme avant. */
+/* **`dansLeRayon()`, et pas seulement « la tuile n'est pas de l'eau ».**
+
+   C'est exactement le défaut nommé le 20/09 pour les bâtiments des îles
+   de démonstration — « le restaurant de La Crique flottait au nord,
+   au-dessus de la mer : les tuiles hors du rayon ne portent pas toutes
+   la valeur eau » — et il était resté ici.
+
+   Mesuré le 21/09 sur une île neuve : 3 cases sont *ni* de l'eau *ni*
+   dans le rayon, et sur mille souvenirs ramenés, **30 y tombaient**.
+   Trois pour cent des souvenirs atterrissaient donc hors de l'île, où
+   on ne peut ni les voir ni les reprendre — sans erreur et sans trace.
+
+   Le rayon dit où est l'île ; la tuile ne dit que ce qui y est peint. */
 function freeTile(w,t){
   const cases=(x,y)=>empriseCases(t||'rocher',x,y);
   for(let k=0;k<300;k++){
     const x=Math.floor(Math.random()*GRID), y=Math.floor(Math.random()*GRID);
     const cs=cases(x,y);
     if(cs.some(c=>c[0]>=GRID||c[1]>=GRID)) continue;
+    if(cs.some(c=>!dansLeRayon(c[0],c[1],w))) continue;
     if(cs.some(c=>w.tiles[c[1]*GRID+c[0]]===2)) continue;
     if(cs.some(c=>c[0]>=w.house.x-1&&c[0]<=w.house.x+2&&c[1]>=w.house.y-1&&c[1]<=w.house.y+2)) continue;
     if(cs.some(c=>objetEn(w.objects,c[0],c[1],true))) continue;
