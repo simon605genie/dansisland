@@ -1400,3 +1400,54 @@ annonce « libre » un slug que l'insert va rejeter.
 L'éditeur écrit à chaque clic. `store.planifierSauvegarde` attend 1,2 s de calme
 avant de pousser, garde une copie dans `localStorage`, et rejoue en cas de coupure.
 Au chargement, si le brouillon local est plus récent que `maj_le`, il gagne.
+
+## Le compte Instagram
+
+Tout est dans `social/`, et **rien n'y touche au jeu** : `build.sh` copie
+une liste explicite dans `dist/`, ce dossier n'en fait pas partie, et les
+images sont servies par `raw.githubusercontent.com` — le dépôt est
+public, et l'API Instagram va chercher l'image à une URL publique, elle
+n'accepte pas d'octets.
+
+    social/maquettes.mjs     les cinq gabarits + la capture du jeu
+    social/directions.mjs    cinq visuels d'exploration  →  directions/
+    social/calendrier.mjs    les 31 publications         →  images/
+    social/calendrier.json   ce que le workflow publie
+
+    node social/directions.mjs        refait les cinq directions
+    node social/calendrier.mjs        refait les 31 images + le json
+    node social/calendrier.mjs --sec  le json seul, sans rendre
+
+Les captures passent par le vrai jeu, avec saison, météo et ciel forcés :
+une image qui changerait selon le jour où on la fabrique n'est pas une
+image, c'est un tirage. Quatre crochets font **montrer** au lieu de dire
+— entrer dans la maison, semer un objet sous les pieds du bonhomme,
+appuyer sur `E`, marcher. Voir CLAUDE.md pour le pourquoi de chacun.
+
+### La mise en ligne
+
+`.github/workflows/instagram.yml`, une publication par jour à 19h30
+Bruxelles. Il reste **inerte** tant que les deux secrets ne sont pas
+posés, et son premier pas dit lequel manque.
+
+Ce qu'il faut faire, une fois :
+
+1. Le compte Instagram en **Professionnel** (Paramètres → Type de
+   compte → Créateur). Gratuit, réversible.
+2. Une app sur developers.facebook.com → produit **Instagram** →
+   panneau **« API setup with Instagram login »**. Pas de Page Facebook,
+   pas d'App Review pour publier sur son propre compte.
+3. Deux secrets dans *Settings → Secrets and variables → Actions* :
+
+       IG_USER_ID        un identifiant, il peut circuler
+       IG_ACCESS_TOKEN   un secret — jamais dans une conversation
+
+Le jeton vit **60 jours**. Un pas du workflow dit combien il en reste et
+avertit sous douze jours ; il ne peut pas le remplacer lui-même, parce
+qu'écrire dans les secrets demanderait un jeton plus puissant que celui
+qu'on protège.
+
+Pour l'essayer sans rien publier : l'onglet Actions, « Publier sur
+Instagram », « Run workflow » — **à blanc par défaut**.
+
+    npm test        les onze harnais, instagram.mjs compris

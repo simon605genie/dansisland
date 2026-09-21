@@ -280,7 +280,7 @@ const CONTENU = {
    * Et le chapô porte la phrase qui a donné cette page : « un écran pour
    * se détendre, enfin ». */
   '/pourquoi-un-jeu-calme': {
-    titre: 'Pourquoi un jeu où personne ne gagne | Dan’s Island',
+    titre: 'Pourquoi un jeu où personne ne gagne | Jeu relaxant pour enfants',
     h1: 'Pourquoi un jeu calme',
     desc: 'Un jeu sans score, sans minuteur et sans partie perdue — et ce que ' +
           'disent vraiment les travaux publiés sur le temps d’écran, le jeu ' +

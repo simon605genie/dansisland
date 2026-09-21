@@ -4469,6 +4469,285 @@ onzième de `FACE_COUL`, donc l'index 10, donc `'a'`. Le contrôle rendait
 zéro pixel et il avait raison — c'est le témoin qui était faux. L'index se
 lit maintenant dans la source.)*
 
+## Le compte Instagram se tient tout seul — 21/09/2026
+
+`social/` et `.github/workflows/instagram.yml`. **Rien de tout ça ne
+touche au jeu** : `build.sh` copie une liste explicite de fichiers dans
+`dist/`, `social/` n'en fait pas partie, et les images sont servies par
+`raw.githubusercontent.com` — le dépôt est public, et l'API Instagram va
+chercher l'image à une URL publique, elle n'accepte pas d'octets.
+L'empreinte du déploiement ne bouge donc pas d'un bit.
+
+### Le reproche qui a tout décidé
+
+La première série de visuels parlait **la voix intérieure du jeu** —
+« il n'y a rien à finir », « le phare balaie la mer » — à quelqu'un qui
+n'y joue pas encore. C'est une légende pour un joueur, pas une accroche
+pour un inconnu.
+
+Un visuel de départ répond à trois questions dans l'ordre : **qu'est-ce
+que c'est, pour qui, et pourquoi maintenant.** La voix intérieure vient
+après, quand on est déjà entré. C'est la même règle que « ce qu'un
+onglet est doit être en haut de cet onglet », transposée hors du jeu.
+
+### Cinq directions, pas cinq variations
+
+    A · LE CLAIM     « Un jeu où personne ne perd » + gratuit, dès 6 ans
+    B · L'ABSENCE    ce que le jeu n'a pas, barré — l'angoisse du parent
+    C · LA BOUCLE    les trois gestes, avec trois îles qui se remplissent
+    D · LA SOURCE    une étude citée, pour le parent qui arbitre
+    E · LE DÉTAIL    presque pas de texte — le cercle large
+
+Elles vivent dans `social/maquettes.mjs`, **partagé** par
+`directions.mjs` (les cinq visuels d'exploration) et `calendrier.mjs`
+(le mois). Deux copies auraient divergé au premier réglage, et ça se
+verrait sur un compte public.
+
+### Montrer, pas dire
+
+Le défaut qui revient le plus souvent ici, et il a une forme précise :
+une carte qui **dit** « on peut entrer dans la maison » en montrant
+l'île vue du dehors. C'est la faute déjà écrite pour les feuilles
+d'automne — promettre un détail qu'on ne peint pas — et elle s'était
+reposée dans la moitié du calendrier.
+
+Quatre crochets de capture la ferment :
+
+    dedans        entre pour de vrai, par le bouton « 🚪 Entrer »
+    sousLesPieds  sème un objet sur la case du bonhomme, (8,10)
+    toucheE       appuie sur E, donc déclenche le geste de cet objet
+    marcher       tient une touche, donc le bonhomme suit son chien
+
+Quatre choses à ne pas défaire :
+
+1. **`entrer()` n'est pas sur `window`.** La page est un module ES, donc
+   sa portée est fermée et `p.evaluate` ne la voit pas. On passe par le
+   bouton du panneau Maison, **en le faisant défiler sous la vue
+   d'abord** — cliquer un élément d'un panneau qui défile fait bouger la
+   page et le clic part à côté, ce qui a coûté trois heures le 20/09.
+   Et le crochet **lève** quand il n'a pas pris : une capture du dehors
+   sous une légende qui parle du dedans est exactement ce qu'il existe
+   pour empêcher.
+2. **La maison est meublée** (`MAISON`, semée par `test:interieur`, donc
+   par le vrai chemin de chargement). Le premier essai entrait dans un
+   salon vide : un plancher nu sous « trois pièces à décorer » ne montre
+   rien à décorer.
+3. **Un intérieur ne se recadre pas comme une île.** La pièce est déjà
+   une composition serrée et centrée : le recadrage de l'île coupait le
+   bonhomme en deux sur le bord gauche. Le champ `cadre` laisse chaque
+   publication dire sa zone, plutôt qu'une sixième maquette qui ne
+   différerait que par quatre nombres.
+4. **Une balade capturée trop tard** montre un chien parti au loin et un
+   bonhomme planté devant sa porte : ça se lit « il y a un chien
+   là-bas ». Trois timings mesurés ; c'est 900 ms de marche qui rend
+   « on promène son chien ».
+
+### Trois mesures qui manquaient sous les visuels
+
+Toutes les trois ont été trouvées en **regardant les images**, et
+corrigées à la racine plutôt que cinq fois :
+
+1. **La signature lisait le coin du cadre, pas ce qu'il y avait derrière
+   elle.** Les maquettes décidaient l'encre d'après le ciel en haut à
+   droite, puis écrivaient l'adresse tout en bas, sur l'île — donc du
+   crème sur du sable, illisible sur quatre affiches sur cinq.
+   `signer()` échantillonne la bande qu'elle va occuper, **une fois tout
+   le reste peint**. C'est la faute que ce fichier répète : une mesure
+   qui ne vérifie pas qu'elle regarde la bonne chose passe au vert sans
+   rien voir.
+2. **Chaque maquette calculait sa découpe à la main**, avec des facteurs
+   en dur — d'où un sous-titre posé sur la mer bleue. `poser()` remplit
+   un rectangle sans jamais déformer, et le bloc de texte se mesure
+   avant : allonger l'accroche ne peut plus recouvrir l'image.
+3. **Les trois vignettes de « la boucle » montraient trois fois la même
+   île.** Trois photos identiques à côté de trois phrases qui promettent
+   une progression, c'est décorer, pas expliquer.
+
+Et le fond des bandes est **celui du cadre**, jamais le crème de la
+planche : le ciel change avec l'heure, et une bande crème sous un cadre
+rose fait une couture horizontale en travers de l'image. L'encre du
+titre bascule en crème quand ce fond est sombre.
+
+### Les sources, et la règle qui les gouverne
+
+Une seule des cinq directions cite des travaux publiés, et la page
+`/pourquoi-un-jeu-calme` les porte toutes. **Trois règles, et elles ne
+se négocient pas :**
+
+1. **Aucune étude citée ne porte sur ce jeu-ci.** On rapporte ce
+   qu'elles ont mesuré — auteurs, revue, année, effectif, DOI — et le
+   jeu se place à côté. « Des études montrent que Dan's Island aide
+   votre enfant » serait faux, invérifiable, et c'est exactement le
+   genre de promesse qu'on fait à des parents parce qu'ils ne vont pas
+   vérifier.
+2. **On cite ce qui dérange autant que ce qui arrange.** La plus grosse
+   étude du lot — 38 935 joueurs, sept jeux, six semaines — ne trouve
+   *aucun* lien causal entre temps de jeu et bien-être, pas même
+   positif. La citer renforce le propos au lieu de l'affaiblir, parce
+   que le propos n'est pas « les jeux font du bien » mais « le temps
+   n'est pas la bonne question ». Un dossier qui ne garde que les
+   résultats flatteurs se reconnaît à ça, et un parent qui vérifie une
+   source vérifie les autres.
+3. **On dit sur qui ont porté les études.** Trois des quatre portent sur
+   des adultes. L'omettre ferait passer des résultats d'adultes pour des
+   résultats d'enfants.
+
+Les quatre : Ballou et al. 2025 (RSOS 12:241174), Vuorre et al. 2022
+(RSOS 9:220411), Toppe et al. 2019 (PLOS ONE 14:e0221092), Johannes et
+al. 2021 (RSOS 8:202049). Les liens sortent **par DOI**, pas vers des
+articles qui les résument : une source qu'on ne peut pas ouvrir n'est
+pas une source.
+
+### Le calendrier ne porte pas de dates
+
+Trente et une publications, une par jour. `PAR_JOUR` existe pour que
+passer à deux soit **une ligne**, et c'est un arbitrage écrit : sur un
+compte neuf, deux par jour ne font pas deux fois la portée, elles se la
+partagent ; le stock se brûle ; et deux par jour dès le premier jour,
+par l'API, avec des images de même facture, c'est le profil qu'un réseau
+amortit.
+
+**Le workflow ne tient aucun compteur.** Il lit les légendes déjà parues
+sur le compte et publie la plus ancienne entrée qui n'y est pas. Donc :
+une exécution sautée par GitHub se rattrape, une exécution lancée deux
+fois ne publie pas deux fois, et reprendre après une pause ne demande de
+remettre aucun état à jour. C'est la règle déjà tenue en SQL pour
+`visites` et `parrainages` — le test d'existence *est* l'écriture.
+
+Le repère est la **première ligne de la légende**, pas un identifiant
+caché : ce qui se lit dans la publication est ce qui sert à la
+reconnaître, donc on peut vérifier à l'œil ce que le programme a conclu.
+Son unicité est vérifiée avant toute publication.
+
+Quatre garde-fous, chacun pour une panne qui serait silencieuse :
+
+- l'image est vérifiée joignable **avant** de créer le conteneur, sinon
+  on laisse des conteneurs orphelins sur le compte ;
+- le déclenchement à la main est **à blanc par défaut** : on ne publie
+  pas sur un compte public en cliquant pour voir ;
+- `concurrency` empêche deux exécutions de se chevaucher ;
+- un pas dit combien de jours il reste au jeton, qui vit 60 jours. Sans
+  lui, le compte s'arrête en silence au deuxième mois.
+
+**Ne jamais remettre `toJSON(secrets)`**, ici comme ailleurs : GitHub
+refuse de planifier un tel workflow, avant le job, donc sans aucun log.
+La consigne datait du 19/09 ; elle est maintenant mesurée.
+
+### Ce qu'il faut de Simon, et ce qui ne doit pas circuler
+
+Le compte en **Professionnel**, une app Meta, et le panneau « API setup
+with Instagram login » — **pas de Page Facebook, pas d'App Review** pour
+publier sur son propre compte, vérifié le 21/09. Puis deux secrets :
+
+    IG_USER_ID        un identifiant, il peut circuler
+    IG_ACCESS_TOKEN   un secret, jamais dans une conversation
+
+C'est la même distinction que pour Cloudflare le 20/09 : un Account ID
+se lit dans `wrangler whoami`, un jeton d'API resterait écrit.
+
+### `test/instagram.mjs`, onzième harnais
+
+Cette logique se trompe **en silence** : publier deux fois, sauter un
+jour pour toujours, republier tout le calendrier — aucune n'est une
+erreur. Elle ne peut donc pas s'éprouver en production, une fois par
+jour, sur un compte public. D'où `IG_API`, qui pointe l'API sur un faux
+serveur local. Un workflow qui ne s'essaie qu'en production n'est pas
+essayé.
+
+Trois erreurs de mesure en l'écrivant, et les trois sont des rechutes :
+
+1. **`execFileSync` bloque la boucle d'événements**, donc le faux
+   serveur — qui vit dans le même processus — ne pouvait pas répondre.
+   Cinq sections sur six ont échoué, et la seule qui passait était « à
+   blanc, aucun appel d'écriture » : vraie parce que **rien ne s'était
+   produit du tout**. Le repère absent qui absout, nommé le 20/09 pour
+   le rayon Bâtiments. Chaque section vérifie donc d'abord qu'une entrée
+   a bien été choisie.
+2. **J'ai accusé le proxy du conteneur** d'avaler les appels à
+   127.0.0.1. Mesuré : un `fetch` local répond en 31 ms. Faux — et
+   c'est « mesurer d'abord », retourné contre moi.
+3. **Le contrôle de `toJSON(secrets)` tombait sur sa propre
+   interdiction** : l'en-tête du workflow écrit ces mots pour dire de ne
+   jamais les remettre. On retire les commentaires avant de chercher.
+   C'est le « shell » cherché dans sa propre bulle, du 19/09 : une
+   assertion se vérifie contre ce que le fichier **fait**, pas contre ce
+   qu'il raconte.
+
+### Ce que rien ici ne peut vérifier
+
+**Que la légende décrive ce que l'image montre.** L'automne ne change la
+clarté du sol que de 182 à 180, et ce sont les feuilles qui le disent —
+or une image fixe en attrape deux ou trois. Une carte titrée « en
+octobre, les feuilles tombent » peut n'en montrer aucune. Chaque carte
+se regarde avant de partir : c'est la limite déjà écrite pour le son,
+pour les deux relevés de genres et pour les six bâtiments. Il y a des
+choses dont le juge est quelqu'un.
+
+Et l'API de Meta elle-même : le faux serveur rend ce que la
+documentation décrit. Si Meta change la forme d'une réponse, seul un
+vrai appel le dira.
+
+## La cinquième page éditoriale, et l'en-tête qui se repliait — 21/09/2026
+
+`/pourquoi-un-jeu-calme` (+ `/why-calm-games`). Les quatre autres pages
+disent *comment* ; celle-ci dit *pourquoi*, et c'est la seule qui cite
+des sources — voir la section précédente pour les trois règles qui la
+gouvernent.
+
+`supabase/2026-09-21_slug_detente.sql`, **à jouer**, rejouable : il
+réserve les deux nouveaux slugs. Sans lui, un joueur prend
+`pourquoi-un-jeu-calme` comme adresse d'île, la fonction répond avant le
+catch-all, et **son île devient inatteignable** — sans erreur et sans
+trace. Ce défaut se rouvre à chaque page ajoutée, et c'est pour ça que
+le contrôle 3 de `test/robots.mjs` croise les deux listes.
+
+`_pages.js` écrit « ne pas en faire cinquante », et la consigne tient :
+ce n'est pas une ferme à contenu, c'est la page qu'un parent cherche
+quand il arbitre.
+
+### Le défaut trouvé au passage, et il était plus vieux que la page
+
+La cinquième page fait replier l'en-tête entre 760 et 820 px. Mais la
+comparaison à quatre pages a dit mieux : **il se repliait déjà de 641 à
+720 px**, sous un seuil de 640 px qui avait l'air raisonnable. Une porte
+corail tombée sous son propre menu — exactement le défaut que le champ
+`court` existait pour empêcher, et que personne n'avait vu parce que
+personne ne l'avait mesuré.
+
+Resserrer police et gouttières a été éprouvé : **ça ne suffit pas**, la
+bande 641-720 reste repliée. Le seuil passe donc à 860 px, ce qui répare
+les deux bandes. Le menu du haut s'en va entre 640 et 860, mais **le
+pied porte la liste complète** : on perd un raccourci qui était cassé à
+ces largeurs-là, pas une page.
+
+C'est la section 5 de `test/design.mjs`, 90 mesures — cinq pages fois
+dix-huit largeurs. Éprouvée en remettant le seuil à 640 : 30 replis,
+nommés par page et par largeur.
+
+**Quatre sondes ont mesuré la mauvaise chose avant celle-là**, et les
+deux dernières rendaient des chiffres *stables et faux* :
+
+- `document.querySelector('header')` attrape `<header class="banniere">`,
+  le bandeau de titre, qui répond 43 px à toutes les largeurs sans rien
+  dire du menu. Le repère est `header.haut`.
+- Compter les ordonnées distinctes des liens rendait « 3 rangées » sur
+  un en-tête de 43 px de haut, ce qui ne peut pas être vrai : le logo,
+  les liens et la porte n'ont ni la même police ni le même alignement
+  vertical, donc leurs boîtes commencent à trois hauteurs différentes
+  **sur la même ligne**. Ce qui se mesure, c'est la hauteur de
+  l'en-tête.
+
+### Le piège des accents graves, rouvert trois fois en une nuit
+
+Une apostrophe inversée dans un commentaire **à l'intérieur d'un
+littéral de gabarit** ferme la chaîne, et le module ne se charge plus du
+tout. C'était écrit depuis le 20/09 pour les commentaires HTML de
+`functions/_commun.js`. Je l'ai rouvert dans le CSS de ce même fichier,
+puis deux fois dans `social/maquettes.mjs` — **les maquettes sont des
+littéraux de gabarit**, et leurs commentaires aussi.
+
+Une consigne écrite dans un fichier ne protège pas les autres fichiers.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.

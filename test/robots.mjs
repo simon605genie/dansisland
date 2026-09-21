@@ -21,7 +21,7 @@
    Pages Functions, qui ne tournent pas ici. Leur contenu est donc vérifié
    dans la source, leur rendu ne l'est pas. */
 import { servir, compteur } from './aide.mjs';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 
 const s = await servir(8203);
 const c = compteur();
@@ -77,8 +77,13 @@ c.titre('1. la page servie, sans une ligne de JavaScript');
   const chemins = [...commun0.matchAll(/chemin:\s*'(\/[a-z-]+)'/g)].map(m => m[1]);
   const liens = chemins.filter(p => html.indexOf('href="' + p + '"') >= 0);
   console.log('     liens : ' + liens.join(' · '));
-  c.dit(chemins.length === 4 && liens.length === 4,
-        'les quatre pages éditoriales sont reliées depuis l’accueil (' + liens.length + '/' + chemins.length + ')');
+  // **Le rapport, pas le nombre.** « Quatre sur quatre » devient faux le
+  // jour où une cinquième page arrive, et rouge pour rien — alors que ce
+  // qu'on veut dire est « toutes ». Le plancher garde l'assertion de
+  // comptage : un contrôle qui lit zéro chemin passerait sinon au vert.
+  c.dit(chemins.length >= 4, 'les chemins de PAGES ont été lus (' + chemins.length + ')');
+  c.dit(liens.length === chemins.length,
+        'chaque page éditoriale est reliée depuis l’accueil (' + liens.length + '/' + chemins.length + ')');
   c.dit(/<link rel="canonical" href="https:\/\/dansisland\.app\/">/.test(html), 'la page porte son canonique');
   c.dit(/og:image" content="https:/.test(html), 'et une image de partage absolue et en https');
 }
@@ -117,8 +122,9 @@ c.titre('3. les quatre pages éditoriales, et les listes qui doivent s’accorde
   const commun = lire('functions/_commun.js');
   const pages = [...commun.matchAll(/chemin:\s*'(\/[a-z-]+)'/g)].map(m => m[1]);
   const alias = [...commun.matchAll(/alias:\s*'(\/[a-z-]+)'/g)].map(m => m[1]);
-  c.dit(pages.length === 4, 'quatre pages déclarées dans PAGES (' + pages.length + ')');
-  c.dit(alias.length === 4, 'et leurs quatre alias (' + alias.length + ')');
+  c.dit(pages.length >= 4, 'les pages de PAGES ont été lues (' + pages.length + ')');
+  c.dit(alias.length === pages.length,
+        'chaque page a son alias anglais (' + alias.length + '/' + pages.length + ')');
   // Le canonique est le français : c'est ce qu'un enfant francophone tape.
   c.dit(pages.every(p => /^\/[a-z-]+$/.test(p) && !/^\/(how|features|build|post)/.test(p)),
         'les chemins canoniques sont en français (' + pages.join(' · ') + ')');
@@ -141,7 +147,8 @@ c.titre('3. les quatre pages éditoriales, et les listes qui doivent s’accorde
     try { lire('functions' + p + '.js'); return false; } catch (e) { return true; }
   });
   c.dit(sansRoute.length === 0,
-        'les huit adresses ont leur fichier de route' + (sansRoute.length ? ' → ' + sansRoute.join(', ') : ''));
+        'les ' + (pages.length + alias.length) + ' adresses ont leur fichier de route' +
+        (sansRoute.length ? ' → ' + sansRoute.join(', ') : ''));
 
   /* **Les huit** routes doivent rendre un chemin **canonique**, pas le
      leur : sinon deux adresses se déclarent chacune canonique et un moteur
@@ -168,7 +175,37 @@ c.titre('3. les quatre pages éditoriales, et les listes qui doivent s’accorde
 
      Deux listes qui doivent rester d'accord, donc, et ce contrôle est le
      seul endroit qui les regarde ensemble. */
-  const sql = lire('supabase/2026-09-20_slugs_reserves.sql');
+  /* **On lit le dernier fichier qui redéfinit `slug_reserve()`**, pas un
+     fichier nommé en dur. Le 21/09, une cinquième page est arrivée avec
+     son propre fichier de réservation, et ce contrôle regardait toujours
+     celui du 20/09 : il a donc dit « pourquoi-un-jeu-calme n'est pas
+     réservé » alors qu'il l'était — rouge pour la mauvaise raison, ce qui
+     use un contrôle aussi sûrement qu'un angle mort.
+
+     Les fichiers sont préfixés par leur date, donc l'ordre alphabétique
+     est l'ordre chronologique, et `create or replace` fait que le dernier
+     gagne en base. Le contrôle lit exactement ce que la base finira par
+     porter. */
+  const definit = f => /create or replace function public\.slug_reserve/.test(lire('supabase/' + f));
+  const tous = readdirSync(new URL('../supabase/', import.meta.url))
+    .filter(f => f.endsWith('.sql')).filter(definit);
+  /* **Seules les migrations datées comptent**, et `schema.sql` est le
+     socle. Premier jet : je triais tous les fichiers par ordre
+     alphabétique en disant « le dernier fait foi » — or `schema.sql` n'a
+     pas de préfixe de date, donc il trie **après** 2026-09-21 et portait
+     la définition d'origine à seize noms. Le contrôle a donc annoncé que
+     les dix adresses n'étaient pas réservées alors qu'elles l'étaient.
+
+     « L'ordre alphabétique est l'ordre chronologique » n'est vrai que
+     des fichiers qui portent une date. C'est la même erreur que de
+     mesurer un en-tête sur le mauvais élément : une règle juste,
+     appliquée à un ensemble qu'elle ne décrit pas. */
+  const dates = tous.filter(f => /^\d{4}-\d{2}-\d{2}_/.test(f)).sort();
+  const retenu = dates.length ? dates[dates.length - 1] : 'schema.sql';
+  c.dit(tous.length > 0, 'au moins un fichier SQL définit slug_reserve()');
+  console.log('     slug_reserve() défini par : ' + tous.join(' · '));
+  console.log('     la dernière migration datée fait foi : ' + retenu);
+  const sql = lire('supabase/' + retenu);
   const bloc = sql.slice(sql.indexOf('select lower(s) in ('), sql.indexOf('$$;'));
   const reserves = [...bloc.matchAll(/'([a-z0-9-]+)'/g)].map(m => m[1]);
   console.log('     réservés : ' + reserves.length + ' noms');
@@ -176,7 +213,8 @@ c.titre('3. les quatre pages éditoriales, et les listes qui doivent s’accorde
   const nus = pages.concat(alias).map(p => p.slice(1));
   const oubliees = nus.filter(n => reserves.indexOf(n) < 0);
   c.dit(oubliees.length === 0,
-        'les huit adresses sont réservées en base' + (oubliees.length ? ' → ' + oubliees.join(', ') : ''));
+        'les ' + nus.length + ' adresses sont réservées en base' +
+        (oubliees.length ? ' → ' + oubliees.join(', ') : ''));
   // Les quinze noms d'avant ne doivent pas avoir disparu au passage.
   const avant = ['api', 'admin', 'app', 'archipel', 'auth', 'compte', 'src', 'www'];
   const perdus = avant.filter(n => reserves.indexOf(n) < 0);
@@ -199,7 +237,8 @@ c.titre('3. les quatre pages éditoriales, et les listes qui doivent s’accorde
   const titres = [...mod.matchAll(/^    titre:\s*'([^']*)'/gm)].map(m => m[1]);
   const sansGenre = titres.filter(t => !/jeu relaxant/i.test(t));
   console.log('     titres   : ' + titres.length + ' · sans le genre : ' + (sansGenre.length || 'aucun'));
-  c.dit(titres.length === 4, 'les quatre titres ont été lus (' + titres.length + ')');
+  c.dit(titres.length >= 4 && titres.length === contenu.length,
+        'un titre par page (' + titres.length + '/' + contenu.length + ')');
   c.dit(sansGenre.length === 0,
         'et chacun porte le positionnement' + (sansGenre.length ? ' → ' + sansGenre.join(' / ') : ''));
 }
@@ -242,8 +281,8 @@ c.titre('4. le rang des cinq — cinq cartes, cinq endroits');
   const rendus = {};
   for (const p of PAGES) rendus[p.chemin] = await (await rendre(p.chemin, {
     next: () => new Response('next', { status: 404 }) })).text();
-  c.dit(Object.keys(rendus).length === 4,
-        'les quatre pages ont été rendues (' + Object.keys(rendus).length + ')');
+  c.dit(Object.keys(rendus).length === PAGES.length && PAGES.length >= 4,
+        'les ' + PAGES.length + ' pages ont été rendues');
 
   /* Une cible doit exister des deux côtés : la page, et l'ancre dedans.
      Une ancre absente ne lève rien — le saut ne fait simplement rien, et
