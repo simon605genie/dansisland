@@ -1,0 +1,254 @@
+{
+  "parJour": 1,
+  "total": 31,
+  "posts": [
+    {
+      "n": 1,
+      "image": "01-ouverture.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/01-ouverture.jpg",
+      "maquette": "claim",
+      "legende": "Voilà Dan’s Island. Une île à soi, qu’on bâtit case par case.\n\nPas de score, pas de minuteur, pas de partie perdue — ce n’est pas une fonctionnalité qui manque, c’est la décision de départ.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 2,
+      "image": "02-nuit-phare.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/02-nuit-phare.jpg",
+      "maquette": "detail",
+      "legende": "La nuit, le phare balaie la mer et les lucioles sortent.\n\nRien ne se passe. C’est exactement ce qu’on lui demande.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 3,
+      "image": "03-ce-quil-ny-a-pas.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/03-ce-quil-ny-a-pas.jpg",
+      "maquette": "absence",
+      "legende": "Il n’y a rien à gagner, et rien à perdre.\n\nLa monnaie du jeu se gagne en jouant et ne s’achète pas : il n’y a aucun paiement réel, et il n’y en aura jamais.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 4,
+      "image": "04-comment-on-joue.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/04-comment-on-joue.jpg",
+      "maquette": "boucle",
+      "legende": "Tout le jeu tient en trois gestes.\n\nEt le troisième est la règle qui tranche tout le reste : l’île grandit parce que quelqu’un est passé, jamais parce que le temps passe.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 5,
+      "image": "05-sans-gagnant.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/05-sans-gagnant.jpg",
+      "maquette": "source",
+      "legende": "Une étude de 2019 sur 96 enfants de 4 à 5 ans : après un jeu compétitif, ils partagent moins avec des enfants qui n’avaient pas joué.\n\nElle ne porte pas sur Dan’s Island, et on ne le prétendra pas. Elle dit juste pourquoi ce jeu n’a pas de gagnant. Sources sur dansisland.app/pourquoi-un-jeu-calme\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 6,
+      "image": "06-la-maree.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/06-la-maree.jpg",
+      "maquette": "detail",
+      "legende": "La marée découvre un anneau de sable mouillé, et y laisse trois choses à ramasser.\n\nComme la vraie, elle passe cinquante minutes plus tard chaque jour — donc l’enfant qui joue toujours après l’école ne voit pas toujours la même moitié du jeu.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 7,
+      "image": "07-temps-decran.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/07-temps-decran.jpg",
+      "maquette": "source",
+      "legende": "Oxford, 2025 : 703 joueurs, 150 jeux, 140 000 heures de jeu mesurées. La durée ne prédit rien ; ce qu’on en retire, si.\n\nL’étude porte sur des adultes, et pas sur ce jeu-ci. On la cite pour ce qu’elle a mesuré — les quatre sources sont en ligne.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 8,
+      "image": "08-linterieur.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/08-linterieur.jpg",
+      "maquette": "detail",
+      "legende": "Trois pièces à décorer : un salon, une chambre, un atelier. Des tapis, des meubles, des tableaux au mur, un vase posé sur la commode.\n\nUn meuble qui ne peut pas aller là où on le pose le dit, au lieu d’effacer ce qui était là.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 9,
+      "image": "09-le-chien.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/09-le-chien.jpg",
+      "maquette": "claim",
+      "legende": "On sort le chien une fois par jour. Il marche devant, s’arrête pour renifler, et si on le distance il s’assied.\n\nIl n’y a aucune façon de rater la promenade. Le seul enjeu, c’est qu’on ne peut pas la faire en regardant ailleurs.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 10,
+      "image": "10-les-saisons.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/10-les-saisons.jpg",
+      "maquette": "detail",
+      "legende": "En décembre, le sol est blanc. En mars, des pétales. En septembre, les feuilles tombent.\n\nUne saison ajoute, elle ne repeint jamais : la neige se pose par-dessus ce que l’enfant a choisi, elle ne le remplace pas.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 11,
+      "image": "11-la-pluie.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/11-la-pluie.jpg",
+      "maquette": "detail",
+      "legende": "Les mouettes se sont posées, les nuages sont descendus d’un cran.\n\nRien ne s’abîme et rien ne pousse : c’est juste la pluie. Il n’y a pas de mauvais temps dans ce jeu.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 12,
+      "image": "12-le-livre-dor.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/12-le-livre-dor.jpg",
+      "maquette": "claim",
+      "legende": "C’est le seul endroit du jeu où le texte de quelqu’un arrive sur l’écran d’un autre.\n\nEt c’est ce qui fait grandir la terre : dix mots reçus, un cran d’île en plus. Le propriétaire peut retirer un mot quand il veut.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 13,
+      "image": "13-la-chambre.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/13-la-chambre.jpg",
+      "maquette": "detail",
+      "legende": "Trois pièces, chacune avec son sol, ses murs et ses meubles. Un vase se pose sur la commode, un tableau s’accroche au mur.\n\nUn meuble qui ne peut pas aller là où on le pose le dit, au lieu d’effacer ce qui était là.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 14,
+      "image": "14-peindre-le-sol.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/14-peindre-le-sol.jpg",
+      "maquette": "detail",
+      "legende": "Douze couleurs, un chemin qu’on trace, une plage qu’on dessine soi-même.\n\nLa peinture se pose sur le sol sans changer ce qu’est la case : on peut faire un chemin bleu sans que l’eau vienne avec.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 15,
+      "image": "15-rien-a-perdre.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/15-rien-a-perdre.jpg",
+      "maquette": "absence",
+      "legende": "Un requin traverse au large, un poisson saute, un voilier passe au nord. Aucun ne peut toucher le bonhomme.\n\nLa mer qui remonte le repose à terre au lieu de le noyer. C’est la même règle que le chien qui s’assied.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 16,
+      "image": "16-la-carte-postale.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/16-la-carte-postale.jpg",
+      "maquette": "boucle",
+      "legende": "Il n’y a pas de code de parrainage à retenir : l’adresse de ton île en est un.\n\nEnvoyer une carte ne rapporte rien. Ce qui paie, c’est quelqu’un qui arrive.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 17,
+      "image": "17-le-visage.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/17-le-visage.jpg",
+      "maquette": "claim",
+      "legende": "Une grille de 24 sur 24 et treize couleurs, sur la tête du bonhomme.\n\nPartout ailleurs on choisit dans une liste. Ici on dessine.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 18,
+      "image": "18-le-potager.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/18-le-potager.jpg",
+      "maquette": "detail",
+      "legende": "Le potager met six jours. Un pas par jour, et rien à arroser.\n\nC’est le seul objet du jeu dont tout le propos est qu’il ne se passe rien aujourd’hui, et qu’il faut revenir demain. Rien ne meurt jamais.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 19,
+      "image": "19-la-brume.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/19-la-brume.jpg",
+      "maquette": "detail",
+      "legende": "Le temps change toutes les deux heures et demie, et il est le même pour tout l’archipel.\n\nDonc deux enfants qui jouent le même soir peuvent en parler.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 20,
+      "image": "20-pas-de-pub.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/20-pas-de-pub.jpg",
+      "maquette": "absence",
+      "legende": "Pas de pub, aucun paiement réel, et rien qui rappelle de revenir.\n\nLe seul texte qui circule est un mot laissé sur le livre d’or d’une île — public, et effaçable par celui qui le reçoit.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 21,
+      "image": "21-les-batiments.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/21-les-batiments.jpg",
+      "maquette": "detail",
+      "legende": "Une école, un restaurant, une ferme, un lieu de culte. Chacun occupe quatre cases, comme la maison.\n\nEt chacun a un habitant qui en sort, va chez le voisin, et lève le bras en te croisant.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 22,
+      "image": "22-la-dalle.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/22-la-dalle.jpg",
+      "maquette": "claim",
+      "legende": "Pose des dalles côte à côte, marche dessus : ça fait une mélodie.\n\nLa hauteur se voit aussi, en points sur la dalle — il y a des appareils où le son ne sort pas.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 23,
+      "image": "23-le-coffre.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/23-le-coffre.jpg",
+      "maquette": "detail",
+      "legende": "Il ne tombe pas tout seul dans la bourse : on y va à pied, et on l’ouvre.\n\nSans le geste, il n’y a pas de moment. C’est la règle de tout le jeu : rien n’arrive par un bouton dans un panneau.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 24,
+      "image": "24-aucun-effet.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/24-aucun-effet.jpg",
+      "maquette": "source",
+      "legende": "La plus grosse étude du domaine ne trouve aucun effet — pas même positif.\n\nOn la cite parce qu’elle ne nous arrange pas, et parce qu’elle rend l’autre intéressante : si la durée ne fait rien, reste ce qu’on y fait.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 25,
+      "image": "25-larc-en-ciel.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/25-larc-en-ciel.jpg",
+      "maquette": "detail",
+      "legende": "L’arc-en-ciel ne se décide pas : il suit une éclaircie qui suit une pluie, et il ne dure qu’une demi-tranche.\n\nCe qui ne se rate jamais ne se remarque plus.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 26,
+      "image": "26-lappareil-photo.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/26-lappareil-photo.jpg",
+      "maquette": "claim",
+      "legende": "Le premier appui ouvre le viseur, le second déclenche. Cadrer est tout ce qu’il y a à faire.\n\nLa photo ne rapporte rien. Une photo qui paierait deviendrait une corvée, et le jeu en a déjà trois.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 27,
+      "image": "27-le-compagnon.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/27-le-compagnon.jpg",
+      "maquette": "detail",
+      "legende": "Un chat, un chien, un crabe, une mouette, un renard. Il te suit chez les voisins et dans la maison.\n\nIl ne rapporte rien et ne se perd jamais : il reste à moins d’une case, donc il n’a rien à rater.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 28,
+      "image": "28-les-voisins.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/28-les-voisins.jpg",
+      "maquette": "boucle",
+      "legende": "On visite l’île des autres à pied, et on y laisse quelque chose.\n\nOn ne s’y croise pas en temps réel, et ce n’est pas un manque : c’est ce qui fait qu’on peut y aller à son rythme.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 29,
+      "image": "29-le-vent.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/29-le-vent.jpg",
+      "maquette": "detail",
+      "legende": "Ce n’est pas dix arbres qui battent ensemble : c’est une onde qui passe, et la phase se déduit de la case.\n\nCe qui bat à l’unisson se lit comme un clignotement d’écran, pas comme du vent.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 30,
+      "image": "30-lhiver-la-nuit.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/30-lhiver-la-nuit.jpg",
+      "maquette": "detail",
+      "legende": "Le sol est blanc, les fenêtres sont allumées, et la Casserole est au-dessus de la mer.\n\nLes constellations ne se cliquent pas et ne rapportent rien. Dans ce jeu, ce qui brille est ce qu’on peut prendre — alors elles ne brillent pas, elles luisent.\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    },
+    {
+      "n": 31,
+      "image": "31-se-detendre.jpg",
+      "url": "https://raw.githubusercontent.com/simon605genie/dansisland/main/social/images/31-se-detendre.jpg",
+      "maquette": "claim",
+      "legende": "Trente jours qu’on publie cette île. Voilà ce qu’elle est, en une ligne.\n\nPersonne ne gagne, personne ne perd, tout se partage. Les raisons de ce choix — et les quatre études citées — sont sur dansisland.app/pourquoi-un-jeu-calme\n\ndansisland.app — gratuit, dans le navigateur, rien à installer.",
+      "hashtags": "#cosygame #jeurelaxant #wholesomegames #pixelart #isometricart #jeuxpourenfants #parentsdeleves #ecranssains #jeuxsanspub #jeuenfrancais #indiegame #gamedev #jeuindependant #devjournal #faitmain"
+    }
+  ]
+}
