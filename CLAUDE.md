@@ -3801,6 +3801,32 @@ Six choses à ne pas défaire.
    chargement. Pas de `name`, pas de `face` : personne ne parle, et
    `faceLue()` rend null, donc ils gardent des yeux dessinés.
 
+### Les habitants traversaient la maison — vu sur une capture, pas dans le code
+
+Le premier jet éprouvait le chemin avec `terre()`. Une école au nord et un
+restaurant au sud donnaient donc une rue qui **passe à travers la maison** :
+l'habitant se plantait dans le mur du salon, à côté du bonhomme. Ça ne se
+lit pas comme un défaut de collision, ça se lit comme un bug d'affichage,
+et c'est une capture d'écran qui l'a dit — pas la relecture, pas le
+harnais, qui mesurait bien 2x parce qu'ils marchaient *vraiment*.
+
+Le chemin demande maintenant à **`blocked()`**, qui est ce qui décide où le
+bonhomme peut marcher : même eau, même sable mouillé à marée basse — un
+habitant n'a pas à être plus frileux que le joueur — et **même maison**.
+Les objets, eux, ne bloquent toujours pas : `blocked()` ne les connaît pas,
+le bonhomme leur marche dessus aussi, et un habitant qui contournerait
+chaque buisson demanderait un chemin, donc un état.
+
+**Et il va chez le suivant plutôt que de disparaître.** Une maison posée
+entre deux bâtiments coupe la rue en deux : s'en tenir au plus proche
+faisait perdre l'habitant. On essaie donc les voisins du plus proche au
+plus loin, la maison en dernier. Perdre quelqu'un parce que le joueur a
+bâti au milieu se lit comme un bug, pas comme une règle.
+
+Coordonnées : `blocked()` prend du **continu** et fait le `floor` lui-même,
+comme pour `hero.x`. On ne lui passe ni un `Math.round` ni un décalage
+d'une demi-case — `centreDe()` rend déjà ce repère-là.
+
 ### Le bras qui salue, et les deux nombres qui ne se devinent pas
 
 `brasQuiSalue()` relit `W` et `H` **comme `drawChar` les calcule** : un

@@ -2520,10 +2520,22 @@ function avatarHabitant(o){
    séparément laisserait l'habitant sauter par-dessus un bras de mer pour
    reprendre sa marche de l'autre côté.
 
-   `terre()` et non `tileAt()!==EAU` : à marée basse le sable mouillé porte,
-   et un habitant qui refuserait d'y aller serait plus frileux que le
-   bonhomme. Il repose sur la terre ferme dès que la mer remonte, puisque
-   le chemin se recalcule à chaque image. */
+   **On demande à `blocked()`, pas à `terre()`.** C'est ce qui décide où le
+   bonhomme peut marcher, donc c'est ce qui doit décider où l'habitant
+   marche : même eau, même sable mouillé à marée basse — il n'a pas à être
+   plus frileux que le joueur — et **même maison**.
+
+   Cette maison-là est tout l'intérêt. Avec `terre()` seul, une école au
+   nord et un restaurant au sud donnaient une rue qui **traverse la
+   maison** : l'habitant se plantait dans le mur du salon, à côté du
+   bonhomme. Ça ne se lit pas comme un défaut de collision, ça se lit
+   comme un bug d'affichage — et c'est une capture d'écran qui l'a dit,
+   pas la relecture. Le chemin s'arrête maintenant devant la façade, et
+   l'habitant fait sa rue plus courte.
+
+   Les objets, eux, ne bloquent pas : `blocked()` ne les connaît pas, et
+   le bonhomme leur marche dessus aussi. Un habitant qui contournerait
+   chaque buisson demanderait un chemin, donc un état. */
 function cheminHabitant(o,cible){
   const a=centreDe(o.t,o.x,o.y);
   const dx=cible.x-a.x, dy=cible.y-a.y, L=Math.hypot(dx,dy);
@@ -2533,10 +2545,14 @@ function cheminHabitant(o,cible){
   // son centre, donc un habitant né plus près naîtrait dans son mur.
   const d0=1.35, dmax=L-1.35;
   if(dmax-d0<1.2) return null;
-  if(!terre(Math.round(a.x+ux*d0), Math.round(a.y+uy*d0))) return null;
+  // `blocked()` prend des coordonnées continues et fait le `floor` lui-même,
+  // comme pour `hero.x` : on ne lui passe donc ni un arrondi ni un décalage
+  // d'une demi-case. `centreDe()` rend déjà ce repère-là.
+  const libre=(u)=>!blocked(a.x+ux*u, a.y+uy*u);
+  if(!libre(d0)) return null;
   let fin=d0;
   for(let d=d0; d<=dmax; d+=0.25){
-    if(!terre(Math.round(a.x+ux*d), Math.round(a.y+uy*d))) break;
+    if(!libre(d)) break;
     fin=d;
   }
   if(fin-d0<1.2) return null;                // pas la place : pas d'habitant
@@ -2568,17 +2584,24 @@ function habitantsAu(t){
   for(const o of bats){
     // Le plus proche des autres, et la maison s'il est seul : un village
     // d'un seul bâtiment a quand même quelqu'un qui en sort.
-    // Centre à centre, des deux côtés : comparer un centre à une case
-    // d'ancrage décale toutes les distances d'une case et peut désigner le
-    // mauvais voisin quand deux bâtiments sont à peu près aussi loin.
+    /* **On essaie les voisins du plus proche au plus loin**, et la maison
+       en dernier, plutôt que de s'en tenir au plus proche.
+
+       Depuis que le chemin passe par `blocked()`, une maison posée entre
+       deux bâtiments coupe la rue en deux : le plus proche devient
+       injoignable, et s'en tenir à lui faisait **disparaître l'habitant**.
+       Perdre quelqu'un parce que le joueur a bâti au milieu se lit comme
+       un bug, pas comme une règle. Il va donc chez le suivant.
+
+       Centre à centre des deux côtés : comparer un centre à une case
+       d'ancrage décale toutes les distances d'une case et peut désigner
+       le mauvais voisin quand deux bâtiments sont à peu près aussi loin. */
     const moi=centreDe(o.t,o.x,o.y);
-    let cible=null, best=Infinity;
-    for(const q of bats){
-      if(q===o) continue;
-      const c=centreDe(q.t,q.x,q.y), d=Math.hypot(c.x-moi.x,c.y-moi.y);
-      if(d<best){ best=d; cible=c; }
-    }
-    const r=cheminHabitant(o, cible||mh);
+    const cibles=bats.filter(q=>q!==o).map(q=>centreDe(q.t,q.x,q.y))
+      .sort((c1,c2)=>Math.hypot(c1.x-moi.x,c1.y-moi.y)-Math.hypot(c2.x-moi.x,c2.y-moi.y));
+    cibles.push(mh);
+    let r=null;
+    for(const c of cibles){ r=cheminHabitant(o,c); if(r) break; }
     if(!r) continue;
     const ph=h2(o.x*5.3+2.9, o.y*11.7+1.1);
     const u=((t/HAB_TOUR+ph)%1+1)%1;
