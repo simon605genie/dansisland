@@ -1,0 +1,99 @@
+# ============================================================
+#  Publier sur Instagram, tout seul
+#
+#  Il ne tient **aucun compteur**. Il demande à Instagram ce qui est déjà
+#  en ligne, et publie la plus ancienne entrée du calendrier qui n'y est
+#  pas. Conséquences, et c'est pour elles que c'est écrit comme ça :
+#
+#    — une exécution sautée par GitHub se rattrape à la suivante ;
+#    — une exécution lancée deux fois ne publie pas deux fois ;
+#    — reprendre après une pause ne demande de remettre aucun état à jour.
+#
+#  C'est la règle déjà tenue en SQL pour `visites` et `parrainages` : le
+#  test d'existence *est* l'écriture, parce qu'un `select` suivi d'un
+#  `insert` laisse passer deux appels lancés dans la même seconde.
+#
+# ------------------------------------------------------------
+#  Ce qu'il faut avoir mis dans les secrets du dépôt
+#
+#    IG_USER_ID        l'identifiant du compte Instagram professionnel
+#    IG_ACCESS_TOKEN   le jeton longue durée (60 jours)
+#
+#  Les deux se lisent dans le panneau « API setup with Instagram login »
+#  de l'app Meta. Pas de Page Facebook, pas d'App Review : publier sur
+#  **son propre** compte ne les demande pas.
+#
+#  L'identifiant est un identifiant ; le jeton est un secret. Les deux
+#  vont quand même dans les secrets du dépôt, parce qu'un identifiant
+#  dans un fichier est un identifiant à changer le jour où le compte
+#  change.
+#
+#  **NE JAMAIS remettre `toJSON(secrets)` ici.** GitHub refuse de
+#  planifier un workflow qui sérialise le contexte des secrets en entier,
+#  il ne le dit nulle part, et il le bloque **avant** le job — donc sans
+#  aucun log. Ça a coûté treize exécutions muettes le 19/09. Les deux
+#  `[ -z … ]` du premier pas disent ce qui manque, et c'est assez.
+# ============================================================
+name: Publier sur Instagram
+
+on:
+  schedule:
+    # 19h30 à Bruxelles en heure d'été (UTC+2). Le cron est en UTC.
+    # Une publication par jour : voir `PAR_JOUR` dans social/calendrier.mjs.
+    - cron: '30 17 * * *'
+  workflow_dispatch:
+    inputs:
+      a_blanc:
+        description: 'À blanc : tout faire sauf publier'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  # Deux exécutions en même temps publieraient la même entrée : la
+  # seconde lirait l'état d'Instagram avant que la première n'ait écrit.
+  group: instagram
+  cancel-in-progress: false
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Les secrets sont-ils là ?
+        env:
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+        run: |
+          manque=0
+          if [ -z "$IG_USER_ID" ];      then echo "::error::IG_USER_ID manque";      manque=1; fi
+          if [ -z "$IG_ACCESS_TOKEN" ]; then echo "::error::IG_ACCESS_TOKEN manque"; manque=1; fi
+          if [ "$manque" = 1 ]; then
+            echo ""
+            echo "  Settings → Secrets and variables → Actions → New repository secret"
+            echo "  Les deux valeurs sont dans le panneau « API setup with Instagram login »"
+            echo "  de l'app Meta. Ne jamais coller le jeton ailleurs que là."
+            exit 1
+          fi
+          echo "COMPTE : ${IG_USER_ID:0:4}…   JETON : ***"
+
+      - name: Publier
+        env:
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          # Le déclenchement à la main est à blanc **par défaut** : on ne
+          # publie pas sur un compte public en cliquant pour voir.
+          A_BLANC: ${{ github.event_name == 'workflow_dispatch' && inputs.a_blanc || 'false' }}
+        run: node .github/publier-instagram.mjs
+
+      - name: Le jeton expire-t-il bientôt ?
+        if: always()
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+        # Un jeton longue durée vit 60 jours. Sans ce pas, le compte
+        # s'arrête en silence au deuxième mois — et « en silence » est
+        # exactement ce que ce dépôt refuse partout.
+        run: node .github/publier-instagram.mjs --jeton
