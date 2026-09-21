@@ -4694,8 +4694,8 @@ disent *comment* ; celle-ci dit *pourquoi*, et c'est la seule qui cite
 des sources — voir la section précédente pour les trois règles qui la
 gouvernent.
 
-`supabase/2026-09-21_slug_detente.sql`, **à jouer**, rejouable : il
-réserve les deux nouveaux slugs. Sans lui, un joueur prend
+`supabase/2026-09-21_slug_detente.sql`, **joué le 21/09/2026** et
+rejouable : il réserve les deux nouveaux slugs. Sans lui, un joueur prend
 `pourquoi-un-jeu-calme` comme adresse d'île, la fonction répond avant le
 catch-all, et **son île devient inatteignable** — sans erreur et sans
 trace. Ce défaut se rouvre à chaque page ajoutée, et c'est pour ça que
@@ -4968,11 +4968,19 @@ Six choses à ne pas défaire :
 6. **Chez un voisin, le bloc disparaît** : il parle de toi, pas de l'île
    qu'on regarde. La même ligne que le coffre fermé chez l'hôte.
 
-`supabase/2026-09-21_reponses_vues.sql`, **à jouer**, rejouable : une
-colonne, pas de table, pas de fonction, pas de policy — `iles_maj` ouvre
-déjà l'update au propriétaire. **Sans elle, le jeu marche** : les réponses
-s'affichent, seule la pastille attend, et `marquerReponsesVues()` avale son
-erreur comme `ramasser()` le fait pour `bourse_ramasser`.
+`supabase/2026-09-21_reponses_vues.sql`, **joué le 21/09/2026** et
+rejouable : une colonne, pas de table, pas de fonction, pas de policy —
+`iles_maj` ouvre déjà l'update au propriétaire. **Sans elle, le jeu
+marchait quand même** : les réponses s'affichaient, seule la pastille
+attendait, et `marquerReponsesVues()` avale son erreur comme `ramasser()`
+le fait pour `bourse_ramasser`. Ce repli reste écrit : il couvre la
+fenêtre entre un déploiement du client et le passage du SQL, qui se
+rouvrira au prochain chantier.
+
+*(Jouées toutes les deux le 21/09, sur parole : le conteneur ne joint pas
+Supabase — mesuré le 20/09 — donc aucune de ces deux lignes n'est une
+vérification de ma part. Ce qui se vérifie d'ici, c'est que le client
+marche dans les deux cas, et c'est ce que fait le contrôle 21.)*
 
 ### Le sentier des visiteurs
 

@@ -1,6 +1,7 @@
 -- ============================================================
 --  « Lila t'a répondu » — la pastille qui ne ment pas
 --  21/09/2026 · REJOUABLE (add column if not exists)
+--  JOUÉ le 21/09/2026. Le rejouer ne coûte rien.
 --
 --  À jouer dans l'éditeur SQL du projet **dansisland**
 --  (cgputbitzfgokpwbbind), jamais celui de mamash.
