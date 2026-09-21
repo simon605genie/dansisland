@@ -4,3 +4,7 @@ node_modules
 .env
 .env.local
 dist/
+
+# Les cadres bruts de la fabrique Instagram : un intermédiaire de réglage,
+# 3,4 Mo pour huit images. Ce qui part en ligne, ce sont les cartes.
+social/images/brut/
