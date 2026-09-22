@@ -19,6 +19,38 @@ Conséquence tenue depuis : aucun objet de ce projet ne porte un nom générique
 d'écosystème Supabase. Le trigger d'inscription s'appelle
 `dansisland_profil_a_la_creation`, jamais `on_auth_user_created`.
 
+## RÈGLE ABSOLUE — comment annoncer un SQL à jouer
+
+Vaut pour **toutes les sessions**, sans exception, dès qu'un fichier de
+`supabase/` attend d'être exécuté. Écrire « joue
+`supabase/2026-09-21_machin.sql` » ne suffit pas : ça demande d'ouvrir un
+éditeur, de trouver le fichier, de le sélectionner, de le copier, puis de
+retrouver le bon projet. Six gestes pour une ligne.
+
+Ce qu'il faut donner, dans cet ordre, à chaque fois :
+
+1. **Le lien de l'éditeur SQL du bon projet**, en clair, cliquable :
+   https://supabase.com/dashboard/project/cgputbitzfgokpwbbind/sql/new
+2. **Le contenu du fichier, en un seul bloc de code**, copiable d'un clic.
+   Le fichier **entier**, commentaires compris — ce sont eux qui disent
+   pourquoi, et ils restent dans l'historique du dashboard.
+3. Dire s'il est **rejouable**, et ce qui se passe **sans** lui (le jeu
+   marche-t-il quand même, et qu'est-ce qui attend).
+
+Trois choses qui cassent la copie en un clic, et qu'il ne faut donc jamais
+faire :
+
+- **couper le SQL en plusieurs blocs** avec de la prose entre les deux ;
+- **commenter à l'intérieur du bloc** pour expliquer à Simon : ce qui n'est
+  pas du SQL valide n'a rien à y faire, l'explication va au-dessus ou en
+  commentaire SQL du fichier lui-même ;
+- **résumer le fichier** plutôt que de le donner. Un SQL recopié à la main
+  dans un message diverge de celui du dépôt, et c'est le piège déjà nommé
+  partout ici : deux listes qui ne disent plus la même chose.
+
+Et la ligne de vérification qui va avec, toujours : **l'en-tête du
+dashboard doit afficher « dansisland »**, jamais « mamash's project ».
+
 ## Clés
 
 `src/config.js` porte une clé **publishable** (`sb_publishable_…`), publique par
