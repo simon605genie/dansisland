@@ -2515,6 +2515,27 @@ function avatarHabitant(o){
           outfit:p(7,CLOTH), acc:p(8,['aucun','aucun','aucun','chapeau','lunettes'])};
 }
 
+/* Le prénom se déduit de la case, **exactement comme la tenue**, et pour
+   la même raison : rien n'en part en base, aucune clé de plus dans
+   `mondeNu()`, et la même île rend les mêmes gens à chaque chargement.
+
+   Il vient de `NOMS_GENS`, la liste des vingt îles bot, et non d'une
+   seconde liste écrite à côté : deux listes de prénoms divergeraient au
+   premier ajout, et c'est la règle que ce fichier tient partout. Effet
+   voulu : le village porte les mêmes prénoms que l'archipel.
+
+   **Deux habitants d'une même île peuvent porter le même prénom, et on ne
+   corrige pas.** Dédoublonner demanderait de connaître tout le village,
+   donc de faire dépendre le nom de chacun de la présence des autres — et
+   effacer un bâtiment renommerait les voisins. C'est mot pour mot le
+   défaut des lanternes qui se déplaçaient au sixième ami : un nom qui
+   change quand on touche à autre chose ne se reconnaît plus. Un prénom
+   pur de sa case est stable pour toujours, et deux Nino dans un village,
+   ça existe. */
+function nomHabitant(o){
+  return NOMS_GENS[Math.floor(h2(o.x*3.1+9.4, o.y*17.3+6.8)*NOMS_GENS.length)%NOMS_GENS.length];
+}
+
 /* Le chemin d'un bâtiment vers un autre, **éprouvé de proche en proche**
    et jamais supposé. Un bâtiment au bord de l'île peut avoir la mer entre
    lui et son voisin, et un habitant qui marcherait sur l'eau est le défaut
@@ -2703,8 +2724,16 @@ function batimentsDuMonde(){
    a avancé et l'habitant se téléporterait au milieu de sa rue. Il tourne
    la tête vers toi et lève le bras en marchant, ce qu'on fait en croisant
    quelqu'un dans la vraie vie. */
+let habCache={t:NaN, v:[]};
 function habitantsAu(t){
-  const bats=batimentsDuMonde(); if(!bats.length) return [];
+  /* Le même `t` rend le même tableau, et il est demandé **deux fois par
+     image** depuis que `proximity()` veut savoir qui passe : une fois là,
+     une fois par `drawWorld()`. Or `cheminHabitant()` fait une
+     propagation de proche en proche par bâtiment. Recalculer à
+     l'identique soixante fois par seconde, c'est le
+     `getBoundingClientRect()` par frame déjà refusé pour `echelleEcran`. */
+  if(t===habCache.t) return habCache.v;
+  const bats=batimentsDuMonde(); if(!bats.length){ habCache={t, v:[]}; return habCache.v; }
   // La maison est le seul 2x2 qui ne soit pas dans `objects` : son centre
   // s'écrit ici comme `drawHouse()` l'écrit, `h.x+1`, et non par
   // `centreDe()`, qui ne connaît que le catalogue.
@@ -2726,11 +2755,16 @@ function habitantsAu(t){
        d'ancrage décale toutes les distances d'une case et peut désigner
        le mauvais voisin quand deux bâtiments sont à peu près aussi loin. */
     const moi=centreDe(o.t,o.x,o.y);
-    const cibles=bats.filter(q=>q!==o).map(q=>centreDe(q.t,q.x,q.y))
-      .sort((c1,c2)=>Math.hypot(c1.x-moi.x,c1.y-moi.y)-Math.hypot(c2.x-moi.x,c2.y-moi.y));
-    cibles.push(mh);
-    let r=null;
-    for(const c of cibles){ r=cheminHabitant(o,c); if(r) break; }
+    /* La cible garde **le bâtiment**, pas seulement son centre. C'est lui
+       qui donne le prénom de celui qu'on va voir et le nom de l'endroit,
+       et un centre tout seul ne sait plus d'où il vient. `b` vaut `null`
+       pour la maison, qui est le seul 2x2 absent d'`objects`. */
+    const cibles=bats.filter(q=>q!==o).map(q=>({b:q, c:centreDe(q.t,q.x,q.y)}))
+      .sort((u1,u2)=>Math.hypot(u1.c.x-moi.x,u1.c.y-moi.y)
+                    -Math.hypot(u2.c.x-moi.x,u2.c.y-moi.y));
+    cibles.push({b:null, c:mh});
+    let r=null, vers=null;
+    for(const q of cibles){ r=cheminHabitant(o,q.c); if(r){ vers=q.b; break; } }
     if(!r) continue;
     const ph=h2(o.x*5.3+2.9, o.y*11.7+1.1);
     const u=((t/HAB_TOUR+ph)%1+1)%1;
@@ -2744,12 +2778,89 @@ function habitantsAu(t){
     // le sens de l'écran qui décide du regard, pas le sens de la grille.
     const av=(r.x1-r.x0)-(r.y1-r.y0), aller=u<0.50;
     const salut=Math.hypot(hero.x-x, hero.y-y)<HAB_SALUT;
-    out.push({o, x, y, marche, salut,
+    out.push({o, x, y, marche, salut, vers, nom: nomHabitant(o),
       face: salut ? (hero.x-x)-(hero.y-y)>0 ? 'droite' : 'gauche'
            : marche ? ((aller?av:-av)>0?'droite':'gauche') : 'bas',
       a: avatarHabitant(o)});
   }
+  habCache={t, v:out};
   return out;
+}
+
+/* Celui qui passe assez près pour qu'on s'adresse la parole, et personne
+   s'il n'y en a pas.
+
+   **Il doit déjà te faire signe** : `h.salut` est la première condition,
+   avant même la distance. Le geste et la parole ne peuvent donc pas se
+   contredire par construction, plutôt que par deux constantes qu'il
+   faudrait penser à tenir d'accord — c'est la leçon des deux bornes de
+   l'octave de la dalle, écrites dans deux fonctions qu'on ne lit jamais
+   ensemble et qui avaient divergé.
+
+   Et il parle **de plus près qu'il ne salue** : on fait signe de loin, on
+   se parle en se croisant. Sans ça, quelqu'un à deux cases et demie
+   couvrirait la bulle de ce qu'on a sous les pieds. */
+const HAB_MOT=1.5;
+/* **On se dit bonjour une fois**, et ensuite on se fait signe.
+
+   Mesuré avant de l'écrire : deux bâtiments près du bonhomme, et le
+   murmure portait la même phrase sur **55 relevés sur 62**. Ils font
+   l'aller-retour toutes les quinze secondes, donc la bulle se rejouait à
+   chaque passage et occupait à elle seule le seul canal de texte du jeu —
+   celui du refus qui doit tomber là où est le doigt, du « +1 shell », de
+   la marée qui tourne. C'est la faute déjà nommée pour la pastille
+   allumée en permanence et pour l'invite de rotation qui battait sans
+   fin : ce qui se répète indéfiniment n'informe plus, il insiste.
+
+   Le geste, lui, **ne s'use pas** : ils continuent de lever le bras à
+   chaque passage. Ce qui se dit une fois est ce qui s'apprend une fois —
+   un prénom et une destination — et c'est exactement ce que fait
+   quelqu'un qu'on croise tous les jours dans sa rue.
+
+   Rien n'en part en base : un `Set` de cases, vidé dans `go()` comme
+   `dalleSous` et le viseur. Changer d'île rend donc les bonjours, ce qui
+   est juste — ce sont d'autres gens.
+
+   **Et la phrase ne porte pas de verrou**, contrairement à la lanterne
+   qui est juste au-dessus. C'est la distinction écrite en toutes lettres
+   sur `say()` : une bulle verrouillée dit un **état** — tu es sur une
+   lanterne, tu es devant une porte — et le ménage du bas la lève quand
+   l'état cesse. Un bonjour est un **événement** : il est dit, puis il
+   s'en va tout seul au bout de sa durée.
+
+   Ce n'est pas un détail de style, c'est ce qui rend « une fois »
+   possible. Avec un verrou, la sonde cesserait de rendre l'habitant à
+   l'image suivante — puisqu'il est déjà salué — le ménage lèverait la
+   bulle aussitôt, et la phrase n'aurait été à l'écran que seize
+   millisecondes. */
+const habSalues=new Set();
+/* **Un seul bonjour à la fois**, et c'est une panne mesurée, pas une
+   précaution. Deux habitants qui se croisent près de toi deviennent
+   éligibles à une image d'écart : le premier disait sa phrase, le second
+   la recouvrait à l'image suivante, et le relevé l'a montré — les deux
+   cases dans `habSalues` dès le premier échantillon, mais **une seule
+   phrase jamais lue**, l'autre affichée seize millisecondes.
+
+   C'est la faute que ce fichier a déjà nommée pour le message d'accueil :
+   « deux `say()` coup sur coup, et c'est le premier qui est perdu ». Elle
+   revient ici par une porte de derrière, parce que rien dans le code ne
+   disait qu'ils parlaient à tour de rôle.
+
+   Celui qui n'a pas pu parler n'est pas marqué : il le dira au passage
+   suivant. Rien ne se perd, c'est juste plus tard — la ligne du chien qui
+   s'assied. Et `HAB_DUREE` est lue aux **deux** endroits, la phrase et
+   l'attente : deux nombres pour la même idée finiraient par diverger. */
+const HAB_DUREE=3400, HAB_SOUFFLE=900;
+let habMuetJusqua=0;
+function habitantProche(){
+  if(dedans || tNow<habMuetJusqua) return null;
+  let p=null, d=HAB_MOT;
+  for(const h of habitantsAu(tNow)){
+    if(!h.salut || habSalues.has(h.o.x+','+h.o.y)) continue;
+    const e=Math.hypot(hero.x-h.x, hero.y-h.y);
+    if(e<d){ d=e; p=h; }
+  }
+  return p;
 }
 
 /* Le bras levé. Il est peint **après** le bonhomme, donc par-dessus : un
@@ -6159,8 +6270,18 @@ function surveillerLeTrajet(dt){
 }
 
 let last=0;
+/* L'horloge de l'image en cours, posée une fois et relue par ce qui n'est
+   pas du dessin. `proximity()` a besoin de savoir où sont les habitants,
+   or ils se déduisent de `t` et `t` n'est qu'un paramètre de `frame()` :
+   sans ce relais, il faudrait ou bien changer la signature de
+   `proximity()` — que le contrôle des sept rangs lit — ou bien lire le
+   tableau de l'image d'avant, ce qui est un décalage d'une frame dont
+   personne ne se souviendrait dans six mois. C'est la ligne déjà tenue
+   par `saisonNow` et `meteoNow` : ce qui vaut pour toute l'image se lit
+   une fois par image. */
+let tNow=0;
 function frame(t){
-  const dt=Math.min(34,t-last); last=t;
+  const dt=Math.min(34,t-last); last=t; tNow=t;
   // Avant le déplacement, pas après : c'est le masque du sable découvert
   // que lit `blocked()`, et un pas fait sur un masque périmé serait un pas
   // dans l'eau.
@@ -7489,6 +7610,26 @@ function tonObjet(t){
   const n=NOM_OBJ[t]||'objet';
   return ((FEM_OBJ[t] && !/^[aeiouyéèêàâîïôöûü]/i.test(n)) ? 'Ta ' : 'Ton ')+'<b>'+n+'</b>';
 }
+/* « à la ferme », « à l'école », « au restaurant ». Troisième forme après
+   « un » et « ton », et la seule qui **contracte** : au masculin, « à le »
+   n'existe pas.
+
+   Les six bâtiments couvrent les trois cas à eux seuls — la ferme est
+   féminine et commence par une consonne, l'école est féminine et élide,
+   le restaurant est masculin — donc écrire les articles à la main ici
+   aurait été faux dès le premier jour. C'est le défaut nommé trois fois
+   en une journée le 19/09 : « Te voilà dans le chambre », « Un fleur de
+   chez Lila », « La porte de Adam est fermée ». Un article en dur devant
+   un nom qui change ne peut pas être juste.
+
+   Rien à tenir d'accord : le genre vient de `FEM_OBJ`, l'élision de la
+   première lettre du nom. Un septième bâtiment est couvert le jour où il
+   entre au catalogue avec son `'f'`. */
+function auLieu(t){
+  const n=NOM_OBJ[t]||'objet';
+  if(/^[aeiouéèêàâîïôöûü]/i.test(n)) return 'à l’<b>'+n+'</b>';
+  return (FEM_OBJ[t]?'à la <b>':'au <b>')+n+'</b>';
+}
 // Ce que le chien laisse n'est dans aucun rayon de l'atelier — il n'y a rien
 // à poser, il arrive tout seul — mais les messages ont besoin de son nom,
 // sinon la maison dit « il y a un objet sous la maison ».
@@ -7787,6 +7928,45 @@ function proximity(){
     bulle('lanterne'+lan.x+'-'+lan.y,
       'Un mot '+deQui(lan.nom)+(lan.quand?', '+leJourDit(lan.quand):'')+
       '. Sa lanterne \u00e9claire ton \u00eele la nuit.');
+    return;
+  }
+  /* Un habitant qu'on croise **dit son pr\u00e9nom et o\u00f9 il va**, et c'est tout
+     ce qu'il dit.
+
+     Pourquoi celle-l\u00e0 et pas une autre phrase : ils traversaient l'\u00eele
+     sans qu'on sache pourquoi, et un personnage qui marche sans but se
+     lit comme un d\u00e9cor anim\u00e9. La phrase ne raconte rien qu'on ne puisse
+     v\u00e9rifier en le suivant des yeux \u2014 c'est \u00ab montrer, pas dire \u00bb, sauf
+     qu'ici le dire rend le montrer lisible.
+
+     **Ils ne disent jamais ce qu'un objet payant dit.** Pas la mar\u00e9e, que
+     vend la girouette \u00e0 42 shells ; pas les mots re\u00e7us, que vend la bo\u00eete
+     aux lettres \u00e0 55. Un b\u00e2timent \u00e0 34 qui donnerait la fonction d'un
+     objet \u00e0 42, c'est le trou du 19/09 \u2014 une visite chez un ami qui
+     offrait les trois articles les plus chers \u2014 rouvert par la porte des
+     habitants.
+
+     **Rang : le dernier**, apr\u00e8s la lanterne et apr\u00e8s le r\u00e9armement du
+     seuil. Quelqu'un qui passe n'interrompt pas ce qu'on est en train de
+     faire, et les sept rangs d'`agir()` ne bougent pas d'une ligne : il
+     n'y a ni plaque rose ni `E`, c'est la r\u00e8gle du potager et de la
+     lanterne.
+
+     Il se **rep\u00e8re par la case de son b\u00e2timent** et non par sa position,
+     qui est continue : un habitant, un b\u00e2timent, et c'est la seule chose
+     de lui qui ne bouge pas. */
+  const hab=habitantProche();
+  if(hab){
+    habSalues.add(hab.o.x+','+hab.o.y);
+    habMuetJusqua=tNow+HAB_DUREE+HAB_SOUFFLE;
+    say('<b>'+esc(hab.nom)+'</b> te fait signe. '+
+      (hab.vers
+        ? '\u00ab\u00a0Je vais voir <b>'+esc(nomHabitant(hab.vers))+'</b>, '+
+          auLieu(hab.vers.t)+'.\u00a0\u00bb'
+        : visiting
+          ? '\u00ab\u00a0Je vais dire bonjour '+deQui(world.owner)+'.\u00a0\u00bb'
+          : '\u00ab\u00a0Je passais dire bonjour chez toi.\u00a0\u00bb'),
+      0, HAB_DUREE);
     return;
   }
   /* Le ménage. Il était une **liste de préfixes écrite à la main**, et
@@ -10957,6 +11137,10 @@ async function go(slug){
   // Sans ça, une dalle à la même case sur l'île d'arrivée resterait muette :
   // la clé n'aurait pas changé, donc on croirait être encore dessus.
   dalleSous=null; dalleFrappee=null;
+  // Les bonjours se rendent en changeant d'île : ce sont d'autres gens, et
+  // deux bâtiments à la même case sur deux îles porteraient sinon le même
+  // repère — donc l'habitant d'en face serait muet avant d'avoir parlé.
+  habSalues.clear(); habMuetJusqua=0;
   // Une carte postale préparée chez soi puis envoyée depuis l'île d'un
   // autre montrerait l'île d'un autre. Le comptoir se ferme en partant,
   // comme le viseur.

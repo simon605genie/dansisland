@@ -1,6 +1,8 @@
 -- ============================================================
 --  Le cadeau du jour ne se perd plus
 --  21/09/2026 · REJOUABLE (create or replace)
+--  JOUÉ le 22/09/2026. Relevé au passage : 2 joueurs avec une série,
+--  la plus longue à 1 — donc personne n'a reculé.
 --
 --  À jouer dans l'éditeur SQL du projet **dansisland**
 --  (cgputbitzfgokpwbbind), jamais celui de mamash.

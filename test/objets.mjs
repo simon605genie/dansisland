@@ -1801,5 +1801,149 @@ c.titre('22. le cadeau du jour ne se perd plus');
   await b.ctx.close();
 }
 
+
+
+
+c.titre('23. les habitants ont un nom, et ils te le disent une fois');
+{
+  /* Ils traversaient l'île sans que personne sache pourquoi, et un
+     personnage qui marche sans but se lit comme un décor animé. Ils
+     disent maintenant leur prénom et où ils vont — une phrase qu'on peut
+     vérifier en les suivant des yeux, donc « montrer » et « dire »
+     d'accord pour une fois.
+
+     Trois défauts possibles, et les trois sont silencieux :
+
+     1. **deux bonjours coup sur coup.** Deux habitants deviennent
+        éligibles à une image d'écart, et le second recouvre le premier :
+        mesuré avant la correction, les deux cases étaient dans
+        `habSalues` dès le premier échantillon mais **une seule phrase**
+        avait jamais été lisible. C'est la faute déjà nommée pour le
+        message d'accueil ;
+     2. **la phrase qui se rejoue.** Ils font l'aller-retour toutes les
+        quinze secondes : sans le « une fois », le murmure portait la même
+        phrase sur 55 relevés sur 62, et le seul canal de texte du jeu
+        était confisqué ;
+     3. **l'article en dur.** « à le restaurant », « à la école ». Les six
+        bâtiments couvrent les trois cas à eux seuls, donc écrire les
+        articles à la main aurait été faux le premier jour. */
+  /* Les deux cases sont **mesurées, pas choisies** : la panne n° 1 ne se
+     produit que si les deux habitants sont à portée de parole *à la même
+     image*, et rien ne le garantit — les phases se déduisent de la case,
+     donc leur point de croisement est fixe. Quatre dispositions ont été
+     relevées sur deux tours entiers avant d'en écrire une :
+
+         deux face à face  (4,9)+(11,9)   21 relevés sur 130
+         deux plus serrés  (5,9)+(10,9)  130 sur 130
+         quatre autour                     0 sur 130
+         quatre en croix                   0 sur 130
+
+     Les deux dispositions à quatre bâtiments rendent **zéro** : les
+     habitants s'apparient entre eux et ne passent pas près du bonhomme.
+     Avec (4,9)+(11,9), la panne posée exprès **passait au vert** — le
+     contrôle ne fabriquait pas la situation qu'il prétendait couvrir.
+     (5,9)+(10,9) les tient à portée tout le temps, donc la collision est
+     certaine et non probable. */
+  const DEUX = [{ t: 'ferme', x: 5, y: 9 }, { t: 'ecole', x: 10, y: 9 }];
+  const UN = [{ t: 'ferme', x: 4, y: 9 }];
+
+  // Une panne qui n'en est pas une : elle expose l'état du jeu à la page.
+  // Sans ça on mesure un murmure sans savoir qui était éligible quand.
+  const SONDE = src => remplacer(src, /function frame\(t\)\{/,
+    'function frame(t){ window.__lieux=()=>[\'ferme\',\'ecole\',\'coiffeur\',' +
+    '\'supermarche\',\'restaurant\',\'culte\'].map(k=>auLieu(k).replace(/<[^>]*>/g,\'\'));' +
+    'window.__hab=()=>habitantsAu(tNow).length;');
+  const sp = await servir(8156, SONDE);
+
+  const suivre = async (objets, ms) => {
+    const o = await onglet(nav, {
+      taille: { width: 1200, height: 860 },
+      memoire: { 'test:objets': JSON.stringify(objets), 'dansisland:entre': '1',
+                 'dansisland:guide': '4', 'dansisland:muet': '1' },
+    });
+    await o.page.goto(sp.url, { waitUntil: 'load' });
+    // Le pas est de 250 ms parce que la phrase dure 3,4 s : un relevé plus
+    // lâche raterait une bulle qui ne tiendrait qu'une image, et c'est
+    // précisément la panne n° 1.
+    const vus = [], phrases = new Set();
+    let avant = '', bascules = 0;
+    for (let i = 0; i < ms / 250; i++) {
+      const w = await o.page.evaluate(() => {
+        const e = document.getElementById('whisper');
+        return e && e.classList.contains('on') ? e.textContent.trim() : '';
+      });
+      const bonjour = /te fait signe/.test(w);
+      if (bonjour) { phrases.add(w); vus.push(w); }
+      if (bonjour && w !== avant) bascules++;
+      avant = w;
+      await attendre(250);
+    }
+    return { o, phrases: [...phrases], vus, bascules,
+             hab: await o.page.evaluate(() => window.__hab()) };
+  };
+
+  // --- les six lieux, imprimés autant que vérifiés -------------------
+  const l = await onglet(nav, { taille: { width: 1200, height: 860 },
+    memoire: { 'dansisland:entre': '1', 'dansisland:guide': '4', 'dansisland:muet': '1' } });
+  await l.page.goto(sp.url, { waitUntil: 'load' });
+  await attendre(2200);
+  const lieux = await l.page.evaluate(() => window.__lieux());
+  console.log('     ' + lieux.join(' · '));
+  c.dit(lieux.length === 6, 'les six bâtiments ont une forme « où » (' + lieux.length + ')');
+  /* Ce que ce contrôle peut prouver : qu'**aucun article n'est écrit à la
+     main**, donc que les trois formes viennent du genre du catalogue et
+     de la première lettre du nom. Ce qu'il ne peut pas prouver, c'est le
+     français — il l'imprime, comme les deux relevés de genres et la ligne
+     des prénoms élidés, pour qu'une personne le relise une fois. */
+  c.dit(!lieux.some(x => /^à le |^à la [aeiouéè]|^au [aeiouéè]/i.test(x)),
+        'aucune contraction impossible (« à le », « à la école », « au école »)');
+  c.dit(lieux.filter(x => /^à la /.test(x)).length >= 1 &&
+        lieux.filter(x => /^à l’/.test(x)).length >= 1 &&
+        lieux.filter(x => /^au /.test(x)).length >= 1,
+        'les trois formes mordent vraiment : « à la », « à l’ », « au »');
+  await l.ctx.close();
+
+  // --- deux habitants : chacun parle, chacun une fois ----------------
+  const d = await suivre(DEUX, 16000);
+  // Un repère absent doit faire échouer ce qui s'appuie dessus, jamais
+  // l'absoudre : sans habitants, tout le reste serait vrai sans rien dire.
+  c.dit(d.hab === 2, 'les deux habitants sont bien là (' + d.hab + ')');
+  for (const p of d.phrases) console.log('     « ' + p + ' »');
+  c.dit(d.phrases.length === 2,
+        'les deux se présentent, et on a pu lire les deux (' + d.phrases.length + ')');
+  c.dit(d.phrases.every(p => /Je vais voir/.test(p)),
+        'chacun dit chez qui il va, et où');
+  c.dit(d.bascules === 2,
+        'aucun bonjour ne se rejoue en 16 s (' + d.bascules + ' phrases dites)');
+  // 3,4 s à 250 ms font ~13 relevés par phrase. Sous 6 pour deux phrases,
+  // c'est qu'une bulle a été recouverte avant d'avoir été lisible.
+  c.dit(d.vus.length >= 12,
+        'et chacune reste lisible (' + d.vus.length + ' relevés pour 2 phrases)');
+  c.dit(d.o.erreurs.length === 0, 'aucune erreur de console');
+  await d.o.ctx.close();
+
+  // --- un seul bâtiment : il vient dire bonjour chez toi -------------
+  const u = await suivre(UN, 12000);
+  c.dit(u.hab === 1, 'un seul habitant (' + u.hab + ')');
+  for (const p of u.phrases) console.log('     « ' + p + ' »');
+  c.dit(u.phrases.length === 1 && /bonjour chez toi/.test(u.phrases[0]),
+        'seul, il vient dire bonjour chez toi');
+  c.dit(u.o.erreurs.length === 0, 'aucune erreur de console');
+  await u.o.ctx.close();
+
+  /* **Ils ne disent jamais ce qu'un objet payant dit.** Pas la marée, que
+     vend la girouette à 42 shells ; pas les mots reçus, que vend la boîte
+     aux lettres à 55. Un bâtiment à 34 qui donnerait la fonction d'un
+     objet à 42, c'est le trou du 19/09 rouvert par une autre porte. Ça se
+     lit dans la source, parce qu'une phrase absente ne se mesure pas. */
+  const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const bloc = src.slice(src.indexOf('const hab=habitantProche();'),
+                         src.indexOf('const hab=habitantProche();') + 900);
+  c.dit(bloc.length > 400, 'le bloc du bonjour a été lu (' + bloc.length + ' caractères)');
+  c.dit(!/maree|Maree|mareeTexte|motsNouveaux|bourse|shell/i.test(bloc),
+        'il ne dit ni la marée, ni les mots reçus, ni les shells');
+  sp.fermer();
+}
+
 await nav.close(); s.fermer();
 process.exit(c.fin() ? 1 : 0);

@@ -5095,8 +5095,11 @@ leçon de `bourseCadeau()`, du 19/09, pour la deuxième fois.)*
 
 ## Le cadeau du jour ne se perd plus — 21/09/2026
 
-`supabase/2026-09-21_cadeau_sans_perte.sql`, **à jouer**, rejouable :
-un seul `create or replace`, et **une ligne change**.
+`supabase/2026-09-21_cadeau_sans_perte.sql`, **joué le 22/09/2026** et
+rejouable : un seul `create or replace`, et **une ligne change**. Le
+relevé de contrôle qui finit le fichier a rendu 2 joueurs avec une série,
+la plus longue à 1 — donc personne n'a reculé, ce que la migration
+promettait.
 
     b.serie := case when b.cadeau = j - 1 then b.serie + 1 else 1 end;
     b.serie := b.serie + 1;
@@ -5200,3 +5203,130 @@ assertion refuse de mesurer si le coffre ne s'est pas ouvert.
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
+
+## Les habitants ont un nom, et ils te le disent une fois — 22/09/2026
+
+**Aucune migration, aucune clé de plus dans `mondeNu()`, aucun gain.** Le
+prénom se déduit de la case du bâtiment, exactement comme la tenue depuis
+le 20/09 : la même île rend les mêmes gens à chaque chargement, et rien
+n'en part en base. La ligne déjà écrite pour les mouettes, le requin, le
+voilier, la pousse du potager et le sentier des lanternes.
+
+Ils marchaient entre les bâtiments sans que personne sache pourquoi, et
+un personnage qui marche sans but se lit comme un décor animé. Ils disent
+maintenant **leur prénom et où ils vont** — « Adam te fait signe. *Je vais
+voir Tom, à l'école.* » — et c'est une phrase qu'on peut vérifier en les
+suivant des yeux. C'est « montrer, pas dire », sauf qu'ici le dire rend le
+montrer lisible.
+
+Sept choses à ne pas défaire.
+
+1. **Ils ne disent jamais ce qu'un objet payant dit.** Pas la marée, que
+   vend la girouette à 42 shells ; pas les mots reçus, que vend la boîte
+   aux lettres à 55. Un bâtiment à 34 qui donnerait la fonction d'un objet
+   à 42, c'est le trou du 19/09 — une visite qui offrait les trois
+   articles les plus chers — rouvert par la porte des habitants. Le
+   contrôle 23 lit le bloc et refuse `maree`, `motsNouveaux`, `shell`.
+2. **Le bonjour est un événement, pas un état**, donc `say()` et **pas**
+   `bulle()`. C'est la distinction écrite en toutes lettres au-dessus de
+   `say()`, et ce n'est pas du style : une bulle verrouillée est levée par
+   le ménage dès que sa sonde cesse de rendre quelque chose. Comme
+   l'habitant est marqué salué à l'instant où il parle, le verrou aurait
+   été levé à l'image suivante et la phrase serait restée **seize
+   millisecondes** à l'écran.
+3. **Deux habitants ne parlent jamais dans le même souffle.** Mesuré, pas
+   supposé : les deux cases étaient dans `habSalues` dès le premier
+   échantillon et **une seule phrase avait jamais été lisible**. C'est mot
+   pour mot la faute nommée la veille pour le message d'accueil — « deux
+   `say()` coup sur coup, et c'est le premier qui est perdu ». D'où
+   `habMuetJusqua`, et `HAB_DUREE` lue aux **deux** endroits, la phrase et
+   l'attente : deux nombres pour la même idée finiraient par diverger.
+   Celui qui n'a pas pu parler n'est pas marqué — il le dira au passage
+   suivant, rien ne se perd.
+4. **On se dit bonjour une fois, et ensuite on se fait signe.** Mesuré
+   avant de l'écrire : deux bâtiments près du bonhomme, et le murmure
+   portait la même phrase sur **55 relevés sur 62**. Ils font
+   l'aller-retour toutes les quinze secondes, donc la bulle se rejouait à
+   chaque passage et confisquait le seul canal de texte du jeu — celui du
+   refus qui doit tomber là où est le doigt, du « +1 shell », de la marée
+   qui tourne. Le geste, lui, ne s'use pas.
+5. **`auLieu()` est la troisième forme après `unObjet()` et
+   `tonObjet()`**, et la seule qui contracte : « à le » n'existe pas. Les
+   six bâtiments couvrent les trois cas à eux seuls — la ferme est
+   féminine et commence par une consonne, l'école élide, le restaurant est
+   masculin — donc un article en dur aurait été faux le premier jour.
+   C'est le défaut nommé trois fois en une journée le 19/09 : « Te voilà
+   dans le chambre », « Un fleur de chez Lila », « La porte de Adam est
+   fermée ». Rien à tenir d'accord : le genre vient de `FEM_OBJ`,
+   l'élision de la première lettre du nom.
+6. **Deux habitants d'une même île peuvent porter le même prénom, et on ne
+   corrige pas.** Dédoublonner ferait dépendre le nom de chacun de la
+   présence des autres, donc **effacer un bâtiment renommerait les
+   voisins** : c'est mot pour mot le défaut des lanternes qui se
+   déplaçaient au sixième ami, corrigé la veille. Un prénom pur de sa case
+   est stable pour toujours, et deux Nino dans un village, ça existe.
+7. **Rien ne peut se rater.** Pas de plaque rose, pas de `E`, aucun rang
+   de plus : les sept rangs d'`agir()` et de `proximity()` ne bougent pas
+   d'une ligne — la règle du potager et de la lanterne. Le bonjour est en
+   **dernier**, après la lanterne et après le réarmement du seuil : un
+   passant n'interrompt pas ce qu'on est en train de faire.
+
+Les prénoms viennent de `NOMS_GENS`, la liste des îles bot, et non d'une
+seconde liste écrite à côté. Effet voulu : le village porte les mêmes
+prénoms que l'archipel.
+
+### `tNow`, et pourquoi `habitantsAu()` retient son résultat
+
+`proximity()` a besoin de savoir qui passe, or les habitants se déduisent
+de `t` — un **paramètre de `frame()`**. Les deux sorties évidentes étaient
+mauvaises : changer la signature de `proximity()`, que le contrôle des
+sept rangs lit, ou lire le tableau de l'image d'avant, c'est-à-dire un
+décalage d'une frame dont personne ne se souviendrait dans six mois.
+`tNow` est posé une fois par image, comme `saisonNow` et `meteoNow`.
+
+Et `habitantsAu()` **retient son résultat pour un même `t`**, parce qu'il
+est maintenant demandé deux fois par image — par `proximity()` et par
+`drawWorld()` — et que `cheminHabitant()` fait une propagation de proche
+en proche par bâtiment. Recalculer à l'identique soixante fois par
+seconde, c'est le `getBoundingClientRect()` par frame déjà refusé pour
+`echelleEcran`.
+
+### Le contrôle 23 ne fabriquait pas la situation qu'il prétendait couvrir
+
+Écrit avec deux bâtiments en (4,9) et (11,9), il passait **au vert avec la
+panne posée exprès** : sans l'attente entre deux bonjours, les deux
+phrases restaient lisibles. La raison est géométrique et se mesure — les
+phases se déduisent de la case, donc le point où les deux habitants se
+croisent est **fixe**, et il ne tombait pas près du bonhomme.
+
+Quatre dispositions relevées sur deux tours entiers avant d'en écrire une,
+en comptant les relevés où **deux** habitants sont à portée de parole en
+même temps :
+
+    deux face à face  (4,9)+(11,9)    21 sur 130
+    deux plus serrés  (5,9)+(10,9)   130 sur 130
+    quatre autour                      0 sur 130
+    quatre en croix                    0 sur 130
+
+Les deux villages de quatre rendent **zéro** : les habitants s'apparient
+entre eux et ne passent pas près du bonhomme. C'est le contraire de
+l'intuition — plus de monde ne veut pas dire plus de rencontres.
+
+Avec (5,9)+(10,9) la collision est certaine et non probable, et les trois
+pannes mordent alors, **chacune sur ses propres lignes** :
+
+    l'attente entre deux bonjours retirée   → une seule phrase lisible sur deux
+    le « une fois » retiré                  → 4 phrases en 16 s au lieu de 2
+    l'article écrit à la main               → « à le ferme · à le école · … »
+
+C'est, une fois de plus, la leçon que ce fichier répète : **une mesure qui
+ne vérifie pas qu'elle regarde la bonne chose passe au vert en ne
+regardant rien.** Les trois prénoms au lieu de vingt, le contrôle 9 qui ne
+lisait pas `GRANDS`, le repère absent qui absolvait au lieu de faire
+échouer — et maintenant une disposition de bâtiments choisie au lieu
+d'être mesurée.
+
+Ce qu'il ne peut pas prouver, et qu'il **imprime** donc : le français des
+six contractions. C'est déjà ce que font les deux relevés de genres et la
+ligne des prénoms élidés — quand un contrôle ne peut pas juger, qu'il
+montre.
