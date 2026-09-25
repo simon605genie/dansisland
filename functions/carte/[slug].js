@@ -14,7 +14,8 @@
 //  échappé comme tout le reste par `ech()`, coupé à 120 caractères, et il
 //  ne sort jamais du bloc qui lui est réservé.
 // ============================================================
-import { ileParSlug, page, reponse, vignette, ech, SITE, SLUG, ROBOTS_NON, rang } from '../_commun.js';
+import { ileParSlug, page, reponse, vignette, ech, SITE, SLUG, ROBOTS_NON, rang,
+         langueDe, avecLangue } from '../_commun.js';
 
 export async function onRequestGet(context) {
   const { params, request, env, next } = context;
@@ -32,6 +33,11 @@ export async function onRequestGet(context) {
   try {
     mot = (new URL(request.url).searchParams.get('m') || '').slice(0, 120).trim();
   } catch (e) { mot = ''; }
+
+  /* La langue ne fait que traverser : elle arrive par l'adresse et repart
+     dans les deux portes. Sans ça, une carte envoyée en anglais fait
+     débarquer son destinataire dans un jeu en français, sans rien dire. */
+  const lg = langueDe(request);
 
   // Le titre nomme **l'expéditeur**, pas l'île : c'est ce qui s'affiche
   // dans l'aperçu WhatsApp, et « Simon t'envoie une carte postale » se lit
@@ -59,8 +65,8 @@ export async function onRequestGet(context) {
         on construit sa maison et son île, puis on va découvrir celles des autres.
         ${ech(qui)} t’invite à venir marcher sur la sienne.</p>
       <div class="portes">
-        <a class="btn p" href="/${ech(slug)}">Visiter cette île</a>
-        <a class="btn" href="/?de=${ech(slug)}">Créer mon île</a>
+        <a class="btn p" href="${ech(avecLangue('/' + slug, lg))}">Visiter cette île</a>
+        <a class="btn" href="${ech(avecLangue('/?de=' + slug, lg))}">Créer mon île</a>
       </div>
     </div>
   </main>
@@ -70,5 +76,5 @@ export async function onRequestGet(context) {
      donc il n'y a pas de cas où elle devrait se retrouver dans un moteur.
      C'est une lettre, pas une page. */
   return reponse(page({ chemin: '/carte/' + slug, titre, desc, ld, corps,
-                        robots: ROBOTS_NON }));
+                        langue: lg, robots: ROBOTS_NON }));
 }

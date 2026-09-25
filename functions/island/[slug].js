@@ -11,10 +11,11 @@
 //  trouvé dans une recherche, une carte postale relayée, un signet.
 // ============================================================
 import { ileParSlug, page, reponse, vignette, ech, SITE, SLUG,
-         ROBOTS_OUI, ROBOTS_NON, ILES_INDEXABLES, rang } from '../_commun.js';
+         ROBOTS_OUI, ROBOTS_NON, ILES_INDEXABLES, rang,
+         langueDe, avecLangue } from '../_commun.js';
 
 export async function onRequestGet(context) {
-  const { params, env, next } = context;
+  const { params, request, env, next } = context;
   const slug = String(params.slug || '').toLowerCase();
   if (!SLUG.test(slug)) return next();
 
@@ -26,6 +27,8 @@ export async function onRequestGet(context) {
   const nom = ile.nom || 'Une île';
   const qui = ile.proprietaire || 'Quelqu’un';
   const mots = Number(ile.mots) || 0;
+  // La langue traverse, elle ne teinte pas la page : voir `langueDe()`.
+  const lg = langueDe(request);
   const titre = nom + ' — une île sur Dan’s Island';
   const desc = qui + ' a construit ' + nom + ' sur Dan’s Island, un jeu de détente. ' +
                'Viens t’y promener, laisse-lui un mot, et crée la tienne.';
@@ -49,8 +52,8 @@ export async function onRequestGet(context) {
         y planter un mot à ton tour et rapporter un souvenir chez toi.
         Tu ne peux rien y casser&nbsp;: chez les voisins, on regarde.</p>
       <div class="portes">
-        <a class="btn p" href="/${ech(slug)}">Visiter cette île</a>
-        <a class="btn" href="/?de=${ech(slug)}">Créer mon île</a>
+        <a class="btn p" href="${ech(avecLangue('/' + slug, lg))}">Visiter cette île</a>
+        <a class="btn" href="${ech(avecLangue('/?de=' + slug, lg))}">Créer mon île</a>
       </div>
     </div>
   </main>
@@ -67,5 +70,5 @@ export async function onRequestGet(context) {
      personne, est indexable — et elle l'est nommément. */
   const indexable = ILES_INDEXABLES.indexOf(slug) >= 0;
   return reponse(page({ chemin: '/island/' + slug, titre, desc, ld, corps,
-                        robots: indexable ? ROBOTS_OUI : ROBOTS_NON }));
+                        langue: lg, robots: indexable ? ROBOTS_OUI : ROBOTS_NON }));
 }

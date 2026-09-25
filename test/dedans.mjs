@@ -174,9 +174,13 @@ c.titre('3. personne ne recolle un article à la main');
   c.dit(dehors === dansLesDeux,
         'aucune phrase ne relit l’article ailleurs (' + (dehors - dansLesDeux) + ' en trop)');
   // Et les quatre phrases passent bien par l'une ou l'autre.
+  /* Les deux premières portent maintenant un trou plutôt qu'un `+` : la
+     phrase entière est visible d'un coup, ce dont une traduction a besoin
+     pour décider de son ordre de mots. Ce que le contrôle prouve est
+     inchangé — l'article ne se recolle nulle part à la main. */
   for (const [quoi, re] of [
-    ['le murmure d’arrivée', /say\('Te voilà dans '\+laPiece\(p\.k,false,true\)/],
-    ['la bulle de la porte', /'Une porte vers '\+laPiece\(p\.vers,false,true\)/],
+    ['le murmure d’arrivée', /Te voilà dans \{piece\}[\s\S]{0,80}?piece: laPiece\(p\.k,false,true\)/],
+    ['la bulle de la porte', /Une porte vers \{piece\}[\s\S]{0,120}?piece: laPiece\(p\.vers,false,true\)/],
     ['la plaque rose', /'Passer '\+aLaPiece\(p\.vers\)/],
     ['la note du panneau', /laPiece\(def\.k,true,true\)/],
   ]) c.dit(re.test(code), quoi + ' passe par la fonction');

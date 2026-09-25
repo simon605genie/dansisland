@@ -5330,3 +5330,167 @@ Ce qu'il ne peut pas prouver, et qu'il **imprime** donc : le français des
 six contractions. C'est déjà ce que font les deux relevés de genres et la
 ligne des prénoms élidés — quand un contrôle ne peut pas juger, qu'il
 montre.
+
+## L'archipel devient multilingue — 22/09/2026
+
+**Aucune migration, aucune clé de plus dans `mondeNu()`.** La langue n'est
+pas une donnée du monde : c'est un réglage de l'appareil qui regarde, comme
+le thème sombre. Elle vit dans `localStorage` sous `dansisland:langue`, et
+elle ne voyage que dans les liens qu'on envoie.
+
+La question posée était « combien coûte une langue ». La réponse est que la
+**plomberie** se paie une fois, et qu'une langue est ensuite une passe de
+traduction. Ce qui décide du prix, c'est la forme de la clé.
+
+### La chaîne française **est** la clé
+
+`T('Marée basse. Va voir le sable mouillé…')` et non `T('maree.basse')`.
+Trois choses en découlent, et elles sont gratuites :
+
+1. **Le repli est le `|| fr` de `T()`.** Une phrase non traduite rend sa
+   propre clé, donc du français juste — pas `maree.basse` à l'écran, pas de
+   liste de clés à tenir, pas de fichier de langue obligatoire. L'anglais
+   est **volontairement à moitié** (53 phrases sur 118, 45 %), et c'est ce
+   qui rend le repli éprouvable au lieu d'être promis.
+2. **La source reste lisible.** On lit la phrase là où elle sert, sans
+   aller chercher ce que `maree.basse` veut dire. C'est la règle déjà tenue
+   partout ici contre les deux listes qui divergent.
+3. **Le français rend octet pour octet ce qu'il rendait avant.** C'est le
+   point le plus important, et c'est lui qui a décidé du choix : **les onze
+   autres harnais cherchent des phrases françaises, donc ils sont la preuve
+   de non-régression de ce chantier.** Aucun ne l'a su, aucun n'a eu à
+   changer, et ils passent tous. Un chantier qui touche quinze cents
+   phrases n'a pas de meilleur garde-fou que ça.
+
+Ce que ça coûte, et c'est le seul coût : **réécrire une phrase laisse sa
+traduction orpheline**, sans erreur et sans trace. La section 3 de
+`test/langues.mjs` les compte plutôt que de les laisser pourrir — c'est
+l'idée du registre `VERROUS_PROX`, qui a remplacé une liste qu'on devait
+penser à tenir.
+
+### La grammaire est un module, pas une liste de cas
+
+Six fonctions montaient un article devant une valeur qui change, et ce
+fichier a mis trois corrections en une journée le 19/09 pour y arriver :
+« Te voilà dans **le** chambre », « **Un** fleur de chez Lila », « La porte
+**de** Adam est fermée ». Elles étaient justes **en français**, et le
+français est ce qui changeait.
+
+`GRAMMAIRE[langue]` porte donc `de`, `un`, `ton`, `ou`, `la`, `ala`, et
+`deQui()`, `unObjet()`, `tonObjet()`, `auLieu()`, `laPiece()`,
+`aLaPiece()` n'en sont plus que les six portes. Trois choses à tenir :
+
+1. **Le nom passe par `T()` avant la grammaire, jamais après.** L'anglais
+   choisit `a`/`an` sur le nom **traduit** : « école » donnerait « an
+   school ». Deux lignes qui ont l'air interchangeables et ne le sont pas.
+2. **Elles restent les seules à lire les données françaises** — le `'f'` de
+   `FEM_OBJ` et les `art`/`a` de `PIECES`. Une phrase qui les relirait
+   serait juste en français et fausse ailleurs ; avant ce chantier, elle
+   n'était que fragile. Le contrôle 4 compte : `FEM_OBJ` lu **4 fois**.
+3. **L'anglais n'est pas le français avec d'autres mots.** Le possessif
+   change de côté — « la porte **de** Lila » contre « **Lila's** door » —
+   donc une concaténation n'aurait jamais pu le rendre, quelle que soit la
+   table de traduction. C'est ce que la section 2 éprouve, et c'est la
+   phrase qu'on rencontre le plus souvent de tout le jeu.
+
+Corollaire tenu par le contrôle : **plus aucun `say()` ne monte une phrase
+par morceaux.** Un `+` entre deux textes est un ordre de mots figé, donc
+une phrase intraduisible. Il en reste **zéro**.
+
+### Les trois sources de la langue, dans cet ordre
+
+Le choix enregistré, puis `?lang=` de l'adresse, puis `navigator.language`.
+
+**Le choix passe devant l'adresse**, et ce n'est pas un détail : sans ça,
+un enfant qui a mis le jeu en français se le verrait remettre en anglais à
+chaque lien reçu d'un ami, sans jamais comprendre pourquoi. C'est la règle
+du cadre glissé contre le mur plutôt qu'effacé — **on ne reprend pas ce qui
+a été choisi.**
+
+### Le lien emporte la langue, et lui seul
+
+La carte postale et l'adresse d'une île sont les deux seules choses de ce
+jeu lues par le navigateur **de quelqu'un d'autre**. `avecLangue()` les
+teinte, et **le défaut ne s'écrit jamais** : en français elle rend l'adresse
+telle quelle, donc aucune carte déjà partie ne change d'un caractère.
+
+C'est un **paramètre et non un segment**. Un segment de plus demanderait de
+réserver `en` comme slug, et un joueur qui prendrait cette adresse rendrait
+son île inatteignable — le défaut du 20/09, celui qui a valu
+`slug_reserve()`.
+
+**Et le maillon qu'on ne voit pas : la page publique.** Une carte envoyée
+en anglais passe par `/carte/<slug>` avant d'arriver au jeu. La fonction
+laissait tomber le paramètre, donc l'ami débarquait en français — et rien
+ne le signalait, puisque le jeu retombe alors sur la langue de son
+navigateur, ce qui a l'air de marcher chez qui l'a envoyée.
+
+L'invariant posé n'est pas « ces deux liens la portent » : c'est **toute
+porte qui mène au jeu la porte, et aucune autre.** Il y en avait cinq par
+page et pas deux — le logotype, le bouton de l'en-tête, les deux du corps,
+celui du socle. Les liens du menu et du rang ne la portent pas : ils mènent
+aux pages éditoriales, qui sont en français, et leur mettre `?lang=en`
+promettrait une traduction qui n'existe pas.
+
+### Ce qui n'est **pas** traduit, et qu'il ne faut pas prétendre
+
+1. **Le voile d'accueil reste en français.** Son texte est du HTML en dur,
+   et c'est écrit depuis le 18/09 : c'est le **seul** texte du site qu'un
+   robot puisse lire. Le traduire demande de choisir entre un robot qui lit
+   du français et un enfant qui lit sa langue, et ça se tranche avec des
+   adresses par langue, pas avec un `T()`.
+2. **Les pages publiques restent en français.** La langue ne fait que les
+   traverser.
+3. **Ce que les joueurs s'écrivent ne se traduit pas**, et ne le fera
+   jamais : `texte` et `reponse` sont les deux seules phrases qui passent
+   d'un joueur à l'autre, et ce sont les leurs.
+
+### Le transformateur a changé trois phrases **sans casser la syntaxe**
+
+Quinze cents phrases ne s'enveloppent pas à la main. Le script a bien
+travaillé, sauf sur les gabarits qui portaient un `?` de premier niveau :
+là où le ternaire choisissait entre **deux phrases entières**, la queue
+commune s'est recollée aux deux branches — et ça **compile**. Aucune
+erreur, aucune trace, juste un texte faux à l'écran.
+
+Trouvées en cherchant tous les gabarits contenant un `?` de premier
+niveau : **15 candidats, 12 légitimes** (un suffixe optionnel), **3
+cassés**, réécrits à la main. La leçon est celle du lit et des six
+bâtiments, transposée à un refactor : **un script qui touche du texte doit
+être relu sur ce qu'il a produit, pas sur ce qu'il promettait de faire.**
+
+### Le harnais tournait en anglais sans le savoir
+
+Sept contrôles sont devenus rouges à la minute où `choisirLangue()` a été
+branché. Le Chromium piloté répond `en-US` : le jeu tournait donc en
+anglais, et les dix harnais qui cherchent des phrases françaises étaient
+rouges **ici** et verts sur une machine réglée en français, sans qu'une
+ligne du jeu ait changé.
+
+`aide.mjs` sème donc `dansisland:langue = 'fr'` avec les autres graines, et
+`langues.mjs` est le seul à la retirer (`null` dé-sème), puisque c'est le
+seul qui l'éprouve. C'est **exactement** l'oracle déjà nommé pour la
+saison, la météo et l'heure de la marée : *une mesure doit tenir toutes ses
+variables sauf celle qu'elle nomme.* Quatrième fois, et cette fois la
+variable était la machine elle-même.
+
+### `test/langues.mjs`, douzième harnais
+
+Ce qui n'y est **pas**, et c'est délibéré : « le français n'a pas bougé ».
+Les onze autres le prouvent déjà, et mieux qu'une assertion écrite pour ça.
+
+Sa section 5 **exécute** les fonctions Cloudflare — ce sont des modules ES
+ordinaires — contre un faux Supabase local, plutôt que d'en lire la source.
+Une regex n'aurait pas vu le bouton de l'en-tête, qui est trois fichiers
+plus loin que les deux liens qu'on croyait tenir. C'est la leçon du
+contrôle 12 : *quand un moteur peut répondre, c'est à lui qu'il faut
+demander.*
+
+Éprouvée en remettant deux vraies pannes, **chacune ne faisant rougir que
+sa propre ligne** : le bouton de l'en-tête privé de langue (2 rouges, et
+il **nomme** le lien fautif), et le défaut français écrit dans l'adresse
+(2 rouges).
+
+*(Un faux positif de plus, pour mémoire : mon premier classement lisait
+tous les `href` de la page, donc l'icône et le manifeste — trois rouges qui
+ne disaient rien du jeu. Une porte est un `<a>`.)*

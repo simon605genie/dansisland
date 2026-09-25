@@ -87,6 +87,44 @@ export const PAGES = [
   { chemin: '/pourquoi-un-jeu-calme', alias: '/why-calm-games',  nom: 'Pourquoi un jeu calme', court: 'Pourquoi' }
 ];
 
+/* ---- la langue, qui ne fait que **traverser** ces pages ----
+
+   Une carte postale envoyée en anglais porte `?lang=en`, et elle passe par
+   `/carte/<slug>` avant d'arriver au jeu. Si la page publique laisse tomber
+   le paramètre, l'ami qui l'ouvre débarque dans un jeu qu'il ne lit pas —
+   et rien ne le signale, puisque le jeu retombe alors sur la langue de son
+   navigateur, ce qui a l'air de marcher.
+
+   Ce qui n'est **pas** fait ici, et il ne faut pas prétendre le contraire :
+   ces pages restent en français. Leur texte est du HTML en dur, c'est le
+   seul que les robots lisent, et le traduire est un autre chantier. La
+   langue ne fait que passer : elle entre par l'adresse et ressort dans les
+   deux liens qui mènent au jeu.
+
+   La liste double celle d'`index.html`, comme les clés Supabase de ce
+   fichier doublent celles de `src/config.js`. Une langue ajoutée là-bas et
+   pas ici serait simplement ignorée au passage — c'est le bon défaut, mais
+   ça reste deux listes à tenir d'accord. */
+export const LANGUES = ['fr', 'en'];
+export const LANGUE_DEFAUT = 'fr';
+
+export function langueDe(request) {
+  let l = '';
+  try {
+    l = String(new URL(request.url).searchParams.get('lang') || '')
+      .slice(0, 2).toLowerCase();
+  } catch (e) { return ''; }
+  /* **Le défaut ne s'écrit jamais**, exactement comme dans le jeu : une
+     adresse française reste une adresse sans paramètre, et les cartes déjà
+     parties ne changent pas d'un caractère. */
+  return (LANGUES.indexOf(l) >= 0 && l !== LANGUE_DEFAUT) ? l : '';
+}
+
+export function avecLangue(url, langue) {
+  if (!langue) return url;
+  return url + (url.indexOf('?') < 0 ? '?' : '&') + 'lang=' + langue;
+}
+
 function base(env) {
   return {
     url: (env && env.SUPABASE_URL) || URL_DEFAUT,
@@ -167,6 +205,16 @@ export function vignette(pal) {
    ratée. */
 export function page(o) {
   const url = SITE + o.chemin;
+  /* **Toute porte qui mène au jeu emporte la langue**, et pas seulement les
+     deux du corps. Le logotype, le bouton de l'en-tête et celui du socle
+     mènent au jeu eux aussi : en oublier un, c'est le même défaut à un clic
+     de distance, et c'est précisément le genre de chose qu'une liste écrite
+     à la main laisse passer.
+
+     Les liens du menu et du rang, eux, ne la portent pas : ils mènent aux
+     pages éditoriales, qui sont en français. Leur mettre `?lang=en`
+     promettrait une traduction qui n'existe pas. */
+  const jeu = avecLangue('/', o.langue);
   return `<!doctype html>
 <html lang="fr">
 <meta charset="utf-8">
@@ -358,7 +406,7 @@ h1{font-size:clamp(26px,6.4vw,36px);font-weight:800}
 </style>
 <div class="wrap">
   <header class="haut">
-    <a class="logo" href="/">
+    <a class="logo" href="${ech(jeu)}">
       <svg viewBox="0 0 64 64" aria-hidden="true">
         <rect width="64" height="64" rx="15" fill="#0D2630"/>
   <circle cx="43" cy="20" r="9" fill="#FF8F70"/>
@@ -379,7 +427,7 @@ h1{font-size:clamp(26px,6.4vw,36px);font-weight:800}
     <nav class="menu" aria-label="Le site">${PAGES.map(p =>
       '<a href="' + p.chemin + '"' + (p.chemin === o.chemin ? ' aria-current="page"' : '') +
       '>' + ech(p.court || p.nom) + '</a>').join('')}</nav>
-    <a class="btn p" href="/">Créer mon île</a>
+    <a class="btn p" href="${ech(jeu)}">Créer mon île</a>
   </header>
   ${o.corps}
   <section class="socle">
@@ -388,7 +436,7 @@ h1{font-size:clamp(26px,6.4vw,36px);font-weight:800}
     personnage, on construit sa maison et son île, puis on va découvrir celles
     des autres. Pas de score, pas de minuteur, pas de partie ratée&nbsp;: la mer
     monte et descend, les mouettes traversent le ciel, et on revient quand on
-    veut. <a href="/">Créer mon île</a>.</p>
+    veut. <a href="${ech(jeu)}">Créer mon île</a>.</p>
     <nav class="liens">${PAGES.map(p =>
       '<a href="' + p.chemin + '">' + ech(p.nom) + '</a>').join('')}</nav>
   </section>

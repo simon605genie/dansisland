@@ -1224,6 +1224,228 @@ import * as store from '/src/store.js';
 (function(){
 "use strict";
 
+/* ================= les langues =================
+   **La chaîne française EST la clé**, et ce choix décide de tout le reste.
+
+   L'autre façon de faire — inventer mille cent trente-quatre clés du genre
+   `coffre.vide` — coûterait trois choses que ce dépôt refuse partout
+   ailleurs : mille noms à trouver, une source qu'on ne peut plus lire (le
+   fichier montre aujourd'hui ce que l'enfant voit, et c'est ce qui permet
+   de repérer « Un fleur de chez Lila » en passant), et une liste de plus à
+   tenir d'accord avec le code.
+
+   Trois conséquences, et les trois sont gratuites :
+
+   1. **une traduction qui manque retombe sur le français**, par
+      construction et non par une branche à écrire — c'est le `|| fr` de
+      `T()`, et rien d'autre. On peut donc ajouter une langue à moitié, et
+      déployer une fonctionnalité le soir sans attendre ses traductions ;
+   2. **en français, le jeu rend exactement les mêmes octets qu'avant.**
+      C'est ce qui rend ce chantier sûr : les onze harnais cherchent des
+      phrases françaises, donc ils sont la preuve qu'il n'a rien changé.
+      Un remaniement qui ne change rien doit pouvoir le prouver, et
+      celui-ci le peut sans qu'on écrive un contrôle pour ça ;
+   3. réécrire une phrase française rend sa traduction orpheline — et
+      c'est le seul coût. Le contrôle 24 les compte plutôt que de les
+      laisser pourrir en silence.
+
+   `{trou}` plutôt qu'un `+`, et ce n'est pas une préférence : une phrase
+   montée par morceaux **ne se traduit pas**, parce que l'ordre des mots
+   change d'une langue à l'autre — « la porte de Lila » contre « Lila's
+   door ». Le gabarit laisse la traduction décider où tombe chaque morceau,
+   et il se relit mieux en français aussi. */
+const LANGUES={fr:'Français', en:'English'};
+const TRAD={};                 // TRAD.en = { la phrase française: sa traduction }
+/* L'anglais, **à moitié**, et c'est délibérément qu'il reste à moitié : une
+   langue complète ne prouverait pas le repli, alors qu'une langue trouée
+   montre les deux à la fois — ce qui est traduit l'est, le reste tombe en
+   français, et le jeu ne casse nulle part. C'est le point 4, éprouvé au
+   lieu d'être promis.
+
+   Les traductions vivent **dans ce fichier**, comme tout le reste : ce
+   dépôt n'a ni build ni dépendance, et un second module à charger serait
+   un aller-retour réseau de plus au démarrage pour tout le monde. Le jour
+   où une troisième langue arrive, elles partiront dans un fichier chacune,
+   chargé à la demande — et ce jour-là se reconnaîtra à son poids, pas à
+   une règle écrite ici.
+
+   Ce qu'une traduction automatique ne peut pas faire, et c'est la limite
+   déjà écrite pour le son et pour les deux relevés de genres : **le ton**.
+   « Il t'attend », « sauter des jours ne t'enlève rien » — ces
+   phrases-là travaillent. Une passe plate rendrait un jeu générique en
+   neuf langues et le jeu soigné en une seule. Les cent-dix d'ici se
+   relisent à la main ; c'est une soirée par langue, pas une semaine. */
+TRAD.en={
+  'quelqu’un':
+    'someone',
+  'Rien à annuler.':
+    'Nothing to undo.',
+  'Ne bouche pas le passage.':
+    'Don’t block the way.',
+  'Tu es debout dessus.':
+    'You’re standing on it.',
+  'Rien à tourner ici.':
+    'Nothing to turn here.',
+  'Pas la place de le tourner ici.':
+    'No room to turn it here.',
+  'Tourné, il bloquerait le passage.':
+    'Turned, it would block the way.',
+  'Un autre meuble est dans le passage.':
+    'Another piece of furniture is in the way.',
+  'La porte {qui} est fermée. Pour l’instant, on ne visite que le dehors.':
+    '{qui} door is closed. For now, you can only visit the outside.',
+  'Te revoilà dehors.':
+    'Back outside.',
+  'Te voilà dans {piece}.':
+    'Here you are in {piece}.',
+  'Tu es invité chez {hote} — on ne touche pas à l\'île des autres.':
+    'You’re a guest at {hote}’s — you don’t touch other people’s islands.',
+  '{objet} déborderait de la grille.':
+    '{objet} would hang off the grid.',
+  'La maison occupe déjà cette case.':
+    'The house is already on that square.',
+  'Un mot du livre d’or est planté là. Choisis un autre endroit.':
+    'A word from the guestbook is planted there. Pick another spot.',
+  'Il y a {objet} sous {objet2}. Efface-le d’abord, ou pose plus loin.':
+    'There’s {objet} under {objet2}. Erase it first, or build further away.',
+  '{objet} n’a pas de sens : il est pareil des deux côtés.':
+    'Turning {objet} changes nothing: it looks the same from both sides.',
+  'La maison déborderait de la grille.':
+    'The house would hang off the grid.',
+  'Le large ne t’appartient pas encore.':
+    'The open sea isn’t yours yet.',
+  'On ne bâtit pas sur l’eau.':
+    'You can’t build on water.',
+  'Il y a {objet} sous la maison. Efface-le d’abord.':
+    'There’s {objet} under the house. Erase it first.',
+  'Maison déplacée.':
+    'House moved.',
+  '<b>La mer remonte.</b> Le sable du bord repasse sous l’eau jusqu’à la prochaine marée.':
+    '<b>The sea is coming back.</b> The sand along the shore goes back under until the next tide.',
+  'Tu as déjà porté la commande aujourd’hui. Elle revient demain.':
+    'You’ve already taken the order round today. It comes back tomorrow.',
+  'Ton île est encore trop petite pour un vrai tour. Fais-la grandir d’abord.':
+    'Your island is still too small for a proper walk. Make it bigger first.',
+  'Le chien retourne à sa place. Le tour n’était pas fini.':
+    'The dog goes back to its spot. The walk wasn’t finished.',
+  'Le chien s’arrête un instant. <b>Il faudra nettoyer</b> — marche dessus et appuie sur <b>E</b>.':
+    'The dog stops for a moment. <b>Something to clean up</b> — walk onto it and press <b>E</b>.',
+  'C’est propre. Le chien fait comme s’il n’y était pour rien.':
+    'All clean. The dog acts like it had nothing to do with it.',
+  '<b>Le chien t’attend.</b> Reviens près de lui : il ne repart pas sans toi.':
+    '<b>Your dog is waiting.</b> Come back to it: it won’t set off without you.',
+  '📷 {objet} {qui}, rapporté en photo.':
+    '📷 A photo of {qui} {objet}, brought home.',
+  'Le paillasson. <b>E</b> pour ressortir.':
+    'The doormat. <b>E</b> to step back out.',
+  'Une porte vers {piece}. <b>E</b> pour passer.':
+    'A door to {piece}. <b>E</b> to go through.',
+  'Tu promènes ton chien. <b>E</b> si tu veux le ramener tout de suite.':
+    'You’re walking your dog. <b>E</b> if you want to bring it back right away.',
+  'Ton chien. <b>E</b> pour le sortir : il fait le tour de l’île, et tu restes près de lui.':
+    'Your dog. <b>E</b> to take it out: it goes round the island, and you stay close.',
+  'Tu as déjà {objet} {qui} au mur, dans {piece}.':
+    'You already have {qui} {objet} on the wall, in {piece}.',
+  '📷 Tu prends {objet} {qui} en photo. Le cadre t’attend dans {piece} de ta maison, et il brille.':
+    '📷 You photograph {qui} {objet}. The frame is waiting in {piece} of your house, and it’s shining.',
+  'Langue':
+    'Language',
+  '{objet} te suit maintenant partout, même chez les voisins.':
+    '{objet} follows you everywhere now, even to the neighbours.',
+  'Tu marches seul.':
+    'You walk alone.',
+  'Clique la case où poser la maison. Elle occupe deux cases sur deux.':
+    'Click the square where the house should go. It takes up two squares by two.',
+  'Mot supprimé.':
+    'Word removed.',
+  'Plus une case de libre pour planter un mot.':
+    'Not one free square left to plant a word.',
+  'Mot planté. Marche à côté du panneau pour le relire.':
+    'Word planted. Walk up to the sign to read it again.',
+  'Ta boîte aux lettres est vide. Le drapeau se lèvera quand quelqu’un sera passé.':
+    'Your letterbox is empty. The flag goes up when someone has been by.',
+  'Choisis une case de ton île pour ton coffre. C’est là que le cadeau du jour t’attendra.':
+    'Pick a square on your island for your chest. That’s where the daily gift will wait.',
+  'Il n’y a encore personne d’autre à visiter.':
+    'There’s nobody else to visit yet.',
+  'Code copié.':
+    'Code copied.',
+  'Île importée.':
+    'Island imported.',
+  'Ce code n’est pas lisible.':
+    'That code can’t be read.',
+  'Lien copié.':
+    'Link copied.',
+  'Photo envoyée.':
+    'Photo sent.',
+  'Chargement de l’île…':
+    'Loading the island…',
+  'Cette île n’existe pas, ou elle n’est pas publiée.':
+    'That island doesn’t exist, or it isn’t published.',
+};
+
+let langue='fr';
+
+function T(fr,v){
+  const s=(TRAD[langue] && TRAD[langue][fr]) || fr;
+  return v ? s.replace(/\{(\w+)\}/g,(m,k)=> k in v ? v[k] : m) : s;
+}
+
+/* La langue est **au joueur, pas à l'île** — comme la bourse et comme le
+   sac. Donc aucune clé dans `mondeNu()`, aucune migration : elle tient
+   dans `localStorage`, comme l'album.
+
+   L'ordre des trois sources compte. **Le choix enregistré passe devant
+   l'adresse**, et c'est la règle du cadre glissé contre le mur plutôt
+   qu'effacé : on ne reprend pas ce qui a été choisi. Sans ça, un enfant
+   qui a mis le jeu en français se le verrait remettre en anglais à chaque
+   lien reçu d'un ami — et il ne comprendrait jamais pourquoi.
+
+   L'adresse ne sert donc qu'à **celui qui n'a jamais choisi**, c'est-à-dire
+   exactement à celui qui arrive par le lien de quelqu'un. */
+function langueDuNavigateur(){
+  const l=navigator.languages||[navigator.language||''];
+  for(const x of l){ const c=String(x||'').slice(0,2).toLowerCase(); if(LANGUES[c]) return c; }
+  return 'fr';
+}
+function choisirLangue(){
+  let l=null;
+  try{ l=localStorage.getItem('dansisland:langue'); }catch(e){}
+  if(!LANGUES[l]){ try{ l=new URLSearchParams(location.search).get('lang'); }catch(e){} }
+  if(!LANGUES[l]) l=langueDuNavigateur();
+  langue=LANGUES[l]?l:'fr';
+  document.documentElement.setAttribute('lang',langue);
+}
+function reglerLangue(l){
+  if(!LANGUES[l]||l===langue) return;
+  langue=l;
+  try{ localStorage.setItem('dansisland:langue',l); }catch(e){}
+  document.documentElement.setAttribute('lang',l);
+  /* Le cadre se repeint, le canvas n'a rien à repeindre : il ne porte
+     aucun mot. C'est ce qui rend ce jeu si peu cher à traduire, et c'est
+     mesuré — tout est dessiné.
+
+     Ce qui ne suit **pas** encore, et il ne faut pas prétendre le
+     contraire : le voile d'accueil, dont le texte est en dur dans le HTML
+     parce que c'est le seul que Google puisse lire. Le traduire demande de
+     le réécrire au chargement, donc de choisir entre un robot qui lit du
+     français et un enfant qui lit sa langue. Ça se tranche, ça ne se
+     glisse pas. */
+  buildAll(); peindreSon();
+}
+/* Ce qu'un lien emporte. La carte postale et l'adresse d'une île sont lues
+   par le navigateur **de quelqu'un d'autre** : c'est le seul endroit où la
+   langue doit voyager, et le seul endroit où elle coûte quelque chose.
+
+   Un paramètre et non un segment (`?lang=en` et non `/en/…`) : un segment
+   de plus demanderait de réserver des slugs côté base, et un joueur qui
+   prendrait `en` comme adresse d'île la rendrait inatteignable — le défaut
+   du 20/09, qu'on ne rouvre pas pour si peu. */
+function avecLangue(url){
+  if(langue==='fr') return url;          // le défaut ne s'écrit pas
+  return url+(url.indexOf('?')<0?'?':'&')+'lang='+langue;
+}
+
 /* ================= géométrie isométrique ================= */
 const GRID=18, TW=56, TH=28, OX=384, OY=12, LIFT=7;
 // OY est remonté de 84 à 12 le 17/09/2026 au soir : le centre de l'île
@@ -1323,9 +1545,8 @@ function faireGrandir(){
   // Dire ce qui reste, ici, au moment o\u00f9 \u00e7a arrive : c'est la seule fois
   // o\u00f9 la r\u00e8gle \u00ab l'\u00eele grandit parce que des gens sont pass\u00e9s \u00bb se voit.
   const reste=Math.max(0, Math.round((RAYON_MAX-r)/PAS_RAYON));
-  say('<b>Ton \u00eele s\u2019agrandit.</b> La mer a recul\u00e9 d\u2019un cran, il y a de la place \u00e0 b\u00e2tir. '+
-      (reste ? 'Encore <b>'+reste+' mot'+(reste>1?'s':'')+'</b> et elle aura tout gagn\u00e9.'
-             : 'Elle a gagn\u00e9 toute la terre qu\u2019il y avait \u00e0 gagner.'), 0, 3400);
+  say(T('<b>Ton \u00eele s\u2019agrandit.</b> La mer a recul\u00e9 d\u2019un cran, il y a de la place \u00e0 b\u00e2tir. {a}', {a: (reste ? 'Encore <b>'+reste+' mot'+(reste>1?'s':'')+'</b> et elle aura tout gagn\u00e9.'
+             : 'Elle a gagn\u00e9 toute la terre qu\u2019il y avait \u00e0 gagner.')}), 0, 3400);
   return true;
 }
 function dansLeRayon(x,y,w){ w=w||world;
@@ -1539,11 +1760,46 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','
    yaourt, de Yann). Trouvé parce que le contrôle **imprime** ce que la
    règle donne sur les vrais prénoms du jeu, au lieu de se contenter de
    dire oui. */
-function deQui(nom){
-  const n=String(nom==null?'quelqu\u2019un':nom);
-  return (/^[aeiou\u00e0\u00e2\u00e4\u00e9\u00e8\u00ea\u00eb\u00ee\u00ef\u00f4\u00f6\u00f9\u00fb\u00fc]/i.test(n)
-          ? 'd\u2019' : 'de ')+'<b>'+esc(n)+'</b>';
-}
+/* ---- la grammaire, un module par langue ----
+   Trois jours de travail vivent ici : le `'f'` du catalogue, l'`art`/`a`
+   des `PIECES`, l'\u00e9lision de `deQui()`, les trois contractions d'`auLieu()`.
+   Tout \u00e7a est **fran\u00e7ais par construction** \u2014 l'anglais n'a pas de genre et
+   ne contracte rien, le n\u00e9erlandais en a deux et met le verbe ailleurs.
+
+   Ce n'est donc pas une table de traduction, c'est un module. Les
+   quarante-sept appels du jeu ne changent pas d'un caract\u00e8re : ils passent
+   par les m\u00eames six fonctions, qui ne font plus que d\u00e9l\u00e9guer.
+
+   **Un module absent retombe sur le fran\u00e7ais**, comme une phrase absente :
+   c'est la m\u00eame ligne, et elle permet d'ajouter une langue sans avoir \u00e0
+   d\u00e9cider tout de suite comment elle d\u00e9cline. */
+const VOY=/^[aeiou\u00e0\u00e2\u00e4\u00e9\u00e8\u00ea\u00eb\u00ee\u00ef\u00f4\u00f6\u00f9\u00fb\u00fc]/i;
+const GRAMMAIRE={
+  fr:{
+    de:n=> (VOY.test(n)?'d\u2019':'de ')+'<b>'+esc(n)+'</b>',
+    un:(n,fem,maj,gras)=>{ const a=fem?'une ':'un ';
+      return (maj?a.charAt(0).toUpperCase()+a.slice(1):a)+(gras?'<b>'+n+'</b>':n); },
+    ton:(n,fem)=> ((fem&&!/^[aeiouy\u00e9\u00e8\u00ea\u00e0\u00e2\u00ee\u00ef\u00f4\u00f6\u00fb\u00fc]/i.test(n))?'Ta ':'Ton ')+'<b>'+n+'</b>',
+    ou:(n,fem)=> VOY.test(n) ? '\u00e0 l\u2019<b>'+n+'</b>' : (fem?'\u00e0 la <b>':'au <b>')+n+'</b>',
+    la:(n,art,maj,gras)=> (maj?art.charAt(0).toUpperCase()+art.slice(1):art)+(gras?'<b>'+n+'</b>':n),
+    ala:(n,a)=> a+n,
+  },
+  /* L'anglais ne conna\u00eet ni genre ni contraction : il re\u00e7oit `fem` et
+     l'ignore, ce qui est exactement ce qu'un module doit pouvoir faire.
+     Le seul accord qui reste est `a`/`an`, qui se lit sur la premi\u00e8re
+     lettre du nom **traduit** \u2014 pas du nom fran\u00e7ais, sinon \u00ab an flower \u00bb. */
+  en:{
+    de:n=> '<b>'+esc(n)+'</b>\u2019s',
+    un:(n,fem,maj,gras)=>{ const a=VOY.test(n)?'an ':'a ';
+      return (maj?a.charAt(0).toUpperCase()+a.slice(1):a)+(gras?'<b>'+n+'</b>':n); },
+    ton:n=> 'Your <b>'+n+'</b>',
+    ou:n=> 'at the <b>'+n+'</b>',
+    la:(n,art,maj,gras)=> (maj?'The ':'the ')+(gras?'<b>'+n+'</b>':n),
+    ala:n=> 'to the '+n,
+  },
+};
+function gram(){ return GRAMMAIRE[langue]||GRAMMAIRE.fr; }
+function deQui(nom){ return gram().de(String(nom==null?T('quelqu\u2019un'):nom)); }
 
 /* volumes isométriques ------------------------------------------------ */
 function isoTop(c,cx,cy,a,col){
@@ -1758,12 +2014,19 @@ function pieceDef(k){ return PIECES.find(p=>p.k===k) || PIECES[0]; }
    à la main et ne passaient pas par cette fonction du tout. Un paramètre
    optionnel coûte moins qu'une seconde orthographe, comme le `saut` de
    `drawChar()` et l'`ouvert` de `DRAW.coffre`. */
+/* Le nom de la pièce passe par `T()`, son article par le module. `art` et
+   `a` restent dans `PIECES` parce que ce sont des données françaises, au
+   même titre que le `'f'` du catalogue : une quatrième pièce ajoutée un
+   jour porte les siens, et l'anglais continue de les ignorer.
+
+   L'invariant du 19/09 tient toujours, et il compte plus que jamais :
+   **`art` et `a` ne se lisent que dans ces deux fonctions.** Le jour où
+   une phrase recollerait un article à la main, elle serait juste en
+   français et fausse partout ailleurs — avant, elle n'était que fragile. */
 function laPiece(k,maj,gras){ const d=pieceDef(k);
-  const n=gras ? '<b>'+d.n.toLowerCase()+'</b>' : d.n.toLowerCase();
-  const a=maj ? d.art.charAt(0).toUpperCase()+d.art.slice(1) : d.art;
-  return a+n; }
+  return gram().la(T(d.n).toLowerCase(), d.art, maj, gras); }
 // « au salon », « à la chambre », « à l'atelier ».
-function aLaPiece(k){ const d=pieceDef(k); return d.a+d.n.toLowerCase(); }
+function aLaPiece(k){ const d=pieceDef(k); return gram().ala(T(d.n).toLowerCase(), d.a); }
 // La case devant une porte, celle sur laquelle on se met pour passer.
 function casePorte(p){ return p.mur==='nw' ? {x:0,y:p.i} : {x:p.i,y:0}; }
 function estPorte(def,x,y){ return def.portes.some(p=>{ const c=casePorte(p); return c.x===x&&c.y===y; }); }
@@ -2144,8 +2407,7 @@ async function reveiller(){
       // reçus hier non plus. Les relire est ce qui évite d'annoncer une
       // commande périmée à qui vient de se lever.
       if(veille){ commandeServeur=null; accorderCommande(); chargerLivraisons().then(buildAll); }
-      if(veille) say('<b>Un jour nouveau.</b> Ton cadeau t’attend dans la <b>Boutique</b>'+
-        (n ? (', et '+n+' touffe'+(n>1?'s':'')+' ont repoussé.') : '.'));
+      if(veille) say(T('<b>Un jour nouveau.</b> Ton cadeau t’attend dans la <b>Boutique</b>{a}', {a: (n ? (', et '+n+' touffe'+(n>1?'s':'')+' ont repoussé.') : '.')}));
       return;
     }catch(e){ /* migration pas encore passée, ou hors ligne : bourse locale */ }
   }
@@ -2157,8 +2419,7 @@ async function reveiller(){
   if(!bouge) return;
   garderBourseLocale(); saveMine(); buildAll();
   if(veille && !premiere)
-    say('<b>Un jour nouveau.</b> Ton cadeau t’attend dans la <b>Boutique</b>'+
-        (n ? (', et '+n+' touffe'+(n>1?'s':'')+' ont repoussé.') : '.'));
+    say(T('<b>Un jour nouveau.</b> Ton cadeau t’attend dans la <b>Boutique</b>{a}', {a: (n ? (', et '+n+' touffe'+(n>1?'s':'')+' ont repoussé.') : '.')}));
 }
 
 
@@ -2938,7 +3199,7 @@ function memoriser(){
   if(histo.length>HISTO_MAX) histo.shift();
 }
 function annuler(){
-  if(!histo.length){ say('Rien \u00e0 annuler.'); return; }
+  if(!histo.length){ say(T('Rien \u00e0 annuler.')); return; }
   const e=JSON.parse(histo.pop());
   mine.tiles=e.t; mine.objects=e.o; mine.house=e.h;
   if(e.i) mine.interieur=e.i;
@@ -5586,7 +5847,7 @@ function degager(){
 function poserMeuble(x,y){
   const p=pieceDef(piece), d=pieceData(), s=emprise(tool.kind,tool.orient);
   const niv=niveau(tool.kind);
-  if(x+s[0]>p.w || y+s[1]>p.h){ say('Il n’y a pas la place ici : ce meuble occupe '+s[0]+'x'+s[1]+' cases.'); return; }
+  if(x+s[0]>p.w || y+s[1]>p.h){ say(T('Il n’y a pas la place ici : ce meuble occupe {a}x{b} cases.', {a: s[0], b: s[1]})); return; }
   const cases=[]; for(let j=0;j<s[1];j++) for(let i=0;i<s[0];i++) cases.push({x:x+i,y:y+j});
 
   // Un cadre s'accroche à une paroi du fond, et c'est le **Sens** qui dit
@@ -5594,14 +5855,14 @@ function poserMeuble(x,y){
   // (rangée 0). Les deux seules parois dessinées sont celles-là.
   if(niv==='mur'){
     const bon = tool.orient==='sw' ? (x===0) : (y===0);
-    if(!bon){ say('Ça s’accroche à un <b>mur du fond</b>. Prends une case contre le mur, ou change le <b>Sens</b> pour viser l’autre.'); return; }
+    if(!bon){ say(T('Ça s’accroche à un <b>mur du fond</b>. Prends une case contre le mur, ou change le <b>Sens</b> pour viser l’autre.')); return; }
     const deja=meubleSur(x,y,d,'mur');
-    if(deja){ say('Il y a déjà <b>'+nomMeuble(deja.t)+'</b> à cet endroit du mur. Prends la <b>⌫ Gomme</b> pour le décrocher.'); return; }
+    if(deja){ say(T('Il y a déjà <b>{meuble}</b> à cet endroit du mur. Prends la <b>⌫ Gomme</b> pour le décrocher.', {meuble: nomMeuble(deja.t)})); return; }
   }
 
   if(niv==='sol'||niv==='dessus'){
-    if(cases.some(c=>estPorte(p,c.x,c.y))){ say('Ne bouche pas le passage.'); return; }
-    if(cases.some(c=>c.x===Math.floor(hero.x)&&c.y===Math.floor(hero.y))){ say('Tu es debout dessus.'); return; }
+    if(cases.some(c=>estPorte(p,c.x,c.y))){ say(T('Ne bouche pas le passage.')); return; }
+    if(cases.some(c=>c.x===Math.floor(hero.x)&&c.y===Math.floor(hero.y))){ say(T('Tu es debout dessus.')); return; }
     const pris=(d.meubles||[]).find(m=>{ const n=niveau(m.t);
       return (n==='sol'||n==='dessus') && casesDe(m).some(c=>cases.some(k=>k.x===c.x&&k.y===c.y)); });
     if(pris){
@@ -5614,14 +5875,14 @@ function poserMeuble(x,y){
         return;
       }
       const dessus=meubleSur(x,y,d,'dessus');
-      if(dessus){ say('Il y a déjà <b>'+nomMeuble(dessus.t)+'</b> sur ce meuble.'); return; }
+      if(dessus){ say(T('Il y a déjà <b>{meuble}</b> sur ce meuble.', {meuble: nomMeuble(dessus.t)})); return; }
     }
   }
 
   // Deux tapis ne se superposent pas, mais un tapis passe sous tout le reste.
   if(niv==='plat'){
     const pris=meublePlatSous(d,cases);
-    if(pris){ say('Il y a déjà <b>'+nomMeuble(pris.t)+'</b> au sol ici. Prends la <b>⌫ Gomme</b>.'); return; }
+    if(pris){ say(T('Il y a déjà <b>{meuble}</b> au sol ici. Prends la <b>⌫ Gomme</b>.', {meuble: nomMeuble(pris.t)})); return; }
   }
 
   memoriser();
@@ -5638,7 +5899,7 @@ function meublePlatSous(d,cases){
 function tournerMeuble(x,y){
   const p=pieceDef(piece), d=pieceData();
   const m=attraper(x,y,d);
-  if(!m){ say('Rien à tourner ici.'); return; }
+  if(!m){ say(T('Rien à tourner ici.')); return; }
   // Un meuble carré garde son encombrement : tourner ne déplace que son dos.
   const o = m.o==='sw' ? 'se' : 'sw';
   const s0=emprise(m.t,m.o), s=emprise(m.t,o), niv=niveau(m.t);
@@ -5647,7 +5908,7 @@ function tournerMeuble(x,y){
   // le vide au milieu de la pièce.
   if(niv==='mur'){
     const bon = o==='sw' ? (m.x===0) : (m.y===0);
-    if(!bon){ say('Cette case n’est pas contre l’autre mur. Décroche-le et repose-le là-bas.'); return; }
+    if(!bon){ say(T('Cette case n’est pas contre l’autre mur. Décroche-le et repose-le là-bas.')); return; }
     memoriser(); m.o=o; son('poser'); saveMine(); buildAll(); return;
   }
   // Un meuble carré, ou n'importe quoi en 1x1, garde exactement ses cases :
@@ -5656,7 +5917,7 @@ function tournerMeuble(x,y){
   if(s[0]===s0[0] && s[1]===s0[1]){
     memoriser(); m.o=o; son('poser'); saveMine(); buildAll(); return;
   }
-  if(m.x+s[0]>p.w || m.y+s[1]>p.h){ say('Pas la place de le tourner ici.'); return; }
+  if(m.x+s[0]>p.w || m.y+s[1]>p.h){ say(T('Pas la place de le tourner ici.')); return; }
   const cases=[]; for(let j=0;j<s[1];j++) for(let i=0;i<s[0];i++) cases.push({x:m.x+i,y:m.y+j});
   if(niv!=='plat'){
     // Ce qui est posé **sur** m le suit : il ne se compte pas comme un
@@ -5664,12 +5925,12 @@ function tournerMeuble(x,y){
     // redescend au sol tout seul, et rien n'est perdu.
     const porte=(d.meubles||[]).filter(k=>niveau(k.t)==='dessus'
       && casesDe(m).some(c=>c.x===k.x&&c.y===k.y));
-    if(cases.some(c=>estPorte(p,c.x,c.y))){ say('Tourné, il bloquerait le passage.'); return; }
-    if(cases.some(c=>c.x===Math.floor(hero.x)&&c.y===Math.floor(hero.y))){ say('Tu es debout dessus.'); return; }
+    if(cases.some(c=>estPorte(p,c.x,c.y))){ say(T('Tourné, il bloquerait le passage.')); return; }
+    if(cases.some(c=>c.x===Math.floor(hero.x)&&c.y===Math.floor(hero.y))){ say(T('Tu es debout dessus.')); return; }
     if((d.meubles||[]).some(k=>k!==m && porte.indexOf(k)<0
         && (niveau(k.t)==='sol'||niveau(k.t)==='dessus')
         && casesDe(k).some(c=>cases.some(q=>q.x===c.x&&q.y===c.y)))){
-      say('Un autre meuble est dans le passage.'); return; }
+      say(T('Un autre meuble est dans le passage.')); return; }
   }
   memoriser(); m.o=o; son('poser'); saveMine(); buildAll();
 }
@@ -5708,7 +5969,7 @@ function porteSousLesPieds(){
 function aCoteDeLaPorte(p){ return p.mur==='nw' ? {x:1,y:p.i} : {x:p.i,y:1}; }
 
 function entrer(k){
-  if(visiting){ say('La porte '+deQui(world.owner)+' est fermée. Pour l’instant, on ne visite que le dehors.'); return; }
+  if(visiting){ say(T('La porte {qui} est fermée. Pour l’instant, on ne visite que le dehors.', {qui: deQui(world.owner)})); return; }
   finBalade(false);                      // on n'emmène pas le chien au salon
   fermerLeViseur();                      // un viseur oublié, c'est une pièce vue à travers deux bandes noires
   posIle={x:hero.x,y:hero.y};
@@ -5719,7 +5980,7 @@ function entrer(k){
   hero.x=c.x+0.5; hero.y=c.y+0.5; hero.face='bas'; target=null;
   majVue(); degager(); tool.mode='marche'; tool.kind=null;
   son('arrivee'); majAmbiance(); hudSync(); buildAll(); ouvrirOnglet('maison');
-  say('Tu rentres chez toi. Une porte pour changer de pièce, et <b>← Ton île</b> en haut du cadre pour ressortir.');
+  say(T('Tu rentres chez toi. Une porte pour changer de pièce, et <b>← Ton île</b> en haut du cadre pour ressortir.'));
 }
 function sortir(){
   fermerLeViseur();
@@ -5732,7 +5993,7 @@ function sortir(){
   posIle=null; tool.mode='marche'; tool.kind=null;
   son('arrivee'); majAmbiance(); hudSync(); buildAll();
   ouvrirOnglet(ongletAvant||'ile'); ongletAvant=null;
-  say('Te revoilà dehors.');
+  say(T('Te revoilà dehors.'));
 }
 function allerPiece(k,depuis){
   const p=pieceDef(k); piece=k;
@@ -5740,7 +6001,7 @@ function allerPiece(k,depuis){
   const c=retour?aCoteDeLaPorte(retour):{x:Math.floor(p.w/2),y:Math.floor(p.h/2)};
   hero.x=c.x+0.5; hero.y=c.y+0.5; target=null; sasArme=false;
   majVue(); degager(); son('arrivee'); hudSync(); buildAll();
-  say('Te voilà dans '+laPiece(p.k,false,true)+'.');
+  say(T('Te voilà dans {piece}.', {piece: laPiece(p.k,false,true)}));
 }
 function franchir(){
   const p=porteSousLesPieds(); if(!p) return false;
@@ -5751,7 +6012,7 @@ function franchir(){
 // cadre pour qui n'a pas de clavier.
 function actionPorte(){
   if(dedans){ if(!franchir())
-    say('Pas de porte ici. La plaque <b>← Ton île</b>, en haut du cadre, te ramène dehors.'); return; }
+    say(T('Pas de porte ici. La plaque <b>← Ton île</b>, en haut du cadre, te ramène dehors.')); return; }
   if(devantLaPorte()) entrer('salon');
 }
 
@@ -5761,14 +6022,14 @@ function clicDedans(q){
   // Le symétrique de dehors : un pinceau d'île armé dedans ne posait rien
   // et ne disait rien.
   if(tool.mode==='terrain'||tool.mode==='objet'||tool.mode==='maison'){
-    say('Ça se pose <b>dehors</b>. Prends <b>← Ton île</b>, en haut du cadre.');
+    say(T('Ça se pose <b>dehors</b>. Prends <b>← Ton île</b>, en haut du cadre.'));
     return;
   }
   if(tool.mode==='marche'){ target={x:q.fx,y:q.fy}; return; }
   if(tool.mode==='meuble'){ poserMeuble(q.x,q.y); return; }
   if(tool.mode==='gomme'){ effacerMeuble(q.x,q.y); return; }
   if(tool.mode==='tourner'){ tournerMeuble(q.x,q.y); return; }
-  say('Ce pinceau-là ne sert que dehors.');
+  say(T('Ce pinceau-là ne sert que dehors.'));
 }
 
 /* ---- le dessin d'une pièce ---- */
@@ -6026,11 +6287,11 @@ cv.addEventListener('click',e=>{
   // clique et rien ne se passe » est le pire des retours. C'est le même
   // défaut que la boutique d'avant, au même endroit : là où est le doigt.
   if(tool.mode==='meuble'){
-    say('Un meuble se pose <b>dedans</b>. Monte sur le seuil de ta porte, ou prends le bouton <b>Entrer</b> du panneau Maison.');
+    say(T('Un meuble se pose <b>dedans</b>. Monte sur le seuil de ta porte, ou prends le bouton <b>Entrer</b> du panneau Maison.'));
     return;
   }
   if(tool.mode==='marche'){ target={x:q.fx,y:q.fy}; return; }
-  if(visiting){ say('Tu es invité chez '+esc(world.owner)+" — on ne touche pas à l'île des autres."); return; }
+  if(visiting){ say(T('Tu es invité chez {hote} — on ne touche pas à l\'île des autres.', {hote: esc(world.owner)})); return; }
   // On ne memorise que si le clic change vraiment quelque chose : sinon la
   // pile se remplit de pas qui n'annulent rien.
   if((tool.mode==='terrain'||tool.mode==='objet'||tool.mode==='sol') && !dansLeRayon(q.x,q.y)){
@@ -6092,16 +6353,13 @@ cv.addEventListener('click',e=>{
    emporterait jusqu'à quatre objets d'un coup. */
 function poserObjet(x,y){
   const t=tool.kind, cases=empriseCases(t,x,y), bat=estBatiment(t);
-  if(bat && (x>GRID-2||y>GRID-2)){ say(unObjet(t,true,true)+' déborderait de la grille.'); return false; }
+  if(bat && (x>GRID-2||y>GRID-2)){ say(T('{objet} déborderait de la grille.', {objet: unObjet(t,true,true)})); return false; }
   // Le rayon d'abord : c'est le seul refus auquel on peut répondre quelque
   // chose, et la réponse est « fais venir du monde », pas « recommence ».
   const dehors=cases.filter(c=>!dansLeRayon(c[0],c[1]));
   if(dehors.length){
     if(!bat) return false;              // le clic hors rayon a déjà parlé
-    say('Il faut <b>quatre cases</b> à '+unObjet(t,false,true)+', et ton île '+
-        'n’est pas encore assez large ici. Essaie plus près du centre — ou '+
-        '<b>agrandis ton île</b> : elle gagne un cran à chaque mot qu’on te laisse. '+
-        'Envoie ta carte postale, onglet <b>Voisins</b>.', 0, 5600);
+    say(T('Il faut <b>quatre cases</b> à {objet}, et ton île n’est pas encore assez large ici. Essaie plus près du centre — ou <b>agrandis ton île</b> : elle gagne un cran à chaque mot qu’on te laisse. Envoie ta carte postale, onglet <b>Voisins</b>.', {objet: unObjet(t,false,true)}), 0, 5600);
     return false;
   }
   if(cases.some(c=>world.tiles[c[1]*GRID+c[0]]===2)){
@@ -6109,13 +6367,13 @@ function poserObjet(x,y){
             : "On ne plante rien dans l'eau."); return false; }
   const h=world.house;
   if(cases.some(c=>c[0]>=h.x&&c[0]<=h.x+1&&c[1]>=h.y&&c[1]<=h.y+1)){
-    say('La maison occupe déjà cette case.'); return false; }
+    say(T('La maison occupe déjà cette case.')); return false; }
   if(bat){
     const gene=(world.objects||[]).find(o=>cases.some(c=>couvre(o,c[0],c[1])));
     if(gene){ say(gene.t==='panneau'
-      ? 'Un mot du livre d’or est planté là. Choisis un autre endroit.'
-      : 'Il y a '+unObjet(gene.t,false,true)+' sous '+unObjet(t,false,true)+
-        '. Efface-le d’abord, ou pose plus loin.'); return false; }
+      ? T('Un mot du livre d’or est planté là. Choisis un autre endroit.')
+      : T('Il y a {objet} sous {objet2}. Efface-le d’abord, ou pose plus loin.',
+          {objet: unObjet(gene.t,false,true), objet2: unObjet(t,false,true)})); return false; }
   }
   memoriser();
   if(!bat) world.objects=world.objects.filter(o=>!couvre(o,x,y));
@@ -6126,28 +6384,28 @@ function poserObjet(x,y){
 }
 function tournerSurIle(x,y){
   const o=objetEn(world.objects,x,y);
-  if(!o){ say('Rien à tourner ici.'); return; }
-  if(!PIVOT_ILE[o.t]){ say(unObjet(o.t,true,true)+' n’a pas de sens : il est pareil des deux côtés.'); return; }
+  if(!o){ say(T('Rien à tourner ici.')); return; }
+  if(!PIVOT_ILE[o.t]){ say(T('{objet} n’a pas de sens : il est pareil des deux côtés.', {objet: unObjet(o.t,true,true)})); return; }
   memoriser(); o.o = o.o==='sw' ? 'se' : 'sw'; son('poser'); saveMine(); buildAll();
 }
 // La maison se pose au clic, comme le reste. Quatre flèches qui suivent les
 // axes de l'isométrie, personne ne sait dans quel sens elles vont.
 function poserMaison(x,y){
   const h=mine.house;
-  if(x>GRID-2||y>GRID-2){ say('La maison déborderait de la grille.'); return; }
+  if(x>GRID-2||y>GRID-2){ say(T('La maison déborderait de la grille.')); return; }
   const cases=[[x,y],[x+1,y],[x,y+1],[x+1,y+1]];
-  if(cases.some(c=>!dansLeRayon(c[0],c[1]))){ say('Le large ne t’appartient pas encore.'); return; }
-  if(cases.some(c=>mine.tiles[c[1]*GRID+c[0]]===2)){ say('On ne bâtit pas sur l’eau.'); return; }
+  if(cases.some(c=>!dansLeRayon(c[0],c[1]))){ say(T('Le large ne t’appartient pas encore.')); return; }
+  if(cases.some(c=>mine.tiles[c[1]*GRID+c[0]]===2)){ say(T('On ne bâtit pas sur l’eau.')); return; }
   const gene=(mine.objects||[]).find(o=>cases.some(c=>c[0]===o.x&&c[1]===o.y));
   if(gene){ say(gene.t==='panneau'
-    ? 'Un mot du livre d’or est planté là. Choisis un autre endroit.'
-    : 'Il y a '+unObjet(gene.t,false,true)+' sous la maison. Efface-le d’abord.'); return; }
+    ? T('Un mot du livre d’or est planté là. Choisis un autre endroit.')
+    : T('Il y a {objet} sous la maison. Efface-le d’abord.', {objet: unObjet(gene.t,false,true)})); return; }
   if(h.x===x&&h.y===y) return;
   memoriser(); h.x=x; h.y=y; saveMine(); son('poser');
   // Le bonhomme ne doit pas se retrouver enfermé dans les murs.
   if(blocked(hero.x,hero.y)){ hero.x=x+2.5; hero.y=y+1.5; target=null;
     if(blocked(hero.x,hero.y)){ hero.x=x+1.5; hero.y=y+2.5; } }
-  buildAll(); say('Maison déplacée.');
+  buildAll(); say(T('Maison déplacée.'));
 }
 
 /* ---- le pad tactile ----
@@ -6624,11 +6882,10 @@ function avancerMaree(){
   if(premier){ if(e.basse) direLaMaree(); return; }
   if(e.basse){
     son('grandir');
-    say('<b>La mer se retire.</b> Du sable mouillé est apparu au bord de l’île, '+
-        'et elle y a laissé des choses.');
+    say(T('<b>La mer se retire.</b> Du sable mouillé est apparu au bord de l’île, et elle y a laissé des choses.'));
   } else {
     laMerMonte();
-    say('<b>La mer remonte.</b> Le sable du bord repasse sous l’eau jusqu’à la prochaine marée.');
+    say(T('<b>La mer remonte.</b> Le sable du bord repasse sous l’eau jusqu’à la prochaine marée.'));
   }
 }
 function direLaMaree(){
@@ -6900,14 +7157,13 @@ function commandeAPorter(){
 let livraisonEnCours=false;
 async function porterLaCommande(){
   if(!visiting||dedans||livraisonEnCours) return;
-  if(!store.configure||!moi){ say('Connecte-toi pour porter la commande chez quelqu’un.'); return; }
+  if(!store.configure||!moi){ say(T('Connecte-toi pour porter la commande chez quelqu’un.')); return; }
   if(!world.id||world.id==='me'){
-    say('Cette île est une île de démonstration : il n’y a personne pour recevoir le panier.'); return; }
-  if(commandePortee()){ say('Tu as déjà porté la commande aujourd’hui. Elle revient demain.'); return; }
+    say(T('Cette île est une île de démonstration : il n’y a personne pour recevoir le panier.')); return; }
+  if(commandePortee()){ say(T('Tu as déjà porté la commande aujourd’hui. Elle revient demain.')); return; }
   const manque=commandeManque();
   if(manque.length){
-    say('Ton sac n’est pas prêt : il te manque <b>'+manque.join('</b> et <b>')+
-        '</b>. Rentre chez toi à marée basse, la mer les laisse sur le sable.'); return; }
+    say(T('Ton sac n’est pas prêt : il te manque <b>{a}</b>. Rentre chez toi à marée basse, la mer les laisse sur le sable.', {a: manque.join('</b> et <b>')})); return; }
   livraisonEnCours=true;
   try{
     const r=await store.livrer(world.id, mine.me.name||monPseudo||'Quelqu’un');
@@ -6916,11 +7172,9 @@ async function porterLaCommande(){
     // Verrouillée sous la clé de l'état « déjà porté » : sans ça,
     // `proximity()` recouvre le message au battement suivant, et le seul
     // moment où l'enfant regarde le compteur dure une image.
-    say('Tu déposes le panier devant la porte '+deQui(world.owner)+'. '+
-        '<b>+'+GAIN_COMMANDE+' shells</b> · et <b>'+GAIN_COMMANDE_RECUE+'</b> pour '+esc(world.owner)+
-        ', qui les trouvera en rentrant.', 'porte:livre');
+    say(T('Tu déposes le panier devant la porte {qui}. <b>+{a} shells</b> · et <b>{b}</b> pour {hote}, qui les trouvera en rentrant.', {qui: deQui(world.owner), a: GAIN_COMMANDE, b: GAIN_COMMANDE_RECUE, hote: esc(world.owner)}), 'porte:livre');
   }catch(e){
-    say('Le panier n’a pas pu être déposé : '+esc(e.message||e));
+    say(T('Le panier n’a pas pu être déposé : {erreur}', {erreur: esc(e.message||e)}));
   }finally{ livraisonEnCours=false; buildAll(); }
 }
 
@@ -7070,7 +7324,7 @@ function chienProche(){
 }
 function sortirLeChien(o){
   const pts=tourDeLIle(o);
-  if(pts.length<3){ say('Ton île est encore trop petite pour un vrai tour. Fais-la grandir d’abord.'); return; }
+  if(pts.length<3){ say(T('Ton île est encore trop petite pour un vrai tour. Fais-la grandir d’abord.')); return; }
   // `crotteA` est l'étape où le chien s'arrêtera. Elle est tirée **ici**,
   // une fois pour le tour : une chance par étape en donnerait trois ou
   // quatre sur un grand tour et aucune sur un petit, et le joueur ne saurait
@@ -7099,7 +7353,7 @@ function taireLattente(){ if(wLock==='baladeloin'){ whisper.classList.remove('on
 function finBalade(bouclee){
   if(!balade) return;
   balade=null; hudSync(); taireLattente();
-  if(!bouclee){ say('Le chien retourne à sa place. Le tour n’était pas fini.'); return; }
+  if(!bouclee){ say(T('Le chien retourne à sa place. Le tour n’était pas fini.')); return; }
   const n=gagner(GAIN_BALADE,'promenade');
   saveMine(); son('chien'); if(n) setTimeout(()=>son('piece'),200); buildAll();
   say(n
@@ -7133,7 +7387,7 @@ function leChienSarrete(){
   if(objetEn(mine.objects,x,y,true)) return;
   mine.objects.push({t:'crotte', x, y});
   saveMine(); son('chien');
-  say('Le chien s’arrête un instant. <b>Il faudra nettoyer</b> — marche dessus et appuie sur <b>E</b>.', 0, 3400);
+  say(T('Le chien s’arrête un instant. <b>Il faudra nettoyer</b> — marche dessus et appuie sur <b>E</b>.'), 0, 3400);
 }
 function crotteProche(){
   if(visiting||dedans) return null;
@@ -7148,7 +7402,7 @@ function nettoyer(o){
   saveMine(); son('gomme'); buildAll();
   // Rien à gagner, et c'est dit gentiment : ce jeu n'a pas besoin qu'on y
   // gagne quelque chose à chaque geste.
-  say('C’est propre. Le chien fait comme s’il n’y était pour rien.');
+  say(T('C’est propre. Le chien fait comme s’il n’y était pour rien.'));
 }
 function avancerLaBalade(dt){
   if(!balade) return;
@@ -7157,7 +7411,7 @@ function avancerLaBalade(dt){
   if((mine.objects||[]).indexOf(balade.o)<0){ balade=null; hudSync(); taireLattente(); return; }
   if(Math.hypot(balade.x-hero.x, balade.y-hero.y)>BALADE_PRES){
     if(!balade.attend){ balade.attend=true; son('chien'); }
-    if(wLock!=='baladeloin') say('<b>Le chien t’attend.</b> Reviens près de lui : il ne repart pas sans toi.','baladeloin');
+    if(wLock!=='baladeloin') say(T('<b>Le chien t’attend.</b> Reviens près de lui : il ne repart pas sans toi.'),'baladeloin');
     return;
   }
   if(balade.attend){ balade.attend=false; taireLattente(); }
@@ -7599,16 +7853,23 @@ const NOM_OBJ={}; OBJ_GROUPS.forEach(g=>g[1].forEach(o=>{ NOM_OBJ[o[0]]=o[1].toL
 const FEM_OBJ={}; OBJ_GROUPS.forEach(g=>g[1].forEach(o=>{ if(o[2]==='f') FEM_OBJ[o[0]]=1; }));
 // « un rocher », « une fleur ». `maj` pour un début de phrase, `gras` pour
 // mettre le nom en valeur sans emporter l'article avec lui.
+/* Le nom de l'objet passe par `T()` **avant** d'arriver à la grammaire, et
+   l'ordre compte : l'anglais choisit `a`/`an` sur la première lettre du nom
+   **traduit**. Lu sur le français, « école » commence par une voyelle et
+   rendrait « **an** school ». Les deux listes ne s'alignent pas, et c'est
+   toujours le nom affiché qui décide de l'article qui le précède.
+
+   Le genre, lui, reste dans le catalogue : c'est du français, et la marque
+   `'f'` y est juste. Un module qui ne s'en sert pas le reçoit et l'ignore ;
+   une langue qui décline autrement portera sa propre table. */
 function unObjet(t,maj,gras){
-  const n=NOM_OBJ[t]||'objet', a=(FEM_OBJ[t]&&NOM_OBJ[t])?'une ':'un ';
-  return (maj?a.charAt(0).toUpperCase()+a.slice(1):a)+(gras?'<b>'+n+'</b>':n);
+  return gram().un(T(NOM_OBJ[t]||'objet'), !!(FEM_OBJ[t]&&NOM_OBJ[t]), maj, gras);
 }
 // « Ton chat », « Ta mouette ». Devant une voyelle, « ta » redevient
 // « ton » — aucune bestiole n'est dans ce cas aujourd'hui, mais la règle
 // est du français, pas un cas particulier de cette liste-ci.
 function tonObjet(t){
-  const n=NOM_OBJ[t]||'objet';
-  return ((FEM_OBJ[t] && !/^[aeiouyéèêàâîïôöûü]/i.test(n)) ? 'Ta ' : 'Ton ')+'<b>'+n+'</b>';
+  return gram().ton(T(NOM_OBJ[t]||'objet'), !!FEM_OBJ[t]);
 }
 /* « à la ferme », « à l'école », « au restaurant ». Troisième forme après
    « un » et « ton », et la seule qui **contracte** : au masculin, « à le »
@@ -7626,9 +7887,7 @@ function tonObjet(t){
    première lettre du nom. Un septième bâtiment est couvert le jour où il
    entre au catalogue avec son `'f'`. */
 function auLieu(t){
-  const n=NOM_OBJ[t]||'objet';
-  if(/^[aeiouéèêàâîïôöûü]/i.test(n)) return 'à l’<b>'+n+'</b>';
-  return (FEM_OBJ[t]?'à la <b>':'au <b>')+n+'</b>';
+  return gram().ou(T(NOM_OBJ[t]||'objet'), !!FEM_OBJ[t]);
 }
 // Ce que le chien laisse n'est dans aucun rayon de l'atelier — il n'y a rien
 // à poser, il arrive tout seul — mais les messages ont besoin de son nom,
@@ -7720,8 +7979,7 @@ function proximiteDedans(){
        du cadre**, comme la réponse se lit au pied du panneau. */
     const k=cadreProche();
     if(k){ const cle='cadre'+piece+k.x+'-'+k.y+k.o;
-      if(wLock!==cle) say('📷 '+unObjet(k.photo,true,true)+' '+deQui(k.de)+
-        ', rapporté en photo.', cle);
+      if(wLock!==cle) say(T('📷 {objet} {qui}, rapporté en photo.', {objet: unObjet(k.photo,true,true), qui: deQui(k.de)}), cle);
       return; }
     if(wLock.indexOf('porte')===0||wLock.indexOf('cadre')===0){ whisper.classList.remove('on'); wLock=''; }
     return; }
@@ -7729,8 +7987,8 @@ function proximiteDedans(){
   const cle='porte'+piece+p.mur+p.i;
   boutonRose(p.vers==='dehors' ? 'Sortir' : ('Passer '+aLaPiece(p.vers)));
   if(wLock!==cle) say(p.vers==='dehors'
-    ? 'Le paillasson. <b>E</b> pour ressortir.'
-    : 'Une porte vers '+laPiece(p.vers,false,true)+'. <b>E</b> pour passer.', cle);
+    ? T('Le paillasson. <b>E</b> pour ressortir.')
+    : T('Une porte vers {piece}. <b>E</b> pour passer.', {piece: laPiece(p.vers,false,true)}), cle);
 }
 function proximity(){
   if(dedans){ proximiteDedans(); return; }
@@ -7768,17 +8026,12 @@ function proximity(){
        Qui a répondu dépend d'où l'on est : chez soi c'est toi, chez
        quelqu'un c'est lui. `deQui()` élide devant une voyelle — « d'Inès »
        et non « de Inès ». */
-    bulle('sign'+panneau.x+'-'+panneau.y,
-    '<b>'+esc(panneau.by)+'</b> a écrit : « '+esc(panneau.txt)+' »'+
-    (panneau.rep
+    bulle('sign'+panneau.x+'-'+panneau.y,T('<b>{nom}</b> a écrit : « {nom2} »{a}', {nom: esc(panneau.by), nom2: esc(panneau.txt), a: (panneau.rep
       ? '<br>↩ '+(visiting ? esc(world.owner||'')+' a répondu' : 'Tu as répondu')+
         ' : « '+esc(panneau.rep)+' »'
-      : '')); return; }
+      : '')})); return; }
   if(photoProche){ boutonRose('📷 Prendre en photo');
-    bulle(clePhoto(objet),
-    unObjet(objet.t,true,true)+' de chez '+esc(world.owner)+
-    '. <b>E</b> ou le bouton rose pour en prendre une <b>photo</b> — '+
-    'le cadre t’attendra dans ta maison.'); return; }
+    bulle(clePhoto(objet),T('{objet} de chez {hote}. <b>E</b> ou le bouton rose pour en prendre une <b>photo</b> — le cadre t’attendra dans ta maison.', {objet: unObjet(objet.t,true,true), hote: esc(world.owner)})); return; }
   /* Le chien, puis ce qu'il a laissé.
 
      **Ces deux branches passent par `chienProche()` et `crotteProche()`**,
@@ -7798,10 +8051,10 @@ function proximity(){
     if(balade){
       if(Math.hypot(balade.x-hero.x, balade.y-hero.y)<1.15){
         boutonRose('Ramener');
-        bulle('chien','Tu promènes ton chien. <b>E</b> si tu veux le ramener tout de suite.'); return; }
+        bulle('chien',T('Tu promènes ton chien. <b>E</b> si tu veux le ramener tout de suite.')); return; }
     } else if(chienProche()){
       boutonRose('Sortir le chien');
-      bulle('chien','Ton chien. <b>E</b> pour le sortir : il fait le tour de l’île, et tu restes près de lui.'); return; }
+      bulle('chien',T('Ton chien. <b>E</b> pour le sortir : il fait le tour de l’île, et tu restes près de lui.')); return; }
     // Au même rang que dans `agir()`, et par la même fonction.
     const cr=crotteProche();
     if(cr){
@@ -7830,8 +8083,7 @@ function proximity(){
     if(bl){
       if(motsNouveaux){
         boutonRose('Relever la boîte');
-        bulle(BOITE_PLEIN,'<b>Le drapeau est lev\u00e9.</b> '+motsNouveaux+' mot'+(motsNouveaux>1?'s':'')+
-          ' t\u2019attend'+(motsNouveaux>1?'ent':'')+'. <b>E</b> pour les lire.');
+        bulle(BOITE_PLEIN,T('<b>Le drapeau est lev\u00e9.</b> {a} mot{b} t\u2019attend{c}. <b>E</b> pour les lire.', {a: motsNouveaux, b: (motsNouveaux>1?'s':''), c: (motsNouveaux>1?'ent':'')}));
       }else{
         boutonRose(null);
         bulle(BOITE_VIDE,'Ta bo\u00eete aux lettres est vide. Le drapeau se l\u00e8vera quand quelqu\u2019un sera pass\u00e9.');
@@ -7846,8 +8098,7 @@ function proximity(){
      passe rien aujourd'hui et qu'il faut revenir demain. */
   const pot=potagerProche();
   if(pot){ boutonRose(null);
-    bulle(POTAGER_CLE, 'Dans le potager : <b>'+POUSSE_DIT[pousseDuPotager()]+'</b>.'+
-      (saisonNow==='hiver' ? ' L’hiver, la terre se repose.' : ' Repasse demain, ça aura poussé.'));
+    bulle(POTAGER_CLE, T('Dans le potager : <b>{a}</b>.{b}', {a: POUSSE_DIT[pousseDuPotager()], b: (saisonNow==='hiver' ? ' L’hiver, la terre se repose.' : ' Repasse demain, ça aura poussé.')}));
     return;
   }
   // La girouette, chez soi comme chez les autres : la mer est la même pour
@@ -7866,10 +8117,9 @@ function proximity(){
     // fait pas — et il faut le dire ici, au pied de l'objet, pas dans un
     // panneau : c'est la leçon de la boutique d'avant le 16/09.
     const a=BOUTIQUE.find(x=>x.k===objet.t && FONCTIONNEL[x.k]);
-    bulle('souv'+objet.x+'-'+objet.y,
-    'Souvenir rapporté de chez <b>'+esc(objet.de)+'</b>.'+(a
+    bulle('souv'+objet.x+'-'+objet.y,T('Souvenir rapporté de chez <b>{nom}</b>.{a}', {nom: esc(objet.de), a: (a
       ? ' Il décore, mais il ne marche pas : <b>'+esc(a.n)+'</b> est à la Boutique, '+a.prix+' shells.'
-      : '')); return; }
+      : '')})); return; }
   // La porte de la maison. Elle n'ouvre que chez soi : c'est une règle de
   // jeu, pas un secret : `interieur` voyage dans le même jsonb que le reste.
   if(devantLaPorte()){
@@ -7885,16 +8135,14 @@ function proximity(){
       // l'envers. `porterLaCommande()` pose `porte:livre` lui-même.
       if(commandeAPorter()){
         boutonRose('Déposer la commande');
-        bulle('porte:pret','La porte '+deQui(world.owner)+' est fermée, mais ton sac est prêt. '+
-          '<b>E</b> pour déposer la commande du jour sur le pas de la porte.'); return; }
+        bulle('porte:pret',T('La porte {qui} est fermée, mais ton sac est prêt. <b>E</b> pour déposer la commande du jour sur le pas de la porte.', {qui: deQui(world.owner)})); return; }
       boutonRose(null);
       if(store.configure&&moi&&bourseServeur&&commandePortee())
-        bulle('porte:livre','La porte '+deQui(world.owner)+' est fermée. Tu as déjà porté la commande aujourd’hui ; elle revient demain.');
+        bulle('porte:livre',T('La porte {qui} est fermée. Tu as déjà porté la commande aujourd’hui ; elle revient demain.', {qui: deQui(world.owner)}));
       else if(store.configure&&moi&&bourseServeur)
-        bulle('porte:manque','La porte '+deQui(world.owner)+' est fermée. C’est ici qu’on dépose la commande du jour, et il te manque <b>'+
-          commandeManque().map(esc).join('</b> et <b>')+'</b> dans ton sac.');
+        bulle('porte:manque',T('La porte {qui} est fermée. C’est ici qu’on dépose la commande du jour, et il te manque <b>{a}</b> dans ton sac.', {qui: deQui(world.owner), a: commandeManque().map(esc).join('</b> et <b>')}));
       else
-        bulle('porte:ferme','La porte '+deQui(world.owner)+' est fermée. Pour l’instant, on ne visite que le dehors.');
+        bulle('porte:ferme',T('La porte {qui} est fermée. Pour l’instant, on ne visite que le dehors.', {qui: deQui(world.owner)}));
       return; }
     // Le seuil fait entrer tout seul ; la case d'à côté se contente
     // d'inviter. Une balade en cours désarme le seuil : passer devant chez
@@ -7925,9 +8173,7 @@ function proximity(){
        texte libre : rien ne dit lequel des deux on a. `deQui()` élide en
        prime devant une voyelle — la règle du 19/09, « La porte de Adam
        est fermée ». */
-    bulle('lanterne'+lan.x+'-'+lan.y,
-      'Un mot '+deQui(lan.nom)+(lan.quand?', '+leJourDit(lan.quand):'')+
-      '. Sa lanterne \u00e9claire ton \u00eele la nuit.');
+    bulle('lanterne'+lan.x+'-'+lan.y,T('Un mot {qui}{a}. Sa lanterne \u00e9claire ton \u00eele la nuit.', {qui: deQui(lan.nom), a: (lan.quand?', '+leJourDit(lan.quand):'')}));
     return;
   }
   /* Un habitant qu'on croise **dit son pr\u00e9nom et o\u00f9 il va**, et c'est tout
@@ -8073,15 +8319,13 @@ function photographier(){
   const deja=PIECES.map(q=>({q, m:(((mine.interieur&&mine.interieur.pieces[q.k])||{}).meubles||[])
       .find(m=>m.t==='tableau' && m.photo===o.t && m.de===qui)}))
     .find(r=>r.m);
-  if(deja){ say('Tu as d\u00e9j\u00e0 '+unObjet(o.t,false,true)+' '+deQui(qui)+
-    ' au mur, dans '+laPiece(deja.q.k,false,true)+'.', cle); return; }
+  if(deja){ say(T('Tu as d\u00e9j\u00e0 {objet} {qui} au mur, dans {piece}.', {objet: unObjet(o.t,false,true), qui: deQui(qui), piece: laPiece(deja.q.k,false,true)}), cle); return; }
   /* Plus un mur libre, et le refus dit quoi faire. La **Gomme** de
      l'atelier décroche un cadre : on ne perd rien, on choisit lequel on
      garde. C'est le refus auquel on peut répondre quelque chose, comme
      celui du bâtiment qui demande quatre cases. */
   const mur=murLibre(mine);
-  if(!mur){ say('Tous tes murs portent d\u00e9j\u00e0 un cadre. D\u00e9croches-en un chez toi '+
-    'avec la <b>Gomme</b> de l\u2019atelier, et reviens le prendre en photo.', cle); return; }
+  if(!mur){ say(T('Tous tes murs portent d\u00e9j\u00e0 un cadre. D\u00e9croches-en un chez toi avec la <b>Gomme</b> de l\u2019atelier, et reviens le prendre en photo.'), cle); return; }
   /* `memoriser()` porte déjà `i:mine.interieur` : Ctrl+Z décroche donc le
      cadre sans une ligne de plus. Vérifié avant d'écrire, pas après. */
   memoriser();
@@ -8109,9 +8353,7 @@ function photographier(){
      est vraiment peint — un cadre au mur, dans une pièce nommée, qui
      brille — et rien de plus : promettre un détail qu'on ne peint pas,
      c'est envoyer un enfant le chercher. */
-  say('\ud83d\udcf7 Tu prends '+unObjet(o.t,false,true)+' '+deQui(qui)+
-      ' en photo. Le cadre t\u2019attend dans '+laPiece(mur.piece,false,true)+
-      ' de ta maison, et il brille.', cle);
+  say(T('\ud83d\udcf7 Tu prends {objet} {qui} en photo. Le cadre t\u2019attend dans {piece} de ta maison, et il brille.', {objet: unObjet(o.t,false,true), qui: deQui(qui), piece: laPiece(mur.piece,false,true)}), cle);
 }
 
 /* ================= panneaux ================= */
@@ -8387,6 +8629,23 @@ function champVisage(){
 function buildToi(){
   const p=document.getElementById('p-toi'); p.innerHTML='';
   const c=document.createElement('canvas'); c.id='preview'; c.width=660; c.height=304; p.appendChild(c);
+  /* La langue est dans **Toi**, et pas dans un réglage à part : c'est ce
+     que la personne lit, comme le compagnon est ce qu'elle emmène. La
+     barre est déjà à cinq onglets et l'avertissement des 360 px vaut
+     toujours.
+
+     **Chaque langue porte son propre nom** — « Français », « English » —
+     et jamais un drapeau : un drapeau nomme un pays, pas une langue, et il
+     n'y en a aucun qui dise « français » sans dire aussi « France » à un
+     enfant belge.
+
+     Ce bouton ne sert qu'à **corriger**. Personne ne doit avoir à le
+     trouver pour jouer : `choisirLangue()` a déjà lu le navigateur, donc
+     un enfant néerlandophone arrive dans sa langue sans rien toucher. Un
+     réglage qu'il faut savoir lire pour pouvoir lire serait un cercle. */
+  if(Object.keys(LANGUES).length>1)
+    p.appendChild(chipsLibre(T('Langue'),
+      Object.keys(LANGUES).map(k=>[k,LANGUES[k]]), langue, reglerLangue));
   p.appendChild(textField('Prénom','me.name','Dan'));
   p.appendChild(chips('Fille ou gar\u00e7on','me.genre',[['fille','Fille'],['garcon','Gar\u00e7on']]));
   p.appendChild(chips('Silhouette','me.body',[['rond','Rond'],['élancé','Élancé'],['costaud','Costaud']]));
@@ -8434,8 +8693,8 @@ function buildToi(){
     p.appendChild(chipsLibre('Ton compagnon',
       [['','Aucun']].concat(dispo.map(c=>[c[0],c[1]])),
       compagnonChoisi(), k=>{ mine.me.compagnon=k; saveMine(); majCompagnon(); buildAll();
-        say(k ? (tonObjet(k)+' te suit maintenant partout, même chez les voisins.')
-              : 'Tu marches seul.'); }));
+        say(k ? T('{objet} te suit maintenant partout, même chez les voisins.', {objet: tonObjet(k)})
+              : T('Tu marches seul.')); }));
     const manque=COMPAGNONS.filter(c=>!achete(c[0]));
     p.appendChild(hint(manque.length
       ? ('Une bestiole que tu as déjà. Il t’en manque '+manque.length+' : '+
@@ -8572,7 +8831,7 @@ function buildMaison(){
   dep.textContent = tool.mode==='maison' ? '\u2715 Annuler le déplacement' : '\u2723 Déplacer la maison';
   dep.disabled=!!visiting;
   dep.onclick=()=>{ if(tool.mode==='maison'){ tool.mode='marche'; tool.kind=null; }
-    else { tool.mode='maison'; tool.kind=null; say('Clique la case où poser la maison. Elle occupe deux cases sur deux.'); }
+    else { tool.mode='maison'; tool.kind=null; say(T('Clique la case où poser la maison. Elle occupe deux cases sur deux.')); }
     buildAll(); };
   row.appendChild(dep); f.appendChild(row); p.appendChild(f);
   p.appendChild(hint('Tu cliques la case, la maison s\'y pose : le coin que tu vises est son coin nord, le plus haut \u00e0 l\'\u00e9cran. La maison est le point de rendez-vous, on d\u00e9barque toujours devant sa porte.'));
@@ -8849,7 +9108,7 @@ function buildIle(){
       const x=document.createElement('button'); x.className='chip'; x.type='button';
       x.style.padding='1px 8px'; x.textContent=m.masque?'montrer':'masquer';
       x.onclick=async()=>{ try{ await store.masquerMot(m.id,!m.masque); m.masque=!m.masque;
-        replanter(world); buildAll(); }catch(e){ say('Modération impossible : '+esc(e.message||e)); } };
+        replanter(world); buildAll(); }catch(e){ say(T('Modération impossible : {erreur}', {erreur: esc(e.message||e)})); } };
       li.appendChild(x);
     }
     // Supprimer : chez soi n'importe quel mot, ailleurs seulement les siens
@@ -8863,8 +9122,8 @@ function buildIle(){
           if(m.id && cible) await store.supprimerMot(m.id);   // sinon : mot local, rien en base
           world.mots=(world.mots||[]).filter(n=>n!==m);
           replanter(world); if(world===mine) saveMine();
-          say('Mot supprim\u00e9.'); buildAll();
-        }catch(e){ say('Suppression impossible : '+esc(e.message||e)); }
+          say(T('Mot supprim\u00e9.')); buildAll();
+        }catch(e){ say(T('Suppression impossible : {erreur}', {erreur: esc(e.message||e)})); }
       };
       li.appendChild(d);
     }
@@ -8927,7 +9186,7 @@ function buildIle(){
             say(m.reponse
               ? 'Réponse envoyée. <b>'+esc(m.auteur_nom)+'</b> la verra en repassant.'
               : 'Réponse effacée.');
-          }catch(e){ say('Réponse impossible : '+esc(e.message||e)); }
+          }catch(e){ say(T('Réponse impossible : {erreur}', {erreur: esc(e.message||e)})); }
         };
         ligne.appendChild(ri); ligne.appendChild(rb);
         bloc.replaceChild(ligne, ouvrir); ri.focus();
@@ -8944,18 +9203,18 @@ function buildIle(){
   add.onclick=async()=>{
     const v=i.value.trim(); if(!v) return;
     const spot=freeTile(world);
-    if(!spot){ say('Plus une case de libre pour planter un mot.'); return; }
+    if(!spot){ say(T('Plus une case de libre pour planter un mot.')); return; }
     if(!cible){                                      // ile de demo ou hors ligne : tout reste local
       world.mots.push({id:null,auteur_nom:(monPseudo||mine.me.name||'Quelqu\u2019un'),texte:v,case_x:spot.x,case_y:spot.y,masque:false});
       replanter(world); son('mot'); if(world===mine){ faireGrandir(); saveMine(); }
-      i.value=''; say('Mot plant\u00e9 (\u00eele de d\u00e9mo : rien n\u2019est envoy\u00e9).'); buildAll(); return;
+      i.value=''; say(T('Mot plant\u00e9 (\u00eele de d\u00e9mo : rien n\u2019est envoy\u00e9).')); buildAll(); return;
     }
-    if(!moi){ say('Connecte-toi pour laisser un mot chez quelqu\u2019un.'); return; }
+    if(!moi){ say(T('Connecte-toi pour laisser un mot chez quelqu\u2019un.')); return; }
     try{
       const m=await store.planterMot(cible,v,spot.x,spot.y,monPseudo||mine.me.name);
       world.mots.push(m); replanter(world); i.value=''; son('mot');
       if(world===mine) faireGrandir();
-      say('Mot plant\u00e9. Marche \u00e0 c\u00f4t\u00e9 du panneau pour le relire.'); buildAll();
+      say(T('Mot plant\u00e9. Marche \u00e0 c\u00f4t\u00e9 du panneau pour le relire.')); buildAll();
       // Le crédit n'est pas demandé : c'est le trigger `mots_credite` qui
       // l'a posé au moment de l'insert. On relit sa propre bourse, et on
       // dit ce qu'on y trouve de plus. Celle de l'hôte ne nous regarde pas.
@@ -8964,16 +9223,13 @@ function buildIle(){
         try{
           appliquerBourse(await store.bourseDuJour());
           const d=mine.bourse.shells-avant;
-          if(d>0) say('Mot plant\u00e9 chez <b>'+esc(world.owner)+'</b>. <b>+'+d+' shell'+(d>1?'s':'')+
-            '</b> \u00b7 et <b>'+GAIN_MOT_RECU+'</b> pour '+esc(world.owner)+', qui les trouvera en rentrant.');
+          if(d>0) say(T('Mot plant\u00e9 chez <b>{hote}</b>. <b>+{a} shell{b}</b> \u00b7 et <b>{c}</b> pour {hote2}, qui les trouvera en rentrant.', {hote: esc(world.owner), a: d, b: (d>1?'s':''), c: GAIN_MOT_RECU, hote2: esc(world.owner)}));
           else if((mine.bourse.faits.mot_pose||0)>=PLAFOND.mot_pose)
-            say('Mot plant\u00e9 chez <b>'+esc(world.owner)+'</b>. Les visites ont d\u00e9j\u00e0 tout donn\u00e9 '+
-                'pour aujourd\u2019hui — mais il le lira quand m\u00eame.');
-          else say('Mot plant\u00e9 chez <b>'+esc(world.owner)+'</b>. Tu lui as d\u00e9j\u00e0 \u00e9crit aujourd\u2019hui : '+
-            'les shells, c\u2019est une fois par personne et par jour.');
+            say(T('Mot plant\u00e9 chez <b>{hote}</b>. Les visites ont d\u00e9j\u00e0 tout donn\u00e9 pour aujourd\u2019hui — mais il le lira quand m\u00eame.', {hote: esc(world.owner)}));
+          else say(T('Mot plant\u00e9 chez <b>{hote}</b>. Tu lui as d\u00e9j\u00e0 \u00e9crit aujourd\u2019hui : les shells, c\u2019est une fois par personne et par jour.', {hote: esc(world.owner)}));
         }catch(e){}
       }
-    }catch(e){ say('Mot refus\u00e9 : '+esc(e.message||e)); }
+    }catch(e){ say(T('Mot refus\u00e9 : {erreur}', {erreur: esc(e.message||e)})); }
   };
   const r2=document.createElement('div'); r2.className='row'; r2.appendChild(add);
   gf.appendChild(i); gf.appendChild(r2); p.appendChild(gf);
@@ -9440,13 +9696,13 @@ async function acheter(a){
   if(achete(a.k) || b.shells<a.prix) return;   // le comptoir l'a déjà dit
   if(bourseServeur){
     try{ appliquerBourse(await store.bourseAcheter(a.k)); }
-    catch(e){ say('Achat refusé : '+esc(e.message||e)); return; }
+    catch(e){ say(T('Achat refusé : {erreur}', {erreur: esc(e.message||e)})); return; }
   }else{
     b.shells-=a.prix; mine.achats.push(a.k); garderBourseLocale();
   }
   vitrine=null; son('achat'); buildAll();
   // Un équipement n'a pas d'atelier : il agit tout de suite, sur place.
-  if(EQUIPEMENT[a.k]){ say('<b>'+esc(a.n)+'</b> est à toi, et ça marche déjà. '+esc(a.d)); return; }
+  if(EQUIPEMENT[a.k]){ say(T('<b>{nom}</b> est à toi, et ça marche déjà. {nom2}', {nom: esc(a.n), nom2: esc(a.d)})); return; }
   ouvrirOnglet(a.ou==='ile'?'ile':'maison');
   // Un meuble ne se pose que dedans, et le panneau Maison ne devient
   // l'atelier des pièces qu'une fois la porte franchie : le dire ici évite
@@ -9500,7 +9756,7 @@ async function ouvrirCadeau(surLeCoffre){
   if(bourseServeur){
     let r;
     try{ r=await store.bourseCadeau(); }
-    catch(e){ say('Le cadeau n’a pas pu s’ouvrir : '+esc(e.message||e)); return; }
+    catch(e){ say(T('Le cadeau n’a pas pu s’ouvrir : {erreur}', {erreur: esc(e.message||e)})); return; }
     if(r.deja){ appliquerBourse(r); return; }
     msg = r.offert
       ? ('<b>Ton septième cadeau.</b> La boutique t’offre <b>'+esc(nomArticle(r.offert))+
@@ -9722,7 +9978,7 @@ function releverLaBoite(){
   const n=motsNouveaux;
   const recus=(mine.mots||[]).filter(m=>!moi||m.auteur!==moi.id).slice(-n||0);
   motsNouveaux=0; son('coffre'); buildAll();
-  if(!n){ say('Ta bo\u00eete aux lettres est vide. Le drapeau se l\u00e8vera quand quelqu\u2019un sera pass\u00e9.',
+  if(!n){ say(T('Ta bo\u00eete aux lettres est vide. Le drapeau se l\u00e8vera quand quelqu\u2019un sera pass\u00e9.'),
               BOITE_VIDE); return; }
   const lus=recus.slice(-3).reverse()
     .map(m=>'<b>'+esc(m.auteur_nom)+'</b> : \u00ab\u00a0'+esc(m.texte)+'\u00a0\u00bb').join(' \u00b7 ');
@@ -9777,11 +10033,14 @@ function potagerProche(){
 }
 function lireLaGirouette(){
   const p=prochaineMaree(); son('piece');
+  /* Deux gabarits entiers plut\u00f4t qu'un ternaire au milieu d'une phrase :
+     une traduction a besoin de voir la phrase compl\u00e8te pour d\u00e9cider de son
+     ordre de mots, et \u00ab pendant {duree} \u00bb ne se place pas au m\u00eame endroit
+     en anglais qu'en fran\u00e7ais. C'est la raison d'\u00eatre du point 1. */
   say(p.basse
-    ? '<b>La mer est basse.</b> Le sable mouill\u00e9 se marche encore pendant '+
-      dureeLisible(p.secondes)+', et il y a des choses \u00e0 y ramasser.'
-    : '<b>La mer est haute.</b> Elle redescendra dans '+dureeLisible(p.secondes)+
-      ', et elle laissera de quoi remplir ton sac.', GIROUETTE_CLE);
+    ? T('<b>La mer est basse.</b> Le sable mouill\u00e9 se marche encore pendant {duree}, et il y a des choses \u00e0 y ramasser.', {duree: dureeLisible(p.secondes)})
+    : T('<b>La mer est haute.</b> Elle redescendra dans {duree}, et elle laissera de quoi remplir ton sac.', {duree: dureeLisible(p.secondes)}),
+    GIROUETTE_CLE);
 }
 // Ce que le dessin lit. Les deux sont l'inverse l'un de l'autre chez soi,
 // et tous les deux faux chez un voisin : là-bas le coffre est un meuble.
@@ -9790,7 +10049,7 @@ function coffreOuvert(o){ return o.t==='coffre' && !visiting && !cadeauDispo(); 
 // Le pinceau du coffre, armé depuis la Boutique quand il n'y en a aucun.
 function poserUnCoffre(){
   tool.mode='objet'; tool.kind='coffre'; ouvrirOnglet('ile'); buildAll();
-  say('Choisis une case de ton île pour ton coffre. C’est là que le cadeau du jour t’attendra.');
+  say(T('Choisis une case de ton île pour ton coffre. C’est là que le cadeau du jour t’attendra.'));
 }
 
 function thumb(g,w){
@@ -9961,7 +10220,7 @@ function buildVoisins(){
   const r0=document.createElement('div'); r0.className='row';
   const alea=document.createElement('button'); alea.className='btn primary'; alea.textContent='\ud83c\udfb2 Une \u00eele au hasard';
   alea.onclick=()=>{ const autres=rows.filter(r=>r.slug!==ici);
-    if(!autres.length){ say('Il n\u2019y a encore personne d\u2019autre \u00e0 visiter.'); return; }
+    if(!autres.length){ say(T('Il n\u2019y a encore personne d\u2019autre \u00e0 visiter.')); return; }
     go(autres[Math.floor(Math.random()*autres.length)].slug); };
   const cp0=document.createElement('button'); cp0.className='btn'; cp0.textContent='\ud83d\udd17 Copier mon lien';
   cp0.disabled=!monSlug;
@@ -9993,16 +10252,16 @@ function buildVoisins(){
   const r3=document.createElement('div'); r3.className='row';
   const cp=document.createElement('button'); cp.className='btn'; cp.textContent='Copier';
   cp.onclick=()=>{ ta.select();
-    if(navigator.clipboard) navigator.clipboard.writeText(ta.value).then(()=>say('Code copi\u00e9.'),()=>say('S\u00e9lectionne et copie \u00e0 la main.'));
-    else say('S\u00e9lectionne et copie \u00e0 la main.'); };
+    if(navigator.clipboard) navigator.clipboard.writeText(ta.value).then(()=>say(T('Code copi\u00e9.')),()=>say(T('S\u00e9lectionne et copie \u00e0 la main.')));
+    else say(T('S\u00e9lectionne et copie \u00e0 la main.')); };
   const im=document.createElement('button'); im.className='btn'; im.textContent='Importer';
   im.onclick=()=>{ try{ const w=decode(ta.value.trim());
       if(!w||!w.tiles||!w.me||w.tiles.length!==GRID*GRID) throw 0;
       const mots=mine.mots; mine=recentrer(Object.assign(defaultWorld(),w)); mine.id='me'; mine.mots=mots;
       mine.house.roofShape=ROOFMAP[mine.house.roofShape]||'pointu';
       saveMine(); if(!visiting){ world=mine; replanter(mine); }
-      say('\u00cele import\u00e9e.'); buildAll();
-    }catch(e){ say('Ce code n\u2019est pas lisible.'); } };
+      say(T('\u00cele import\u00e9e.')); buildAll();
+    }catch(e){ say(T('Ce code n\u2019est pas lisible.')); } };
   r3.appendChild(cp); r3.appendChild(im);
   sf.appendChild(ta); sf.appendChild(r3); p.appendChild(sf);
   p.appendChild(hint('Le code reste utile pour sauvegarder ou dupliquer une \u00eele hors ligne. Le partage, lui, passe par ton adresse publique.'));
@@ -10140,19 +10399,19 @@ function peindreCarteCompte(){
     const cr=document.createElement('button'); cr.className='btn primary'; cr.textContent='Cr\u00e9er mon \u00eele';
     cr.onclick=async()=>{
       const v=sl.value.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/^-+|-+$/g,'');
-      if(v.length<2){ say('Deux caract\u00e8res minimum, lettres et chiffres.'); return; }
+      if(v.length<2){ say(T('Deux caract\u00e8res minimum, lettres et chiffres.')); return; }
       cr.disabled=true;
       try{
-        if(!(await store.slugLibre(v))){ say('<b>'+esc(v)+'</b> n\u2019est pas disponible. Essaie autre chose.'); cr.disabled=false; return; }
+        if(!(await store.slugLibre(v))){ say(T('<b>{nom}</b> n\u2019est pas disponible. Essaie autre chose.', {nom: esc(v)})); cr.disabled=false; return; }
         const ile=await store.creerIle(v, mondeNu(mine), mine.name);
         ileId=ile.id; monSlug=ile.slug; mine.id=ile.id; mine.slug=ile.slug;
-        say('Ton \u00eele est en ligne : <b>'+esc(location.host+'/'+ile.slug)+'</b>');
+        say(T('Ton \u00eele est en ligne : <b>{nom}</b>', {nom: esc(location.host+'/'+ile.slug)}));
         majURL('/'+ile.slug); await chargerArchipel(); peindreCompte(); buildAll();
         // Elle existe : le code de parrainage retenu à l'arrivée peut
         // enfin servir. Le serveur refuse le second appel, donc l'appeler
         // ici **et** au chargement du compte ne coûte rien.
         reglerLeParrainage();
-      }catch(e){ say('Cr\u00e9ation impossible : '+esc(e.message||e)); }
+      }catch(e){ say(T('Cr\u00e9ation impossible : {erreur}', {erreur: esc(e.message||e)})); }
       cr.disabled=false;
     };
     ajout(sl); ajout(cr);
@@ -10165,8 +10424,8 @@ function peindreCarteCompte(){
     ajout(txt('\u00b7 ton \u00eele : <span class="lien">'+esc(url)+'</span>','redite'));
     const cp=document.createElement('button'); cp.className='btn redite'; cp.textContent='Copier le lien';
     cp.onclick=()=>{ const full=location.origin+'/'+monSlug;
-      if(navigator.clipboard) navigator.clipboard.writeText(full).then(()=>say('Lien copi\u00e9.'),()=>say('Copie \u00e0 la main : '+esc(full)));
-      else say('Copie \u00e0 la main : '+esc(full)); };
+      if(navigator.clipboard) navigator.clipboard.writeText(full).then(()=>say(T('Lien copi\u00e9.')),()=>say(T('Copie \u00e0 la main : {nom}', {nom: esc(full)})));
+      else say(T('Copie \u00e0 la main : {nom}', {nom: esc(full)})); };
     ajout(cp);
     const e=document.createElement('span'); e.className='etat'; e.dataset.e=etatSauvegarde;
     e.textContent = etatSauvegarde || 'en ligne'; ajout(e);
@@ -10226,6 +10485,15 @@ async function chargerCatalogue(){
 }
 
 async function demarrer(){
+  /* La langue **avant tout le reste**, et c'est un ordre qui se voit à
+     l'usage : la première chose que `demarrer()` fait ensuite, c'est
+     parler — le murmure du chargement, la bienvenue d'un parrain. Posée
+     après, elle arriverait une phrase trop tard, et cette phrase-là serait
+     en français chez quelqu'un qui n'en lit pas.
+
+     Et elle se lit dans l'adresse, donc avant le nettoyage de l'URL qui
+     suit juste en dessous. */
+  choisirLangue();
   // Le code de parrainage, puis l'adresse nettoyée : les deux avant tout
   // le reste, sinon un `history.replaceState` passerait après le premier
   // `pushState` du routeur et remettrait la query.
@@ -10342,9 +10610,8 @@ async function chargerMonCompte(){
           : q.length===2 ? q[0]+' et '+q[1]+' t\u2019ont r\u00e9pondu'
           : q[0]+' et '+(q.length-1)+' autres t\u2019ont r\u00e9pondu');
       }
-      if(nouvelles.length) say('Depuis ton dernier passage : '+nouvelles.join(' \u00b7 ')+'. '+
-        (reponsesNouvelles ? 'C\u2019est dans l\u2019onglet <b>Voisins</b>.'
-                           : 'Va les lire dans l\u2019onglet <b>\u00cele</b>.'), 0, 4200);
+      if(nouvelles.length) say(T('Depuis ton dernier passage : {a}. {b}', {a: nouvelles.join(' \u00b7 '), b: (reponsesNouvelles ? 'C\u2019est dans l\u2019onglet <b>Voisins</b>.'
+                           : 'Va les lire dans l\u2019onglet <b>\u00cele</b>.')}), 0, 4200);
       try{ await store.marquerVu(ile.id); }catch(e){}
       const grandi=rayonPour(mine.mots.length);
       if(grandi>(mine.rayon||RAYON0)){ mine.rayon=grandi; }
@@ -10357,7 +10624,7 @@ async function chargerMonCompte(){
       reglerLeParrainage();
       try{ filleuls=await store.mesFilleuls(); }catch(e){ filleuls=0; }
     }
-  }catch(e){ say('Compte charg\u00e9 partiellement : '+esc(e.message||e)); }
+  }catch(e){ say(T('Compte charg\u00e9 partiellement : {erreur}', {erreur: esc(e.message||e)})); }
 }
 
 /* Une place libre pour poser quelque chose. `t` dit quoi : un bâtiment
@@ -10459,10 +10726,10 @@ function cadrePhoto(){
 function appareilEnMain(){ return achete('appareil'); }
 function basculerViseur(){
   if(!appareilEnMain()){
-    say('Il te faut un <b>appareil photo</b> : il est à la Boutique, au rayon <b>Pour toi</b>.'); return; }
+    say(T('Il te faut un <b>appareil photo</b> : il est à la Boutique, au rayon <b>Pour toi</b>.')); return; }
   if(viseurOn){ declencher=true; return; }
   viseurOn=true; son('viseur'); hudSync();
-  say('<b>Viseur ouvert.</b> Place-toi, cadre, puis appuie encore sur <b>P</b> ou sur 📷 pour déclencher.', 'viseur');
+  say(T('<b>Viseur ouvert.</b> Place-toi, cadre, puis appuie encore sur <b>P</b> ou sur 📷 pour déclencher.'), 'viseur');
 }
 function fermerLeViseur(){
   if(!viseurOn) return;
@@ -10559,7 +10826,7 @@ function prendreLaPhoto(t){
   flashJusqua=t+180; son('photo'); fermerLeViseur();
   // La phrase dit maintenant ce qu'on peut en **faire**, pas seulement où
   // elle est allée : l'album n'est plus une impasse.
-  say('<b>Photo prise'+(visiting?(' chez '+esc(chez)):'')+'.</b> Elle est enregistrée, et elle est dans ton album, onglet <b>Toi</b> — clique-la pour l’envoyer.');
+  say(T('<b>Photo prise{a}.</b> Elle est enregistrée, et elle est dans ton album, onglet <b>Toi</b> — clique-la pour l’envoyer.', {a: (visiting?(' chez '+esc(chez)):'')}));
   buildAll();
 }
 /* L'album. Une photo par prise, en JPEG.
@@ -10648,13 +10915,13 @@ async function envoyerPhoto(ph){
   try{
     if(f && navigator.canShare && navigator.canShare({files:[f]})){
       await navigator.share({title:'Dan’s Island', text:texteDeLaPhoto(ph), files:[f]});
-      say('Photo envoyée.');
+      say(T('Photo envoyée.'));
       return;
     }
   }catch(e){ if(e && e.name==='AbortError') return; }
   // Pas de partage natif : elle descend dans les fichiers, et on le dit.
   enregistrerPhoto(ph);
-  say('Ta photo est <b>enregistrée</b> : tu peux la joindre à un message.');
+  say(T('Ta photo est <b>enregistrée</b> : tu peux la joindre à un message.'));
 }
 
 /* ================= la carte postale =================
@@ -10712,13 +10979,26 @@ let carteOuverte=false, cartePhrase='';
 // L'adresse \u00e0 partager. Le slug de l'\u00eele est aussi le code de parrainage :
 // `de=` le redit dans la query pour que le lien marche m\u00eame si la page
 // publique n'est pas servie par une fonction (voir functions/).
+/* Les deux liens portent la langue, et ce sont les **seuls** : ce sont les
+   deux choses de ce jeu qui sont lues par le navigateur de quelqu'un
+   d'autre. Un enfant néerlandophone qui envoie sa carte à un copain fait
+   arriver ce copain dans un jeu qu'il peut lire, sans rien avoir demandé.
+
+   `avecLangue()` n'écrit rien quand la langue est le français : le défaut
+   ne s'écrit pas, et les liens d'aujourd'hui ne changent pas d'un
+   caractère. C'est aussi ce qui fait que ce passage ne casse aucune carte
+   déjà partie.
+
+   Et le paramètre ne l'emporte pas sur un choix enregistré — voir
+   `choisirLangue()` : il ne sert qu'à celui qui n'a jamais choisi, donc
+   exactement à celui qui arrive par ce lien-là. */
 function lienCarte(){
   const s=monSlug||'';
-  return s ? (location.origin+'/carte/'+s) : (location.origin+'/');
+  return s ? avecLangue(location.origin+'/carte/'+s) : (location.origin+'/');
 }
 function lienIle(){
   const s=monSlug||'';
-  return s ? (location.origin+'/'+s+'?de='+encodeURIComponent(s)) : (location.origin+'/');
+  return s ? avecLangue(location.origin+'/'+s+'?de='+encodeURIComponent(s)) : (location.origin+'/');
 }
 function texteCarte(){
   return CARTE_MOT+'\n'+lienCarte();
@@ -10819,7 +11099,7 @@ function enregistrerCarte(){
   a.download='carte-'+(monSlug||'dansisland')+'-'+jourDuJeu()+'.png';
   a.href=carteEnImage().toDataURL('image/png');
   document.body.appendChild(a); a.click(); a.remove();
-  say('Carte postale enregistr\u00e9e dans tes fichiers.');
+  say(T('Carte postale enregistr\u00e9e dans tes fichiers.'));
 }
 // Le partage natif, avec l'image dedans. C'est lui qui met la carte dans
 // la conversation plut\u00f4t qu'un lien qui promet une carte.
@@ -10835,12 +11115,12 @@ function envoyerCartePostale(){
         // donc le lien est **aussi** dans le texte. Un lien perdu, c'est
         // une carte postale sans adresse.
         await navigator.share({title:'Dan\u2019s Island', text:texteCarte(), files:[f]});
-        say('Carte postale envoy\u00e9e. Merci pour ton \u00eele.');
+        say(T('Carte postale envoy\u00e9e. Merci pour ton \u00eele.'));
         return;
       }
       if(navigator.share){
         await navigator.share({title:'Dan\u2019s Island', text:CARTE_MOT, url:lienCarte()});
-        say('Lien envoy\u00e9. L\u2019image, elle, t\u2019attend dans tes fichiers.');
+        say(T('Lien envoy\u00e9. L\u2019image, elle, t\u2019attend dans tes fichiers.'));
         enregistrerCarte();
         return;
       }
@@ -10858,13 +11138,13 @@ function partagerWhatsApp(){
   const u='https://wa.me/?text='+encodeURIComponent(texteCarte());
   const w=window.open(u,'_blank','noopener');
   if(!w) location.href=u;
-  say('WhatsApp s\u2019ouvre. <b>Ajoute l\u2019image</b> si tu veux qu\u2019elle parte avec : elle vient d\u2019\u00eatre enregistr\u00e9e.');
+  say(T('WhatsApp s\u2019ouvre. <b>Ajoute l\u2019image</b> si tu veux qu\u2019elle parte avec : elle vient d\u2019\u00eatre enregistr\u00e9e.'));
   enregistrerCarte();
 }
 function copierLien(url,mot){
   if(navigator.clipboard) navigator.clipboard.writeText(url)
-    .then(()=>say(mot||'Lien copi\u00e9.'),()=>say('Copie \u00e0 la main : '+esc(url)));
-  else say('Copie \u00e0 la main : '+esc(url));
+    .then(()=>say(mot||'Lien copi\u00e9.'),()=>say(T('Copie \u00e0 la main : {nom}', {nom: esc(url)})));
+  else say(T('Copie \u00e0 la main : {nom}', {nom: esc(url)}));
 }
 // Le comptoir de la carte postale, dans l'onglet Voisins. Il se ferme
 // quand on part chez quelqu'un : une carte de son \u00eele pr\u00e9par\u00e9e puis
@@ -11015,7 +11295,7 @@ function peindreGuide(){
 function demarrerLeGuide(){
   if(guidePas){ ouvrirOnglet(guideEnCours()?PAS[guidePas].o:'toi'); buildAll(); return; }
   guidePas=1; garderGuide(); ouvrirOnglet('toi'); buildAll();
-  say('<b>Un pas à la fois.</b> Le bandeau au-dessus des onglets dit ce qui vient — et rien ne presse.',null,5200);
+  say(T('<b>Un pas à la fois.</b> Le bandeau au-dessus des onglets dit ce qui vient — et rien ne presse.'),null,5200);
 }
 function avancerLeGuide(){
   if(!guideEnCours()) return;
@@ -11029,8 +11309,7 @@ function avancerLeGuide(){
 function guideFait(n){ if(guidePas===n) avancerLeGuide(); }
 function finirLeGuide(dire){
   guidePas=9; garderGuide(); buildAll();
-  if(dire) say('<b>Tu sais tout.</b> Le reste se découvre en marchant : la marée qui descend, '+
-    'le coffre du jour, le chien qui veut sortir. Bon séjour.',null,6500);
+  if(dire) say(T('<b>Tu sais tout.</b> Le reste se découvre en marchant : la marée qui descend, le coffre du jour, le chien qui veut sortir. Bon séjour.'),null,6500);
 }
 
 /* ---- l'invitation ----
@@ -11051,8 +11330,7 @@ function peindreInvite(){
     if(world.slug) capterParrain(world.slug);
     go('me');
     demarrerLeGuide();
-    say('Ton île t’attend. Fabrique-toi d’abord, puis donne-lui son adresse '+
-        'dans le bandeau, en haut de la page.',null,6000);
+    say(T('Ton île t’attend. Fabrique-toi d’abord, puis donne-lui son adresse dans le bandeau, en haut de la page.'),null,6000);
   };
   inviteEl.appendChild(t); inviteEl.appendChild(b);
 }
@@ -11153,11 +11431,11 @@ async function go(slug){
     const demo=DEMO.find(d=>d.slug===slug);
     if(demo){ demo.mots=demo.mots||[]; replanter(demo); visiting=demo; world=demo; }
     else{
-      say('Chargement de l\u2019\u00eele…');
+      say(T('Chargement de l\u2019\u00eele…'));
       let w=null;
       try{ w=await store.chargerIle(slug); }
-      catch(e){ say('Impossible de charger cette \u00eele : '+esc(e.message||e)); return; }
-      if(!w){ say('Cette \u00eele n\u2019existe pas, ou elle n\u2019est pas publi\u00e9e.'); return; }
+      catch(e){ say(T('Impossible de charger cette \u00eele : {erreur}', {erreur: esc(e.message||e)})); return; }
+      if(!w){ say(T('Cette \u00eele n\u2019existe pas, ou elle n\u2019est pas publi\u00e9e.')); return; }
       const v=Object.assign({}, w.monde, {
         id:w.id, slug:w.slug, name:w.nom, owner:w.proprietaire_nom,
         // `proprietaire` sert à une seule chose : écarter ses propres mots
@@ -11194,8 +11472,7 @@ async function go(slug){
   const finDuGuide = visiting && guidePas===4;
   if(finDuGuide) finirLeGuide(false);
   hudSync(); buildAll();
-  if(visiting) say('Tu d\u00e9barques chez <b>'+esc(world.owner)+'</b>. Marche, lis, laisse un mot — mais tu ne peux rien changer.'
-    + (finDuGuide ? ' <b>Tu sais tout</b> : le reste se d\u00e9couvre en marchant.' : ''),
+  if(visiting) say(T('Tu d\u00e9barques chez <b>{hote}</b>. Marche, lis, laisse un mot — mais tu ne peux rien changer.{a}', {hote: esc(world.owner), a: (finDuGuide ? ' <b>Tu sais tout</b> : le reste se d\u00e9couvre en marchant.' : '')}),
     null, finDuGuide ? 7000 : 0);
 }
 function majURL(chemin){

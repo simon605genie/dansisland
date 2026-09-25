@@ -737,11 +737,24 @@ c.titre('14. personne ne colle « un » devant un nom d’objet');
     .split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
   const colles = [...code.matchAll(/['’ ](?:[Uu]n|[Uu]ne|[TtSs]on|[Tt]a)\s*(?:<[^>]*>)?\s*'\s*\+\s*\(?\s*NOM_OBJ\[/g)];
   c.dit(colles.length === 0, 'aucune phrase ne colle un article devant NOM_OBJ (' + colles.length + ')');
+  /* Depuis le passage aux gabarits, la phrase ne colle plus rien : elle
+     porte un **trou**, et le trou reçoit la fonction. Le contrôle vérifie
+     donc les deux — la phrase a bien son `{objet}`, et c'est bien
+     `unObjet()` qui le remplit. C'est strictement plus fort qu'avant, où
+     il suffisait de trouver une concaténation.
+
+     Et c'est le défaut déjà nommé pour `mondeNu()` : ces quatre lignes
+     affirmaient quelque chose de vrai en s'accrochant à la ponctuation
+     qui l'entourait le jour où elles ont été écrites. */
   for (const [q, re] of [
-    ['l’objet qu’on photographie chez un voisin', /unObjet\(objet\.t,true,true\)\+' de chez '/],
-    ['l’objet sous la maison', /'Il y a '\+unObjet\(gene\.t,false,true\)\+' sous la maison/],
-    ['l’objet qu’on ne peut pas tourner', /say\(unObjet\(o\.t,true,true\)\+' n’a pas de sens/],
-    ['le compagnon qui te suit', /tonObjet\(k\)\+' te suit maintenant partout/],
+    ['l’objet qu’on photographie chez un voisin',
+      /\{objet\} de chez \{hote\}[\s\S]{0,220}?objet: unObjet\(objet\.t,true,true\)/],
+    ['l’objet sous la maison',
+      /Il y a \{objet\} sous la maison[\s\S]{0,120}?objet: unObjet\(gene\.t,false,true\)/],
+    ['l’objet qu’on ne peut pas tourner',
+      /\{objet\} n’a pas de sens[\s\S]{0,120}?objet: unObjet\(o\.t,true,true\)/],
+    ['le compagnon qui te suit',
+      /\{objet\} te suit maintenant partout[\s\S]{0,120}?objet: tonObjet\(k\)/],
   ]) c.dit(re.test(code), q + ' passe par la fonction');
   // Et la crotte, qui n'est dans aucun rayon : son genre se pose à la main,
   // donc c'est exactement celui qu'on peut oublier.
@@ -766,10 +779,13 @@ c.titre('14. personne ne colle « un » devant un nom d’objet');
      fichier** aux prénoms que le jeu **livre vraiment**, et imprime le
      résultat. Ce n'est donc pas ma table comparée à ma table : la règle
      vient de `deQui()`, les prénoms du bloc des îles de démonstration. */
-  c.dit(/function deQui\(nom\)/.test(code), 'deQui() est là');
+  c.dit(/function deQui\(nom\)/.test(code) && /de:n=>/.test(code), 'deQui() est là, et son module aussi');
   c.dit(!/porte de <b>'\+esc\(world\.owner\)/.test(code),
         'plus une phrase ne colle « de » devant le nom de l’hôte');
-  const voy = (code.match(/return \(\/\^\[([^\]]*)\]\/i\.test\(n\)/) || [])[1];
+  /* La liste des voyelles a quitté le corps de `deQui()` pour la constante
+     `VOY`, que le module français de `GRAMMAIRE` lit. Le contrôle la lit
+     là où elle est ; ce qu'il prouve n'a pas bougé d'un mot. */
+  const voy = (code.match(/const VOY=\/\^\[([^\]]*)\]\//) || [])[1];
   c.dit(!!voy, 'sa liste de voyelles a été lue');
   /* Les prénoms viennent de **deux** endroits — les quelques îles écrites à
      la main (`mkN`) et la liste des bots (`NOMS_GENS`) — et mon premier jet

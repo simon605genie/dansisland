@@ -125,7 +125,19 @@ export async function onglet(nav, { taille = { width: 1280, height: 900 }, memoi
       Object.entries(m).forEach(([k, v]) =>
         v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v));
     } catch (e) {}
-  }, { 'dansisland:entre': '1', 'dansisland:guide': '4', 'dansisland:tourne': '1', ...memoire });
+  /* **`dansisland:langue` est semée en français**, et c'est le garde-fou le
+     plus important de ce fichier depuis la marée figée.
+
+     Sans elle, le jeu lit `navigator.language` — et un Chromium piloté
+     répond `en-US`. Les dix harnais qui cherchent des phrases françaises
+     seraient donc rouges ici et verts sur une machine réglée en français,
+     sans qu'une ligne du jeu ait changé. C'est exactement l'oracle déjà
+     nommé pour la saison, la météo et l'heure de la marée : **une mesure
+     doit tenir toutes ses variables sauf celle qu'elle nomme.**
+
+     Seul `langues.mjs` la remplace, puisque c'est la seule qu'il éprouve. */
+  }, { 'dansisland:entre': '1', 'dansisland:guide': '4', 'dansisland:tourne': '1',
+       'dansisland:langue': 'fr', ...memoire });
   const page = await ctx.newPage();
   page.on('pageerror', e => erreurs.push(String(e)));
   return { ctx, page, erreurs };
