@@ -12,10 +12,15 @@
    bougé ». Les onze autres harnais cherchent des phrases françaises, donc
    ils le prouvent déjà, et mieux qu'une assertion écrite pour ça. C'est
    même la raison d'avoir pris la chaîne française comme clé. */
-import { navigateur, servir, onglet, compteur, attendre } from './aide.mjs';
+import { navigateur, servir, onglet, compteur, attendre, remplacer } from './aide.mjs';
 import { readFileSync } from 'fs';
 
 const s = await servir(8158);
+/* Une seconde copie, avec une sonde : `T` vit dans la portée du module, donc
+   `page.evaluate` ne le voit pas. C'est la technique du 20/09 — instrumenter
+   l'objet mesuré plutôt que de déduire son comportement d'un effet de bord. */
+const sonde = await servir(8160, src => remplacer(src, /function langueDuNavigateur\(\)\{/,
+  'window.__T=(k,v)=>T(k,v); window.__langue=()=>langue; function langueDuNavigateur(){'));
 const nav = await navigateur();
 const c = compteur();
 const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -94,35 +99,130 @@ c.titre('2. en anglais, le jeu parle anglais — et la grammaire suit');
 c.titre('3. ce qui n’est pas traduit retombe sur le français, et rien ne casse');
 {
   /* C'est le point 4, et il n'a pas de branche à lui : c'est le `|| fr` de
-     `T()`. L'anglais est **volontairement à moitié** — une langue complète
-     ne prouverait pas ce repli.
+     `T()`.
 
-     Le contrôle le mesure au lieu de le croire : il demande au jeu de
-     rendre une clé traduite et une clé qui ne l'est pas. */
+     Cette section a longtemps exigé que **l'anglais soit incomplet** —
+     « sinon ce contrôle ne prouverait rien ». C'était une preuve par effet
+     de bord, donc une assertion qui se périmait le jour où le travail
+     aboutirait : c'est arrivé le 22/09 au soir, à 100 % de couverture. Elle
+     demande maintenant à `T()` lui-même, plus bas. */
   const o = await ouvrir({ 'dansisland:langue': 'en' });
-  const r = await o.page.evaluate(() => {
-    const t = document.createElement('div');
-    // Le murmure est le seul endroit qui rende du texte du jeu sans geste.
-    return { html: document.body.innerHTML.length, t: t.nodeName };
-  });
-  c.dit(r.html > 1000, 'la page a bien été rendue (' + r.html + ' caractères)');
+  const html = await o.page.evaluate(() => document.body.innerHTML.length);
+  c.dit(html > 1000, 'la page a bien été rendue (' + html + ' caractères)');
 
-  const cles = [...src.matchAll(/\bT\('((?:[^'\\]|\\.)*)'/g)]
-    .map(m => m[1].replace(/\\u([0-9a-f]{4})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
-                  .replace(/\\'/g, "'"));
-  const uniques = [...new Set(cles)];
+  /* **On retire les commentaires avant de chercher.** Ce fichier explique
+     ses propres clés, donc un commentaire qui cite `T('…')` en devient une :
+     mesuré, deux fausses clés dont « ` , ne peut pas les voir : c ». C'est
+     le « shell » cherché dans sa propre bulle, du 19/09, et la même leçon
+     que l'interdiction de `toJSON(secrets)` trouvée dans son propre
+     avertissement. */
+  const propre = src.replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
+  const lire = s2 => s2.replace(/\\u([0-9a-f]{4})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+                       .replace(/\\'/g, "'").replace(/\\\\/g, '\\');
+  const cles = [...propre.matchAll(/\bT\('((?:[^'\\]|\\.)*)'/g)].map(m => lire(m[1]));
+  /* **Deux tables portent des clés sans les écrire dans un appel** :
+     `POUSSE_DIT`, lu par un index, et les noms de `PIECES`, lus par
+     `T(d.n)`. La regex ne voit ni l'une ni l'autre.
+
+     J'ai d'abord écrit « `POUSSE_DIT` est la seule table dans ce cas ».
+     C'était faux, et c'est le rendu qui l'a dit : l'anglais affichait
+     « Here you are in the salon ». Un contrôle qui ne lit qu'une de ses
+     sources dit « tout va bien » avec assurance — le défaut du contrôle 9
+     qui ignorait `GRANDS`, et des trois prénoms au lieu de vingt. */
+  const pousse = [...(((propre.match(/const POUSSE_DIT=\[([\s\S]*?)\];/) || [])[1]) || '')
+    .matchAll(/'((?:[^'\\]|\\.)*)'/g)].map(m => lire(m[1]));
+  const pieces = [...(((propre.match(/const PIECES=\[([\s\S]*?)\n\];/) || [])[1]) || '')
+    .matchAll(/\bn:\s*'((?:[^'\\]|\\.)*)'/g)].map(m => lire(m[1]));
+  const uniques = [...new Set(cles.concat(pousse, pieces))];
   const bloc = (src.match(/TRAD\.en=\{([\s\S]*?)\n\};/) || [])[1] || '';
-  const traduites = [...bloc.matchAll(/^  '((?:[^'\\]|\\.)*)':/gm)]
-    .map(m => m[1].replace(/\\u([0-9a-f]{4})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
-                  .replace(/\\'/g, "'"));
+  const paires = [...bloc.matchAll(/^  '((?:[^'\\]|\\.)*)':\n    '((?:[^'\\]|\\.)*)',/gm)]
+    .map(m => [lire(m[1]), lire(m[2])]);
+  const traduites = paires.map(p => p[0]);
   // Un repère absent doit faire échouer ce qui s'appuie dessus, jamais
   // l'absoudre : sans clés lues, tout le reste serait vrai sans rien dire.
-  c.dit(uniques.length > 80, uniques.length + ' phrases passent par T()');
-  c.dit(traduites.length > 20, traduites.length + ' sont traduites en anglais');
-  console.log('     couverture : ' + Math.round(traduites.length * 100 / uniques.length) + ' %'
-            + ' — le reste tombe en français, et c’est ce qui doit marcher');
-  c.dit(traduites.length < uniques.length,
-        'l’anglais est bien incomplet — sinon ce contrôle ne prouverait rien');
+  c.dit(uniques.length > 120, uniques.length + ' phrases passent par T()');
+  c.dit(pousse.length === 6, 'dont les ' + pousse.length + ' états du potager, lus par leur table');
+  c.dit(pieces.length === 3, 'et les ' + pieces.length + ' noms de pièces, lus par la leur');
+  c.dit(traduites.length > 120, traduites.length + ' sont traduites en anglais');
+  console.log('     couverture : ' + Math.round(traduites.length * 100 / uniques.length) + ' %');
+
+  /* **Le repli se mesure, il ne se déduit plus.** Ce contrôle exigeait
+     jusqu'ici que l'anglais soit incomplet — ce qui prouvait le `|| fr` par
+     un effet de bord, et devenait faux le jour où la traduction serait
+     finie. C'est aujourd'hui. On demande donc à `T()` lui-même : une clé
+     absente de la table doit rendre sa propre chaîne. */
+  {
+    const p = await ouvrir({ 'dansisland:langue': 'en' }, sonde.url);
+    const r = await p.page.evaluate(() => ({
+      pose: window.__langue(),
+      absente: window.__T('Une phrase que personne n’a traduite.'),
+      presente: window.__T('Rien à annuler.'),
+      trou: window.__T('Il y a {objet} sous la maison. Efface-le d’abord.', { objet: 'X' }),
+    }));
+    c.dit(r.pose === 'en', 'la sonde tourne bien en anglais (' + r.pose + ')');
+    c.dit(r.absente === 'Une phrase que personne n’a traduite.',
+          'une clé absente rend sa propre chaîne — le repli est le `|| fr`');
+    c.dit(r.presente === 'Nothing to undo.', 'et une clé présente rend sa traduction');
+    c.dit(r.trou === 'There’s X under the house. Erase it first.',
+          'les trous se remplissent dans la phrase traduite');
+    await p.ctx.close();
+  }
+
+  /* **Un trou fantôme rend son accolade à l'écran.** `T()` ne remplace que
+     ce que l'appelant lui donne : un `{qui}` écrit dans l'anglais là où le
+     français dit `{hote}` ressort tel quel, en clair, sans erreur et sans
+     trace. Failli le livrer sur la bulle de la photo chez un voisin. */
+  let fantomes = 0;
+  for (const [fr, en] of paires) {
+    const ok = new Set([...fr.matchAll(/\{(\w+)\}/g)].map(x => x[1]));
+    for (const t of new Set([...en.matchAll(/\{(\w+)\}/g)].map(x => x[1])))
+      if (!ok.has(t)) { fantomes++; console.log('     {' + t + '} absent du français : ' + fr.slice(0, 56)); }
+  }
+  c.dit(paires.length === traduites.length && paires.length > 120,
+        paires.length + ' paires relues en entier');
+  c.dit(fantomes === 0, 'aucun trou de l’anglais n’est absent du français (' + fantomes + ')');
+
+  /* **La majuscule voyage avec le trou.** `unObjet(t, maj, …)` et
+     `laPiece(k, maj, …)` décident d'une capitale à l'appel, donc pour
+     *toutes* les langues à la fois — et une traduction qui déplace le trou
+     casse l'accord en silence. Mesuré : « Turning **A**n école changes
+     nothing », « **a**n école needs four squares », « A photo of **A**
+     palmier ». Trois fois, et aucune ne se voyait autrement qu'en rendant
+     la phrase.
+
+     L'invariant est exact : `maj` doit valoir vrai si et seulement si le
+     trou ouvre la phrase, **dans les deux langues**. Il ne vaut que pour
+     ces deux fonctions — `{qui}` rend un prénom, toujours capitalisé, et
+     `{n}` un nombre. */
+  const tete = (t, h) => new RegExp('^(?:<b>|📷 |↩ |<br>↩ )*\\{' + h + '\\}').test(t);
+  const anglais = Object.fromEntries(paires);
+  const appels = /\bT\('((?:[^'\\]|\\.)*)',\s*\{/g;
+  let m3, majVus = 0, majFaux = [];
+  while ((m3 = appels.exec(propre))) {
+    let p = 0, k = appels.lastIndex - 1;
+    for (; k < propre.length; k++) { const ch = propre[k];
+      if (ch === '{') p++; else if (ch === '}') { p--; if (!p) break; } }
+    const fr = lire(m3[1]), en = anglais[fr];
+    if (!en) continue;
+    for (const x of propre.slice(appels.lastIndex - 1, k + 1)
+           .matchAll(/(\w+):\s*(?:unObjet|laPiece)\([^,]+,\s*(true|false)/g)) {
+      majVus++;
+      const maj = x[2] === 'true';
+      if (tete(fr, x[1]) !== maj || tete(en, x[1]) !== maj)
+        majFaux.push('maj=' + maj + ' fr=' + tete(fr, x[1]) + ' en=' + tete(en, x[1]) +
+                     ' {' + x[1] + '} · ' + fr.slice(0, 46));
+    }
+  }
+  c.dit(majVus > 10, majVus + ' trous à majuscule lus');
+  for (const f of majFaux.slice(0, 4)) console.log('     ' + f);
+  c.dit(majFaux.length === 0,
+        'la majuscule tombe en tête de phrase dans les deux langues (' + majFaux.length + ' non)');
+
+  const nonTraduites = uniques.filter(k => traduites.indexOf(k) < 0);
+  for (const k of nonTraduites.slice(0, 5)) console.log('     sans anglais : ' + k.slice(0, 70));
+  c.dit(nonTraduites.length === 0,
+        'et l’anglais est complet (' + nonTraduites.length + ' sans traduction)');
 
   /* **Les orphelines.** C'est le seul coût de « la chaîne française est la
      clé » : réécrire une phrase laisse sa traduction sans emploi, sans
@@ -160,6 +260,51 @@ c.titre('4. le câblage : plus une phrase ne monte un article à la main');
   for (const a of assemblees.slice(0, 4)) console.log('     reste : ' + a[0].slice(0, 70));
   c.dit(assemblees.length === 0,
         'aucun say() ne monte plus une phrase par morceaux (' + assemblees.length + ')');
+
+  /* **Et l'autre moitié du même défaut, celle qui se cachait mieux :** une
+     phrase traduite dont un trou reçoit du français écrit en dur. Ça rend
+     un texte à moitié anglais, et rien ne le signale. Treize appels
+     étaient dans ce cas — la repousse des touffes, la queue de saison du
+     potager, « a répondu », « chez X » — parce que le contrôle ci-dessus
+     ne regardait que l'argument de `say()`, jamais l'objet qui le suit.
+
+     La règle est resserrée sur ce que les treize avaient **vraiment** en
+     commun : un littéral collé par un `+`. « Un littéral dans un trou »
+     attrapait aussi ' · ', '</b> ', 'fr-FR' et 'hiver' — sept faux
+     positifs, et un faux positif use un contrôle aussi sûrement qu'un
+     angle mort. */
+  const sansT = t => {              // on aveugle les T(...) imbriqués
+    let r = '', i = 0;
+    while (i < t.length) {
+      const j = t.indexOf('T(', i);
+      if (j < 0) { r += t.slice(i); break; }
+      r += t.slice(i, j);
+      let p = 0, k = j + 1;
+      for (; k < t.length; k++) { const ch = t[k];
+        if (ch === '(') p++; else if (ch === ')') { p--; if (!p) break; } }
+      r += ' '.repeat(k - j + 1); i = k + 1;
+    }
+    return r;
+  };
+  const motDedans = t => t.replace(/<\/?[a-z]+>/gi, '').replace(/\\u[0-9a-f]{4}/gi, 'e')
+                          .replace(/[^A-Za-z]/g, '').length >= 3;
+  const re = /\bT\('(?:[^'\\]|\\.)*',\s*\{/g;
+  let m2, aTrous = 0, recolles = [];
+  while ((m2 = re.exec(code))) {
+    let p = 0, k = re.lastIndex - 1;
+    for (; k < code.length; k++) { const ch = code[k];
+      if (ch === '{') p++; else if (ch === '}') { p--; if (!p) break; } }
+    aTrous++;
+    for (const x of sansT(code.slice(re.lastIndex - 1, k + 1))
+           .matchAll(/(?:\+\s*)'((?:[^'\\]|\\.)*)'|'((?:[^'\\]|\\.)*)'(?=\s*\+)/g)) {
+      const t = x[1] ?? x[2];
+      if (motDedans(t)) recolles.push(t.slice(0, 60));
+    }
+  }
+  c.dit(aTrous > 50, aTrous + ' appels T() à trous lus');
+  for (const t of recolles.slice(0, 6)) console.log('     recollé : ' + t);
+  c.dit(recolles.length === 0,
+        'aucun trou ne reçoit du français recollé (' + recolles.length + ')');
 }
 
 c.titre('5. le lien emporte la langue, et lui seul');
@@ -253,5 +398,5 @@ c.titre('5. le lien emporte la langue, et lui seul');
   c.dit(!/\/'\+langue\+'\//.test(src), 'et c’est un paramètre, pas un segment d’adresse');
 }
 
-await nav.close(); s.fermer();
+await nav.close(); s.fermer(); sonde.fermer();
 process.exit(c.fin() ? 1 : 0);

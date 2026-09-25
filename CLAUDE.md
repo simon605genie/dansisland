@@ -5376,9 +5376,12 @@ fichier a mis trois corrections en une journée le 19/09 pour y arriver :
 **de** Adam est fermée ». Elles étaient justes **en français**, et le
 français est ce qui changeait.
 
-`GRAMMAIRE[langue]` porte donc `de`, `un`, `ton`, `ou`, `la`, `ala`, et
-`deQui()`, `unObjet()`, `tonObjet()`, `auLieu()`, `laPiece()`,
-`aLaPiece()` n'en sont plus que les six portes. Trois choses à tenir :
+`GRAMMAIRE[langue]` porte donc `de`, `venant`, `un`, `ton`, `ou`, `la`,
+`ala`, et `deQui()`, `deChez()`, `unObjet()`, `tonObjet()`, `auLieu()`,
+`laPiece()`, `aLaPiece()` n'en sont plus que les sept portes. *(`venant`
+et `deChez()` sont arrivés le soir même, avec l'anglais complet : voir
+plus bas — le français dit « de X » pour le possessif comme pour la
+provenance, l'anglais non.)* Trois choses à tenir :
 
 1. **Le nom passe par `T()` avant la grammaire, jamais après.** L'anglais
    choisit `a`/`an` sur le nom **traduit** : « école » donnerait « an
@@ -5494,3 +5497,170 @@ il **nomme** le lien fautif), et le défaut français écrit dans l'adresse
 *(Un faux positif de plus, pour mémoire : mon premier classement lisait
 tous les `href` de la page, donc l'icône et le manifeste — trois rouges qui
 ne disaient rien du jeu. Une porte est un `<a>`.)*
+
+### L'anglais est complet — 22/09/2026
+
+**150 clés, 150 traduites.** Et « les 65 phrases qui restent » n'étaient
+pas 65 lignes de table : **treize trous recevaient du français écrit en
+dur**, donc treize phrases traduites auraient rendu un texte à moitié
+anglais.
+
+    T('…{a}', {a: (n ? (', et '+n+' touffe'+(n>1?'s':'')+' ont repoussé.') : '.')})
+
+C'est mot pour mot le défaut que le contrôle 4 interdit depuis ce
+chantier — « un `+` entre deux textes est un ordre de mots figé » — mais
+déplacé d'un cran, **dans l'objet d'arguments**, là où le contrôle ne
+regardait pas. Il ne cherchait que l'argument de `say()`. Les treize sont
+dépliés : chaque fragment est devenu sa propre clé, et le total est passé
+de 118 à 147, puis à 150 avec les noms de pièces.
+
+Trois phrases **françaises** changent de rendu au passage, et il faut le
+dire plutôt que de prétendre l'invariant tenu :
+
+    « Encore <b>1 mot</b> et elle aura tout gagné. »  → « un mot »
+    « 1 mot t’attend. »                               → « Un mot t’attend. »
+    « , et 1 touffe ont repoussé. »                   → « une touffe a repoussé »
+
+La troisième **était fausse** : `' touffe'+(n>1?'s':'')+' ont repoussé.'`
+accordait le nom et pas le verbe, donc à une seule touffe le jeu écrivait
+« et 1 touffe ont repoussé ». Trouvé en traduisant, et pas autrement :
+traduire oblige à lire chaque phrase pour ce qu'elle **dit**, là où on la
+relit d'habitude pour ce qu'elle fait.
+
+**Deux phrases accordaient par suffixes, et l'anglais ne sait pas.**
+`{a} mot{b} t’attend{c}` marche en français et n'a aucun équivalent :
+« word{s} {is/are} waiting » ne se fabrique pas par une terminaison. Les
+deux sont devenues **deux phrases entières**, singulier et pluriel. C'est
+la règle déjà écrite pour `laPiece()` : un argument optionnel coûte moins
+qu'une seconde fonction, mais un accord grammatical n'est pas un
+argument.
+
+#### Ce qui reste en français, et c'est la prochaine décision
+
+**Les libellés de l'interface ne sont pas traduits** — les onglets
+(`Voisins`, `Boutique`, `Toi`, `Île`), `← Ton île`, `⌫ Gomme`, `Entrer`,
+le rayon `Pour toi`. Ils sont peints hors de `T()`, dans les panneaux.
+
+Les phrases anglaises les citent donc **tels qu'ils s'affichent** :
+« Send your postcard, in the **Voisins** tab ». C'est laid et c'est
+juste. Les traduire ici enverrait l'enfant chercher un bouton qui
+n'existe pas — la faute déjà nommée pour les feuilles d'automne,
+promettre un détail qu'on ne peint pas. Traduire la couche des panneaux
+est un chantier à part, et il se décide ; il ne se glisse pas.
+
+**Les noms d'objets sont dans le même cas**, et c'est la conséquence la
+plus visible : l'anglais dit « An **école**, from Lila's island ».
+`NOM_OBJ` se construit depuis `OBJ_GROUPS`, c'est-à-dire depuis les
+étiquettes de l'atelier — les traduire dans la bulle sans traduire la
+vignette ferait dire deux mots différents pour le même dessin. Le module
+de grammaire fait son travail au passage : il choisit « an » sur le nom
+**français**, ce qui est ce qu'il faut tant que le nom l'est.
+
+#### Cinq défauts que seul le rendu a montrés
+
+Les clés passaient, la couverture disait 100 %, et il a fallu **imprimer
+les phrases anglaises rendues par le vrai `T()`** pour voir ce qu'elles
+disaient. Cinq fautes, dont aucune n'était visible autrement. C'est la
+règle du lit, des six bâtiments et du cadre-photo, transposée à la
+traduction : *ça ne se voit que rendu.*
+
+**« Here you are in the salon. »** Les noms de pièces passent par
+`T(d.n)` — une **variable**, donc invisible à la regex, exactement comme
+`POUSSE_DIT`. J'avais écrit dans la source que `POUSSE_DIT` était « la
+seule table dans ce cas » : c'était faux le jour où je l'écrivais. Les
+trois noms sont traduits, et **la plaque et les puces passent par `T()`
+avec la bulle** — sans ça la bulle aurait dit « the bedroom » et la
+plaque « Chambre ». Un libellé se traduit partout où il s'affiche, ou
+nulle part.
+
+**« Lila's a palm tree. »** Trois phrases anglaises collaient le
+possessif devant `{objet}`, qui porte déjà son article. En français
+« un palmier **de** Lila » marche parce que l'article précède et le
+complément suit ; en anglais le possessif précède, donc les deux se
+heurtent. Les trois disent « {objet} from {qui} ».
+
+**La majuscule voyage avec le trou.** `unObjet(t, maj, …)` décide d'une
+capitale **à l'appel**, donc pour toutes les langues à la fois. Une
+traduction qui déplace le trou casse l'accord en silence : « Turning
+**A**n école changes nothing », « **a**n école needs four squares », « A
+photo of **A** palmier ». Trois fois. L'invariant est exact et il est
+devenu un contrôle : `maj` vaut vrai **si et seulement si** le trou ouvre
+la phrase, dans les deux langues. 14 trous lus, 0 en désaccord ; la panne
+remise en nomme un et dit les trois valeurs.
+
+Et une vraie faute de grammaire anglaise : **« A word from Yann's »**.
+Le français dit « de X » pour le possessif
+comme pour la provenance — « la porte **de** Lila », « un mot **de**
+Lila » — et l'anglais dit « Lila's door » mais « a word **from** Lila ».
+Une seule fonction ne peut pas faire les deux, et `deQui()` les faisait
+toutes les deux depuis le 19/09 sans que ça se voie, puisqu'en français
+elles coïncident.
+
+`GRAMMAIRE` a donc gagné `venant`, et `deChez()` est sa porte. **Sept
+sites appellent `deQui()`, six sont des possessifs** — les portes de
+voisins, le panier déposé, les trois phrases de la photo — et un seul
+est une provenance, la lanterne. C'est celui-là qui bascule, et le
+français n'y change pas un caractère, élision comprise : « Un mot
+d'Inès ».
+
+#### Le contrôle 3 prouvait le repli par un effet de bord
+
+Il exigeait que **l'anglais soit incomplet** : « sinon ce contrôle ne
+prouverait rien ». C'était vrai et c'était indirect, donc c'est devenu
+faux le jour où la traduction s'est terminée — aujourd'hui. Une assertion
+qui se périme quand le travail aboutit n'est pas un garde-fou, c'est un
+témoin de l'état d'avancement.
+
+Le repli se **mesure** maintenant : une sonde expose `T` à la page (la
+portée d'un module ES est fermée, c'est la technique du 20/09), et on
+demande trois choses — une clé absente rend sa propre chaîne, une clé
+présente rend sa traduction, un trou se remplit dans la phrase traduite.
+Ça éprouve le mécanisme au lieu d'un symptôme, et ça reste vrai à 100 %
+de couverture.
+
+#### Trois défauts de contrôle trouvés en le complétant
+
+1. **Le harnais se comptait lui-même.** L'extraction des clés lisait
+   `T('…')` **commentaires compris** — et `index.html` explique ses
+   propres clés. Deux fausses clés, dont « ` , ne peut pas les voir : c ».
+   On retire les commentaires avant de chercher : c'est le « shell »
+   cherché dans sa propre bulle du 19/09, et l'interdiction de
+   `toJSON(secrets)` trouvée dans son propre avertissement.
+2. **Un trou fantôme rend son accolade à l'écran.** J'avais écrit `{qui}`
+   dans l'anglais là où le français dit `{hote}` : `T()` ne remplace que
+   ce que l'appelant lui donne, donc `{qui}` ressortait **en clair**, sans
+   erreur et sans trace. Le contrôle croise maintenant les trous des deux
+   côtés de chaque paire. Failli le livrer.
+3. **Deux tables portent des clés sans les écrire dans un appel** —
+   `POUSSE_DIT`, lue par un index, et les noms de `PIECES`, lus par
+   `T(d.n)`. La regex n'en voyait aucune. J'ai d'abord écrit que
+   `POUSSE_DIT` était la seule, et c'est le rendu qui m'a démenti : c'est
+   le défaut du contrôle 9 qui ignorait `GRANDS`, et des trois prénoms au
+   lieu de vingt, commis **en écrivant le garde-fou contre lui**. Le
+   contrôle lit les deux par leur nom et compte 6 et 3. Une troisième
+   table de ce genre devra y entrer.
+
+#### Le garde-fou qui aurait attrapé les treize, et pourquoi il a fallu le resserrer
+
+Ma première règle était « un littéral dans un trou ». Elle rendait **sept
+faux positifs** — `' · '`, `'</b> '`, `'fr-FR'`, `'numeric'`, `'hiver'` —
+c'est-à-dire de la ponctuation, du balisage, des options de format et un
+opérande de comparaison. *Un faux positif use un contrôle aussi sûrement
+qu'un angle mort* : celui-là aurait cessé d'être lu en une semaine.
+
+La règle retenue est ce que les treize avaient **vraiment** en commun :
+un littéral **collé par un `+`**, une fois les `T(…)` imbriqués aveuglés,
+et qui garde trois lettres après retrait des balises. Mesurée sur les
+deux versions : **0 sur la corrigée, 12 sur celle d'avant**, chacune
+nommée. C'est une règle éprouvée contre le vrai défaut, pas contre une
+panne fabriquée pour elle.
+
+Les quatre nouveaux contrôles ont été éprouvés en remettant le défaut, un
+par un, et **chacun n'a fait rougir que sa propre ligne** : un fragment
+recollé (« recollé : chez »), un trou fantôme (« {qui} absent du
+français »), une majuscule déplacée (« maj=true fr=true en=false »), et
+un commentaire citant un appel — celui-là devant rester **vert**,
+puisque c'est la preuve que le ménage des commentaires mord.
+
+**150 clés à l'arrivée**, pas 118 : les treize trous dépliés en ont
+ajouté 29, et les noms de pièces 3.
