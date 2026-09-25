@@ -5664,3 +5664,32 @@ puisque c'est la preuve que le ménage des commentaires mord.
 
 **150 clés à l'arrivée**, pas 118 : les treize trous dépliés en ont
 ajouté 29, et les noms de pièces 3.
+
+#### Un rouge de `vivant.mjs` que je n'ai pas attrapé, et le relevé qui va avec
+
+`vivant.mjs` a rendu **un rouge deux fois** pendant ce chantier, dans la
+suite complète, sur un état **intermédiaire** du fichier — les treize
+trous dépliés, la traduction pas finie. Je n'ai jamais su lequel de ses
+contrôles rougissait : le premier tour l'a filtré à la ligne de bilan, et
+il n'est plus jamais revenu.
+
+Le relevé, tel qu'il est, plutôt qu'une conclusion :
+
+    seul, version finale              3 tours   vert
+    suite complète, version finale    4 tours   vert
+    suite complète, sur HEAD          1 tour    vert
+    suite complète, état intermédiaire 2 tours   rouge (contrôle inconnu)
+
+Ce que ça permet de dire : ce n'est pas une régression de la version
+poussée, et `HEAD` passait déjà. Ce que ça ne permet **pas** de dire :
+que le contrôle est sain. Ce harnais a déjà clignoté deux fois sur un
+dépôt inchangé — le 20/09 (phare, printemps, rafale) et le 21/09 (l'hôte
+qui marche, seuil à 1,5 posé au-dessus d'un nuage à 1,42-1,45) — et les
+deux fois la cause était la même : *une fenêtre qui ne couvre pas la
+période du phénomène, ou un seuil posé dans le nuage.*
+
+**La leçon pour la prochaine fois est une leçon de méthode, pas de jeu :**
+j'ai filtré la sortie de `npm test` sur la ligne de bilan, donc j'ai perdu
+le nom du contrôle au moment exact où il était disponible. Un rouge se
+capture **en entier** du premier coup — `npm test > fichier` — parce qu'un
+contrôle intermittent ne se laisse pas reproduire sur commande.
