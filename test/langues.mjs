@@ -20,7 +20,7 @@ const s = await servir(8158);
    `page.evaluate` ne le voit pas. C'est la technique du 20/09 — instrumenter
    l'objet mesuré plutôt que de déduire son comportement d'un effet de bord. */
 const sonde = await servir(8160, src => remplacer(src, /function langueDuNavigateur\(\)\{/,
-  'window.__T=(k,v)=>T(k,v); window.__langue=()=>langue; function langueDuNavigateur(){'));
+  'window.__T=(k,v)=>T(k,v); window.__langue=()=>langue; window.__tables=()=>textesDeTable(); function langueDuNavigateur(){'));
 const nav = await navigateur();
 const c = compteur();
 const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -121,20 +121,24 @@ c.titre('3. ce qui n’est pas traduit retombe sur le français, et rien ne cass
   const lire = s2 => s2.replace(/\\u([0-9a-f]{4})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
                        .replace(/\\'/g, "'").replace(/\\\\/g, '\\');
   const cles = [...propre.matchAll(/\bT\('((?:[^'\\]|\\.)*)'/g)].map(m => lire(m[1]));
-  /* **Deux tables portent des clés sans les écrire dans un appel** :
-     `POUSSE_DIT`, lu par un index, et les noms de `PIECES`, lus par
-     `T(d.n)`. La regex ne voit ni l'une ni l'autre.
+  /* **Les tables dont les valeurs sont des clés**, `T(NOM_OBJ[t])` et ses
+     sœurs, ne sont désignées nulle part dans la source : la regex ne les
+     voit pas. Elles étaient d'abord nommées ici, une par une — deux, puis
+     cinq — c'est-à-dire la liste recopiée dans un contrôle que ce dépôt
+     refuse partout, et celle-là m'a déjà démenti une fois (« POUSSE_DIT est
+     la seule table dans ce cas » était faux le jour où je l'écrivais).
 
-     J'ai d'abord écrit « `POUSSE_DIT` est la seule table dans ce cas ».
-     C'était faux, et c'est le rendu qui l'a dit : l'anglais affichait
-     « Here you are in the salon ». Un contrôle qui ne lit qu'une de ses
-     sources dit « tout va bien » avec assurance — le défaut du contrôle 9
-     qui ignorait `GRANDS`, et des trois prénoms au lieu de vingt. */
-  const pousse = [...(((propre.match(/const POUSSE_DIT=\[([\s\S]*?)\];/) || [])[1]) || '')
-    .matchAll(/'((?:[^'\\]|\\.)*)'/g)].map(m => lire(m[1]));
-  const pieces = [...(((propre.match(/const PIECES=\[([\s\S]*?)\n\];/) || [])[1]) || '')
-    .matchAll(/\bn:\s*'((?:[^'\\]|\\.)*)'/g)].map(m => lire(m[1]));
-  const uniques = [...new Set(cles.concat(pousse, pieces))];
+     `textesDeTable()` vit donc **dans le jeu**, à côté de `T()`, et le
+     contrôle le lui demande. Une sixième table entre là-bas, et ce fichier
+     la voit sans qu'on y touche. C'est la leçon du contrôle 12 : quand le
+     moteur peut répondre, c'est à lui qu'il faut demander. */
+  const tables = await (async () => {
+    const p = await ouvrir({ 'dansisland:langue': 'fr' }, sonde.url);
+    const r = await p.page.evaluate(() => window.__tables());
+    await p.ctx.close();
+    return r;
+  })();
+  const uniques = [...new Set(cles.concat(tables))];
   const bloc = (src.match(/TRAD\.en=\{([\s\S]*?)\n\};/) || [])[1] || '';
   const paires = [...bloc.matchAll(/^  '((?:[^'\\]|\\.)*)':\n    '((?:[^'\\]|\\.)*)',/gm)]
     .map(m => [lire(m[1]), lire(m[2])]);
@@ -142,8 +146,7 @@ c.titre('3. ce qui n’est pas traduit retombe sur le français, et rien ne cass
   // Un repère absent doit faire échouer ce qui s'appuie dessus, jamais
   // l'absoudre : sans clés lues, tout le reste serait vrai sans rien dire.
   c.dit(uniques.length > 120, uniques.length + ' phrases passent par T()');
-  c.dit(pousse.length === 6, 'dont les ' + pousse.length + ' états du potager, lus par leur table');
-  c.dit(pieces.length === 3, 'et les ' + pieces.length + ' noms de pièces, lus par la leur');
+  c.dit(tables.length > 100, 'dont ' + tables.length + ' venues des tables, que le jeu déclare lui-même');
   c.dit(traduites.length > 120, traduites.length + ' sont traduites en anglais');
   console.log('     couverture : ' + Math.round(traduites.length * 100 / uniques.length) + ' %');
 

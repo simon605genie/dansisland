@@ -5693,3 +5693,104 @@ j'ai filtré la sortie de `npm test` sur la ligne de bilan, donc j'ai perdu
 le nom du contrôle au moment exact où il était disponible. Un rouge se
 capture **en entier** du premier coup — `npm test > fichier` — parce qu'un
 contrôle intermittent ne se laisse pas reproduire sur commande.
+
+### Les noms d'objets aussi — 22/09/2026
+
+**268 clés.** Les 118 dernières sont le catalogue : 45 noms d'objets d'île,
+23 meubles, 9 rayons d'atelier, 4 équipements, 37 descriptions de vitrine.
+« An **école** » est devenu « a school ».
+
+**Un nom se traduit partout où il s'affiche, ou nulle part.** Vingt sites
+le lisent — la vignette de l'atelier, son `title`, l'étiquette du rayon, la
+vignette de la vitrine, le comptoir, la liste des compagnons, les trois
+phrases d'achat, `nomMeuble()`, la phrase du Sens, `nomArticle()` — et les
+vingt passent par `T()`. En oublier un ferait dire deux mots différents
+pour le même dessin.
+
+Les **33 des 37** noms de vitrine qui sont mot pour mot le nom d'atelier
+n'ont donc qu'une traduction, puisque c'est la même clé. Ça se mesure
+plutôt que de se supposer : vérifié avant d'écrire, 33 identiques, 0
+différents.
+
+**Les descriptions viennent avec.** Elles sont sous le nom, sur la même
+carte de vitrine : traduire l'un sans l'autre laisse « Weather vane · dit
+où en est la marée », qui est pire que tout en français.
+
+Deux choses à tenir :
+
+1. **`NOM_OBJ` garde la capitale, et c'est la traduction qu'on met en
+   minuscule.** Il la perdait à la construction (`o[1].toLowerCase()`),
+   donc la clé aurait été `arbre à fleurs` — une chaîne qui n'est écrite
+   nulle part dans la table. `T(NOM_OBJ[t]).toLowerCase()` : la clé est ce
+   que le catalogue dit, la casse est une affaire d'affichage.
+2. **`nomMeuble()` ne descend pas en minuscule**, contrairement aux trois
+   fonctions de grammaire. Il rendait `Canapé` avec sa capitale, et le
+   passer en minuscule aurait changé le français. On n'ajoute que `T()`.
+
+### Le registre des tables vit dans le jeu, pas dans le contrôle
+
+Cinq tables portent maintenant des clés **par variable** — `PIECES`,
+`POUSSE_DIT`, `NOM_OBJ`, `MEUBLE_NOMS`, `BOUTIQUE` — donc invisibles à la
+regex qui cherche `T('…')`. `test/langues.mjs` les nommait une par une :
+d'abord une, puis deux, et il aurait fallu en ajouter trois. **C'est la
+liste recopiée dans un contrôle que ce dépôt refuse partout**, et celle-là
+m'avait déjà démenti une fois — « `POUSSE_DIT` est la seule table dans ce
+cas » était faux le jour où je l'écrivais.
+
+`textesDeTable()` vit donc **dans `index.html`, à côté de `T()`**, et le
+contrôle le lui demande par la sonde. Une sixième table entre là-bas, avec
+ses sœurs, et le harnais la voit le jour même sans qu'on y touche. C'est la
+leçon du contrôle 12 : *quand le moteur peut répondre, c'est à lui qu'il
+faut demander.*
+
+**Le jeu ne l'appelle jamais**, et il faut le dire plutôt que de le laisser
+découvrir : c'est dix lignes que seul le harnais lit. C'est le prix assumé
+pour que la liste soit là où sont les tables — une déclaration sur la
+donnée, comme `FONCTIONNEL` ou `VENT_PLIE`, et pas une copie dans un
+fichier qui n'a aucun moyen de savoir quand elle se périme.
+
+Et il lit les tables **dérivées** (`NOM_OBJ`, `MEUBLE_NOMS`) plutôt que les
+catalogues : c'est ce que `T()` lit vraiment. Le gain n'est pas théorique —
+`NOM_OBJ.crotte` est posé à la main, **hors d'`OBJ_GROUPS`**, donc la
+première version du registre l'avait raté et l'anglais aurait dit « a
+crotte ». La clé prend d'ailleurs la capitale des autres au passage : une
+clé qui déroge est celle qu'on oublie de traduire. Le contrôle 14 de
+`test/objets.mjs` lisait cette ligne **à la ponctuation près** — il accepte
+maintenant les deux casses, parce que ce qu'il affirme, le genre posé à la
+main, n'a pas bougé. C'est la troisième fois qu'un contrôle est piné sur
+une syntaxe plutôt que sur ce qu'elle dit.
+
+Éprouvé en remettant deux vraies pannes, chacune ne rougissant que sa
+propre ligne : une traduction retirée (« sans anglais : Montgolfière »), et
+une table retirée du registre (19 orphelines, nommées).
+
+### Deux fautes d'anglais que seule la lecture a montrées
+
+Les 46 noms imprimés **tels qu'une phrase les rend** — c'est la méthode qui
+avait trouvé les cinq défauts de l'heure d'avant :
+
+    a wind chimes      → « wind chimes » est un pluriel en anglais
+    at the hairdresser → un *hairdresser* est la personne, pas le bâtiment
+
+`Wind chime` et `Hair salon`. Aucune des deux ne se voyait dans la table :
+elles ne sont fausses qu'une fois l'article devant et le lieu autour.
+
+### Ce qui reste en français, et c'est maintenant tout ce qui reste
+
+Les **libellés de l'interface** : les onglets (`Voisins`, `Boutique`,
+`Toi`, `Île`), `← Ton île`, `⌫ Gomme`, `Entrer`, et les en-têtes de
+panneau (« Ta terre », « Le cadeau du jour »). Mesuré sur la page rendue
+en anglais : les rayons et les vignettes sont anglais, le cadre autour ne
+l'est pas.
+
+**La frontière est celle de la donnée, et pas un jugement au cas par
+cas** : un rayon de catalogue (`Nature`, `Bâtiments`) est une valeur de
+table, donc il se traduit avec ce qu'il contient ; un titre de section
+écrit dans le code du panneau (`Pour toi`, `Sur ton île`, `Dans ta
+maison`) est du cadre, donc il attend son chantier. Ils se touchent à
+l'écran — « Sur ton île » juste au-dessus de « Buildings » — et c'est
+laid, mais traduire trois en-têtes sur vingt serait arbitraire là où la
+règle, elle, se dit en une ligne.
+
+C'est le dernier morceau, et il se décide comme les autres : un libellé se
+traduit partout où il s'affiche, ou nulle part.

@@ -758,7 +758,10 @@ c.titre('14. personne ne colle « un » devant un nom d’objet');
   ]) c.dit(re.test(code), q + ' passe par la fonction');
   // Et la crotte, qui n'est dans aucun rayon : son genre se pose à la main,
   // donc c'est exactement celui qu'on peut oublier.
-  c.dit(/NOM_OBJ\.crotte='crotte'; FEM_OBJ\.crotte=1;/.test(code),
+  // La capitale est venue avec la traduction : c'est une clé comme les
+  // autres. Ce que la ligne affirme — le genre posé à la main — n'a pas
+  // bougé, donc on relâche la ponctuation et pas le sens.
+  c.dit(/NOM_OBJ\.crotte='[Cc]rotte'; FEM_OBJ\.crotte=1;/.test(code),
         'la crotte, hors catalogue, porte quand même son genre');
 
   /* Et la phrase du Sens, qui recopiait `PIVOT_ILE` à la main. Elle disait
