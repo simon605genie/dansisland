@@ -314,10 +314,12 @@ lu que par Cloudflare Pages. Seule la racine est testable ainsi.
     npx playwright install chromium
     npm test
 
-Dix harnais, dans `test/`, qui font tourner **la vraie page dans un vrai
+Douze harnais, dans `test/`, qui font tourner **la vraie page dans un vrai
 navigateur** contre un serveur simulé (`test/faux-store.js` remplace
 `src/store.js` dans une copie jetable — le dépôt n'est jamais modifié, et
-rien ne touche la base de production).
+rien ne touche la base de production). Deux n'ouvrent pas Chromium :
+`robots.mjs` prend la page par le réseau, comme un robot qui ne rend pas,
+et `instagram.mjs` pointe l'API Meta sur un faux serveur local.
 
     balises.mjs     aucun panneau ne montre de balise en clair
     etroit.mjs      360 px et 780x360 : rien ne déborde, rien n'est coupé
@@ -332,6 +334,10 @@ rien ne touche la base de production).
     vivant.mjs      ce qui bouge tout seul : vent, phare, constellations,
                     météo, saisons, les habitants du village, les dalles
                     qui chantent — et que rien de tout ça n'entre en base
+    instagram.mjs   la logique de publication : ne rien publier deux fois,
+                    ne sauter aucun jour, rattraper une exécution manquée
+    langues.mjs     la langue, la grammaire, et que pas un mot du jeu
+                    n'arrive à l'écran sans passer par T()
 
 Ils existent parce que les défauts qu'ils surveillent ont tous été
 trouvés à l'œil, tard, et qu'aucun n'aurait survécu à un contrôle : des

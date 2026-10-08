@@ -1061,9 +1061,9 @@ textarea{
       <div class="whisper" id="whisper"></div>
       <div class="pad" id="pad" hidden aria-hidden="true"><span class="knob" id="knob"></span></div>
       <div class="zoom" id="zoom">
-        <button type="button" id="zoom-plus" aria-label="Voir de plus près">+</button>
-        <button type="button" id="zoom-moins" aria-label="Voir toute l’île">−</button>
-        <button type="button" id="photo-btn" aria-label="Appareil photo" hidden>📷</button>
+        <button type="button" id="zoom-plus" aria-label="Voir de plus près" data-t-aria>+</button>
+        <button type="button" id="zoom-moins" aria-label="Voir toute l’île" data-t-aria>−</button>
+        <button type="button" id="photo-btn" aria-label="Appareil photo" data-t-aria hidden>📷</button>
         <!-- **Reprendre son bonhomme, et il est toujours là.**
 
              Il n'apparaissait d'abord que quand un pinceau était armé, au
@@ -1081,11 +1081,11 @@ textarea{
              les plaques celle du haut — et parce que cette colonne est la
              seule qui existe **partout** : dehors, dedans, et chez les
              voisins. -->
-        <button type="button" id="marche-btn" aria-label="Reprendre ton bonhomme">✋</button>
+        <button type="button" id="marche-btn" aria-label="Reprendre ton bonhomme" data-t-aria>✋</button>
       </div>
       <button class="tourne" id="tourne" type="button" hidden><span>⟳</span>
-        <em style="font-style:normal"><b class="mieux">Dan’s Island se joue mieux en paysage.</b>
-        Tourne ton téléphone pour entrer sur ton île.</em></button>
+        <em style="font-style:normal"><b class="mieux" data-t>Dan’s Island se joue mieux en paysage.</b>
+        <span data-t>Tourne ton téléphone pour entrer sur ton île.</span></em></button>
 
     </div>
 
@@ -1097,11 +1097,11 @@ textarea{
       <div class="guide" id="guide" hidden></div>
       <div class="invite" id="invite" hidden></div>
       <div class="tabs" role="tablist">
-        <button role="tab" aria-selected="true" data-tab="toi">Moi</button>
-        <button role="tab" aria-selected="false" data-tab="maison">Maison</button>
-        <button role="tab" aria-selected="false" data-tab="ile">Île</button>
-        <button role="tab" aria-selected="false" data-tab="voisins">Voisins</button>
-        <button role="tab" aria-selected="false" data-tab="boutique">Boutique</button>
+        <button role="tab" aria-selected="true" data-tab="toi" data-t>Moi</button>
+        <button role="tab" aria-selected="false" data-tab="maison" data-t>Maison</button>
+        <button role="tab" aria-selected="false" data-tab="ile" data-t>Île</button>
+        <button role="tab" aria-selected="false" data-tab="voisins" data-t>Voisins</button>
+        <button role="tab" aria-selected="false" data-tab="boutique" data-t>Boutique</button>
       </div>
       <div class="panel on" id="p-toi"></div>
       <div class="panel" id="p-maison"></div>
@@ -1390,36 +1390,36 @@ TRAD.en={
     '<b>One more word</b> and it will have grown all it can.',
   'Elle a gagn\u00e9 toute la terre qu\u2019il y avait \u00e0 gagner.':
     'It has gained every bit of land there was to gain.',
-  '<b>Un jour nouveau.</b> Ton cadeau t\u2019attend dans la <b>Boutique</b>{a}':
-    '<b>A new day.</b> Your gift is waiting in the <b>Boutique</b> tab{a}',
+  '<b>Un jour nouveau.</b> Ton cadeau t\u2019attend dans la <b>{boutique}</b>{a}':
+    '<b>A new day.</b> Your present is waiting in the <b>{boutique}</b> tab{a}',
   ', et {n} touffes ont repouss\u00e9.':
     ', and {n} tufts of grass have grown back.',
   ', et une touffe a repouss\u00e9.':
     ', and one tuft of grass has grown back.',
   'Il n\u2019y a pas la place ici : ce meuble occupe {a}x{b} cases.':
     'There isn\u2019t room here: this piece of furniture takes up {a}x{b} squares.',
-  '\u00c7a s\u2019accroche \u00e0 un <b>mur du fond</b>. Prends une case contre le mur, ou change le <b>Sens</b> pour viser l\u2019autre.':
-    'This hangs on a <b>back wall</b>. Pick a square against the wall, or change the <b>Sens</b> setting to aim at the other one.',
-  'Il y a d\u00e9j\u00e0 <b>{meuble}</b> \u00e0 cet endroit du mur. Prends la <b>\u232b Gomme</b> pour le d\u00e9crocher.':
-    'There\u2019s already <b>{meuble}</b> on that spot of the wall. Use the <b>\u232b Gomme</b> to take it down.',
+  '\u00c7a s\u2019accroche \u00e0 un <b>mur du fond</b>. Prends une case contre le mur, ou change le <b>{sens}</b> pour viser l\u2019autre.':
+    'This hangs on a <b>back wall</b>. Pick a square against the wall, or change the <b>{sens}</b> setting to aim at the other one.',
+  'Il y a déjà <b>{meuble}</b> à cet endroit du mur. Prends la <b>{gomme}</b> pour le décrocher.':
+    '<b>{meuble}</b> is already on that spot on the wall. Use the <b>{gomme}</b> to take it down.',
   'Il y a d\u00e9j\u00e0 <b>{meuble}</b> sur ce meuble.':
     'There\u2019s already <b>{meuble}</b> on that piece of furniture.',
-  'Il y a d\u00e9j\u00e0 <b>{meuble}</b> au sol ici. Prends la <b>\u232b Gomme</b>.':
-    'There\u2019s already <b>{meuble}</b> on the floor here. Use the <b>\u232b Gomme</b>.',
+  'Il y a d\u00e9j\u00e0 <b>{meuble}</b> au sol ici. Prends la <b>{gomme}</b>.':
+    'There\u2019s already <b>{meuble}</b> on the floor here. Use the <b>{gomme}</b>.',
   'Cette case n\u2019est pas contre l\u2019autre mur. D\u00e9croche-le et repose-le l\u00e0-bas.':
     'That square isn\u2019t against the other wall. Take it down and hang it over there.',
-  'Tu rentres chez toi. Une porte pour changer de pi\u00e8ce, et <b>\u2190 Ton \u00eele</b> en haut du cadre pour ressortir.':
-    'You step inside. A door takes you from room to room, and <b>\u2190 Ton \u00eele</b> at the top of the frame takes you back out.',
-  'Pas de porte ici. La plaque <b>\u2190 Ton \u00eele</b>, en haut du cadre, te ram\u00e8ne dehors.':
-    'No door here. The <b>\u2190 Ton \u00eele</b> plate, at the top of the frame, takes you back outside.',
-  '\u00c7a se pose <b>dehors</b>. Prends <b>\u2190 Ton \u00eele</b>, en haut du cadre.':
-    'This goes <b>outside</b>. Use <b>\u2190 Ton \u00eele</b>, at the top of the frame.',
+  'Tu rentres chez toi. Une porte pour changer de pièce, et <b>{retour}</b> en haut du cadre pour ressortir.':
+    'You step inside. A door to change room, and <b>{retour}</b> at the top of the frame to go back out.',
+  'Pas de porte ici. La plaque <b>{retour}</b>, en haut du cadre, te ram\u00e8ne dehors.':
+    'No door here. The <b>{retour}</b> plate, at the top of the frame, takes you back outside.',
+  'Ça se pose <b>dehors</b>. Prends <b>{retour}</b>, en haut du cadre.':
+    'That goes <b>outside</b>. Use <b>{retour}</b>, at the top of the frame.',
   'Ce pinceau-l\u00e0 ne sert que dehors.':
     'That brush only works outside.',
-  'Un meuble se pose <b>dedans</b>. Monte sur le seuil de ta porte, ou prends le bouton <b>Entrer</b> du panneau Maison.':
-    'Furniture goes <b>inside</b>. Step onto your doorstep, or use the <b>Entrer</b> button in the Maison panel.',
-  'Il faut <b>quatre cases</b> \u00e0 {objet}, et ton \u00eele n\u2019est pas encore assez large ici. Essaie plus pr\u00e8s du centre \u2014 ou <b>agrandis ton \u00eele</b> : elle gagne un cran \u00e0 chaque mot qu\u2019on te laisse. Envoie ta carte postale, onglet <b>Voisins</b>.':
-    'You need <b>four squares</b> for {objet}, and your island isn\u2019t wide enough here yet. Try closer to the middle \u2014 or <b>make your island bigger</b>: it grows a notch with every word someone leaves you. Send your postcard, in the <b>Voisins</b> tab.',
+  'Un meuble se pose <b>dedans</b>. Monte sur le seuil de ta porte, ou prends le bouton <b>{entrer}</b> du panneau {maison}.':
+    'Furniture goes <b>inside</b>. Step onto your doorstep, or use the <b>{entrer}</b> button in the {maison} panel.',
+  'Il faut <b>quatre cases</b> \u00e0 {objet}, et ton \u00eele n\u2019est pas encore assez large ici. Essaie plus pr\u00e8s du centre \u2014 ou <b>agrandis ton \u00eele</b> : elle gagne un cran \u00e0 chaque mot qu\u2019on te laisse. Envoie ta carte postale, onglet <b>{voisins}</b>.':
+    'You need <b>four squares</b> for {objet}, and your island isn\u2019t wide enough here yet. Try closer to the middle \u2014 or <b>make your island bigger</b>: it grows a notch with every word someone leaves you. Send your postcard, in the <b>{voisins}</b> tab.',
   '<b>La mer se retire.</b> Du sable mouill\u00e9 est apparu au bord de l\u2019\u00eele, et elle y a laiss\u00e9 des choses.':
     '<b>The sea is going out.</b> Wet sand has appeared along the shore, and it has left things behind.',
   'Connecte-toi pour porter la commande chez quelqu\u2019un.':
@@ -1454,8 +1454,8 @@ TRAD.en={
     ' Come back tomorrow, it will have grown.',
   'Souvenir rapport\u00e9 de chez <b>{nom}</b>.{a}':
     'A keepsake brought back from <b>{nom}</b>\u2019s.{a}',
-  ' Il d\u00e9core, mais il ne marche pas : <b>{nom}</b> est \u00e0 la Boutique, {prix} shells.':
-    ' It looks nice, but it doesn\u2019t work: <b>{nom}</b> is in the Boutique, {prix} shells.',
+  ' Il décore, mais il ne marche pas : <b>{nom}</b> est à la {boutique}, {prix} shells.':
+    ' It decorates, but it does not work: <b>{nom}</b> is in the {boutique}, {prix} shells.',
   'La porte {qui} est ferm\u00e9e, mais ton sac est pr\u00eat. <b>E</b> pour d\u00e9poser la commande du jour sur le pas de la porte.':
     '{qui} door is closed, but your bag is ready. <b>E</b> to leave today\u2019s order on the doorstep.',
   'La porte {qui} est ferm\u00e9e. Tu as d\u00e9j\u00e0 port\u00e9 la commande aujourd\u2019hui ; elle revient demain.':
@@ -1464,8 +1464,8 @@ TRAD.en={
     '{qui} door is closed. This is where today\u2019s order gets dropped off, and your bag is still missing <b>{a}</b>.',
   'Un mot {qui}{a}. Sa lanterne \u00e9claire ton \u00eele la nuit.':
     'A word {qui}{a}. Their lantern lights up your island at night.',
-  'Tous tes murs portent d\u00e9j\u00e0 un cadre. D\u00e9croches-en un chez toi avec la <b>Gomme</b> de l\u2019atelier, et reviens le prendre en photo.':
-    'Every one of your walls already has a frame on it. Take one down at home with the workshop\u2019s <b>Gomme</b>, then come back and take this photo.',
+  'Tous tes murs portent d\u00e9j\u00e0 un cadre. D\u00e9croches-en un chez toi avec la <b>{gomme}</b> de l\u2019atelier, et reviens le prendre en photo.':
+    'Every one of your walls already has a frame on it. Take one down at home with the workshop\u2019s <b>{gomme}</b>, then come back and take this photo.',
   'Mod\u00e9ration impossible : {erreur}':
     'Couldn\u2019t moderate: {erreur}',
   'Suppression impossible : {erreur}':
@@ -1522,18 +1522,18 @@ TRAD.en={
     'Copy it by hand: {nom}',
   'Depuis ton dernier passage : {a}. {b}':
     'Since you were last here: {a}. {b}',
-  'C\u2019est dans l\u2019onglet <b>Voisins</b>.':
-    'It\u2019s in the <b>Voisins</b> tab.',
-  'Va les lire dans l\u2019onglet <b>\u00cele</b>.':
-    'Go and read them in the <b>\u00cele</b> tab.',
+  'C\u2019est dans l\u2019onglet <b>{onglet}</b>.':
+    'It\u2019s in the <b>{onglet}</b> tab.',
+  'Va les lire dans l\u2019onglet <b>{onglet}</b>.':
+    'Go and read them in the <b>{onglet}</b> tab.',
   'Compte charg\u00e9 partiellement : {erreur}':
     'Account only partly loaded: {erreur}',
-  'Il te faut un <b>appareil photo</b> : il est \u00e0 la Boutique, au rayon <b>Pour toi</b>.':
-    'You need a <b>camera</b>: it\u2019s in the Boutique, in the <b>Pour toi</b> aisle.',
+  'Il te faut un <b>appareil photo</b> : il est \u00e0 la {boutique}, au rayon <b>{pourtoi}</b>.':
+    'You need a <b>camera</b>: it\u2019s in the {boutique}, in the <b>{pourtoi}</b> aisle.',
   '<b>Viseur ouvert.</b> Place-toi, cadre, puis appuie encore sur <b>P</b> ou sur \ud83d\udcf7 pour d\u00e9clencher.':
     '<b>Viewfinder open.</b> Move around, frame your shot, then press <b>P</b> or \ud83d\udcf7 again to take it.',
-  '<b>Photo prise{a}.</b> Elle est enregistr\u00e9e, et elle est dans ton album, onglet <b>Toi</b> \u2014 clique-la pour l\u2019envoyer.':
-    '<b>Photo taken{a}.</b> It\u2019s saved, and it\u2019s in your album, in the <b>Toi</b> tab \u2014 click it to send it.',
+  '<b>Photo prise{a}.</b> Elle est enregistr\u00e9e, et elle est dans ton album, onglet <b>{toi}</b> \u2014 clique-la pour l\u2019envoyer.':
+    '<b>Photo taken{a}.</b> It\u2019s saved, and it\u2019s in your album, in the <b>{toi}</b> tab \u2014 click it to send it.',
   ' chez {hote}':
     ' at {hote}\u2019s',
   'Ta photo est <b>enregistr\u00e9e</b> : tu peux la joindre \u00e0 un message.':
@@ -1805,20 +1805,854 @@ TRAD.en={
   'Douze touches noires, et le couvercle ferm\u00e9.':
     'Twelve black keys, and the lid closed.',
   'Le chien, le crabe ou la mouette te suit partout, m\u00eame chez les voisins. Ils sont d\u00e9j\u00e0 \u00e0 toi ; \u00e7a se choisit dans l\u2019onglet Toi.':
-    'The dog, the crab or the seagull follows you everywhere, even to the neighbours\u2019. They\u2019re already yours; you pick one in the <b>Toi</b> tab.',
+    'The dog, the crab or the seagull follows you everywhere, even to the neighbours\u2019. They\u2019re already yours; you pick one in the Me tab.',
   'Tu marches un tiers plus vite, dehors comme dedans.':
     'You walk a third faster, outside and in.',
   'Un viseur, un d\u00e9clencheur, et l\u2019album qui va avec.':
     'A viewfinder, a shutter, and the album that goes with them.',
   'Elle tond les quatre cases voisines en passant.':
     'It mows the four neighbouring squares as you go past.',
+
+  /* ---- les libellés de l'interface, et tout ce qui les cite ----
+     Un libellé se traduit **partout où il s'affiche, ou nulle part** :
+     les vingt sites qui lisent un nom d'objet passent par `T()`, et une
+     phrase qui nomme un bouton le reçoit en **trou**, nourri par `T()`.
+     Sans ça l'anglais enverrait l'enfant chercher « Voisins » sous un
+     onglet qui dit « Neighbours ». ---- */
+  'Annulé. Encore {n} pas en arrière.':
+    'Undone. {n} more steps back.',
+  'Annulé. Encore un pas en arrière.':
+    'Undone. One more step back.',
+  'Annulé.':
+    'Undone.',
+  'On ne pose rien sur <b>{meuble}</b>. Essaie une table basse, une table de nuit, une commode, un bureau, une malle ou le piano.':
+    'Nothing goes on top of <b>{meuble}</b>. Try a coffee table, a bedside table, a chest of drawers, a desk, a trunk or the piano.',
+  'Il y a déjà <b>{meuble}</b> ici. Prends la <b>{gomme}</b>, ou choisis une case libre.':
+    '<b>{meuble}</b> is already here. Use the <b>{gomme}</b>, or pick an empty square.',
+  'encore {k} touffes':
+    '{k} tufts to go',
+  'encore une touffe':
+    'one tuft to go',
+  'la pelouse est nette':
+    'the lawn is clear',
+  'Tondu, mais la tonte a déjà tout donné pour aujourd’hui.':
+    'Mowed, but mowing has already paid all it pays today.',
+  'encore {k} choses sur le sable':
+    '{k} more things on the sand',
+  'encore une chose sur le sable':
+    'one more thing on the sand',
+  'tu as tout ramassé':
+    'you have picked up everything',
+  'Tu ramasses {quoi}, mais la marée a déjà tout donné pour aujourd’hui : il ne rentre pas dans le sac non plus.':
+    'You pick up {quoi}, but the tide has already paid all it pays today: it does not go in the bag either.',
+  '<b>Le chien part devant.</b> Reste près de lui tout le tour de l’île : <b>{n} shells</b> à l’arrivée.':
+    '<b>The dog sets off.</b> Stay close to him all the way round the island: <b>{n} shells</b> when you get back.',
+  '<b>Le chien repart.</b> Il a déjà eu sa promenade du jour : celle-ci est pour le plaisir.':
+    '<b>The dog is off again.</b> He has already had his walk today: this one is just for fun.',
+  '<b>Le tour est bouclé. +{n} shells.</b> Il redemandera demain.':
+    '<b>Once round, done. +{n} shells.</b> He will ask again tomorrow.',
+  '<b>Le tour est bouclé. +{n} shell.</b> Il redemandera demain.':
+    '<b>Once round, done. +{n} shell.</b> He will ask again tomorrow.',
+  '<b>Le tour est bouclé.</b> Il avait déjà eu sa promenade aujourd’hui : rien dans la bourse, mais il était content.':
+    '<b>Once round, done.</b> He had already had his walk today: nothing in the purse, but he was happy.',
+  'Ton chien est passé par là. <b>E</b> ou le bouton rose, et c’est propre.':
+    'Your dog has been past here. <b>E</b> or the pink button, and it is clean.',
+  'Son coupé':
+    'Sound off',
+  'Son':
+    'Sound',
+  'Remettre le son':
+    'Turn the sound back on',
+  'Couper le son':
+    'Turn the sound off',
+  '<b>Ton coffre.</b> Il y a quelque chose dedans aujourd’hui. <b>E</b> pour l’ouvrir.':
+    '<b>Your chest.</b> There is something in it today. <b>E</b> to open it.',
+  'Ton coffre est vide : tu l’as déjà ouvert aujourd’hui. Il se remplit demain.':
+    'Your chest is empty: you have already opened it today. It fills up again tomorrow.',
+  'La girouette pointe vers le large. <b>E</b> pour savoir combien de temps la mer reste basse.':
+    'The weather vane points out to sea. <b>E</b> to find out how long the tide stays low.',
+  'La girouette pointe vers la terre. <b>E</b> pour savoir quand la mer redescend.':
+    'The weather vane points inland. <b>E</b> to find out when the tide goes out again.',
+  'Ta porte. Ton chien n’a pas fini son tour : <b>E</b> pour rentrer quand même, il retournera à sa place.':
+    'Your door. Your dog has not finished his walk: <b>E</b> to go in anyway, and he will go back to his spot.',
+  'Ta porte. Monte sur le seuil, ou <b>E</b> pour rentrer chez toi.':
+    'Your door. Step onto the doorstep, or press <b>E</b> to go in.',
+  '<b>{qui}</b> te fait signe. {quoi}':
+    '<b>{qui}</b> waves at you. {quoi}',
+  '« Je vais voir <b>{nom}</b>, {ou}. »':
+    '“I am off to see <b>{nom}</b>, {ou}.”',
+  '« Je vais dire bonjour {qui}. »':
+    '“I am off to say hello to {qui}.”',
+  '« Je passais dire bonjour chez toi. »':
+    '“I was just dropping by to say hello.”',
+  'Couleur {c}':
+    'Colour {c}',
+  'Couleur libre':
+    'Any colour',
+  ' et ':
+    ' and ',
+  'Tout effacer':
+    'Clear it all',
+  'Les pastilles sont des couleurs toutes prêtes. La pipette, au bout de chaque rangée, ouvre toutes les autres — la couleur exacte de tes cheveux, si tu veux.':
+    'The dots are ready-made colours. The picker, at the end of each row, opens all the others — the exact colour of your own hair, if you like.',
+  'Une bestiole que tu as déjà. Il t’en manque {n} : {quoi}. Elles s’achètent à la {boutique}, et elles deviennent alors des compagnons possibles.':
+    'A critter you already have. You are missing {n}: {quoi}. They are bought in the {boutique}, and they then become possible companions.',
+  'Tu as toutes les bestioles. Change de compagnon quand tu veux, ça ne coûte rien.':
+    'You have every critter. Change companion whenever you like, it costs nothing.',
+  'Tu marches seul. Le <b>{compagnon}</b> s’achète à la {boutique}, au rayon <b>{pourtoi}</b>, pour <b>{n} shells</b> — et le <b>chien</b>, le <b>crabe</b> et la <b>mouette</b> sont déjà à toi : l’un d’eux te suivra partout, même chez les voisins.':
+    'You walk alone. <b>{compagnon}</b> is bought in the {boutique}, in the <b>{pourtoi}</b> aisle, for <b>{n} shells</b> — and the <b>dog</b>, the <b>crab</b> and the <b>seagull</b> are already yours: one of them will follow you everywhere, even to the neighbours’.',
+  'demandé':
+    'asked for',
+  'Le sac te suit d’un appareil à l’autre et chez les voisins : il est à <b>toi</b>, pas à ton île. Il se remplit sur le sable mouillé, à marée basse, tant que la marée paie encore aujourd’hui.':
+    'The bag follows you from one device to another and to the neighbours’: it belongs to <b>you</b>, not to your island. It fills up on the wet sand, at low tide, as long as the tide is still paying today.',
+  'Ton sac est vide. À marée basse, va marcher sur le sable mouillé au bord de ton île : ce que la mer y laisse y tombe. C’est avec ça qu’on remplit la <b>commande du jour</b>, dans l’onglet {onglet}.':
+    'Your bag is empty. At low tide, go and walk on the wet sand at the edge of your island: whatever the sea leaves there drops into it. That is what fills the <b>order of the day</b>, in the {onglet} tab.',
+  'chez {qui}':
+    'at {qui}’s',
+  'chez toi':
+    'at home',
+  'Clique une photo pour l’<b>envoyer</b> — sur téléphone elle part dans la conversation, ailleurs elle descend dans tes fichiers. L’album garde les <b>{n} dernières</b> et il vit dans <b>ce navigateur</b>, pas en base : il ne te suit pas d’un appareil à l’autre.':
+    'Click a photo to <b>send</b> it — on a phone it goes straight into the conversation, elsewhere it lands in your files. The album keeps the <b>last {n}</b> and it lives in <b>this browser</b>, not in the database: it does not follow you from one device to another.',
+  'Ton album est vide. Appuie sur <b>P</b> ou sur 📷, au bord du cadre : le viseur s’ouvre, tu cadres, et un second appui déclenche.':
+    'Your album is empty. Press <b>P</b> or 📷, at the edge of the frame: the viewfinder opens, you frame your shot, and a second press takes it.',
+  'Tu n’as pas d’<b>appareil photo</b>. Il est à la {boutique}, au rayon <b>{pourtoi}</b> : on vise, on déclenche, et la photo se range ici — d’où tu peux l’envoyer.':
+    'You have no <b>camera</b>. It is in the {boutique}, in the <b>{pourtoi}</b> aisle: you aim, you shoot, and the photo lands here — and from here you can send it.',
+  'Tu es invité chez <b>{qui}</b>. Ces réglages sont ceux de <b>ta</b> maison, que tu ne vois pas d’ici : ils t’attendent chez toi.':
+    'You are a guest at <b>{qui}</b>’s. These settings are for <b>your</b> house, which you cannot see from here: they are waiting for you back home.',
+  '✕ Annuler le déplacement':
+    '✕ Cancel the move',
+  '✣ Déplacer la maison':
+    '✣ Move the house',
+  'Tu cliques la case, la maison s\'y pose : le coin que tu vises est son coin nord, le plus haut à l\'écran. La maison est le point de rendez-vous, on débarque toujours devant sa porte.':
+    'Click a square and the house lands there: the corner you aim at is its north corner, the highest one on screen. The house is the meeting point — visitors always arrive at its door.',
+  '🚪 Entrer':
+    '🚪 Go inside',
+  'Entrer':
+    'Go inside',
+  'La porte {qui} est fermée : on ne visite que le dehors. Rentre chez toi pour ouvrir la tienne.':
+    '{qui} door is shut: you only visit the outdoors. Go home to open your own.',
+  'Trois pièces, et personne d’autre n’y entre. Tu peux aussi <b>marcher sur le seuil</b> de ta porte : c’est la même chose, sans passer par un bouton. Une fois dedans, ce panneau devient l’atelier des pièces.':
+    'Three rooms, and nobody else goes in. You can also <b>walk onto the doorstep</b>: it does the same thing, without a button. Once inside, this panel becomes the workshop for the rooms.',
+  'La mer recule d’un cran à chaque mot qu’on te laisse — c’est la seule façon de gagner du terrain. <b>Encore {n} mots</b>, et elle aura reculé autant qu’elle le peut. Pour qu’on passe, envoie ta <b>carte postale</b> — elle est dans l’onglet {onglet}.':
+    'The sea draws back a notch with every word someone leaves you — that is the only way to gain ground. <b>{n} more words</b>, and it will have drawn back as far as it can. To get people coming, send your <b>postcard</b> — it is in the {onglet} tab.',
+  'La mer recule d’un cran à chaque mot qu’on te laisse — c’est la seule façon de gagner du terrain. <b>Encore un mot</b>, et elle aura reculé autant qu’elle le peut. Pour qu’on passe, envoie ta <b>carte postale</b> — elle est dans l’onglet {onglet}.':
+    'The sea draws back a notch with every word someone leaves you — that is the only way to gain ground. <b>One more word</b>, and it will have drawn back as far as it can. To get people coming, send your <b>postcard</b> — it is in the {onglet} tab.',
+  'Tu as gagné toute la terre qu’il y avait à gagner : au-delà, c’est le large, et la mer a besoin de sa place pour la marée. Il ne reste plus qu’à la remplir — et les gens qui passent continuent de te laisser des mots, et des shells.':
+    'You have won all the land there was to win: beyond that is the open sea, and the sea needs its room for the tide. All that is left is to fill it — and people who pass by still leave you words, and shells.',
+  'Tu es invité chez <b>{qui}</b>. Le haut de ce panneau règle <b>ton</b> île, pas la sienne : tu ne verrais rien changer d’ici, alors il attend que tu sois rentré.':
+    'You are a guest at <b>{qui}</b>’s. The top of this panel sets up <b>your</b> island, not theirs: you would see nothing change from here, so it waits until you are home.',
+  'Rentrer chez toi':
+    'Go back home',
+  'L’ambiance appartient à l’île, pas au joueur : tes visiteurs entendront celle que tu choisis. Le bouton <b>{son}</b>, en haut du cadre, coupe tout pour toi seul. La <b>{musique}</b> n’est jamais deux fois la même, et elle suit le ciel : claire de jour, basse la nuit.':
+    'The ambience belongs to the island, not to the player: your visitors will hear the one you pick. The <b>{son}</b> button, at the top of the frame, mutes everything for you alone. The <b>{musique}</b> is never twice the same, and it follows the sky: bright by day, low at night.',
+  '⌫ Effacer':
+    '⌫ Erase',
+  '⌫ Gomme':
+    '⌫ Eraser',
+  '⟳ Tourner':
+    '⟳ Turn',
+  '↶ Annuler':
+    '↶ Undo',
+  'Il y a <b>{n} objets</b> de plus à la <b>{boutique}</b>. On les achète une fois, et on en pose ensuite autant qu’on veut.':
+    'There are <b>{n} more objects</b> in the <b>{boutique}</b>. You buy one once, and then place as many as you like.',
+  'Il y a <b>un objet</b> de plus à la <b>{boutique}</b>. On l’achète une fois, et on en pose ensuite autant qu’on veut.':
+    'There is <b>one more object</b> in the <b>{boutique}</b>. You buy it once, and then place as many as you like.',
+  'Le sens ne change que ce qui suit un axe : {quoi}. Un arbre est pareil des deux côtés. <b>{tourner}</b> retourne ce qui est déjà posé, sans l\'effacer.':
+    'Facing only changes things that follow an axis: {quoi}. A tree looks the same from either side. <b>{tourner}</b> turns what is already placed, without erasing it.',
+  'Vider les objets':
+    'Clear the objects',
+  'Nouveau relief':
+    'New terrain',
+  'Le curseur suit la grille isométrique : le losange rose montre la case visée. <b>Ctrl+Z</b> revient en arrière, jusqu’à {n} fois.':
+    'The cursor follows the isometric grid: the pink diamond shows the square you are aiming at. <b>Ctrl+Z</b> steps back, up to {n} times.',
+  '<b>La mer est basse.</b> L’anneau de sable mouillé au bord de l’île se marche, et la mer y laisse des choses à ramasser. On n’y bâtit pas : elle le reprend à la prochaine marée.':
+    '<b>The tide is out.</b> You can walk the ring of wet sand at the edge of the island, and the sea leaves things to pick up there. You cannot build on it: the sea takes it back at the next tide.',
+  '<b>La mer est haute.</b> Deux fois par jour elle se retire et découvre un anneau de sable mouillé au bord de l’île, où elle laisse des choses à ramasser. Comme la vraie, elle passe environ cinquante minutes plus tard chaque jour.':
+    '<b>The tide is in.</b> Twice a day it goes out and uncovers a ring of wet sand at the edge of the island, where it leaves things to pick up. Like the real thing, it comes about fifty minutes later each day.',
+  '{temps} Il fait le même temps sur toutes les îles, et il change toutes les deux heures et demie.':
+    '{temps} The weather is the same on every island, and it changes every two and a half hours.',
+  'C’est <b>{saison}</b>. {quoi} L’île suit le vrai calendrier, et la saison ne repeint jamais ce que tu as choisi : elle se pose dessus.':
+    'It is <b>{saison}</b>. {quoi} The island follows the real calendar, and the season never repaints what you chose: it settles on top.',
+  'Livre d’or — {nom}':
+    'Guest book — {nom}',
+  ' · {n} nouveaux':
+    ' · {n} new',
+  ' · {n} nouveau':
+    ' · {n} new',
+  'Personne n’est encore passé.':
+    'Nobody has been by yet.',
+  '(masqué)':
+    '(hidden)',
+  'montrer':
+    'show',
+  'masquer':
+    'hide',
+  'supprimer':
+    'delete',
+  '↩ <b>{qui}</b> a répondu : « {quoi} »':
+    '↩ <b>{qui}</b> replied: “{quoi}”',
+  'changer ma réponse':
+    'change my reply',
+  'répondre':
+    'reply',
+  'Envoyer':
+    'Send',
+  'Réponse envoyée. <b>{qui}</b> la verra en repassant.':
+    'Reply sent. <b>{qui}</b> will see it next time they come by.',
+  'Planter le mot':
+    'Plant the word',
+  '↩ On t’a répondu':
+    '↩ Someone replied to you',
+  'Ta petite phrase':
+    'Your own line',
+  '← Ressortir':
+    '← Back outside',
+  'Le <b>{sens}</b> sert deux fois : il retourne le meuble qu’on va poser, et pour un <b>tableau</b> ou une <b>guirlande</b> il dit à quel mur du fond ça s’accroche.':
+    '<b>{sens}</b> does two jobs: it turns the piece you are about to place, and for a <b>picture</b> or <b>string lights</b> it says which back wall they hang on.',
+  '✋ Marcher':
+    '✋ Walk',
+  'Marcher':
+    'Walk',
+  '<b>{tourner}</b> retourne ce qui est <b>déjà posé</b>, sans l’effacer. La <b>{gomme}</b> prend ce qu’il y a de plus haut sur la case : ce qui est posé sur un meuble avant le meuble, et le tapis en dernier.':
+    '<b>{tourner}</b> turns what is <b>already placed</b>, without erasing it. The <b>{gomme}</b> takes the topmost thing on the square: whatever sits on a piece of furniture before the furniture, and the rug last.',
+  'Il y a <b>{n} meubles</b> de plus à la <b>{boutique}</b>.':
+    'There are <b>{n} more pieces of furniture</b> in the <b>{boutique}</b>.',
+  'Il y a <b>un meuble</b> de plus à la <b>{boutique}</b>.':
+    'There is <b>one more piece of furniture</b> in the <b>{boutique}</b>.',
+  'Trois pièces, et personne d’autre que toi n’y entre. {piece} fait {w}x{h} cases et porte <b>{n} meubles</b>. <b>Ctrl+Z</b> annule ici comme dehors.':
+    'Three rooms, and nobody but you goes in. {piece} is {w}x{h} squares and holds <b>{n} pieces of furniture</b>. <b>Ctrl+Z</b> undoes in here just as it does outside.',
+  'Trois pièces, et personne d’autre que toi n’y entre. {piece} fait {w}x{h} cases et porte <b>{n} meuble</b>. <b>Ctrl+Z</b> annule ici comme dehors.':
+    'Three rooms, and nobody but you goes in. {piece} is {w}x{h} squares and holds <b>{n} piece of furniture</b>. <b>Ctrl+Z</b> undoes in here just as it does outside.',
+  'Tout ne se pose pas au même endroit. Un <b>tapis</b> va au sol, sous le reste. Un <b>vase</b>, une <b>plante</b> ou la <b>télévision</b> se posent par terre, ou sur une table basse, une table de nuit, une commode, un bureau, une malle ou le piano. Un <b>tableau</b> et une <b>guirlande</b> s’accrochent à un mur du fond. Tout le reste tient sa case, et on ne passe pas au travers.':
+    'Not everything goes in the same place. A <b>rug</b> lies on the floor, under everything else. A <b>vase</b>, a <b>plant</b> or the <b>television</b> go on the floor, or on a coffee table, a bedside table, a chest of drawers, a desk, a trunk or the piano. A <b>picture</b> and <b>string lights</b> hang on a back wall. Everything else holds its square, and you cannot walk through it.',
+  '🎁 <b>Ton cadeau t’attend chez toi</b>, pas ici : il est dans ton coffre, sur ton île. Rentre, et va marcher jusqu’à lui.':
+    '🎁 <b>Your present is waiting at home</b>, not here: it is in your chest, on your island. Go back, and walk over to it.',
+  '🎁 <b>Ton cadeau t’attend chez toi</b>, pas ici. Rentre sur ton île, et tu pourras l’ouvrir.':
+    '🎁 <b>Your present is waiting at home</b>, not here. Go back to your island and you can open it.',
+  '🎁 <b>Ton cadeau t’attend dans ton coffre</b>, sur ton île, il scintille. Va marcher jusqu’à lui, puis appuie sur <b>E</b> ou touche le bouton rose du cadre.':
+    '🎁 <b>Your present is waiting in your chest</b>, on your island, and it is sparkling. Walk over to it, then press <b>E</b> or touch the pink button on the frame.',
+  '🎁 Ouvrir mon cadeau':
+    '🎁 Open my present',
+  'Poser un coffre':
+    'Place a chest',
+  'Tu n’as pas de coffre sur ton île. Pose-en un (il est gratuit, au rayon <b>{rayon}</b> de ton atelier), et c’est lui qui portera le cadeau, chaque jour.':
+    'You have no chest on your island. Place one (it is free, in the <b>{rayon}</b> aisle of your workshop), and that is what will hold the present, every day.',
+  'Tu en as déjà ouvert <b>{n}</b>. Chaque fois il grossit un peu, et tous les <b>sept</b>, la boutique t’en offre un — {combien} Sauter des jours ne t’enlève rien.':
+    'You have opened <b>{n}</b> already. Each one is a little bigger, and every <b>seventh</b>, the shop gives you an object — {combien} Skipping days takes nothing away from you.',
+  'le prochain est le bon.':
+    'the next one is the one.',
+  'plus que <b>{k}</b>.':
+    'only <b>{k}</b> to go.',
+  'Ouvre-le quand tu veux : il grossit à chaque fois, et au septième la boutique t’offre un objet. Sauter des jours ne t’enlève rien.':
+    'Open it whenever you like: it grows each time, and on the seventh the shop gives you an object. Skipping days takes nothing away from you.',
+  '<b>{n}</b> shells':
+    '<b>{n}</b> shells',
+  '<b>{n}</b> shell':
+    '<b>{n}</b> shell',
+  'shells':
+    'shells',
+  'shell':
+    'shell',
+  'Marche sur les hautes herbes : 1 shell la touffe, et il en reste <b>{n}</b> sur ton île.':
+    'Walk over the tall grass: 1 shell a tuft, and there are <b>{n}</b> left on your island.',
+  'La pelouse est nette. Les herbes repousseront demain.':
+    'The lawn is clear. The grass will grow back tomorrow.',
+  'Va voir ton chien, sors-le, et reste près de lui le temps d’un tour de l’île. Il y en a un dans ton atelier, au rayon <b>{rayon}</b>.':
+    'Go and find your dog, take him out, and stay close to him for one lap of the island. There is one in your workshop, in the <b>{rayon}</b> aisle.',
+  'Deux fois par jour la mer se retire et découvre un anneau de sable mouillé au bord de l’île. Va y marcher : elle y laisse des choses, <b>{n} shells</b> chacune.':
+    'Twice a day the sea goes out and uncovers a ring of wet sand at the edge of the island. Go and walk on it: the sea leaves things there, <b>{n} shells</b> each.',
+  '<b>{n} shells</b> par personne, une fois par jour. Va dans l’onglet <b>{onglet}</b>.':
+    '<b>{n} shells</b> per person, once a day. Go to the <b>{onglet}</b> tab.',
+  '<b>{n} shells</b> par personne qui passe. Rien à faire : partage l’adresse de ton île.':
+    '<b>{n} shells</b> for each person who comes by. Nothing to do: share your island’s address.',
+  'Remplis ton sac sur le sable à marée basse, puis va déposer le panier sur le pas de la porte de quelqu’un. Une fois par jour. Va dans l’onglet <b>{onglet}</b>.':
+    'Fill your bag on the sand at low tide, then leave the basket on someone’s doorstep. Once a day. Go to the <b>{onglet}</b> tab.',
+  '<b>{n} shells</b> par personne qui t’en apporte une. Rien à faire : partage l’adresse de ton île.':
+    '<b>{n} shells</b> for each person who brings you one. Nothing to do: share your island’s address.',
+  'C’est tout pour aujourd’hui. Ça repart demain.':
+    'That is all for today. It starts again tomorrow.',
+  '<b>{n} shells</b>':
+    '<b>{n} shells</b>',
+  '<b>{n} shell</b>':
+    '<b>{n} shell</b>',
+  'Il te reste {a} à aller chercher aujourd’hui. Ce qui les donne est <b>en bas de cet onglet</b>. Et {b} de plus si des gens passent sur ton île — ça, ça ne se joue pas, ça se partage.':
+    'You have {a} left to go and find today. What gives them is <b>at the bottom of this tab</b>. And {b} more if people come by your island — that one is not played for, it is shared.',
+  'Il te reste {a} à aller chercher aujourd’hui. Ce qui les donne est <b>en bas de cet onglet</b>.':
+    'You have {a} left to go and find today. What gives them is <b>at the bottom of this tab</b>.',
+  'Tu as pris tout ce que l’île donnait aujourd’hui. Il reste {b} si des gens passent sur ton île : partage son adresse, dans l’onglet <b>{onglet}</b>.':
+    'You have taken everything the island gave today. There is still {b} if people come by: share its address, in the <b>{onglet}</b> tab.',
+  'Tu as pris tout ce que l’île donnait aujourd’hui. Ça repart demain — le détail est <b>en bas de cet onglet</b>.':
+    'You have taken everything the island gave today. It starts again tomorrow — the details are <b>at the bottom of this tab</b>.',
+  '✓ à toi':
+    '✓ yours',
+  '{n} shells':
+    '{n} shells',
+  'Les rayons sont ceux de ton <b>atelier</b> : un objet acheté ici va se ranger dans le rayon du même nom, dans l’onglet <b>{onglet}</b>.':
+    'The aisles are the ones in your <b>workshop</b>: an object bought here goes into the aisle of the same name, in the <b>{onglet}</b> tab.',
+  'Tout se paie en <b>shells</b>, la monnaie de l’île. On les gagne en jouant, jamais avec de l’argent : il n’y a rien à acheter ici avec autre chose que des shells.':
+    'Everything is paid for in <b>shells</b>, the island’s currency. You earn them by playing, never with money: there is nothing here to buy with anything but shells.',
+  'Un objet s’achète <b>une fois, pour toujours</b> : il rejoint ton atelier et tu en poses autant que tu veux, sans repayer. Ce qui est acheté apparaît dans l’onglet <b>{onglet}</b> ou dans <b>Dedans</b>, dans son rayon. Ce qui est <b>pour toi</b> n’a pas d’atelier : ça agit dès l’achat.':
+    'An object is bought <b>once, for good</b>: it joins your workshop and you place as many as you like, without paying again. What you buy shows up in the <b>{onglet}</b> tab or <b>inside your house</b>, in its aisle. What is <b>for you</b> has no workshop: it works from the moment you buy it.',
+  'Ta bourse est tenue par le serveur, pas par ton navigateur : elle te suit d’un appareil à l’autre, et c’est lui qui compte les jours. Les shells qu’une visite rapporte, c’est le mot planté qui les déclenche — personne ne peut les demander.':
+    'Your purse is kept by the server, not by your browser: it follows you from one device to another, and the server is what counts the days. The shells a visit earns are triggered by the word that gets planted — nobody can ask for them.',
+  'Tu joues sans compte : cette bourse ne vit que dans ce navigateur, et rien n’en sort. Connecte-toi et crée ton île pour qu’elle te suive, et pour que les visites rapportent.':
+    'You are playing without an account: this purse lives only in this browser, and nothing leaves it. Sign in and create your island so that it follows you, and so that visits pay.',
+  '<b>{nom}</b> · {prix} shells — {quoi}':
+    '<b>{nom}</b> · {prix} shells — {quoi}',
+  'Déjà à toi':
+    'Already yours',
+  'Il te manque {n} shells':
+    'You need {n} more shells',
+  'Il te manque {n} shell':
+    'You need {n} more shell',
+  'Acheter pour {n} shells':
+    'Buy for {n} shells',
+  'Laisser':
+    'Leave it',
+  'Va tondre ta pelouse, et reviens : la tonte donne <b>{n} shells</b> par jour, et le cadeau du jour s’y ajoute.':
+    'Go and mow your lawn, then come back: mowing gives <b>{n} shells</b> a day, and the present of the day adds to that.',
+  '<b>{quoi}</b> est à toi. Tu la trouveras dans ton atelier, et tu peux en poser autant que tu veux.':
+    '<b>{quoi}</b> is yours. You will find it in your workshop, and you can place as many as you like.',
+  '<b>{quoi}</b> est à toi. <b>Entre dans ta maison</b> : l’atelier des pièces t’attend dans ce même panneau, et tu peux en poser autant que tu veux.':
+    '<b>{quoi}</b> is yours. <b>Go inside your house</b>: the workshop for the rooms is waiting in this very panel, and you can place as many as you like.',
+  '{lus} — et {k} autres, dans le livre d’or.':
+    '{lus} — and {k} others, in the guest book.',
+  '{lus} — et un autre, dans le livre d’or.':
+    '{lus} — and one more, in the guest book.',
+  '✓ dans ton sac':
+    '✓ in your bag',
+  'il en faut un':
+    'you need one',
+  'La commande est la même pour tout l’archipel : la mer la dépose sur le sable de chaque île à marée basse, et on va la porter chez quelqu’un. <b>Connecte-toi et crée ton île</b> pour pouvoir la livrer.':
+    'The order is the same across the whole archipelago: the sea leaves it on every island’s sand at low tide, and you carry it to someone. <b>Sign in and create your island</b> to be able to deliver it.',
+  '✓ <b>Tu as porté la commande aujourd’hui.</b> Elle revient demain, et ce sera autre chose.':
+    '✓ <b>You delivered the order today.</b> It comes back tomorrow, and it will be something else.',
+  '🧺 <b>Ton sac est prêt.</b> Va chez quelqu’un, marche jusqu’au pas de sa porte, et appuie sur <b>E</b> ou touche le bouton rose : tu gagnes <b>{a} shells</b>, et lui <b>{b}</b>, qu’il trouvera en rentrant.':
+    '🧺 <b>Your bag is ready.</b> Go to someone’s island, walk up to their doorstep, and press <b>E</b> or touch the pink button: you earn <b>{a} shells</b>, and they earn <b>{b}</b>, which they will find when they get home.',
+  'Il te manque {quoi}. À marée basse, la mer les laisse sur le sable mouillé au bord de <b>ton</b> île : c’est là qu’on remplit le sac. Chez les voisins, il n’y a rien à ramasser : on y va les mains pleines, pas l’inverse.':
+    'You still need {quoi}. At low tide, the sea leaves them on the wet sand at the edge of <b>your</b> island: that is where you fill the bag. There is nothing to pick up at the neighbours’: you arrive with your hands full, not the other way round.',
+  '📦 Aujourd’hui, <b>{qui}</b> t’ont déposé un panier devant ta porte. Les shells sont déjà dans ta bourse.':
+    '📦 Today, <b>{qui}</b> left a basket at your door. The shells are already in your purse.',
+  '📦 Aujourd’hui, <b>{qui}</b> t’a déposé un panier devant ta porte. Les shells sont déjà dans ta bourse.':
+    '📦 Today, <b>{qui}</b> left a basket at your door. The shells are already in your purse.',
+  'Aller chez {qui}':
+    'Go to {qui}’s',
+  'Et {n} autres, plus anciennes.':
+    'And {n} others, older ones.',
+  'Et {n} autre, plus ancienne.':
+    'And {n} other, an older one.',
+  'Un mot planté chez quelqu’un peut recevoir une réponse. C’est la seule chose du jeu qui vienne te chercher.':
+    'A word planted at someone’s island can get a reply. It is the only thing in this game that comes looking for you.',
+  '💌 Envoyer ma carte postale':
+    '💌 Send my postcard',
+  'Une carte postale montre <b>ton</b> île, pas celle de l’hôte. Rentre chez toi, et elle t’attend ici.':
+    'A postcard shows <b>your</b> island, not your host’s. Go back home, and it will be waiting here.',
+  'Une image de ton île, ton nom, ton adresse, et une phrase de toi. Elle part dans WhatsApp, dans un message, où tu veux — et qui la reçoit peut venir marcher chez toi.':
+    'A picture of your island, your name, your address, and a line of your own. It goes out on WhatsApp, in a message, wherever you like — and whoever gets it can come and walk on your island.',
+  'Sans nom':
+    'Unnamed',
+  ' · {n} mots':
+    ' · {n} words',
+  ' · {n} mot':
+    ' · {n} word',
+  'ici':
+    'here',
+  'Rentrer':
+    'Go home',
+  'Visiter':
+    'Visit',
+  '🎲 Une île au hasard':
+    '🎲 A random island',
+  '🔗 Copier mon lien':
+    '🔗 Copy my link',
+  'Copier':
+    'Copy',
+  'Importer':
+    'Import',
+  'Le code reste utile pour sauvegarder ou dupliquer une île hors ligne. Le partage, lui, passe par ton adresse publique.':
+    'The code is still handy for saving or duplicating an island offline. Sharing, though, goes through your public address.',
+  'Changer d’adresse':
+    'Change address',
+  'Envoi…':
+    'Sending…',
+  'Renvoyer dans {n} s':
+    'Resend in {n} s',
+  'Renvoyer le lien':
+    'Resend the link',
+  'toi@exemple.be':
+    'you@example.com',
+  'Recevoir mon lien':
+    'Send me my link',
+  'dan':
+    'dan',
+  'Créer mon île':
+    'Create my island',
+  'Copier le lien':
+    'Copy the link',
+  'en ligne':
+    'online',
+  'Se déconnecter':
+    'Sign out',
+  'Viens marcher chez moi.':
+    'Come and walk on my island.',
+  'Partager sur WhatsApp':
+    'Share on WhatsApp',
+  'Enregistrer l’image':
+    'Save the image',
+  'Fermer':
+    'Close',
+  'Le lien mène à ta carte, puis à ton île : <span class="mono">{lien}</span>. Qui crée son île en arrivant par là devient ton <b>filleul</b>, et vous recevez des shells tous les deux.':
+    'The link leads to your card, then to your island: <span class="mono">{lien}</span>. Anyone who creates their island after arriving that way becomes your <b>referral</b>, and you both get shells.',
+  'Ton île n’a pas encore d’adresse : la carte s’enregistre et s’envoie, mais le lien ramène à l’accueil. Donne-lui son adresse dans le bandeau, en haut de la page, et le lien mènera chez toi.':
+    'Your island has no address yet: the card still saves and sends, but the link goes back to the home page. Give it an address in the bar at the top of the page, and the link will lead to your island.',
+  'Compris':
+    'Got it',
+  'Suivant':
+    'Next',
+  'Passer':
+    'Skip',
+  'Tu es chez <b>{qui}</b>. Toi aussi, tu peux avoir ton île.':
+    'You are at <b>{qui}</b>’s. You can have an island too.',
+  '<b>+{n} shells</b> de bienvenue, offerts par <b>{qui}</b> — et autant pour lui. Les shells servent à personnaliser ton île : va voir la <b>{boutique}</b>.':
+    '<b>+{n} shells</b> to welcome you, from <b>{qui}</b> — and as many for them. Shells are for making your island your own: go and see the <b>{boutique}</b>.',
+  'Ton île n’a pas encore d’adresse. Donne-lui-en une dans le bandeau, en haut de la page : cette adresse sera aussi ton <b>code de parrainage</b>.':
+    'Your island has no address yet. Give it one in the bar at the top of the page: that address will also be your <b>referral code</b>.',
+  'Quand quelqu’un crée son île depuis ton lien : <b>+{a} shells</b> pour toi, <b>+{b}</b> pour lui.':
+    'When someone creates their island from your link: <b>+{a} shells</b> for you, <b>+{b}</b> for them.',
+  '<b>{n} îles sont nées</b> de tes liens. Merci pour l’archipel.':
+    '<b>{n} islands were born</b> from your links. Thank you, from the archipelago.',
+  '<b>{n} île est née</b> de tes liens. Merci pour l’archipel.':
+    '<b>{n} island was born</b> from your links. Thank you, from the archipelago.',
+  'Les shells servent à personnaliser ton île : des objets à poser, des meubles, des bottes pour marcher plus vite. Tout ça t’attend dans la <b>{boutique}</b>.':
+    'Shells are for making your island your own: objects to place, furniture, boots to walk faster. It is all waiting in the <b>{boutique}</b>.',
+  '<b>+{n} shells.</b> {suite}':
+    '<b>+{n} shells.</b> {suite}',
+  '<b>+{n} shell.</b> {suite}':
+    '<b>+{n} shell.</b> {suite}',
+  '← Ton île':
+    '← Your island',
+  'Ressortir sur ton île':
+    'Back out onto your island',
+  'Nom de l’île':
+    'Island name',
+  'Invité chez {qui}':
+    'Guest at {qui}’s',
+  'Chez toi':
+    'Your place',
+  'Chez toi · édition':
+    'Your place · editing',
+  'Dan’s Island se joue mieux en paysage.':
+    'Dan’s Island plays better in landscape.',
+  'Tourne ton téléphone pour entrer sur ton île.':
+    'Turn your phone to step onto your island.',
+  'Voir de plus près':
+    'Look closer',
+  'Voir toute l’île':
+    'See the whole island',
+  'Reprendre ton bonhomme':
+    'Take your character back',
+  'Appareil photo':
+    'Camera',
+  'Moi':
+    'Me',
+  'Maison':
+    'House',
+  'Île':
+    'Island',
+  'Voisins':
+    'Neighbours',
+  'Boutique':
+    'Shop',
+  'Pièce':
+    'Room',
+  'Language':
+    'Language',
+  'Français':
+    'Français',
+  'English':
+    'English',
+  'Prénom':
+    'First name',
+  'Dan':
+    'Dan',
+  'Fille ou garçon':
+    'Girl or boy',
+  'Fille':
+    'Girl',
+  'Garçon':
+    'Boy',
+  'Silhouette':
+    'Build',
+  'Rond':
+    'Round',
+  'Élancé':
+    'Slim',
+  'Costaud':
+    'Sturdy',
+  'Teint':
+    'Skin',
+  'Cheveux':
+    'Hair',
+  'Rasé':
+    'Shaved',
+  'Vague':
+    'Wavy',
+  'Chignon':
+    'Bun',
+  'Piquants':
+    'Spiky',
+  'Longs':
+    'Long',
+  'Couleur de cheveux':
+    'Hair colour',
+  'Regard':
+    'Eyes',
+  'Joyeux':
+    'Cheerful',
+  'Malin':
+    'Sly',
+  'Calme':
+    'Calm',
+  'Endormi':
+    'Sleepy',
+  'Son visage, à peindre':
+    'Their face, to paint',
+  'Tenue':
+    'Outfit',
+  'Accessoire':
+    'Accessory',
+  'Aucun':
+    'None',
+  'Chapeau':
+    'Hat',
+  'Lunettes':
+    'Glasses',
+  'Couronne':
+    'Crown',
+  'Cape':
+    'Cape',
+  'Ton équipement':
+    'Your kit',
+  'Ton compagnon':
+    'Your companion',
+  'Ton sac':
+    'Your bag',
+  'Ton album':
+    'Your album',
+  'Enseigne':
+    'Sign',
+  'Chez Dan':
+    'Dan’s place',
+  'Toiture':
+    'Roof shape',
+  'Pointu':
+    'Pitched',
+  'Dôme':
+    'Domed',
+  'Plat':
+    'Flat',
+  'Couleur du toit':
+    'Roof colour',
+  'Murs':
+    'Walls',
+  'Porte':
+    'Door',
+  'Volets':
+    'Shutters',
+  'Sans':
+    'None',
+  'Comme le toit':
+    'Like the roof',
+  'Comme la porte':
+    'Like the door',
+  'Cheminée':
+    'Chimney',
+  'Avec':
+    'With',
+  'Emplacement':
+    'Position',
+  'L’intérieur':
+    'Inside',
+  'Nom de l\'île':
+    'Island name',
+  'L\'île de Dan':
+    'Dan’s island',
+  'Ta terre':
+    'Your land',
+  'Heure':
+    'Time of day',
+  'Jour':
+    'Day',
+  'Crépuscule':
+    'Dusk',
+  'Ambiance sonore':
+    'Ambience',
+  'Silence':
+    'Silence',
+  'Vagues':
+    'Waves',
+  'Oiseaux':
+    'Birds',
+  'Musique':
+    'Music',
+  'Palette du terrain':
+    'Terrain palette',
+  'Archipel':
+    'Archipelago',
+  'Été':
+    'Summer',
+  'Corail':
+    'Coral',
+  'Automne':
+    'Autumn',
+  'Givre':
+    'Frost',
+  'Pinceau terrain':
+    'Terrain brush',
+  'Herbe':
+    'Grass',
+  'Sable':
+    'Sand',
+  'Chemin':
+    'Path',
+  'Eau':
+    'Water',
+  'Peindre le sol':
+    'Paint the ground',
+  'Crème':
+    'Cream',
+  'Encre':
+    'Ink',
+  'Lagon':
+    'Lagoon',
+  'Mer':
+    'Sea',
+  'Rose':
+    'Pink',
+  'Soleil':
+    'Sun',
+  'Violet':
+    'Purple',
+  'Bois':
+    'Wood',
+  'Rouge':
+    'Red',
+  'Corriger':
+    'Fix',
+  'Sens':
+    'Facing',
+  '↘ Vers la droite':
+    '↘ To the right',
+  '↙ Vers la gauche':
+    '↙ To the left',
+  'Couleur de l\'objet':
+    'Object colour',
+  'Couleur du meuble':
+    'Furniture colour',
+  'Sol':
+    'Floor',
+  'Parquet':
+    'Parquet',
+  'Bois clair':
+    'Pale wood',
+  'Carreaux':
+    'Tiles',
+  'Moquette':
+    'Carpet',
+  'Béton':
+    'Concrete',
+  'Menthe':
+    'Mint',
+  'Marine':
+    'Navy',
+  'La commande du jour':
+    'The order of the day',
+  'Ta carte postale':
+    'Your postcard',
+  'Inviter quelqu’un':
+    'Invite someone',
+  'L’archipel':
+    'The archipelago',
+  'Code de sauvegarde':
+    'Save code',
+  'Le cadeau du jour':
+    'The present of the day',
+  'Ta bourse':
+    'Your purse',
+  'Ce qui rapporte aujourd’hui':
+    'What pays today',
+  'Pour toi':
+    'For you',
+  'Sur ton île':
+    'On your island',
+  'Dans ta maison':
+    'In your house',
+  'Divers':
+    'Other',
+  'Tondre la pelouse':
+    'Mow the lawn',
+  'Sortir le chien':
+    'Walk the dog',
+  'Ramasser ce que la mer laisse':
+    'Pick up what the sea leaves',
+  'Laisser un mot chez quelqu’un':
+    'Leave a word at someone’s island',
+  'Recevoir un mot chez toi':
+    'Get a word on your island',
+  'Porter la commande du jour':
+    'Deliver the order of the day',
+  'Recevoir la commande chez toi':
+    'Get the order brought to you',
+  'le printemps':
+    'spring',
+  'Des pétales passent dans le vent.':
+    'Petals drift past on the wind.',
+  'l’été':
+    'summer',
+  'Rien de plus : l’île est comme elle est.':
+    'Nothing more: the island is just as it is.',
+  'l’automne':
+    'autumn',
+  'Des feuilles tombent sur l’herbe.':
+    'Leaves are falling on the grass.',
+  'l’hiver':
+    'winter',
+  'Il neige, et le sol est blanc.':
+    'It is snowing, and the ground is white.',
+  '<b>Il fait beau.</b> Le soleil est de sortie et les mouettes avec lui.':
+    '<b>It is a fine day.</b> The sun is out and the seagulls with it.',
+  '<b>Le ciel est couvert.</b> Le soleil passe derrière, pâle.':
+    '<b>The sky is overcast.</b> The sun shows through, pale.',
+  '<b>Il pleut.</b> Les mouettes se sont posées. Rien ne s’abîme et rien ne pousse : c’est juste la pluie.':
+    '<b>It is raining.</b> The seagulls have settled. Nothing is spoiled and nothing grows: it is just rain.',
+  '<b>Il y a de la brume.</b> Elle se lèvera toute seule.':
+    '<b>There is mist.</b> It will lift on its own.',
+  '<b>Le vent souffle fort.</b> Regarde les arbres et les herbes.':
+    '<b>The wind is blowing hard.</b> Look at the trees and the grass.',
+  '<b>Ton bonhomme.</b> Silhouette, cheveux, tenue.':
+    '<b>Your character.</b> Build, hair, outfit.',
+  '<b>Ta maison.</b> Un toit, des murs, une porte.':
+    '<b>Your house.</b> A roof, walls, a door.',
+  '<b>Ton île.</b> Prends un arbre, puis clique une case.':
+    '<b>Your island.</b> Pick a tree, then click a square.',
+  '<b>Tes voisins.</b> Va marcher sur l’île d’un autre.':
+    '<b>Your neighbours.</b> Go and walk on someone else’s island.',
+  'un coquillage':
+    'a shell',
+  'une étoile de mer':
+    'a starfish',
+  'un bout de bois flotté':
+    'a piece of driftwood',
+  'une bouteille à la mer':
+    'a message in a bottle',
+  '<b>{n} cases</b> peintes. La neige de l’hiver passe par-dessus, et elle repart avec elle.':
+    '<b>{n} squares</b> painted. Winter snow settles on top, and it leaves with the snow.',
+  '<b>{n} case</b> peinte. La neige de l’hiver passe par-dessus, et elle repart avec elle.':
+    '<b>{n} square</b> painted. Winter snow settles on top, and it leaves with the snow.',
+  'Une couleur par case, posée <b>sur</b> le terrain : elle ne change pas ce qu’est la case, seulement sa couleur.':
+    'One colour per square, laid <b>on top of</b> the terrain: it does not change what the square is, only its colour.',
+  'Ce que tu peins ici remplace les yeux dessinés — les cheveux, le chapeau et la couronne restent. <b>{effacer}</b> te rend le regard d’avant.':
+    'What you paint here replaces the drawn eyes — the hair, the hat and the crown stay. <b>{effacer}</b> gives you the old face back.',
+  'Choisis une couleur, puis remplis des cases dans le rond. Tant que tu n’as rien peint, c’est le <b>{regard}</b> au-dessus qui décide.':
+    'Pick a colour, then fill in squares inside the circle. Until you have painted something, <b>{regard}</b> above decides.',
+  '({n} shells à la {boutique})':
+    '({n} shells in the {boutique})',
+  '{n} mots dans ton livre d’or':
+    '{n} words in your guest book',
+  '{n} mot dans ton livre d’or':
+    '{n} word in your guest book',
+  '<b>{n} crans sur {t}</b> · {or}':
+    '<b>{n} notches out of {t}</b> · {or}',
+  '<b>{n} cran sur {t}</b> · {or}':
+    '<b>{n} notch out of {t}</b> · {or}',
+  '<b>Ton île est au bout de sa terre</b> · {or}':
+    '<b>Your island has all the land it can have</b> · {or}',
+  '<b>Mode démo.</b> Renseigne la clé <span class="mono">anon</span> dans <span class="mono">src/config.js</span> pour brancher les comptes et les îles publiques.':
+    '<b>Demo mode.</b> Fill in the <span class="mono">anon</span> key in <span class="mono">src/config.js</span> to switch on accounts and public islands.',
+  'Chargement de ton compte…':
+    'Loading your account…',
+  '📬 <b>Lien envoyé à {mail}.</b> Ouvre-le <b>depuis cet appareil</b> : il ne marche pas ailleurs. S’il tarde, regarde dans les indésirables.':
+    '📬 <b>Link sent to {mail}.</b> Open it <b>on this device</b>: it will not work anywhere else. If it is slow, check your spam folder.',
+  'Reçois un lien de connexion par e-mail, pas de mot de passe à retenir.':
+    'Get a sign-in link by email — no password to remember.',
+  'Connecté':
+    'Signed in',
+  'Choisis l’adresse de ton île :':
+    'Choose your island’s address:',
+  '· ton île : <span class="lien">{url}</span>':
+    '· your island: <span class="lien">{url}</span>',
+  '<b>{n} nouveaux mots</b> sur ton île, et des <b>shells</b> avec':
+    '<b>{n} new words</b> on your island, and <b>shells</b> with them',
+  '<b>{n} nouveau mot</b> sur ton île, et des <b>shells</b> avec':
+    '<b>{n} new word</b> on your island, and <b>shells</b> with it',
+  '{a} t’a répondu':
+    '{a} replied to you',
+  '{a} et {b} t’ont répondu':
+    '{a} and {b} replied to you',
+  '{a} et {n} autres t’ont répondu':
+    '{a} and {n} others replied to you',
+  'Le sable mouillé n’est à personne : la mer le reprend à la prochaine marée. On y ramasse, on n’y bâtit pas.':
+    'The wet sand belongs to nobody: the sea takes it back at the next tide. You pick things up there, you do not build on it.',
+  'Le large ne t’appartient pas encore. La mer recule d’un cran à chaque mot qu’on te laisse.':
+    'The open sea is not yours yet. The sea draws back a notch with every word someone leaves you.',
+  'On ne bâtit pas sur l’eau : les quatre cases doivent être à terre.':
+    'You cannot build on water: all four squares have to be on land.',
+  'Tu as repris ton bonhomme. <b>Clique</b> où tu veux aller.':
+    'You have your character back. <b>Click</b> wherever you want to go.',
+  'Ton bonhomme t’écoute. <b>Clique</b> où tu veux aller, ou marche aux flèches.':
+    'Your character is listening. <b>Click</b> wherever you want to go, or walk with the arrow keys.',
+  '<b>Marée basse.</b> Le sable du bord est praticable, ici aussi.':
+    '<b>The tide is out.</b> The sand along the shore can be walked on here too.',
+  '<b>Marée basse.</b> Va voir le sable mouillé au bord de l’île : la mer y laisse des choses.':
+    '<b>The tide is out.</b> Go and look at the wet sand at the edge of the island: the sea leaves things there.',
+  'Réponse effacée.':
+    'Reply deleted.',
+  'Touche l’île pour marcher. Avec un pinceau actif, la touche pose.':
+    'Touch the island to walk. With a brush selected, touching places things.',
+  'Flèches ou ZQSD pour marcher. Clic pour te déplacer, ou pour poser quand un pinceau est actif.':
+    'Arrow keys or WASD to walk. Click to move, or to place things when a brush is selected.',
 };
 
 let langue='fr';
 
+/* **Toutes** les clés qu'on a demandées, dans l'ordre où le jeu les
+   demande. Ce registre se remplit tout seul en jouant, et c'est ce qui le
+   rend indispensable : depuis que `field()`, `chips()` et `textField()`
+   traduisent leur libellé, la clé est un **argument** de l'appelant, donc
+   invisible à toute regex sur la source. `test/langues.mjs` ouvre les
+   panneaux et relit ce registre ; ce qui y est sans traduction est ce que
+   le joueur verrait en français. C'est le registre de `VERROUS_PROX`,
+   transposé aux phrases, et la leçon du contrôle 12 : quand le moteur peut
+   répondre, c'est à lui qu'il faut demander. */
+const VUS=new Set();
+
 function T(fr,v){
-  const s=(TRAD[langue] && TRAD[langue][fr]) || fr;
+  const d=TRAD[langue];
+  if(fr) VUS.add(fr);
+  const s=(d && d[fr]) || fr;
   return v ? s.replace(/\{(\w+)\}/g,(m,k)=> k in v ? v[k] : m) : s;
+}
+
+/* Les libellés écrits **dans le HTML**. `data-t` dit « mon texte est ma
+   clé », `data-t-aria` dit la même chose de mon `aria-label`. Un libellé
+   statique neuf porte l'attribut et il est couvert le jour où il est
+   écrit : c'est le registre qui se remplit tout seul, comme `VERROUS_PROX`
+   pour les verrous de bulle — une liste de sélecteurs dans le code aurait
+   été la liste recopiée que ce dépôt refuse partout.
+
+   `data-t` ne va que sur une **feuille** : `textContent` détruirait les
+   enfants, et c'est pour ça que l'invite de rotation porte l'attribut sur
+   ses deux lignes et non sur le bouton. La clé d'origine est retenue dans
+   `data-tFr`, sinon un second passage prendrait la traduction pour clé. */
+function traduireLeCadre(){
+  document.querySelectorAll('[data-t]').forEach(e=>{
+    if(e.dataset.tFr===undefined) e.dataset.tFr=e.textContent.trim();
+    e.textContent=T(e.dataset.tFr);
+  });
+  document.querySelectorAll('[data-t-aria]').forEach(e=>{
+    if(!e.dataset.tAria) e.dataset.tAria=e.getAttribute('aria-label')||'';
+    e.setAttribute('aria-label',T(e.dataset.tAria));
+  });
 }
 
 /* La langue est **au joueur, pas à l'île** — comme la bourse et comme le
@@ -1861,6 +2695,17 @@ function textesDeTable(){
   Object.values(NOM_OBJ).forEach(x=>t.push(x));
   Object.values(MEUBLE_NOMS).forEach(x=>t.push(x));
   BOUTIQUE.forEach(a=>{ t.push(a.n); t.push(a.d); });
+  HEURES.forEach(h=>t.push(h[1]));
+  AMBIANCES.forEach(a=>t.push(a[1]));
+  GROUNDS.forEach(g=>t.push(g.n));
+  SOLS.forEach(x=>t.push(x[1]));
+  MURS.forEach(x=>t.push(x[1]));
+  SOL_NOMS.forEach(x=>t.push(x));
+  Object.values(GAINS_NOMS).forEach(x=>t.push(x));
+  Object.values(SAISONS).forEach(x=>{ t.push(x.n); t.push(x.d); });
+  Object.values(METEO_DIT).forEach(x=>t.push(x));
+  PAS.forEach(x=>{ if(x) t.push(x.q); });
+  Object.values(NOM_TROUVAILLE).forEach(x=>t.push(x));
   return [...new Set(t)];
 }
 function langueDuNavigateur(){
@@ -1891,7 +2736,7 @@ function reglerLangue(l){
      le réécrire au chargement, donc de choisir entre un robot qui lit du
      français et un enfant qui lit sa langue. Ça se tranche, ça ne se
      glisse pas. */
-  buildAll(); peindreSon();
+  traduireLeCadre(); buildAll(); peindreSon();
 }
 /* Ce qu'un lien emporte. La carte postale et l'adresse d'une île sont lues
    par le navigateur **de quelqu'un d'autre** : c'est le seul endroit où la
@@ -1970,10 +2815,11 @@ let noteDeLaPeinture=null;
 function rafraichirPeinture(){
   if(!noteDeLaPeinture) return;
   const n=solDe(mine).split('').filter(c=>c!=='.').length;
-  noteDeLaPeinture.innerHTML = n
-    ? '<b>'+n+' case'+(n>1?'s':'')+'</b> peinte'+(n>1?'s':'')+
-      '. La neige de l’hiver passe par-dessus, et elle repart avec elle.'
-    : 'Une couleur par case, posée <b>sur</b> le terrain : elle ne change pas ce qu’est la case, seulement sa couleur.';
+  noteDeLaPeinture.innerHTML = n>1
+    ? T('<b>{n} cases</b> peintes. La neige de l’hiver passe par-dessus, et elle repart avec elle.',{n})
+    : n
+      ? T('<b>{n} case</b> peinte. La neige de l’hiver passe par-dessus, et elle repart avec elle.',{n})
+      : T('Une couleur par case, posée <b>sur</b> le terrain : elle ne change pas ce qu’est la case, seulement sa couleur.');
 }
 /* Une chaîne se réécrit d'un coup : `sol` reste une chaîne en base, jamais
    un tableau, pour la même raison que `me.face`.
@@ -2237,6 +3083,7 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','
 const VOY=/^[aeiou\u00e0\u00e2\u00e4\u00e9\u00e8\u00ea\u00eb\u00ee\u00ef\u00f4\u00f6\u00f9\u00fb\u00fc]/i;
 const GRAMMAIRE={
   fr:{
+    nu:/^(un|une) /,
     de:n=> (VOY.test(n)?'d\u2019':'de ')+'<b>'+esc(n)+'</b>',
       /* Le fran\u00e7ais dit « de X » pour le possessif comme pour la
          provenance ; l'anglais dit « X's door » mais « a word from X ».
@@ -2255,6 +3102,7 @@ const GRAMMAIRE={
      Le seul accord qui reste est `a`/`an`, qui se lit sur la premi\u00e8re
      lettre du nom **traduit** \u2014 pas du nom fran\u00e7ais, sinon \u00ab an flower \u00bb. */
   en:{
+    nu:/^(a|an) /i,
     de:n=> '<b>'+esc(n)+'</b>\u2019s',
     venant:n=> 'from <b>'+esc(n)+'</b>',
     un:(n,fem,maj,gras)=>{ const a=VOY.test(n)?'an ':'a ';
@@ -2876,7 +3724,7 @@ async function reveiller(){
       // reçus hier non plus. Les relire est ce qui évite d'annoncer une
       // commande périmée à qui vient de se lever.
       if(veille){ commandeServeur=null; accorderCommande(); chargerLivraisons().then(buildAll); }
-      if(veille) say(T('<b>Un jour nouveau.</b> Ton cadeau t’attend dans la <b>Boutique</b>{a}', {a: (n ? (n>1 ? T(', et {n} touffes ont repoussé.', {n: n}) : T(', et une touffe a repoussé.'))
+      if(veille) say(T('<b>Un jour nouveau.</b> Ton cadeau t’attend dans la <b>{boutique}</b>{a}', {boutique: T('Boutique'), a: (n ? (n>1 ? T(', et {n} touffes ont repoussé.', {n: n}) : T(', et une touffe a repoussé.'))
         : '.')}));
       return;
     }catch(e){ /* migration pas encore passée, ou hors ligne : bourse locale */ }
@@ -2889,7 +3737,7 @@ async function reveiller(){
   if(!bouge) return;
   garderBourseLocale(); saveMine(); buildAll();
   if(veille && !premiere)
-    say(T('<b>Un jour nouveau.</b> Ton cadeau t’attend dans la <b>Boutique</b>{a}', {a: (n ? (n>1 ? T(', et {n} touffes ont repoussé.', {n: n}) : T(', et une touffe a repoussé.'))
+    say(T('<b>Un jour nouveau.</b> Ton cadeau t’attend dans la <b>{boutique}</b>{a}', {boutique: T('Boutique'), a: (n ? (n>1 ? T(', et {n} touffes ont repoussé.', {n: n}) : T(', et une touffe a repoussé.'))
         : '.')}));
 }
 
@@ -3681,7 +4529,8 @@ function annuler(){
   replanter(mine);
   if(!visiting) world=mine;
   saveMine(); degager(); buildAll(); son('annule');
-  say(histo.length?('Annul\u00e9. Encore '+histo.length+' pas en arri\u00e8re.'):'Annul\u00e9.');
+  say(histo.length>1 ? T('Annul\u00e9. Encore {n} pas en arri\u00e8re.',{n:histo.length})
+    : histo.length ? T('Annul\u00e9. Encore un pas en arri\u00e8re.') : T('Annul\u00e9.'));
 }
 function motsDe(w){ return (w.mots||[]).filter(m=>!m.masque); }
 // Replante les panneaux du livre d'or dans le décor.
@@ -6326,9 +7175,9 @@ function poserMeuble(x,y){
   // (rangée 0). Les deux seules parois dessinées sont celles-là.
   if(niv==='mur'){
     const bon = tool.orient==='sw' ? (x===0) : (y===0);
-    if(!bon){ say(T('Ça s’accroche à un <b>mur du fond</b>. Prends une case contre le mur, ou change le <b>Sens</b> pour viser l’autre.')); return; }
+    if(!bon){ say(T('Ça s’accroche à un <b>mur du fond</b>. Prends une case contre le mur, ou change le <b>{sens}</b> pour viser l’autre.', {sens: T('Sens')})); return; }
     const deja=meubleSur(x,y,d,'mur');
-    if(deja){ say(T('Il y a déjà <b>{meuble}</b> à cet endroit du mur. Prends la <b>⌫ Gomme</b> pour le décrocher.', {meuble: nomMeuble(deja.t)})); return; }
+    if(deja){ say(T('Il y a déjà <b>{meuble}</b> à cet endroit du mur. Prends la <b>{gomme}</b> pour le décrocher.', {meuble: nomMeuble(deja.t), gomme: T('⌫ Gomme')})); return; }
   }
 
   if(niv==='sol'||niv==='dessus'){
@@ -6341,8 +7190,8 @@ function poserMeuble(x,y){
                   && niveau(pris.t)==='sol' && SURFACE[pris.t];
       if(!surLui){
         say(niv==='dessus' && niveau(pris.t)==='sol'
-          ? ('On ne pose rien sur <b>'+nomMeuble(pris.t)+'</b>. Essaie une table basse, une table de nuit, une commode, un bureau, une malle ou le piano.')
-          : ('Il y a déjà <b>'+nomMeuble(pris.t)+'</b> ici. Prends la <b>⌫ Gomme</b>, ou choisis une case libre.'));
+          ? T('On ne pose rien sur <b>{meuble}</b>. Essaie une table basse, une table de nuit, une commode, un bureau, une malle ou le piano.',{meuble:nomMeuble(pris.t)})
+          : T('Il y a déjà <b>{meuble}</b> ici. Prends la <b>{gomme}</b>, ou choisis une case libre.',{meuble:nomMeuble(pris.t),gomme:T('⌫ Gomme')}));
         return;
       }
       const dessus=meubleSur(x,y,d,'dessus');
@@ -6353,7 +7202,7 @@ function poserMeuble(x,y){
   // Deux tapis ne se superposent pas, mais un tapis passe sous tout le reste.
   if(niv==='plat'){
     const pris=meublePlatSous(d,cases);
-    if(pris){ say(T('Il y a déjà <b>{meuble}</b> au sol ici. Prends la <b>⌫ Gomme</b>.', {meuble: nomMeuble(pris.t)})); return; }
+    if(pris){ say(T('Il y a déjà <b>{meuble}</b> au sol ici. Prends la <b>{gomme}</b>.', {meuble: nomMeuble(pris.t), gomme: T('⌫ Gomme')})); return; }
   }
 
   memoriser();
@@ -6451,7 +7300,7 @@ function entrer(k){
   hero.x=c.x+0.5; hero.y=c.y+0.5; hero.face='bas'; target=null;
   majVue(); degager(); tool.mode='marche'; tool.kind=null;
   son('arrivee'); majAmbiance(); hudSync(); buildAll(); ouvrirOnglet('maison');
-  say(T('Tu rentres chez toi. Une porte pour changer de pièce, et <b>← Ton île</b> en haut du cadre pour ressortir.'));
+  say(T('Tu rentres chez toi. Une porte pour changer de pièce, et <b>{retour}</b> en haut du cadre pour ressortir.', {retour: T('← Ton île')}));
 }
 function sortir(){
   fermerLeViseur();
@@ -6483,7 +7332,7 @@ function franchir(){
 // cadre pour qui n'a pas de clavier.
 function actionPorte(){
   if(dedans){ if(!franchir())
-    say(T('Pas de porte ici. La plaque <b>← Ton île</b>, en haut du cadre, te ramène dehors.')); return; }
+    say(T('Pas de porte ici. La plaque <b>{retour}</b>, en haut du cadre, te ramène dehors.', {retour: T('← Ton île')})); return; }
   if(devantLaPorte()) entrer('salon');
 }
 
@@ -6493,7 +7342,7 @@ function clicDedans(q){
   // Le symétrique de dehors : un pinceau d'île armé dedans ne posait rien
   // et ne disait rien.
   if(tool.mode==='terrain'||tool.mode==='objet'||tool.mode==='maison'){
-    say(T('Ça se pose <b>dehors</b>. Prends <b>← Ton île</b>, en haut du cadre.'));
+    say(T('Ça se pose <b>dehors</b>. Prends <b>{retour}</b>, en haut du cadre.', {retour: T('← Ton île')}));
     return;
   }
   if(tool.mode==='marche'){ target={x:q.fx,y:q.fy}; return; }
@@ -6758,7 +7607,8 @@ cv.addEventListener('click',e=>{
   // clique et rien ne se passe » est le pire des retours. C'est le même
   // défaut que la boutique d'avant, au même endroit : là où est le doigt.
   if(tool.mode==='meuble'){
-    say(T('Un meuble se pose <b>dedans</b>. Monte sur le seuil de ta porte, ou prends le bouton <b>Entrer</b> du panneau Maison.'));
+    say(T('Un meuble se pose <b>dedans</b>. Monte sur le seuil de ta porte, ou prends le bouton <b>{entrer}</b> du panneau {maison}.',
+      {entrer: T('Entrer'), maison: T('Maison')}));
     return;
   }
   if(tool.mode==='marche'){ target={x:q.fx,y:q.fy}; return; }
@@ -6769,8 +7619,8 @@ cv.addEventListener('click',e=>{
     // Sur le sable découvert, « le large » serait faux : on a les pieds
     // dessus. Le refus doit dire la bonne raison, là où est le doigt.
     say(decouverte(q.x,q.y)
-      ? 'Le sable mouill\u00e9 n\u2019est \u00e0 personne : la mer le reprend \u00e0 la prochaine mar\u00e9e. On y ramasse, on n\u2019y b\u00e2tit pas.'
-      : 'Le large ne t\u2019appartient pas encore. La mer recule d\u2019un cran \u00e0 chaque mot qu\u2019on te laisse.');
+      ? T('Le sable mouill\u00e9 n\u2019est \u00e0 personne : la mer le reprend \u00e0 la prochaine mar\u00e9e. On y ramasse, on n\u2019y b\u00e2tit pas.')
+      : T('Le large ne t\u2019appartient pas encore. La mer recule d\u2019un cran \u00e0 chaque mot qu\u2019on te laisse.'));
     return;
   }
   if(tool.mode==='terrain'){
@@ -6830,12 +7680,12 @@ function poserObjet(x,y){
   const dehors=cases.filter(c=>!dansLeRayon(c[0],c[1]));
   if(dehors.length){
     if(!bat) return false;              // le clic hors rayon a déjà parlé
-    say(T('Il faut <b>quatre cases</b> à {objet}, et ton île n’est pas encore assez large ici. Essaie plus près du centre — ou <b>agrandis ton île</b> : elle gagne un cran à chaque mot qu’on te laisse. Envoie ta carte postale, onglet <b>Voisins</b>.', {objet: unObjet(t,false,true)}), 0, 5600);
+    say(T('Il faut <b>quatre cases</b> à {objet}, et ton île n’est pas encore assez large ici. Essaie plus près du centre — ou <b>agrandis ton île</b> : elle gagne un cran à chaque mot qu’on te laisse. Envoie ta carte postale, onglet <b>{voisins}</b>.', {objet: unObjet(t,false,true), voisins: T('Voisins')}), 0, 5600);
     return false;
   }
   if(cases.some(c=>world.tiles[c[1]*GRID+c[0]]===2)){
-    say(bat ? 'On ne bâtit pas sur l’eau : les quatre cases doivent être à terre.'
-            : "On ne plante rien dans l'eau."); return false; }
+    say(bat ? T('On ne bâtit pas sur l’eau : les quatre cases doivent être à terre.')
+            : T("On ne plante rien dans l'eau.")); return false; }
   const h=world.house;
   if(cases.some(c=>c[0]>=h.x&&c[0]<=h.x+1&&c[1]>=h.y&&c[1]<=h.y+1)){
     say(T('La maison occupe déjà cette case.')); return false; }
@@ -6949,8 +7799,8 @@ document.getElementById('marche-btn').addEventListener('click',()=>{
   carteOuverte=false;
   buildAll(); hudSync();
   say(confisque
-    ? 'Tu as repris ton bonhomme. <b>Clique</b> où tu veux aller.'
-    : 'Ton bonhomme t’écoute. <b>Clique</b> où tu veux aller, ou marche aux flèches.');
+    ? T('Tu as repris ton bonhomme. <b>Clique</b> où tu veux aller.')
+    : T('Ton bonhomme t’écoute. <b>Clique</b> où tu veux aller, ou marche aux flèches.'));
 });
 document.getElementById('zoom-plus').addEventListener('click',()=>zoomer(1.22));
 document.getElementById('zoom-moins').addEventListener('click',()=>zoomer(1/1.22));
@@ -7093,9 +7943,11 @@ function tondre(){
   tondeuseJusqua=performance.now()+1100;
   saveMine(); son('tonte'); if(n) setTimeout(()=>son('piece'),150); buildAll();
   say(n
-    ? ('Tondu'+(coupe>1?(' \u00d7'+coupe):'')+'. <b>+'+n+' shell'+(n>1?'s':'')+'</b> \u00b7 '+
-       (reste ? ('encore '+reste+' touffe'+(reste>1?'s':'')) : 'la pelouse est nette'))
-    : 'Tondu, mais la tonte a d\u00e9j\u00e0 tout donn\u00e9 pour aujourd\u2019hui.');
+    ? T(n>1 ? 'Tondu{x}. <b>+{n} shells</b> \u00b7 {reste}' : 'Tondu{x}. <b>+{n} shell</b> \u00b7 {reste}',
+        {x:(coupe>1?(' \u00d7'+coupe):''), n,
+         reste:(reste>1 ? T('encore {k} touffes',{k:reste})
+                        : reste ? T('encore une touffe') : T('la pelouse est nette'))})
+    : T('Tondu, mais la tonte a d\u00e9j\u00e0 tout donn\u00e9 pour aujourd\u2019hui.'));
 }
 
 /* ================= la marée =================
@@ -7382,8 +8234,8 @@ function direLaMaree(){
      seule quand elle tournera pour de vrai. */
   if(whisper.classList.contains('on')) return;
   say(visiting
-    ? '<b>Marée basse.</b> Le sable du bord est praticable, ici aussi.'
-    : '<b>Marée basse.</b> Va voir le sable mouillé au bord de l’île : la mer y laisse des choses.');
+    ? T('<b>Marée basse.</b> Le sable du bord est praticable, ici aussi.')
+    : T('<b>Marée basse.</b> Va voir le sable mouillé au bord de l’île : la mer y laisse des choses.'));
 }
 
 /* L'anneau de sable mouillé. « Juste au-delà du bord » se mesure sur le
@@ -7498,10 +8350,13 @@ function ramasserLaMaree(){
   const n=ramasser(c.t), reste=laisse.length;
   son('piece');
   say(n
-    ? ('Tu ramasses '+NOM_TROUVAILLE[c.t]+' et tu le mets dans ton sac. <b>+'+n+' shell'+(n>1?'s':'')+'</b> · '+
-       (reste ? ('encore '+reste+' chose'+(reste>1?'s':'')+' sur le sable') : 'tu as tout ramassé'))
-    : ('Tu ramasses '+NOM_TROUVAILLE[c.t]+', mais la marée a déjà tout donné pour aujourd’hui : '+
-       'il ne rentre pas dans le sac non plus.'));
+    ? T(n>1 ? 'Tu ramasses {quoi} et tu le mets dans ton sac. <b>+{n} shells</b> · {reste}'
+            : 'Tu ramasses {quoi} et tu le mets dans ton sac. <b>+{n} shell</b> · {reste}',
+        {quoi:T(NOM_TROUVAILLE[c.t]), n,
+         reste:(reste>1 ? T('encore {k} choses sur le sable',{k:reste})
+                        : reste ? T('encore une chose sur le sable') : T('tu as tout ramassé'))})
+    : T('Tu ramasses {quoi}, mais la marée a déjà tout donné pour aujourd’hui : il ne rentre pas dans le sac non plus.',
+        {quoi:T(NOM_TROUVAILLE[c.t])}));
   buildAll();
 }
 // La mer remonte sur quelqu'un qui marchait sur le sable : on le repose à
@@ -7615,7 +8470,7 @@ function commandePortee(){
 function commandePrete(){ return commandeDuJour().every(k=>sacCompte(k)>=1); }
 // Ce qui manque, en toutes lettres, pour l'écrire là où est le doigt.
 function commandeManque(){
-  return commandeDuJour().filter(k=>sacCompte(k)<1).map(k=>NOM_TROUVAILLE[k]);
+  return commandeDuJour().filter(k=>sacCompte(k)<1).map(k=>T(NOM_TROUVAILLE[k]));
 }
 // Vrai quand il y a quelque chose à faire de la commande, ici et
 // maintenant : c'est ce que porte la pastille de l'onglet Voisins.
@@ -7810,8 +8665,8 @@ function sortirLeChien(o){
   // Le verrou `chien` est celui de la bulle de proximité : sans lui, elle
   // tombe à la frame suivante et efface ce message avant qu'on l'ait lu.
   say(du
-    ? ('<b>Le chien part devant.</b> Reste près de lui tout le tour de l’île : <b>'+du+' shells</b> à l’arrivée.')
-    : '<b>Le chien repart.</b> Il a déjà eu sa promenade du jour : celle-ci est pour le plaisir.', 'chien');
+    ? T('<b>Le chien part devant.</b> Reste près de lui tout le tour de l’île : <b>{n} shells</b> à l’arrivée.',{n:du})
+    : T('<b>Le chien repart.</b> Il a déjà eu sa promenade du jour : celle-ci est pour le plaisir.'), 'chien');
 }
 // Trois façons de finir : le tour est bouclé, le maître renonce, ou il
 // quitte l'île (la maison, un voisin, une annulation qui refait les
@@ -7828,8 +8683,9 @@ function finBalade(bouclee){
   const n=gagner(GAIN_BALADE,'promenade');
   saveMine(); son('chien'); if(n) setTimeout(()=>son('piece'),200); buildAll();
   say(n
-    ? ('<b>Le tour est bouclé. +'+n+' shell'+(n>1?'s':'')+'.</b> Il redemandera demain.')
-    : '<b>Le tour est bouclé.</b> Il avait déjà eu sa promenade aujourd’hui : rien dans la bourse, mais il était content.');
+    ? (n>1 ? T('<b>Le tour est bouclé. +{n} shells.</b> Il redemandera demain.',{n})
+           : T('<b>Le tour est bouclé. +{n} shell.</b> Il redemandera demain.',{n}))
+    : T('<b>Le tour est bouclé.</b> Il avait déjà eu sa promenade aujourd’hui : rien dans la bourse, mais il était content.'));
 }
 function etapeSuivante(){
   balade.i++; balade.fige=0;
@@ -7911,6 +8767,17 @@ function avancerLaBalade(dt){
 
    Un navigateur refuse de faire du bruit avant que l'utilisateur ait
    touché la page : le contexte ne démarre donc qu'au premier clic. */
+/* Les trois heures du ciel, et les sept corvées. Deux tables nommées
+   plutôt que deux listes écrites au milieu d'une fonction : c'est ce qui
+   les rend visibles au registre de `textesDeTable()`, donc traduisibles
+   sans qu'on ait à y penser. */
+const HEURES=[['jour','Jour'],['crépuscule','Crépuscule'],['nuit','Nuit']];
+const GAINS_NOMS={
+  tonte:'Tondre la pelouse', promenade:'Sortir le chien',
+  maree:'Ramasser ce que la mer laisse', mot_pose:'Laisser un mot chez quelqu’un',
+  mot_recu:'Recevoir un mot chez toi', commande:'Porter la commande du jour',
+  commande_recue:'Recevoir la commande chez toi',
+};
 const AMBIANCES=[['silence','Silence'],['vagues','Vagues'],['oiseaux','Oiseaux'],['nuit','Nuit'],
                  ['musique','Musique']];
 let ac=null, maitre=null, ambiance=null, ambianceEnCours='', minuteurOiseaux=null;
@@ -8278,9 +9145,9 @@ function couperLeSon(v){
 // il se posait sur le ciel de l'île.
 function peindreSon(){
   const b=document.getElementById('son-btn'); if(!b) return;
-  const t = sonCoupe ? ['🔇','Son coupé'] : ['🔊','Son'];
+  const t = sonCoupe ? ['🔇',T('Son coupé')] : ['🔊',T('Son')];
   b.innerHTML = t[0]+' <span class="mot">'+t[1]+'</span>';
-  b.setAttribute('aria-label', sonCoupe ? 'Remettre le son' : 'Couper le son');
+  b.setAttribute('aria-label', sonCoupe ? T('Remettre le son') : T('Couper le son'));
   b.setAttribute('aria-pressed', String(!sonCoupe));
 }
 // Le premier geste de l'utilisateur est le seul moment où le navigateur
@@ -8333,6 +9200,11 @@ const FEM_OBJ={}; OBJ_GROUPS.forEach(g=>g[1].forEach(o=>{ if(o[2]==='f') FEM_OBJ
    Le genre, lui, reste dans le catalogue : c'est du français, et la marque
    `'f'` y est juste. Un module qui ne s'en sert pas le reçoit et l'ignore ;
    une langue qui décline autrement portera sa propre table. */
+/* Retirer l'article est une affaire de **grammaire**, pas d'une regex
+   écrite sur place : le français dit « un / une », l'anglais « a / an ».
+   La vignette du sac montre le nom nu, et un `replace(/^(un|une) /)` y
+   aurait laissé « a shell » en anglais. */
+function sansArticle(s){ return s.replace(gram().nu, ''); }
 function unObjet(t,maj,gras){
   return gram().un(T(NOM_OBJ[t]||'objet').toLowerCase(), !!(FEM_OBJ[t]&&NOM_OBJ[t]), maj, gras);
 }
@@ -8532,7 +9404,7 @@ function proximity(){
     if(cr){
       boutonRose('Nettoyer');
       bulle('crotte'+cr.x+'-'+cr.y,
-        'Ton chien est passé par là. <b>E</b> ou le bouton rose, et c’est propre.'); return; }
+        T('Ton chien est passé par là. <b>E</b> ou le bouton rose, et c’est propre.')); return; }
   }
   // Le coffre du jour. Il passe avant « souvenir rapporté » : un coffre
   // ramené de chez un voisin est un coffre comme un autre, et ce qu'il a
@@ -8540,10 +9412,10 @@ function proximity(){
   if(!visiting&&coffreProche()){
     if(cadeauDispo()){
       boutonRose('Ouvrir le coffre');
-      bulle(COFFRE_PLEIN,'<b>Ton coffre.</b> Il y a quelque chose dedans aujourd’hui. <b>E</b> pour l’ouvrir.');
+      bulle(COFFRE_PLEIN,T('<b>Ton coffre.</b> Il y a quelque chose dedans aujourd’hui. <b>E</b> pour l’ouvrir.'));
     }else{
       boutonRose(null);
-      bulle(COFFRE_VIDE,'Ton coffre est vide : tu l’as déjà ouvert aujourd’hui. Il se remplit demain.');
+      bulle(COFFRE_VIDE,T('Ton coffre est vide : tu l’as déjà ouvert aujourd’hui. Il se remplit demain.'));
     }
     return;
   }
@@ -8560,7 +9432,7 @@ function proximity(){
           : T('<b>Le drapeau est lev\u00e9.</b> Un mot t\u2019attend. <b>E</b> pour le lire.'));
       }else{
         boutonRose(null);
-        bulle(BOITE_VIDE,'Ta bo\u00eete aux lettres est vide. Le drapeau se l\u00e8vera quand quelqu\u2019un sera pass\u00e9.');
+        bulle(BOITE_VIDE,T('Ta bo\u00eete aux lettres est vide. Le drapeau se l\u00e8vera quand quelqu\u2019un sera pass\u00e9.'));
       }
       return;
     }
@@ -8581,8 +9453,8 @@ function proximity(){
   if(girouetteProche()){
     boutonRose('Lire la girouette');
     bulle(GIROUETTE_CLE, mareeBasse
-      ? 'La girouette pointe vers le large. <b>E</b> pour savoir combien de temps la mer reste basse.'
-      : 'La girouette pointe vers la terre. <b>E</b> pour savoir quand la mer redescend.');
+      ? T('La girouette pointe vers le large. <b>E</b> pour savoir combien de temps la mer reste basse.')
+      : T('La girouette pointe vers la terre. <b>E</b> pour savoir quand la mer redescend.'));
     return;
   }
   // Même cas, chez soi : un souvenir rapporté se regarde, il ne se ramasse
@@ -8593,7 +9465,7 @@ function proximity(){
     // panneau : c'est la leçon de la boutique d'avant le 16/09.
     const a=BOUTIQUE.find(x=>x.k===objet.t && FONCTIONNEL[x.k]);
     bulle('souv'+objet.x+'-'+objet.y,T('Souvenir rapporté de chez <b>{nom}</b>.{a}', {nom: esc(objet.de), a: (a
-      ? T(' Il décore, mais il ne marche pas : <b>{nom}</b> est à la Boutique, {prix} shells.',
+      ? T(' Il décore, mais il ne marche pas : <b>{nom}</b> est à la {boutique}, {prix} shells.',
           {nom: esc(T(a.n)), prix: a.prix})
       : '')})); return; }
   // La porte de la maison. Elle n'ouvre que chez soi : c'est une règle de
@@ -8628,8 +9500,8 @@ function proximity(){
     else sasArme=true;
     boutonRose('Entrer');
     bulle('porte', balade
-      ? 'Ta porte. Ton chien n’a pas fini son tour : <b>E</b> pour rentrer quand même, il retournera à sa place.'
-      : 'Ta porte. Monte sur le seuil, ou <b>E</b> pour rentrer chez toi.'); return;
+      ? T('Ta porte. Ton chien n’a pas fini son tour : <b>E</b> pour rentrer quand même, il retournera à sa place.')
+      : T('Ta porte. Monte sur le seuil, ou <b>E</b> pour rentrer chez toi.')); return;
   }
   sasArme=true; boutonRose(null);
   /* Une lanterne se **regarde**, elle ne se prend pas : pas de plaque
@@ -8681,13 +9553,12 @@ function proximity(){
   if(hab){
     habSalues.add(hab.o.x+','+hab.o.y);
     habMuetJusqua=tNow+HAB_DUREE+HAB_SOUFFLE;
-    say('<b>'+esc(hab.nom)+'</b> te fait signe. '+
-      (hab.vers
-        ? '\u00ab\u00a0Je vais voir <b>'+esc(nomHabitant(hab.vers))+'</b>, '+
-          auLieu(hab.vers.t)+'.\u00a0\u00bb'
+    say(T('<b>{qui}</b> te fait signe. {quoi}', {qui:esc(hab.nom), quoi:(hab.vers
+        ? T('\u00ab\u00a0Je vais voir <b>{nom}</b>, {ou}.\u00a0\u00bb',
+            {nom:esc(nomHabitant(hab.vers)), ou:auLieu(hab.vers.t)})
         : visiting
-          ? '\u00ab\u00a0Je vais dire bonjour '+deQui(world.owner)+'.\u00a0\u00bb'
-          : '\u00ab\u00a0Je passais dire bonjour chez toi.\u00a0\u00bb'),
+          ? T('\u00ab\u00a0Je vais dire bonjour {qui}.\u00a0\u00bb',{qui:deQui(world.owner)})
+          : T('\u00ab\u00a0Je passais dire bonjour chez toi.\u00a0\u00bb'))}),
       0, HAB_DUREE);
     return;
   }
@@ -8801,7 +9672,7 @@ function photographier(){
      garde. C'est le refus auquel on peut répondre quelque chose, comme
      celui du bâtiment qui demande quatre cases. */
   const mur=murLibre(mine);
-  if(!mur){ say(T('Tous tes murs portent d\u00e9j\u00e0 un cadre. D\u00e9croches-en un chez toi avec la <b>Gomme</b> de l\u2019atelier, et reviens le prendre en photo.'), cle); return; }
+  if(!mur){ say(T('Tous tes murs portent d\u00e9j\u00e0 un cadre. D\u00e9croches-en un chez toi avec la <b>{gomme}</b> de l\u2019atelier, et reviens le prendre en photo.',{gomme:T('\u232b Gomme')}), cle); return; }
   /* `memoriser()` porte déjà `i:mine.interieur` : Ctrl+Z décroche donc le
      cadre sans une ligne de plus. Vérifié avant d'écrire, pas après. */
   memoriser();
@@ -8839,11 +9710,18 @@ function set(p,v){const k=p.split('.'),l=k.pop(); k.reduce((o,x)=>o[x],mine)[l]=
   // bonhomme *est* le premier pas, régler sa maison le deuxième.
   if(p.indexOf('me.')===0) guideFait(1); else if(p.indexOf('house.')===0) guideFait(2);
   buildAll();}
-function field(label){ const f=document.createElement('div'); f.className='field';
-  const l=document.createElement('div'); l.className='lab'; l.textContent=label; f.appendChild(l); return f; }
+/* Le libellé est une **clé** : tout ce qui passe par `field()` se traduit
+   sans qu'on l'écrive, et un libellé neuf entre dans `VUS` le jour où
+   il est posé. `pret` dit « ce libellé est déjà composé » — un seul s'en
+   sert, celui du livre d'or, qui porte le nom de l'île. Sans lui, la phrase
+   montée serait demandée comme clé et ne se traduirait jamais. C'est le
+   même choix que le `saut` de `drawChar()` et l'`ouvert` de `DRAW.coffre` :
+   un argument optionnel coûte moins qu'une seconde fonction. */
+function field(label,pret){ const f=document.createElement('div'); f.className='field';
+  const l=document.createElement('div'); l.className='lab'; l.textContent=pret?label:T(label); f.appendChild(l); return f; }
 function chips(label,path,opts){
   const f=field(label), box=document.createElement('div'); box.className='chips';
-  opts.forEach(([v,n])=>{ const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=n;
+  opts.forEach(([v,n])=>{ const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=T(n);
     b.setAttribute('aria-pressed',String(get(path)===v)); b.onclick=()=>set(path,v); box.appendChild(b); });
   f.appendChild(box); return f;
 }
@@ -8851,17 +9729,17 @@ function chips(label,path,opts){
 // dans `mine` par un chemin, il écrit dans la pièce en cours.
 function chipsLibre(label,opts,valeur,fn){
   const f=field(label), box=document.createElement('div'); box.className='chips';
-  opts.forEach(o=>{ const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=o[1];
+  opts.forEach(o=>{ const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=T(o[1]);
     b.setAttribute('aria-pressed',String(valeur===o[0])); b.onclick=()=>fn(o[0]); box.appendChild(b); });
   f.appendChild(box); return f;
 }
 function swatches(label,path,list){
   const f=field(label), box=document.createElement('div'); box.className='sw';
   list.forEach(c=>{ const b=document.createElement('button'); b.type='button'; b.style.background=c;
-    b.setAttribute('aria-label','Couleur '+c);
+    b.setAttribute('aria-label',T('Couleur {c}',{c}));
     b.setAttribute('aria-pressed',String(String(get(path)).toLowerCase()===c.toLowerCase()));
     b.onclick=()=>set(path,c); box.appendChild(b); });
-  const pick=document.createElement('input'); pick.type='color'; pick.value=get(path); pick.title='Couleur libre';
+  const pick=document.createElement('input'); pick.type='color'; pick.value=get(path); pick.title=T('Couleur libre');
   pick.oninput=e=>{const k=path.split('.'),l=k.pop(); k.reduce((o,x)=>o[x],mine)[l]=e.target.value; saveMine(); if(!visiting) world=mine; paintPreview();};
   pick.onchange=()=>buildAll();
   box.appendChild(pick); f.appendChild(box); return f;
@@ -8969,13 +9847,20 @@ function rafraichirChamps(){
   });
 }
 function textField(label,path,ph){
-  const f=field(label), i=document.createElement('input'); i.type='text'; i.value=get(path); i.placeholder=ph||''; i.maxLength=22;
+  const f=field(label), i=document.createElement('input'); i.type='text'; i.value=get(path); i.placeholder=ph?T(ph):''; i.maxLength=22;
   i.dataset.chemin=path;
   i.oninput=e=>{const k=path.split('.'),l=k.pop(), obj=k.reduce((o,x)=>o[x],mine);
     const avant=obj[l]; obj[l]=e.target.value;
     if(path==='me.name') suivreLePrenom(avant, e.target.value);
     saveMine(); hudSync(); rafraichirChamps(); paintPreview(); peindreMaison();};
   f.appendChild(i); return f;
+}
+/* « a, b et c ». Le joint est une clé, parce que l'anglais dit « and » :
+   une liste jointe en dur est un ordre de mots figé, exactement comme une
+   phrase montée par morceaux. */
+function listeEt(xs){
+  if(xs.length<2) return xs.join('');
+  return xs.slice(0,-1).join(', ')+T(' et ')+xs[xs.length-1];
 }
 function hint(t){const p=document.createElement('p'); p.className='hint'; p.innerHTML=t; return p;}
 function rule(){const h=document.createElement('hr'); h.className='rule'; return h;}
@@ -9064,8 +9949,8 @@ function champVisage(){
   // clic ailleurs. Même famille que le champ du nom d'île resté périmé.
   const note=hint('');
   const direLaNote=()=>{ note.innerHTML = faceLue(mine.me)
-    ? 'Ce que tu peins ici remplace les yeux dessinés — les cheveux, le chapeau et la couronne restent. <b>Tout effacer</b> te rend le regard d’avant.'
-    : 'Choisis une couleur, puis remplis des cases dans le rond. Tant que tu n’as rien peint, c’est le <b>Regard</b> au-dessus qui décide.'; };
+    ? T('Ce que tu peins ici remplace les yeux dessinés — les cheveux, le chapeau et la couronne restent. <b>{effacer}</b> te rend le regard d’avant.',{effacer:T('Tout effacer')})
+    : T('Choisis une couleur, puis remplis des cases dans le rond. Tant que tu n’as rien peint, c’est le <b>{regard}</b> au-dessus qui décide.',{regard:T('Regard')}); };
   const redessine=()=>{ dessinerEditeurVisage(cv); direLaNote(); saveMine(); paintPreview(); };
   let trace=false;
   const poser=ev=>{ if(peindreCase(cv,ev)) redessine(); };
@@ -9094,7 +9979,7 @@ function champVisage(){
 
   const r=document.createElement('div'); r.className='row';
   const vider=document.createElement('button'); vider.className='btn'; vider.type='button';
-  vider.textContent='Tout effacer';
+  vider.textContent=T('Tout effacer');
   vider.onclick=()=>{ mine.me.face=FACE_VIDE; saveMine(); buildAll(); };
   r.appendChild(vider); f.appendChild(r);
 
@@ -9140,7 +10025,7 @@ function buildToi(){
      supprimée le 17/09, revenu par un panneau. Ce qui compte pour l'enfant,
      c'est qu'il y a un bouton au bout de la rangée et qu'il donne toutes
      les couleurs. */
-  p.appendChild(hint('Les pastilles sont des couleurs toutes prêtes. La pipette, au bout de chaque rangée, ouvre toutes les autres — la couleur exacte de tes cheveux, si tu veux.'));
+  p.appendChild(hint(T('Les pastilles sont des couleurs toutes prêtes. La pipette, au bout de chaque rangée, ouvre toutes les autres — la couleur exacte de tes cheveux, si tu veux.')));
 
   // L'équipement se voit ici, pas seulement dans la vitrine : un pouvoir
   // qu'on a acheté et qu'on ne retrouve nulle part finit par s'oublier.
@@ -9150,7 +10035,8 @@ function buildToi(){
     const li=document.createElement('li');
     li.innerHTML = achete(a.k)
       ? ('<b>'+esc(T(a.n))+'</b> — '+esc(T(a.d)))
-      : ('<span style="opacity:.65"><b>'+esc(T(a.n))+'</b> — '+esc(T(a.d))+' <i>('+a.prix+' shells à la Boutique)</i></span>');
+      : ('<span style="opacity:.65"><b>'+esc(T(a.n))+'</b> — '+esc(T(a.d))+' <i>'+
+         T('({n} shells à la {boutique})',{n:a.prix,boutique:T('Boutique')})+'</i></span>');
     le.appendChild(li); });
   fe.appendChild(le); p.appendChild(fe);
 
@@ -9173,18 +10059,17 @@ function buildToi(){
               : T('Tu marches seul.')); }));
     const manque=COMPAGNONS.filter(c=>!achete(c[0]));
     p.appendChild(hint(manque.length
-      ? ('Une bestiole que tu as déjà. Il t’en manque '+manque.length+' : '+
-         manque.map(c=>'<b>'+esc(c[1])+'</b>').join(', ')+'. Elles s’achètent à la Boutique, et elles deviennent alors des compagnons possibles.')
-      : 'Tu as toutes les bestioles. Change de compagnon quand tu veux, ça ne coûte rien.'));
+      ? T('Une bestiole que tu as déjà. Il t’en manque {n} : {quoi}. Elles s’achètent à la {boutique}, et elles deviennent alors des compagnons possibles.',
+          {n:manque.length, quoi:manque.map(c=>'<b>'+esc(T(c[1]))+'</b>').join(', ')})
+      : T('Tu as toutes les bestioles. Change de compagnon quand tu veux, ça ne coûte rien.')));
   }else{
     p.appendChild(field('Ton compagnon'));
     // Nommer les trois bestioles **gratuites** est tout ce qui manquait.
     // « une de celles que tu as déjà » se lisait comme « il t'en faut une
     // d'abord », donc comme deux achats — alors que le chien, le crabe et
     // la mouette n'ont jamais rien coûté et suffisent.
-    p.appendChild(hint('Tu marches seul. Le <b>Compagnon</b> s’achète à la Boutique, au rayon '+
-      '<b>Pour toi</b>, pour <b>'+VERROU.compagnon+' shells</b> — et le <b>chien</b>, le <b>crabe</b> '+
-      'et la <b>mouette</b> sont déjà à toi : l’un d’eux te suivra partout, même chez les voisins.'));
+    p.appendChild(hint(T('Tu marches seul. Le <b>{compagnon}</b> s’achète à la {boutique}, au rayon <b>{pourtoi}</b>, pour <b>{n} shells</b> — et le <b>chien</b>, le <b>crabe</b> et la <b>mouette</b> sont déjà à toi : l’un d’eux te suivra partout, même chez les voisins.',
+      {n:VERROU.compagnon, compagnon:T('Compagnon'), boutique:T('Boutique'), pourtoi:T('Pour toi')})));
   }
 
   // Le sac. Il est ici et pas dans un septième onglet : c'est ce que le
@@ -9203,15 +10088,15 @@ function buildToi(){
     const c=document.createElement('canvas'); c.width=120; c.height=120;
     apercuTrouvaille(c.getContext('2d'),k,!n);
     const nom=document.createElement('span');
-    nom.textContent=NOM_TROUVAILLE[k].replace(/^(un|une) /,'');
+    nom.textContent=sansArticle(T(NOM_TROUVAILLE[k]));
     const q=document.createElement('span'); q.className='prix';
-    q.textContent = n ? ('\u00d7 '+n) : (pris ? 'demandé' : '\u2014');
+    q.textContent = n ? ('\u00d7 '+n) : (pris ? T('demandé') : '\u2014');
     d.appendChild(c); d.appendChild(nom); d.appendChild(q);
     gs.appendChild(d); });
   fs.appendChild(gs); p.appendChild(fs);
   p.appendChild(hint(sacPlein()
-    ? 'Le sac te suit d’un appareil à l’autre et chez les voisins : il est à <b>toi</b>, pas à ton île. Il se remplit sur le sable mouillé, à marée basse, tant que la marée paie encore aujourd’hui.'
-    : 'Ton sac est vide. À marée basse, va marcher sur le sable mouillé au bord de ton île : ce que la mer y laisse y tombe. C’est avec ça qu’on remplit la <b>commande du jour</b>, dans l’onglet Voisins.'));
+    ? T('Le sac te suit d’un appareil à l’autre et chez les voisins : il est à <b>toi</b>, pas à ton île. Il se remplit sur le sable mouillé, à marée basse, tant que la marée paie encore aujourd’hui.')
+    : T('Ton sac est vide. À marée basse, va marcher sur le sable mouillé au bord de ton île : ce que la mer y laisse y tombe. C’est avec ça qu’on remplit la <b>commande du jour</b>, dans l’onglet {onglet}.',{onglet:T('Voisins')})));
 
   // L'album. Il vit dans ce navigateur et pas en base, et il le dit :
   // une photo, ce sont des pixels, et des pixels n'ont rien à faire dans
@@ -9224,7 +10109,7 @@ function buildToi(){
       const d=document.createElement('div'); d.className='obj acquis'; d.style.cursor='default';
       const im=document.createElement('img'); im.src=ph.u; im.alt='';
       im.style.cssText='width:60px;height:40px;object-fit:cover;border-radius:8px;display:block;background:#FDFBF0';
-      const nom=document.createElement('span'); nom.textContent=ph.chez ? ('chez '+(ph.qui||'?')) : (ph.ile||'chez toi');
+      const nom=document.createElement('span'); nom.textContent=ph.chez ? T('chez {qui}',{qui:ph.qui||'?'}) : (ph.ile||T('chez toi'));
       const q=document.createElement('span'); q.className='prix'; q.textContent=ph.jour||'';
       d.appendChild(im); d.appendChild(nom); d.appendChild(q);
       /* Cliquer une vignette **l'envoie** plutôt que de la réenregistrer.
@@ -9237,13 +10122,13 @@ function buildToi(){
       d.style.cursor='pointer';
       ga.appendChild(d); });
     fa.appendChild(ga); p.appendChild(fa);
-    p.appendChild(hint('Clique une photo pour l’<b>envoyer</b> — sur téléphone elle part dans la conversation, ailleurs elle descend dans tes fichiers. L’album garde les <b>'+ALBUM_MAX+
-      ' dernières</b> et il vit dans <b>ce navigateur</b>, pas en base : il ne te suit pas d’un appareil à l’autre.'));
+    p.appendChild(hint(T('Clique une photo pour l’<b>envoyer</b> — sur téléphone elle part dans la conversation, ailleurs elle descend dans tes fichiers. L’album garde les <b>{n} dernières</b> et il vit dans <b>ce navigateur</b>, pas en base : il ne te suit pas d’un appareil à l’autre.',{n:ALBUM_MAX})));
   }else{
     p.appendChild(fa);
     p.appendChild(hint(appareilEnMain()
-      ? 'Ton album est vide. Appuie sur <b>P</b> ou sur 📷, au bord du cadre : le viseur s’ouvre, tu cadres, et un second appui déclenche.'
-      : 'Tu n’as pas d’<b>appareil photo</b>. Il est à la Boutique, au rayon <b>Pour toi</b> : on vise, on déclenche, et la photo se range ici — d’où tu peux l’envoyer.'));
+      ? T('Ton album est vide. Appuie sur <b>P</b> ou sur 📷, au bord du cadre : le viseur s’ouvre, tu cadres, et un second appui déclenche.')
+      : T('Tu n’as pas d’<b>appareil photo</b>. Il est à la {boutique}, au rayon <b>{pourtoi}</b> : on vise, on déclenche, et la photo se range ici — d’où tu peux l’envoyer.',
+          {boutique:T('Boutique'), pourtoi:T('Pour toi')})));
   }
 
   paintPreview();
@@ -9291,7 +10176,7 @@ function buildMaison(){
      Les deux boutons d'action (déplacer, entrer) étaient déjà fermés ; il
      ne restait que l'apparence, ouverte. */
   const pose=(f)=>p.appendChild(visiting?fermerEnVisite(f):f);
-  if(visiting) p.appendChild(hint('Tu es invité chez <b>'+esc(world.owner)+'</b>. Ces réglages sont ceux de <b>ta</b> maison, que tu ne vois pas d’ici : ils t’attendent chez toi.'));
+  if(visiting) p.appendChild(hint(T('Tu es invité chez <b>{qui}</b>. Ces réglages sont ceux de <b>ta</b> maison, que tu ne vois pas d’ici : ils t’attendent chez toi.',{qui:esc(world.owner)})));
   pose(textField('Enseigne','house.sign','Chez Dan'));
   pose(chips('Toiture','house.roofShape',[['pointu','Pointu'],['dome','Dôme'],['plat','Plat']]));
   pose(swatches('Couleur du toit','house.roof',ROOFS));
@@ -9304,13 +10189,13 @@ function buildMaison(){
   const f=field('Emplacement'), row=document.createElement('div'); row.className='row';
   const dep=document.createElement('button');
   dep.className='btn'+(tool.mode==='maison'?' primary':'');
-  dep.textContent = tool.mode==='maison' ? '\u2715 Annuler le déplacement' : '\u2723 Déplacer la maison';
+  dep.textContent = tool.mode==='maison' ? T('\u2715 Annuler le déplacement') : T('\u2723 Déplacer la maison');
   dep.disabled=!!visiting;
   dep.onclick=()=>{ if(tool.mode==='maison'){ tool.mode='marche'; tool.kind=null; }
     else { tool.mode='maison'; tool.kind=null; say(T('Clique la case où poser la maison. Elle occupe deux cases sur deux.')); }
     buildAll(); };
   row.appendChild(dep); f.appendChild(row); p.appendChild(f);
-  p.appendChild(hint('Tu cliques la case, la maison s\'y pose : le coin que tu vises est son coin nord, le plus haut \u00e0 l\'\u00e9cran. La maison est le point de rendez-vous, on d\u00e9barque toujours devant sa porte.'));
+  p.appendChild(hint(T('Tu cliques la case, la maison s\'y pose : le coin que tu vises est son coin nord, le plus haut \u00e0 l\'\u00e9cran. La maison est le point de rendez-vous, on d\u00e9barque toujours devant sa porte.')));
 
   // Entrer est une **action**, pas un onglet. On entre en marchant sur le
   // seuil, par `E`, par le bouton rose du cadre \u2014 et par ici, pour qui
@@ -9319,13 +10204,13 @@ function buildMaison(){
   p.appendChild(rule());
   const fe2=field('L\u2019int\u00e9rieur'), re2=document.createElement('div'); re2.className='row';
   const be2=document.createElement('button'); be2.className='btn primary';
-  be2.textContent='\ud83d\udeaa Entrer';
+  be2.textContent=T('\ud83d\udeaa Entrer');
   be2.disabled=!!visiting;
   be2.onclick=()=>entrer('salon');
   re2.appendChild(be2); fe2.appendChild(re2); p.appendChild(fe2);
   p.appendChild(hint(visiting
-    ? 'La porte '+deQui(world.owner)+' est ferm\u00e9e : on ne visite que le dehors. Rentre chez toi pour ouvrir la tienne.'
-    : 'Trois pi\u00e8ces, et personne d\u2019autre n\u2019y entre. Tu peux aussi <b>marcher sur le seuil</b> de ta porte : c\u2019est la m\u00eame chose, sans passer par un bouton. Une fois dedans, ce panneau devient l\u2019atelier des pi\u00e8ces.'));
+    ? T('La porte {qui} est ferm\u00e9e : on ne visite que le dehors. Rentre chez toi pour ouvrir la tienne.',{qui:deQui(world.owner)})
+    : T('Trois pi\u00e8ces, et personne d\u2019autre n\u2019y entre. Tu peux aussi <b>marcher sur le seuil</b> de ta porte : c\u2019est la m\u00eame chose, sans passer par un bouton. Une fois dedans, ce panneau devient l\u2019atelier des pi\u00e8ces.')));
   peindreMaison();
 }
 function peindreMaison(){
@@ -9378,54 +10263,52 @@ function fieldTerre(){
   j.appendChild(i); f.appendChild(j);
 
   const c=document.createElement('p'); c.className='chiffre';
+  const dOr = mots>1 ? T('{n} mots dans ton livre d’or',{n:mots}) : T('{n} mot dans ton livre d’or',{n:mots});
   c.innerHTML=reste
-    ? '<b>'+gagne+' cran'+(gagne>1?'s':'')+' sur '+total+'</b> · '+
-      mots+' mot'+(mots>1?'s':'')+' dans ton livre d’or'
-    : '<b>Ton île est au bout de sa terre</b> · '+
-      mots+' mot'+(mots>1?'s':'')+' dans ton livre d’or';
+    ? (gagne>1 ? T('<b>{n} crans sur {t}</b> · {or}',{n:gagne,t:total,or:dOr})
+               : T('<b>{n} cran sur {t}</b> · {or}',{n:gagne,t:total,or:dOr}))
+    : T('<b>Ton île est au bout de sa terre</b> · {or}',{or:dOr});
   f.appendChild(c);
 
   f.appendChild(hint(reste
-    ? 'La mer recule d’un cran à chaque mot qu’on te laisse — c’est la seule '+
-      'façon de gagner du terrain. <b>Encore '+reste+' mot'+(reste>1?'s':'')+'</b>, et elle '+
-      'aura reculé autant qu’elle le peut. '+
-      'Pour qu’on passe, envoie ta <b>carte postale</b> — elle est dans l’onglet Voisins.'
-    : 'Tu as gagné toute la terre qu’il y avait à gagner : au-delà, c’est le large, '+
-      'et la mer a besoin de sa place pour la marée. Il ne reste plus qu’à la remplir — '+
-      'et les gens qui passent continuent de te laisser des mots, et des shells.'));
+    ? (reste>1
+        ? T('La mer recule d’un cran à chaque mot qu’on te laisse — c’est la seule façon de gagner du terrain. <b>Encore {n} mots</b>, et elle aura reculé autant qu’elle le peut. Pour qu’on passe, envoie ta <b>carte postale</b> — elle est dans l’onglet {onglet}.',{n:reste,onglet:T('Voisins')})
+        : T('La mer recule d’un cran à chaque mot qu’on te laisse — c’est la seule façon de gagner du terrain. <b>Encore un mot</b>, et elle aura reculé autant qu’elle le peut. Pour qu’on passe, envoie ta <b>carte postale</b> — elle est dans l’onglet {onglet}.',{onglet:T('Voisins')}))
+    : T('Tu as gagné toute la terre qu’il y avait à gagner : au-delà, c’est le large, et la mer a besoin de sa place pour la marée. Il ne reste plus qu’à la remplir — et les gens qui passent continuent de te laisser des mots, et des shells.')));
   return f;
 }
 
 function buildIle(){
   const p=document.getElementById('p-ile'); p.innerHTML='';
   if(visiting){
-    p.appendChild(hint('Tu es invité chez <b>'+esc(world.owner)+'</b>. Le haut de ce panneau règle <b>ton</b> île, pas la sienne : tu ne verrais rien changer d’ici, alors il attend que tu sois rentré.'));
+    p.appendChild(hint(T('Tu es invité chez <b>{qui}</b>. Le haut de ce panneau règle <b>ton</b> île, pas la sienne : tu ne verrais rien changer d’ici, alors il attend que tu sois rentré.',{qui:esc(world.owner)})));
     const fr=document.createElement('div'); fr.className='row';
-    const br=document.createElement('button'); br.className='btn primary'; br.textContent='Rentrer chez toi';
+    const br=document.createElement('button'); br.className='btn primary'; br.textContent=T('Rentrer chez toi');
     br.onclick=()=>go('me'); fr.appendChild(br); p.appendChild(fr);
   }
   const fn=textField('Nom de l\'île','name',"L'île de Dan");
   p.appendChild(visiting?fermerEnVisite(fn):fn);
   p.appendChild(fieldTerre());
   const fs=field('Heure'), bs=document.createElement('div'); bs.className='chips';
-  [['jour','Jour'],['crépuscule','Crépuscule'],['nuit','Nuit']].forEach(([v,n])=>{
-    const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=n;
+  HEURES.forEach(([v,n])=>{
+    const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=T(n);
     b.setAttribute('aria-pressed',String(mine.sky===v));
     b.onclick=()=>{mine.sky=v; saveMine(); buildAll();}; bs.appendChild(b); });
   fs.appendChild(bs); p.appendChild(visiting?fermerEnVisite(fs):fs);
 
   const fa=field('Ambiance sonore'), ba=document.createElement('div'); ba.className='chips';
   AMBIANCES.forEach(([v,n])=>{
-    const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=n;
+    const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=T(n);
     b.setAttribute('aria-pressed',String((mine.ambiance||'vagues')===v));
     b.onclick=()=>{ mine.ambiance=v; saveMine(); if(!visiting) majAmbiance(); buildAll(); }; ba.appendChild(b); });
   fa.appendChild(ba); p.appendChild(visiting?fermerEnVisite(fa):fa);
-  p.appendChild(hint('L\u2019ambiance appartient \u00e0 l\u2019\u00eele, pas au joueur : tes visiteurs entendront celle que tu choisis. Le bouton <b>Son</b>, en haut du cadre, coupe tout pour toi seul. La <b>Musique</b> n\u2019est jamais deux fois la m\u00eame, et elle suit le ciel : claire de jour, basse la nuit.'));
+  p.appendChild(hint(T('L\u2019ambiance appartient \u00e0 l\u2019\u00eele, pas au joueur : tes visiteurs entendront celle que tu choisis. Le bouton <b>{son}</b>, en haut du cadre, coupe tout pour toi seul. La <b>{musique}</b> n\u2019est jamais deux fois la m\u00eame, et elle suit le ciel : claire de jour, basse la nuit.',
+    {son:T('Son'), musique:T('Musique')})));
 
   const fg=field('Palette du terrain'), bg=document.createElement('div'); bg.className='chips';
   GROUNDS.forEach(g=>{
     const b=document.createElement('button'); b.className='chip'; b.type='button';
-    b.innerHTML='<span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:'+g.grass+';margin-right:6px"></span>'+g.n;
+    b.innerHTML='<span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:'+g.grass+';margin-right:6px"></span>'+T(g.n);
     b.setAttribute('aria-pressed',String(mine.pal.k===g.k));
     b.onclick=()=>{mine.pal=g; saveMine(); buildAll();}; bg.appendChild(b); });
   fg.appendChild(bg); p.appendChild(visiting?fermerEnVisite(fg):fg);
@@ -9433,7 +10316,7 @@ function buildIle(){
 
   const ft=field('Pinceau terrain'), bt=document.createElement('div'); bt.className='chips';
   [['marche',null,'✋ Marcher'],['terrain',0,'Herbe'],['terrain',1,'Sable'],['terrain',3,'Chemin'],['terrain',2,'Eau']].forEach(([m,k,n])=>{
-    const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=n;
+    const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=T(n);
     b.setAttribute('aria-pressed',String(tool.mode===m&&tool.kind===k));
     b.onclick=()=>{tool.mode=m;tool.kind=k;buildAll();}; bt.appendChild(b); });
   ft.appendChild(bt); p.appendChild(visiting?fermerEnVisite(ft):ft);
@@ -9451,9 +10334,9 @@ function buildIle(){
   const fp=field('Peindre le sol'), bp=document.createElement('div'); bp.className='chips';
   const pastille=(k,n)=>{
     const b=document.createElement('button'); b.className='chip'; b.type='button';
-    b.innerHTML = k==null ? '⌫ Effacer'
+    b.innerHTML = k==null ? T('⌫ Effacer')
       : '<span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:'+
-        SOL_COUL[k]+';border:1px solid rgba(11,60,93,.25);margin-right:6px"></span>'+n;
+        SOL_COUL[k]+';border:1px solid rgba(11,60,93,.25);margin-right:6px"></span>'+T(n);
     b.setAttribute('aria-pressed',String(tool.mode==='sol'&&tool.kind===k));
     b.onclick=()=>{tool.mode='sol';tool.kind=k;buildAll();};
     bp.appendChild(b);
@@ -9480,7 +10363,7 @@ function buildIle(){
     // mort dans l'atelier n'apprend rien, la boutique le dit mieux.
     const items=items0.filter(([v])=>achete(v));
     if(!items.length) return;
-    const fo=field(T(title)), bo=document.createElement('div'); bo.className='objs';
+    const fo=field(title), bo=document.createElement('div'); bo.className='objs';
     items.forEach(([v,n])=>{
       const b=document.createElement('button'); b.className='obj'; b.type='button';
       b.setAttribute('aria-pressed',String(tool.mode==='objet'&&tool.kind===v));
@@ -9495,13 +10378,14 @@ function buildIle(){
   // Ce qui manque ici est à la boutique, et on le dit : un atelier plus court
   // qu'hier sans explication ressemble à une panne.
   const verrous=BOUTIQUE.filter(a=>a.ou==='ile'&&!achete(a.k)).length;
-  if(verrous) p.appendChild(hint('Il y a <b>'+verrous+' objet'+(verrous>1?'s':'')+
-    '</b> de plus \u00e0 la <b>Boutique</b>. On les ach\u00e8te une fois, et on en pose ensuite autant qu\u2019on veut.'));
+  if(verrous) p.appendChild(hint(verrous>1
+    ? T('Il y a <b>{n} objets</b> de plus \u00e0 la <b>{boutique}</b>. On les ach\u00e8te une fois, et on en pose ensuite autant qu\u2019on veut.',{n:verrous,boutique:T('Boutique')})
+    : T('Il y a <b>un objet</b> de plus \u00e0 la <b>{boutique}</b>. On l\u2019ach\u00e8te une fois, et on en pose ensuite autant qu\u2019on veut.',{boutique:T('Boutique')})));
   const fe=field('Corriger'), be=document.createElement('div'); be.className='chips';
-  const e=document.createElement('button'); e.className='chip'; e.type='button'; e.textContent='⌫ Gomme';
+  const e=document.createElement('button'); e.className='chip'; e.type='button'; e.textContent=T('⌫ Gomme');
   e.setAttribute('aria-pressed',String(tool.mode==='gomme'));
   e.onclick=()=>{tool.mode='gomme';tool.kind=null;buildAll();};
-  const tr=document.createElement('button'); tr.className='chip'; tr.type='button'; tr.textContent='\u27f3 Tourner';
+  const tr=document.createElement('button'); tr.className='chip'; tr.type='button'; tr.textContent=T('\u27f3 Tourner');
   tr.setAttribute('aria-pressed',String(tool.mode==='tourner'));
   tr.onclick=()=>{tool.mode='tourner';tool.kind=null;buildAll();};
   be.appendChild(e); be.appendChild(tr); fe.appendChild(be); p.appendChild(visiting?fermerEnVisite(fe):fe);
@@ -9515,13 +10399,12 @@ function buildIle(){
      prix SQL : deux listes qui divergent, et le panneau annonce un geste que
      l'objet ne fait pas. Ici il n'y en a plus qu'une. */
   const axes=Object.keys(PIVOT_ILE).map(k=>'<b>'+T(NOM_OBJ[k]||k).toLowerCase()+'</b>').join(', ');
-  p.appendChild(hint('Le sens ne change que ce qui suit un axe : '+axes+
-    '. Un arbre est pareil des deux côtés. <b>\u27f3 Tourner</b> retourne ce qui est déjà posé, sans l\'effacer.'));
+  p.appendChild(hint(T('Le sens ne change que ce qui suit un axe : {quoi}. Un arbre est pareil des deux côtés. <b>{tourner}</b> retourne ce qui est déjà posé, sans l\'effacer.',{quoi:axes, tourner:T('\u27f3 Tourner')})));
 
   const fc=field('Couleur de l\'objet'), bc=document.createElement('div'); bc.className='sw';
   OBJ_COLORS.forEach(c=>{
     const b=document.createElement('button'); b.type='button'; b.style.background=c;
-    b.setAttribute('aria-label','Couleur '+c);
+    b.setAttribute('aria-label',T('Couleur {c}',{c}));
     b.setAttribute('aria-pressed',String(tool.color.toLowerCase()===c.toLowerCase()));
     b.onclick=()=>{tool.color=c;buildAll();}; bc.appendChild(b); });
   const pk=document.createElement('input'); pk.type='color'; pk.value=tool.color;
@@ -9529,16 +10412,16 @@ function buildIle(){
   bc.appendChild(pk); fc.appendChild(bc); p.appendChild(visiting?fermerEnVisite(fc):fc);
 
   const row=document.createElement('div'); row.className='row';
-  const un=document.createElement('button'); un.className='btn'; un.textContent='\u21b6 Annuler';
+  const un=document.createElement('button'); un.className='btn'; un.textContent=T('\u21b6 Annuler');
   un.disabled=!histo.length; un.onclick=()=>annuler();
-  const rst=document.createElement('button'); rst.className='btn'; rst.textContent='Vider les objets';
+  const rst=document.createElement('button'); rst.className='btn'; rst.textContent=T('Vider les objets');
   rst.onclick=()=>{ if(!(mine.objects||[]).some(o=>o.t!=='panneau')) return;
     memoriser(); mine.objects=(mine.objects||[]).filter(o=>o.t==='panneau'); saveMine(); buildAll(); };
-  const nw=document.createElement('button'); nw.className='btn'; nw.textContent='Nouveau relief';
+  const nw=document.createElement('button'); nw.className='btn'; nw.textContent=T('Nouveau relief');
   nw.onclick=()=>{ memoriser();
     mine.tiles=baseTiles((mine.rayon||RAYON0)*(0.92+Math.random()*0.08),0.76+Math.random()*0.10); saveMine(); buildAll(); };
   row.appendChild(un); row.appendChild(rst); row.appendChild(nw); p.appendChild(row);
-  p.appendChild(hint('Le curseur suit la grille isométrique : le losange rose montre la case visée. <b>Ctrl+Z</b> revient en arrière, jusqu\u2019\u00e0 '+HISTO_MAX+' fois.'));
+  p.appendChild(hint(T('Le curseur suit la grille isométrique : le losange rose montre la case visée. <b>Ctrl+Z</b> revient en arrière, jusqu\u2019\u00e0 {n} fois.',{n:HISTO_MAX})));
   // Ce qui se disait ici de la croissance est monté en haut du panneau,
   // dans « Ta terre » : la règle centrale du jeu ne se dit pas dans la
   // dernière note grise d'un panneau qui en compte quatorze.
@@ -9546,43 +10429,42 @@ function buildIle(){
   // 360 px, le bouton Son passe à la ligne et se pose sur les boutons de
   // zoom. Elle se dit donc ici, et dans le murmure quand elle tourne.
   p.appendChild(hint(mareeBasse
-    ? '<b>La mer est basse.</b> L\u2019anneau de sable mouill\u00e9 au bord de l\u2019\u00eele se marche, '+
-      'et la mer y laisse des choses \u00e0 ramasser. On n\u2019y b\u00e2tit pas : elle le reprend \u00e0 la prochaine mar\u00e9e.'
-    : '<b>La mer est haute.</b> Deux fois par jour elle se retire et d\u00e9couvre un anneau de sable '+
-      'mouill\u00e9 au bord de l\u2019\u00eele, o\u00f9 elle laisse des choses \u00e0 ramasser. '+
-      'Comme la vraie, elle passe environ cinquante minutes plus tard chaque jour.'));
+    ? T('<b>La mer est basse.</b> L\u2019anneau de sable mouill\u00e9 au bord de l\u2019\u00eele se marche, et la mer y laisse des choses \u00e0 ramasser. On n\u2019y b\u00e2tit pas : elle le reprend \u00e0 la prochaine mar\u00e9e.')
+    : T('<b>La mer est haute.</b> Deux fois par jour elle se retire et d\u00e9couvre un anneau de sable mouill\u00e9 au bord de l\u2019\u00eele, o\u00f9 elle laisse des choses \u00e0 ramasser. Comme la vraie, elle passe environ cinquante minutes plus tard chaque jour.')));
   /* Le temps qu'il fait, à côté de la marée et pour la même raison : pas
      de plaque de plus dans le bandeau, l'avertissement des 360 px vaut
      toujours. Et il dit **qu'il est le même pour tout le monde** — c'est
      ce qui le rend racontable à un copain, exactement comme la marée. */
-  p.appendChild(hint(METEO_DIT[meteoNow] +
-    ' Il fait le même temps sur toutes les îles, et il change toutes les deux heures et demie.'));
+  p.appendChild(hint(T('{temps} Il fait le même temps sur toutes les îles, et il change toutes les deux heures et demie.',
+         {temps:T(METEO_DIT[meteoNow])})));
   // La saison, dans la même note que le temps : ce sont deux choses qu'on
   // ne choisit pas et qui arrivent à tout l'archipel en même temps.
-  p.appendChild(hint('C’est <b>'+SAISONS[saisonNow].n+'</b>. '+SAISONS[saisonNow].d+
-    ' L’île suit le vrai calendrier, et la saison ne repeint jamais ce que tu as choisi : elle se pose dessus.'));
+  p.appendChild(hint(T('C’est <b>{saison}</b>. {quoi} L’île suit le vrai calendrier, et la saison ne repeint jamais ce que tu as choisi : elle se pose dessus.',
+         {saison:T(SAISONS[saisonNow].n), quoi:T(SAISONS[saisonNow].d)})));
   p.appendChild(rule());
 
   // ---- livre d'or ----
   // `cible` = l'id en base, ou null quand l'ile n'y est pas encore (demo, hors ligne)
   const cible = (world===mine) ? ileId : (world.demo ? null : world.id);
   const jeModere = !visiting || world.aMoi;
-  const gf=field('Livre d\u2019or \u2014 '+(world.name||'')+
-    ((world===mine&&motsNouveaux)?(' \u00b7 '+motsNouveaux+' nouveau'+(motsNouveaux>1?'x':'')):'')),
+  const gf=field(T('Livre d\u2019or \u2014 {nom}',{nom:world.name||''})+
+    ((world===mine&&motsNouveaux)
+      ? (motsNouveaux>1 ? T(' \u00b7 {n} nouveaux',{n:motsNouveaux}) : T(' \u00b7 {n} nouveau',{n:motsNouveaux}))
+      : ''), true),
     ul=document.createElement('ul'); ul.className='gb';
   const notes=(world.mots||[]).filter(m=>jeModere||!m.masque);
   if(!notes.length){ const li=document.createElement('li'); li.style.color='var(--ink-3)';
-    li.textContent='Personne n\u2019est encore pass\u00e9.'; ul.appendChild(li); }
+    li.textContent=T('Personne n\u2019est encore pass\u00e9.'); ul.appendChild(li); }
   notes.slice(-8).forEach(m=>{
     const li=document.createElement('li');
     li.style.display='flex'; li.style.alignItems='baseline'; li.style.gap='8px';
     li.style.flexWrap='wrap';          // la réponse passe à la ligne sous le mot
     const t=document.createElement('span'); t.style.flex='1';
-    t.innerHTML='<b>'+esc(m.auteur_nom)+'</b> \u2014 '+esc(m.texte)+(m.masque?' <i style="opacity:.6">(masqu\u00e9)</i>':'');
+    t.innerHTML='<b>'+esc(m.auteur_nom)+'</b> \u2014 '+esc(m.texte)+(m.masque?' <i style="opacity:.6">'+T('(masqué)')+'</i>':'');
     li.appendChild(t);
     if(jeModere&&m.id&&cible){
       const x=document.createElement('button'); x.className='chip'; x.type='button';
-      x.style.padding='1px 8px'; x.textContent=m.masque?'montrer':'masquer';
+      x.style.padding='1px 8px'; x.textContent=m.masque?T('montrer'):T('masquer');
       x.onclick=async()=>{ try{ await store.masquerMot(m.id,!m.masque); m.masque=!m.masque;
         replanter(world); buildAll(); }catch(e){ say(T('Modération impossible : {erreur}', {erreur: esc(e.message||e)})); } };
       li.appendChild(x);
@@ -9591,7 +10473,7 @@ function buildIle(){
     // (c'est exactement ce que laisse passer la policy RLS mots_suppr).
     if(jeModere || !cible || (moi && m.auteur && m.auteur===moi.id)){
       const d=document.createElement('button'); d.className='chip'; d.type='button';
-      d.style.padding='1px 8px'; d.textContent='supprimer';
+      d.style.padding='1px 8px'; d.textContent=T('supprimer');
       d.onclick=async()=>{
         if(!confirm('Supprimer ce mot ? C\u2019est d\u00e9finitif.')) return;
         try{
@@ -9635,14 +10517,14 @@ function buildIle(){
     if(m.reponse){
       const r=document.createElement('div');
       r.style.cssText='font-size:13px;color:var(--ink-2);margin-top:2px';
-      r.innerHTML='↩ <b>'+esc(world.owner||'')+'</b> a répondu : « '+esc(m.reponse)+' »';
+      r.innerHTML=T('↩ <b>{qui}</b> a répondu : « {quoi} »',{qui:esc(world.owner||''),quoi:esc(m.reponse)});
       bloc.appendChild(r);
     }
     if(jeModere&&m.id&&cible){
       const ouvrir=document.createElement('button');
       ouvrir.className='chip'; ouvrir.type='button';
       ouvrir.style.cssText='padding:1px 8px;margin-top:4px';
-      ouvrir.textContent=m.reponse?'changer ma réponse':'répondre';
+      ouvrir.textContent=m.reponse?T('changer ma réponse'):T('répondre');
       ouvrir.onclick=()=>{
         const ligne=document.createElement('div');
         ligne.style.cssText='display:flex;gap:6px;align-items:center;margin-top:4px';
@@ -9654,14 +10536,14 @@ function buildIle(){
         ri.placeholder='Répondre à '+m.auteur_nom+'…';
         ri.style.flex='1';
         const rb=document.createElement('button'); rb.className='btn primary'; rb.type='button';
-        rb.style.padding='2px 10px'; rb.textContent='Envoyer';
+        rb.style.padding='2px 10px'; rb.textContent=T('Envoyer');
         rb.onclick=async()=>{
           try{
             m.reponse=await store.repondreAuMot(m.id, ri.value);
             replanter(world); son('mot'); buildAll();
             say(m.reponse
-              ? 'Réponse envoyée. <b>'+esc(m.auteur_nom)+'</b> la verra en repassant.'
-              : 'Réponse effacée.');
+              ? T('Réponse envoyée. <b>{qui}</b> la verra en repassant.',{qui:esc(m.auteur_nom)})
+              : T('Réponse effacée.'));
           }catch(e){ say(T('Réponse impossible : {erreur}', {erreur: esc(e.message||e)})); }
         };
         ligne.appendChild(ri); ligne.appendChild(rb);
@@ -9675,7 +10557,7 @@ function buildIle(){
   gf.appendChild(ul);
   const i=document.createElement('input'); i.type='text'; i.maxLength=200;
   i.placeholder = visiting ? 'Un mot pour '+(world.owner||'')+'\u2026' : 'Un mot sur ton propre mur\u2026';
-  const add=document.createElement('button'); add.className='btn primary'; add.textContent='Planter le mot';
+  const add=document.createElement('button'); add.className='btn primary'; add.textContent=T('Planter le mot');
   add.onclick=async()=>{
     const v=i.value.trim(); if(!v) return;
     const spot=freeTile(world);
@@ -9820,7 +10702,7 @@ function buildDedans(p){
 
   const rp=document.createElement('div'); rp.className='row';
   const be=document.createElement('button'); be.className='btn primary';
-  be.textContent = '\u2190 Ressortir';
+  be.textContent=T('\u2190 Ressortir');
   be.onclick=()=>sortir();
   rp.appendChild(be); p.appendChild(rp);
   p.appendChild(rule());
@@ -9835,32 +10717,33 @@ function buildDedans(p){
   // Sens, et deux noms pour une même chose se paient en hésitation.
   p.appendChild(chipsLibre('Sens',[['se','\u2198 Vers la droite'],['sw','\u2199 Vers la gauche']],tool.orient,
     v=>{ tool.orient=v; buildAll(); }));
-  p.appendChild(hint('Le <b>Sens</b> sert deux fois : il retourne le meuble qu’on va poser, et pour un <b>tableau</b> ou une <b>guirlande</b> il dit à quel mur du fond ça s’accroche.'));
+  p.appendChild(hint(T('Le <b>{sens}</b> sert deux fois : il retourne le meuble qu’on va poser, et pour un <b>tableau</b> ou une <b>guirlande</b> il dit à quel mur du fond ça s’accroche.',{sens:T('Sens')})));
 
   // ⟳ Tourner était rangé sous un champ intitulé « Marcher », entre Marcher
   // et Gomme : l'étiquette du groupe était le nom de son premier bouton, et
   // on ne trouvait pas Tourner. Dehors, ces deux-là sont sous « Corriger ».
   // Mêmes outils, mêmes étiquettes, des deux côtés de la porte.
   const fm=field('Marcher'), bm=document.createElement('div'); bm.className='chips';
-  const mb=document.createElement('button'); mb.className='chip'; mb.type='button'; mb.textContent='\u270b Marcher';
+  const mb=document.createElement('button'); mb.className='chip'; mb.type='button'; mb.textContent=T('\u270b Marcher');
   mb.setAttribute('aria-pressed',String(tool.mode==='marche'));
   mb.onclick=()=>{ tool.mode='marche'; tool.kind=null; buildAll(); };
   bm.appendChild(mb); fm.appendChild(bm); p.appendChild(fm);
 
   const fx=field('Corriger'), bx=document.createElement('div'); bx.className='chips';
-  const gb=document.createElement('button'); gb.className='chip'; gb.type='button'; gb.textContent='\u232b Gomme';
+  const gb=document.createElement('button'); gb.className='chip'; gb.type='button'; gb.textContent=T('\u232b Gomme');
   gb.setAttribute('aria-pressed',String(tool.mode==='gomme'));
   gb.onclick=()=>{ tool.mode='gomme'; tool.kind=null; buildAll(); };
-  const tb=document.createElement('button'); tb.className='chip'; tb.type='button'; tb.textContent='\u27f3 Tourner';
+  const tb=document.createElement('button'); tb.className='chip'; tb.type='button'; tb.textContent=T('\u27f3 Tourner');
   tb.setAttribute('aria-pressed',String(tool.mode==='tourner'));
   tb.onclick=()=>{ tool.mode='tourner'; tool.kind=null; buildAll(); };
   bx.appendChild(gb); bx.appendChild(tb); fx.appendChild(bx); p.appendChild(fx);
-  p.appendChild(hint('<b>⟳ Tourner</b> retourne ce qui est <b>déjà posé</b>, sans l’effacer. La <b>⌫ Gomme</b> prend ce qu’il y a de plus haut sur la case : ce qui est posé sur un meuble avant le meuble, et le tapis en dernier.'));
+  p.appendChild(hint(T('<b>{tourner}</b> retourne ce qui est <b>déjà posé</b>, sans l’effacer. La <b>{gomme}</b> prend ce qu’il y a de plus haut sur la case : ce qui est posé sur un meuble avant le meuble, et le tapis en dernier.',
+    {tourner:T('⟳ Tourner'), gomme:T('⌫ Gomme')})));
 
   MEUBLE_GROUPS.forEach(g=>{
     const meubles=g[1].filter(m=>achete(m[0]));
     if(!meubles.length) return;
-    const fo=field(T(g[0])), bo=document.createElement('div'); bo.className='objs';
+    const fo=field(g[0]), bo=document.createElement('div'); bo.className='objs';
     meubles.forEach(m=>{
       const b=document.createElement('button'); b.className='obj'; b.type='button'; b.title=T(m[1]);
       b.setAttribute('aria-pressed',String(tool.mode==='meuble'&&tool.kind===m[0]));
@@ -9874,8 +10757,9 @@ function buildDedans(p){
       bo.appendChild(b); });
     fo.appendChild(bo); p.appendChild(fo); });
   const verrousM=BOUTIQUE.filter(a=>a.ou==='dedans'&&!achete(a.k)).length;
-  if(verrousM) p.appendChild(hint('Il y a <b>'+verrousM+' meuble'+(verrousM>1?'s':'')+
-    '</b> de plus \u00e0 la <b>Boutique</b>.'));
+  if(verrousM) p.appendChild(hint(verrousM>1
+    ? T('Il y a <b>{n} meubles</b> de plus \u00e0 la <b>{boutique}</b>.',{n:verrousM,boutique:T('Boutique')})
+    : T('Il y a <b>un meuble</b> de plus \u00e0 la <b>{boutique}</b>.',{boutique:T('Boutique')})));
 
   const fc=field('Couleur du meuble'), bc=document.createElement('div'); bc.className='sw';
   OBJ_COLORS.forEach(k=>{
@@ -9888,19 +10772,17 @@ function buildDedans(p){
   bc.appendChild(pk); fc.appendChild(bc); p.appendChild(fc);
 
   const nb=(d.meubles||[]).length;
-  p.appendChild(hint('Trois pi\u00e8ces, et personne d\u2019autre que toi n\u2019y entre. '+
-    laPiece(def.k,true,true)+
-    ' fait '+def.w+'x'+def.h+' cases et porte <b>'+nb+' meuble'+(nb>1?'s':'')+'</b>. '+
-    '<b>Ctrl+Z</b> annule ici comme dehors.'));
+  p.appendChild(hint((nb>1
+      ? T('Trois pi\u00e8ces, et personne d\u2019autre que toi n\u2019y entre. {piece} fait {w}x{h} cases et porte <b>{n} meubles</b>. <b>Ctrl+Z</b> annule ici comme dehors.',
+          {piece:laPiece(def.k,true,true), w:def.w, h:def.h, n:nb})
+      : T('Trois pi\u00e8ces, et personne d\u2019autre que toi n\u2019y entre. {piece} fait {w}x{h} cases et porte <b>{n} meuble</b>. <b>Ctrl+Z</b> annule ici comme dehors.',
+          {piece:laPiece(def.k,true,true), w:def.w, h:def.h, n:nb}))));
   // Le bas du panneau disait « un meuble ne se pose pas sur un autre ; le
   // tapis, si ». Ce n'est plus vrai depuis les niveaux, et le reste de la
   // phrase répétait les deux repères donnés plus haut. Il dit maintenant la
   // seule chose que le panneau ne dise nulle part ailleurs : sur quoi ça se
   // pose.
-  p.appendChild(hint('Tout ne se pose pas au m\u00eame endroit. Un <b>tapis</b> va au sol, sous le reste. '+
-    'Un <b>vase</b>, une <b>plante</b> ou la <b>t\u00e9l\u00e9vision</b> se posent par terre, ou sur une table basse, '+
-    'une table de nuit, une commode, un bureau, une malle ou le piano. Un <b>tableau</b> et une <b>guirlande</b> '+
-    's\u2019accrochent \u00e0 un mur du fond. Tout le reste tient sa case, et on ne passe pas au travers.'));
+  p.appendChild(hint(T('Tout ne se pose pas au m\u00eame endroit. Un <b>tapis</b> va au sol, sous le reste. Un <b>vase</b>, une <b>plante</b> ou la <b>t\u00e9l\u00e9vision</b> se posent par terre, ou sur une table basse, une table de nuit, une commode, un bureau, une malle ou le piano. Un <b>tableau</b> et une <b>guirlande</b> s\u2019accrochent \u00e0 un mur du fond. Tout le reste tient sa case, et on ne passe pas au travers.')));
 }
 
 
@@ -9942,21 +10824,20 @@ function buildBoutique(){
       // Et il ne promet un coffre que s'il y en a un : sans ça, la phrase
       // enverrait chercher un objet qui n'existe pas sur l'île du joueur.
       fc.appendChild(hint(coffres
-        ? '🎁 <b>Ton cadeau t’attend chez toi</b>, pas ici : il est dans ton coffre, sur ton île. Rentre, et va marcher jusqu’à lui.'
-        : '🎁 <b>Ton cadeau t’attend chez toi</b>, pas ici. Rentre sur ton île, et tu pourras l’ouvrir.'));
+        ? T('🎁 <b>Ton cadeau t’attend chez toi</b>, pas ici : il est dans ton coffre, sur ton île. Rentre, et va marcher jusqu’à lui.')
+        : T('🎁 <b>Ton cadeau t’attend chez toi</b>, pas ici. Rentre sur ton île, et tu pourras l’ouvrir.')));
     }else if(coffres){
-      fc.appendChild(hint('🎁 <b>Ton cadeau t’attend dans ton coffre</b>, sur ton île, il scintille. '+
-        'Va marcher jusqu’à lui, puis appuie sur <b>E</b> ou touche le bouton rose du cadre.'));
+      fc.appendChild(hint(T('🎁 <b>Ton cadeau t’attend dans ton coffre</b>, sur ton île, il scintille. Va marcher jusqu’à lui, puis appuie sur <b>E</b> ou touche le bouton rose du cadre.')));
     }else{
       const r=document.createElement('div'); r.className='row';
       const bt=document.createElement('button'); bt.className='btn primary';
-      bt.textContent='🎁 Ouvrir mon cadeau';
+      bt.textContent=T('🎁 Ouvrir mon cadeau');
       bt.onclick=()=>ouvrirCadeau();
       const po=document.createElement('button'); po.className='btn';
-      po.textContent='Poser un coffre';
+      po.textContent=T('Poser un coffre');
       po.onclick=()=>poserUnCoffre();
       r.appendChild(bt); r.appendChild(po); fc.appendChild(r);
-      fc.appendChild(hint('Tu n’as pas de coffre sur ton île. Pose-en un (il est gratuit, au rayon <b>Village</b> de ton atelier), et c’est lui qui portera le cadeau, chaque jour.'));
+      fc.appendChild(hint(T('Tu n’as pas de coffre sur ton île. Pose-en un (il est gratuit, au rayon <b>{rayon}</b> de ton atelier), et c’est lui qui portera le cadeau, chaque jour.',{rayon:T('Village')})));
     }
     p.appendChild(fc);
     /* **Rien ici ne presse, et c'est le point.** La note disait « tu es
@@ -9964,17 +10845,15 @@ function buildBoutique(){
        protéger, donc quelque chose à perdre. Elle dit maintenant où on en
        est et ce qui attend — un tirage vers l'avant, pas une laisse. */
     p.appendChild(hint(b.serie
-      ? ('Tu en as déjà ouvert <b>'+b.serie+'</b>. Chaque fois il grossit un peu, '+
-         'et tous les <b>sept</b>, la boutique t’en offre un — '+
-         (7-(b.serie%7)===7 ? 'le prochain est le bon.' :
-          'plus que <b>'+(7-(b.serie%7))+'</b>.')+
-         ' Sauter des jours ne t’enlève rien.')
-      : 'Ouvre-le quand tu veux : il grossit à chaque fois, et au septième la boutique t’offre un objet. Sauter des jours ne t’enlève rien.'));
+      ? T('Tu en as déjà ouvert <b>{n}</b>. Chaque fois il grossit un peu, et tous les <b>sept</b>, la boutique t’en offre un — {combien} Sauter des jours ne t’enlève rien.',
+          {n:b.serie, combien:(7-(b.serie%7)===7 ? T('le prochain est le bon.')
+                                                 : T('plus que <b>{k}</b>.',{k:7-(b.serie%7)}))})
+      : T('Ouvre-le quand tu veux : il grossit à chaque fois, et au septième la boutique t’offre un objet. Sauter des jours ne t’enlève rien.')));
     p.appendChild(rule());
   }
 
   const ft=field('Ta bourse'), t=document.createElement('p'); t.className='tresor';
-  t.innerHTML='<b>'+b.shells+'</b> shell'+(b.shells>1?'s':'');
+  t.innerHTML=b.shells>1?T('<b>{n}</b> shells',{n:b.shells}):T('<b>{n}</b> shell',{n:b.shells});
   ft.appendChild(t); p.appendChild(ft);
 
   // Ce qui rapporte aujourd'hui, en quatre lignes plutôt qu'en quatre
@@ -9998,22 +10877,21 @@ function buildBoutique(){
      elle vaut ici aussi. */
   const f=b.faits||{}, touffes=touffesSur(mine);
   const gains=[
-    ['Tondre la pelouse', 'tonte', touffes
-      ? ('Marche sur les hautes herbes : 1 shell la touffe, et il en reste <b>'+touffes+'</b> sur ton île.')
-      : 'La pelouse est nette. Les herbes repousseront demain.', true],
-    ['Sortir le chien', 'promenade',
-      'Va voir ton chien, sors-le, et reste près de lui le temps d’un tour de l’île. Il y en a un dans ton atelier, au rayon <b>Bestioles</b>.', true],
-    ['Ramasser ce que la mer laisse', 'maree',
-      'Deux fois par jour la mer se retire et découvre un anneau de sable mouillé au bord de l’île. '+
-      'Va y marcher : elle y laisse des choses, <b>'+GAIN_MAREE+' shells</b> chacune.', true],
-    ['Laisser un mot chez quelqu’un', 'mot_pose',
-      '<b>'+GAIN_MOT_POSE+' shells</b> par personne, une fois par jour. Va dans l’onglet <b>Voisins</b>.', true],
-    ['Recevoir un mot chez toi', 'mot_recu',
-      '<b>'+GAIN_MOT_RECU+' shells</b> par personne qui passe. Rien à faire : partage l’adresse de ton île.', false],
-    ['Porter la commande du jour', 'commande',
-      'Remplis ton sac sur le sable à marée basse, puis va déposer le panier sur le pas de la porte de quelqu’un. Une fois par jour. Va dans l’onglet <b>Voisins</b>.', true],
-    ['Recevoir la commande chez toi', 'commande_recue',
-      '<b>'+GAIN_COMMANDE_RECUE+' shells</b> par personne qui t’en apporte une. Rien à faire : partage l’adresse de ton île.', false]
+    [GAINS_NOMS.tonte, 'tonte', touffes
+      ? T('Marche sur les hautes herbes : 1 shell la touffe, et il en reste <b>{n}</b> sur ton île.',{n:touffes})
+      : T('La pelouse est nette. Les herbes repousseront demain.'), true],
+    [GAINS_NOMS.promenade, 'promenade',
+      T('Va voir ton chien, sors-le, et reste près de lui le temps d’un tour de l’île. Il y en a un dans ton atelier, au rayon <b>{rayon}</b>.',{rayon:T('Bestioles')}), true],
+    [GAINS_NOMS.maree, 'maree',
+      T('Deux fois par jour la mer se retire et découvre un anneau de sable mouillé au bord de l’île. Va y marcher : elle y laisse des choses, <b>{n} shells</b> chacune.',{n:GAIN_MAREE}), true],
+    [GAINS_NOMS.mot_pose, 'mot_pose',
+      T('<b>{n} shells</b> par personne, une fois par jour. Va dans l’onglet <b>{onglet}</b>.',{n:GAIN_MOT_POSE,onglet:T('Voisins')}), true],
+    [GAINS_NOMS.mot_recu, 'mot_recu',
+      T('<b>{n} shells</b> par personne qui passe. Rien à faire : partage l’adresse de ton île.',{n:GAIN_MOT_RECU}), false],
+    [GAINS_NOMS.commande, 'commande',
+      T('Remplis ton sac sur le sable à marée basse, puis va déposer le panier sur le pas de la porte de quelqu’un. Une fois par jour. Va dans l’onglet <b>{onglet}</b>.',{onglet:T('Voisins')}), true],
+    [GAINS_NOMS.commande_recue, 'commande_recue',
+      T('<b>{n} shells</b> par personne qui t’en apporte une. Rien à faire : partage l’adresse de ton île.',{n:GAIN_COMMANDE_RECUE}), false]
   ];
   const fg=field('Ce qui rapporte aujourd’hui');
   const box=document.createElement('div'); box.className='gains';
@@ -10022,9 +10900,9 @@ function buildBoutique(){
     const p0=PLAFOND[cle]||0, fait=Math.min(f[cle]||0,p0), plein=p0&&fait>=p0;
     if(!plein){ if(soi) reste+=p0-fait; else resteSiOnPasse+=p0-fait; }
     const d=document.createElement('div'); d.className='gain'+(plein?' plein':'');
-    d.innerHTML='<b>'+nom+'</b><span class="n">'+fait+' / '+p0+'</span>'+
+    d.innerHTML='<b>'+T(nom)+'</b><span class="n">'+fait+' / '+p0+'</span>'+
       '<div class="bar"><i style="width:'+(p0?Math.round(fait/p0*100):0)+'%"></i></div>'+
-      '<small>'+(plein?'C’est tout pour aujourd’hui. Ça repart demain.':quoi)+'</small>';
+      '<small>'+(plein?T('C’est tout pour aujourd’hui. Ça repart demain.'):quoi)+'</small>';
     box.appendChild(d);
   });
   fg.appendChild(box);
@@ -10054,15 +10932,17 @@ function buildBoutique(){
      langage : c'est la règle centrale du jeu, **l'île grandit parce que
      des gens sont passés**, énoncée à l'endroit exact où l'enfant compte
      son argent. */
-  const sh=n=>'<b>'+n+' shell'+(n>1?'s':'')+'</b>';
+  const sh=n=>n>1?T('<b>{n} shells</b>',{n}):T('<b>{n} shell</b>',{n});
   p.appendChild(hint(
     reste
-      ? ('Il te reste '+sh(reste)+' à aller chercher aujourd’hui. Ce qui les donne est <b>en bas de cet onglet</b>.'
-         + (resteSiOnPasse ? ' Et '+sh(resteSiOnPasse)+' de plus si des gens passent sur ton île — ça, ça ne se joue pas, ça se partage.' : ''))
+      ? (resteSiOnPasse
+          ? T('Il te reste {a} à aller chercher aujourd’hui. Ce qui les donne est <b>en bas de cet onglet</b>. Et {b} de plus si des gens passent sur ton île — ça, ça ne se joue pas, ça se partage.',
+              {a:sh(reste), b:sh(resteSiOnPasse)})
+          : T('Il te reste {a} à aller chercher aujourd’hui. Ce qui les donne est <b>en bas de cet onglet</b>.',{a:sh(reste)}))
       : resteSiOnPasse
-        ? ('Tu as pris tout ce que l’île donnait aujourd’hui. Il reste '+sh(resteSiOnPasse)
-           + ' si des gens passent sur ton île : partage son adresse, dans l’onglet <b>Voisins</b>.')
-        : 'Tu as pris tout ce que l’île donnait aujourd’hui. Ça repart demain — le détail est <b>en bas de cet onglet</b>.'));
+        ? T('Tu as pris tout ce que l’île donnait aujourd’hui. Il reste {b} si des gens passent sur ton île : partage son adresse, dans l’onglet <b>{onglet}</b>.',
+            {b:sh(resteSiOnPasse), onglet:T('Voisins')})
+        : T('Tu as pris tout ce que l’île donnait aujourd’hui. Ça repart demain — le détail est <b>en bas de cet onglet</b>.')));
   p.appendChild(rule());
 
   const choisi = vitrine ? BOUTIQUE.find(a=>a.k===vitrine) : null;
@@ -10085,7 +10965,7 @@ function buildBoutique(){
     else                    apercuToi(c.getContext('2d'),a.k,a.c);
     const nom=document.createElement('span'); nom.textContent=T(a.n);
     const prix=document.createElement('span'); prix.className='prix';
-    prix.textContent = eu ? '✓ à toi' : (a.prix+' shells');
+    prix.textContent = eu ? T('✓ à toi') : T('{n} shells',{n:a.prix});
     bt.appendChild(c); bt.appendChild(nom); bt.appendChild(prix);
     bt.onclick=()=>{ vitrine = (vitrine===a.k) ? null : a.k; buildAll(); };
     return bt;
@@ -10113,7 +10993,7 @@ function buildBoutique(){
   // porte donc sa ligne, et elle travaille : elle dit que ces rayons-là sont
   // ceux de l'atelier, donc où l'objet ira se ranger une fois payé.
   const ileTitre=field('Sur ton île');
-  ileTitre.appendChild(hint('Les rayons sont ceux de ton <b>atelier</b> : un objet acheté ici va se ranger dans le rayon du même nom, dans l’onglet <b>Île</b>.'));
+  ileTitre.appendChild(hint(T('Les rayons sont ceux de ton <b>atelier</b> : un objet acheté ici va se ranger dans le rayon du même nom, dans l’onglet <b>{onglet}</b>.',{onglet:T('Île')})));
   p.appendChild(ileTitre);
   const dejaVu=[];
   OBJ_GROUPS.forEach(([titre,items])=>{
@@ -10121,7 +11001,7 @@ function buildBoutique(){
     const lot=BOUTIQUE.filter(a=>a.ou==='ile'&&cles.indexOf(a.k)>=0);
     if(!lot.length) return;
     lot.forEach(a=>dejaVu.push(a.k));
-    rayon(T(titre),lot,'ile');
+    rayon(titre,lot,'ile');
   });
   // Un article d'île qui ne serait dans aucun rayon de l'atelier ne doit pas
   // disparaître de la vitrine : il se vendrait sans pouvoir se poser, et rien
@@ -10136,11 +11016,12 @@ function buildBoutique(){
   p.appendChild(apres);
 
   p.appendChild(rule());
-  p.appendChild(hint('Tout se paie en <b>shells</b>, la monnaie de l’île. On les gagne en jouant, jamais avec de l’argent : il n’y a rien à acheter ici avec autre chose que des shells.'));
-  p.appendChild(hint('Un objet s’achète <b>une fois, pour toujours</b> : il rejoint ton atelier et tu en poses autant que tu veux, sans repayer. Ce qui est acheté apparaît dans l’onglet <b>Île</b> ou dans <b>Dedans</b>, dans son rayon. Ce qui est <b>pour toi</b> n’a pas d’atelier : ça agit dès l’achat.'));
+  p.appendChild(hint(T('Tout se paie en <b>shells</b>, la monnaie de l’île. On les gagne en jouant, jamais avec de l’argent : il n’y a rien à acheter ici avec autre chose que des shells.')));
+  p.appendChild(hint(T('Un objet s’achète <b>une fois, pour toujours</b> : il rejoint ton atelier et tu en poses autant que tu veux, sans repayer. Ce qui est acheté apparaît dans l’onglet <b>{onglet}</b> ou dans <b>Dedans</b>, dans son rayon. Ce qui est <b>pour toi</b> n’a pas d’atelier : ça agit dès l’achat.',
+    {onglet:T('Île')})));
   p.appendChild(hint(bourseServeur
-    ? 'Ta bourse est tenue par le serveur, pas par ton navigateur : elle te suit d’un appareil à l’autre, et c’est lui qui compte les jours. Les shells qu’une visite rapporte, c’est le mot planté qui les déclenche — personne ne peut les demander.'
-    : 'Tu joues sans compte : cette bourse ne vit que dans ce navigateur, et rien n’en sort. Connecte-toi et crée ton île pour qu’elle te suive, et pour que les visites rapportent.'));
+    ? T('Ta bourse est tenue par le serveur, pas par ton navigateur : elle te suit d’un appareil à l’autre, et c’est lui qui compte les jours. Les shells qu’une visite rapporte, c’est le mot planté qui les déclenche — personne ne peut les demander.')
+    : T('Tu joues sans compte : cette bourse ne vit que dans ce navigateur, et rien n’en sort. Connecte-toi et crée ton île pour qu’elle te suive, et pour que les visites rapportent.')));
 }
 // Le comptoir : ce qu'on a choisi, ce que ça coûte, et le seul bouton qui
 // débite. Il dit « il te manque 8 shells » là où on vient de cliquer.
@@ -10150,19 +11031,19 @@ function comptoir(a){
   // Le prix, ici aussi et pas seulement sur la vignette : quand on ne peut
   // pas encore payer, le bouton dit ce qui manque et plus ce que ça coûte,
   // et « il te manque 45 shells » ne dit pas si l'objet en vaut 50 ou 500.
-  h.innerHTML='<b>'+esc(T(a.n))+'</b> \u00b7 '+a.prix+' shells — '+esc(T(a.d));
+  h.innerHTML=T('<b>{nom}</b> · {prix} shells — {quoi}',{nom:esc(T(a.n)),prix:a.prix,quoi:esc(T(a.d))});
   const r=document.createElement('div'); r.className='row';
   const ok=document.createElement('button'); ok.className='btn primary';
   const manque=a.prix-mine.bourse.shells;
-  if(achete(a.k)){ ok.textContent='Déjà à toi'; ok.disabled=true; }
-  else if(manque>0){ ok.textContent='Il te manque '+manque+' shell'+(manque>1?'s':''); ok.disabled=true; }
-  else { ok.textContent='Acheter pour '+a.prix+' shells'; ok.onclick=()=>acheter(a); }
-  const non=document.createElement('button'); non.className='btn'; non.textContent='Laisser';
+  if(achete(a.k)){ ok.textContent=T('Déjà à toi'); ok.disabled=true; }
+  else if(manque>0){ ok.textContent=manque>1?T('Il te manque {n} shells',{n:manque}):T('Il te manque {n} shell',{n:manque}); ok.disabled=true; }
+  else { ok.textContent=T('Acheter pour {n} shells',{n:a.prix}); ok.onclick=()=>acheter(a); }
+  const non=document.createElement('button'); non.className='btn'; non.textContent=T('Laisser');
   non.onclick=()=>{ vitrine=null; buildAll(); };
   r.appendChild(ok); r.appendChild(non);
   w.appendChild(h); w.appendChild(r);
   if(manque>0 && !achete(a.k))
-    w.appendChild(hint('Va tondre ta pelouse, et reviens : la tonte donne <b>'+PLAFOND.tonte+' shells</b> par jour, et le cadeau du jour s’y ajoute.'));
+    w.appendChild(hint(T('Va tondre ta pelouse, et reviens : la tonte donne <b>{n} shells</b> par jour, et le cadeau du jour s’y ajoute.',{n:PLAFOND.tonte})));
   return w;
 }
 // C'est le serveur qui débite, et c'est lui qui connaît le prix : le
@@ -10184,8 +11065,8 @@ async function acheter(a){
   // l'atelier des pièces qu'une fois la porte franchie : le dire ici évite
   // le « j'ai payé et je ne trouve rien ».
   say(a.ou==='ile'
-    ? ('<b>'+esc(a.n)+'</b> est à toi. Tu la trouveras dans ton atelier, et tu peux en poser autant que tu veux.')
-    : ('<b>'+esc(a.n)+'</b> est à toi. <b>Entre dans ta maison</b> : l’atelier des pièces t’attend dans ce même panneau, et tu peux en poser autant que tu veux.'));
+    ? T('<b>{quoi}</b> est à toi. Tu la trouveras dans ton atelier, et tu peux en poser autant que tu veux.',{quoi:esc(T(a.n))})
+    : T('<b>{quoi}</b> est à toi. <b>Entre dans ta maison</b> : l’atelier des pièces t’attend dans ce même panneau, et tu peux en poser autant que tu veux.',{quoi:esc(T(a.n))}));
 }
 
 /* ---- le cadeau du jour ----
@@ -10467,7 +11348,8 @@ function releverLaBoite(){
               BOITE_VIDE); return; }
   const lus=recus.slice(-3).reverse()
     .map(m=>'<b>'+esc(m.auteur_nom)+'</b> : \u00ab\u00a0'+esc(m.texte)+'\u00a0\u00bb').join(' \u00b7 ');
-  say(lus + (n>3 ? ' \u2014 et '+(n-3)+' autre'+(n-3>1?'s':'')+', dans le livre d\u2019or.' : ''), BOITE_VIDE);
+  say(n>4 ? T('{lus} \u2014 et {k} autres, dans le livre d\u2019or.',{lus,k:n-3})
+    : n>3 ? T('{lus} \u2014 et un autre, dans le livre d\u2019or.',{lus}) : lus, BOITE_VIDE);
 }
 
 /* ---- la girouette ----
@@ -10567,21 +11449,21 @@ function carteCommande(){
     const c=document.createElement('canvas'); c.width=120; c.height=120;
     apercuTrouvaille(c.getContext('2d'),k,!ok);
     const nom=document.createElement('span');
-    nom.textContent=NOM_TROUVAILLE[k].replace(/^(un|une) /,'');
+    nom.textContent=sansArticle(T(NOM_TROUVAILLE[k]));
     const q=document.createElement('span'); q.className='prix';
-    q.textContent = ok ? '\u2713 dans ton sac' : 'il en faut un';
+    q.textContent = ok ? T('\u2713 dans ton sac') : T('il en faut un');
     d.appendChild(c); d.appendChild(nom); d.appendChild(q);
     g.appendChild(d); });
   f.appendChild(g);
 
   if(!store.configure||!moi){
-    f.appendChild(hint('La commande est la même pour tout l’archipel : la mer la dépose sur le sable de chaque île à marée basse, et on va la porter chez quelqu’un. <b>Connecte-toi et crée ton île</b> pour pouvoir la livrer.'));
+    f.appendChild(hint(T('La commande est la même pour tout l’archipel : la mer la dépose sur le sable de chaque île à marée basse, et on va la porter chez quelqu’un. <b>Connecte-toi et crée ton île</b> pour pouvoir la livrer.')));
     return f;
   }
   if(commandePortee()){
-    f.appendChild(hint('✓ <b>Tu as porté la commande aujourd’hui.</b> Elle revient demain, et ce sera autre chose.'));
+    f.appendChild(hint(T('✓ <b>Tu as porté la commande aujourd’hui.</b> Elle revient demain, et ce sera autre chose.')));
   }else if(commandePrete()){
-    f.appendChild(hint('🧺 <b>Ton sac est prêt.</b> Va chez quelqu’un, marche jusqu’au pas de sa porte, et appuie sur <b>E</b> ou touche le bouton rose : tu gagnes <b>'+GAIN_COMMANDE+' shells</b>, et lui <b>'+GAIN_COMMANDE_RECUE+'</b>, qu’il trouvera en rentrant.'));
+    f.appendChild(hint(T('🧺 <b>Ton sac est prêt.</b> Va chez quelqu’un, marche jusqu’au pas de sa porte, et appuie sur <b>E</b> ou touche le bouton rose : tu gagnes <b>{a} shells</b>, et lui <b>{b}</b>, qu’il trouvera en rentrant.',{a:GAIN_COMMANDE,b:GAIN_COMMANDE_RECUE})));
   }else{
     const m=commandeManque();
     // On échappe **chaque** nom, puis on joint. L'inverse — joindre d'abord,
@@ -10589,12 +11471,13 @@ function carteCommande(){
     // `</b>` s'affichent en clair au milieu de la phrase. C'était le cas ici
     // et dans la bulle du pas de la porte ; quatre lignes plus bas, les noms
     // des porteurs le faisaient déjà dans le bon ordre.
-    f.appendChild(hint('Il te manque <b>'+m.map(esc).join('</b> et <b>')+'</b>. À marée basse, la mer les laisse sur le sable mouillé au bord de <b>ton</b> île : c’est là qu’on remplit le sac. Chez les voisins, il n’y a rien à ramasser : on y va les mains pleines, pas l’inverse.'));
+    f.appendChild(hint(T('Il te manque {quoi}. À marée basse, la mer les laisse sur le sable mouillé au bord de <b>ton</b> île : c’est là qu’on remplit le sac. Chez les voisins, il n’y a rien à ramasser : on y va les mains pleines, pas l’inverse.',{quoi:listeEt(m.map(x=>'<b>'+esc(x)+'</b>'))})));
   }
   if(livraisonsRecues.length){
     const noms=livraisonsRecues.map(l=>esc(l.auteur_nom||'Quelqu’un'));
-    f.appendChild(hint('📦 Aujourd’hui, <b>'+noms.join('</b>, <b>')+'</b> t’'+(noms.length>1?'ont':'a')+
-      ' déposé un panier devant ta porte. Les shells sont déjà dans ta bourse.'));
+    f.appendChild(hint(noms.length>1
+      ? T('📦 Aujourd’hui, <b>{qui}</b> t’ont déposé un panier devant ta porte. Les shells sont déjà dans ta bourse.',{qui:noms.join('</b>, <b>')})
+      : T('📦 Aujourd’hui, <b>{qui}</b> t’a déposé un panier devant ta porte. Les shells sont déjà dans ta bourse.',{qui:noms.join('')})));
   }
   return f;
 }
@@ -10619,15 +11502,15 @@ function carteReponses(){
     t.innerHTML=(i<reponsesNouvelles?'<b>·</b> ':'')+
       '<b>'+esc(r.qui)+'</b> a répondu à ton mot : « '+esc(r.reponse)+' »';
     const b=document.createElement('button'); b.className='btn'+(i<reponsesNouvelles?' primary':'');
-    b.textContent='Aller chez '+r.qui;
+    b.textContent=T('Aller chez {qui}',{qui:r.qui});
     b.onclick=()=>go(r.slug);
     l.appendChild(t); l.appendChild(b); f.appendChild(l);
   });
   if(mesReponses.length>4)
-    f.appendChild(hint('Et '+(mesReponses.length-4)+' autre'+(mesReponses.length>5?'s':'')+
-      ', plus anciennes.'));
-  f.appendChild(hint('Un mot planté chez quelqu’un peut recevoir une réponse. '+
-    'C’est la seule chose du jeu qui vienne te chercher.'));
+    f.appendChild(hint(mesReponses.length>5
+      ? T('Et {n} autres, plus anciennes.',{n:mesReponses.length-4})
+      : T('Et {n} autre, plus ancienne.',{n:mesReponses.length-4})));
+  f.appendChild(hint(T('Un mot planté chez quelqu’un peut recevoir une réponse. C’est la seule chose du jeu qui vienne te chercher.')));
   return f;
 }
 function buildVoisins(){
@@ -10668,13 +11551,13 @@ function buildVoisins(){
     const rc=document.createElement('div'); rc.className='row';
     const oc=document.createElement('button'); oc.className='btn primary';
     oc.style.flex='1 1 auto'; oc.style.fontSize='15.5px';
-    oc.textContent='💌 Envoyer ma carte postale';
+    oc.textContent=T('💌 Envoyer ma carte postale');
     oc.disabled=!!visiting;
     oc.onclick=()=>{ carteOuverte=true; buildAll(); };
     rc.appendChild(oc); fc.appendChild(rc);
     fc.appendChild(hint(visiting
-      ? 'Une carte postale montre <b>ton</b> île, pas celle de l’hôte. Rentre chez toi, et elle t’attend ici.'
-      : 'Une image de ton île, ton nom, ton adresse, et une phrase de toi. Elle part dans WhatsApp, dans un message, où tu veux — et qui la reçoit peut venir marcher chez toi.'));
+      ? T('Une carte postale montre <b>ton</b> île, pas celle de l’hôte. Rentre chez toi, et elle t’attend ici.')
+      : T('Une image de ton île, ton nom, ton adresse, et une phrase de toi. Elle part dans WhatsApp, dans un message, où tu veux — et qui la reçoit peut venir marcher chez toi.')));
   }
   apres.appendChild(fc);
   apres.appendChild(carteParrainage());
@@ -10693,21 +11576,22 @@ function buildVoisins(){
     const c=document.createElement('canvas'); c.width=104; c.height=104;
     thumb(c.getContext('2d'),{pal:r.pal,me:r.av});
     const txt=document.createElement('div'); txt.className='n-txt';
-    txt.innerHTML='<strong>'+esc(r.nom||'Sans nom')+'</strong><span>'+esc(r.who||'?')+' \u00b7 '+r.n+' mot'+(r.n>1?'s':'')+'</span>';
+    txt.innerHTML='<strong>'+esc(r.nom||T('Sans nom'))+'</strong><span>'+esc(r.who||'?')+
+      (r.n>1?T(' · {n} mots',{n:r.n}):T(' · {n} mot',{n:r.n}))+'</span>';
     const b=document.createElement('button');
     const here = r.slug===ici;
     b.className='btn'+(here?'':' primary');
-    b.textContent = here ? 'ici' : (r.slug===(monSlug||'me') ? 'Rentrer' : 'Visiter');
+    b.textContent = here ? T('ici') : (r.slug===(monSlug||'me') ? T('Rentrer') : T('Visiter'));
     b.disabled=here; b.onclick=()=>go(r.slug);
     d.appendChild(c); d.appendChild(txt); d.appendChild(b); list.appendChild(d);
   });
   f.appendChild(list);
   const r0=document.createElement('div'); r0.className='row';
-  const alea=document.createElement('button'); alea.className='btn primary'; alea.textContent='\ud83c\udfb2 Une \u00eele au hasard';
+  const alea=document.createElement('button'); alea.className='btn primary'; alea.textContent=T('\ud83c\udfb2 Une \u00eele au hasard');
   alea.onclick=()=>{ const autres=rows.filter(r=>r.slug!==ici);
     if(!autres.length){ say(T('Il n\u2019y a encore personne d\u2019autre \u00e0 visiter.')); return; }
     go(autres[Math.floor(Math.random()*autres.length)].slug); };
-  const cp0=document.createElement('button'); cp0.className='btn'; cp0.textContent='\ud83d\udd17 Copier mon lien';
+  const cp0=document.createElement('button'); cp0.className='btn'; cp0.textContent=T('\ud83d\udd17 Copier mon lien');
   cp0.disabled=!monSlug;
   cp0.onclick=()=>copierLien(lienIle(),'Ton lien est copi\u00e9. Qui cr\u00e9e son \u00eele en arrivant par l\u00e0 devient ton filleul.');
   r0.appendChild(alea); r0.appendChild(cp0); f.appendChild(r0);
@@ -10735,11 +11619,11 @@ function buildVoisins(){
      de coller pour l'importer. */
   champCode=ta;
   const r3=document.createElement('div'); r3.className='row';
-  const cp=document.createElement('button'); cp.className='btn'; cp.textContent='Copier';
+  const cp=document.createElement('button'); cp.className='btn'; cp.textContent=T('Copier');
   cp.onclick=()=>{ ta.select();
     if(navigator.clipboard) navigator.clipboard.writeText(ta.value).then(()=>say(T('Code copi\u00e9.')),()=>say(T('S\u00e9lectionne et copie \u00e0 la main.')));
     else say(T('S\u00e9lectionne et copie \u00e0 la main.')); };
-  const im=document.createElement('button'); im.className='btn'; im.textContent='Importer';
+  const im=document.createElement('button'); im.className='btn'; im.textContent=T('Importer');
   im.onclick=()=>{ try{ const w=decode(ta.value.trim());
       if(!w||!w.tiles||!w.me||w.tiles.length!==GRID*GRID) throw 0;
       const mots=mine.mots; mine=recentrer(Object.assign(defaultWorld(),w)); mine.id='me'; mine.mots=mots;
@@ -10749,7 +11633,7 @@ function buildVoisins(){
     }catch(e){ say(T('Ce code n\u2019est pas lisible.')); } };
   r3.appendChild(cp); r3.appendChild(im);
   sf.appendChild(ta); sf.appendChild(r3); p.appendChild(sf);
-  p.appendChild(hint('Le code reste utile pour sauvegarder ou dupliquer une \u00eele hors ligne. Le partage, lui, passe par ton adresse publique.'));
+  p.appendChild(hint(T('Le code reste utile pour sauvegarder ou dupliquer une \u00eele hors ligne. Le partage, lui, passe par ton adresse publique.')));
 }
 
 /* ================= bandeau compte ================= */
@@ -10826,14 +11710,14 @@ function peindreCarteCompte(){
 
   if(!store.configure){
     compteCharge=true;
-    ajout(txt('<b>Mode d\u00e9mo.</b> Renseigne la cl\u00e9 <span class="mono">anon</span> dans <span class="mono">src/config.js</span> pour brancher les comptes et les \u00eeles publiques.'));
+    ajout(txt(T('<b>Mode d\u00e9mo.</b> Renseigne la cl\u00e9 <span class="mono">anon</span> dans <span class="mono">src/config.js</span> pour brancher les comptes et les \u00eeles publiques.')));
     return;
   }
   if(!compteCharge){
     // Tant que la session n'est pas revenue, on ne sait pas encore qui est
     // là : proposer de se connecter à quelqu'un de déjà connecté, c'est
     // l'inviter à croire qu'il ne l'est pas.
-    ajout(txt('Chargement de ton compte\u2026'));
+    ajout(txt(T('Chargement de ton compte\u2026')));
     return;
   }
   if(!moi){
@@ -10841,8 +11725,8 @@ function peindreCarteCompte(){
     // qu'il n'y a rien d'autre \u00e0 faire qu'ouvrir sa bo\u00eete mail, un champ
     // vide et un bouton actif n'invitent qu'\u00e0 r\u00e9appuyer.
     if(lienA){
-      ajout(txt('\ud83d\udcec <b>Lien envoy\u00e9 \u00e0 '+esc(lienA)+'.</b> Ouvre-le <b>depuis cet appareil</b> : '+
-                'il ne marche pas ailleurs. S\u2019il tarde, regarde dans les ind\u00e9sirables.','envoye'));
+      ajout(txt(T('\ud83d\udcec <b>Lien envoy\u00e9 \u00e0 {mail}.</b> Ouvre-le <b>depuis cet appareil</b> : il ne marche pas ailleurs. S\u2019il tarde, regarde dans les ind\u00e9sirables.',
+                  {mail:esc(lienA)}),'envoye'));
       const re=document.createElement('button'); re.className='btn';
       // Le compte \u00e0 rebours est le seul texte qui change chaque seconde, et
       // `#compte` porte `aria-live="polite"` : sans ce `off`, un lecteur
@@ -10850,38 +11734,38 @@ function peindreCarteCompte(){
       re.setAttribute('aria-live','off');
       re.onclick=()=>envoyerLien(lienA);
       const autre=document.createElement('button'); autre.className='btn';
-      autre.textContent='Changer d\u2019adresse';
+      autre.textContent=T('Changer d\u2019adresse');
       autre.onclick=()=>{ lienA=''; lienErr=''; peindreCompte(); };
       ajout(re); ajout(autre);
       const majRenvoi=()=>{
         const r=Math.max(0, Math.ceil((RENVOI-(Date.now()-lienLe))/1000));
         re.disabled = lienEnvoi || r>0;
-        re.textContent = lienEnvoi ? 'Envoi\u2026'
-                       : (r ? 'Renvoyer dans '+r+'\u00a0s' : 'Renvoyer le lien');
+        re.textContent = lienEnvoi ? T('Envoi\u2026')
+                       : (r ? T('Renvoyer dans {n}\u00a0s',{n:r}) : T('Renvoyer le lien'));
         if(!r) clearInterval(lienMinuteur);
       };
       majRenvoi();
       if(!lienEnvoi) lienMinuteur=setInterval(majRenvoi, 1000);
       return;
     }
-    ajout(txt('Re\u00e7ois un lien de connexion par e-mail, pas de mot de passe \u00e0 retenir.'));
+    ajout(txt(T('Re\u00e7ois un lien de connexion par e-mail, pas de mot de passe \u00e0 retenir.')));
     if(lienErr) ajout(txt('\u26a0\ufe0f '+esc(lienErr),'souci'));
-    const mail=document.createElement('input'); mail.type='email'; mail.placeholder='toi@exemple.be';
+    const mail=document.createElement('input'); mail.type='email'; mail.placeholder=T('toi@exemple.be');
     // L'adresse tap\u00e9e survit au refus : la retaper apr\u00e8s une erreur, c'est
     // la deuxi\u00e8me chose qui fait abandonner.
     mail.value=lienSaisi;
     mail.oninput=()=>{ lienSaisi=mail.value; };
     mail.onkeydown=(e)=>{ if(e.key==='Enter') envoyerLien(mail.value); };
     const go2=document.createElement('button'); go2.className='btn primary';
-    go2.disabled=lienEnvoi; go2.textContent=lienEnvoi?'Envoi\u2026':'Recevoir mon lien';
+    go2.disabled=lienEnvoi; go2.textContent=lienEnvoi?T('Envoi\u2026'):T('Recevoir mon lien');
     go2.onclick=()=>envoyerLien(mail.value);
     ajout(mail); ajout(go2); return;
   }
-  ajout(txt((monPseudo?esc(monPseudo):'Connect\u00e9')+'','qui'));
+  ajout(txt((monPseudo?esc(monPseudo):T('Connect\u00e9'))+'','qui'));
   if(!monSlug){
-    ajout(txt('Choisis l\u2019adresse de ton \u00eele :'));
-    const sl=document.createElement('input'); sl.type='text'; sl.placeholder='dan'; sl.maxLength=24;
-    const cr=document.createElement('button'); cr.className='btn primary'; cr.textContent='Cr\u00e9er mon \u00eele';
+    ajout(txt(T('Choisis l\u2019adresse de ton \u00eele :')));
+    const sl=document.createElement('input'); sl.type='text'; sl.placeholder=T('dan'); sl.maxLength=24;
+    const cr=document.createElement('button'); cr.className='btn primary'; cr.textContent=T('Cr\u00e9er mon \u00eele');
     cr.onclick=async()=>{
       const v=sl.value.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/^-+|-+$/g,'');
       if(v.length<2){ say(T('Deux caract\u00e8res minimum, lettres et chiffres.')); return; }
@@ -10906,17 +11790,17 @@ function peindreCarteCompte(){
     // de copie sont aussi dans l'onglet Voisins, sous \u00ab \ud83d\udd17 Copier mon
     // lien \u00bb. C'est ce qui permet \u00e0 l'\u00e9cran couch\u00e9 de s'en passer sans rien
     // perdre. Ne pas en marquer un dont ce serait le seul endroit.
-    ajout(txt('\u00b7 ton \u00eele : <span class="lien">'+esc(url)+'</span>','redite'));
-    const cp=document.createElement('button'); cp.className='btn redite'; cp.textContent='Copier le lien';
+    ajout(txt(T('\u00b7 ton \u00eele : <span class="lien">{url}</span>',{url:esc(url)}),'redite'));
+    const cp=document.createElement('button'); cp.className='btn redite'; cp.textContent=T('Copier le lien');
     cp.onclick=()=>{ const full=location.origin+'/'+monSlug;
       if(navigator.clipboard) navigator.clipboard.writeText(full).then(()=>say(T('Lien copi\u00e9.')),()=>say(T('Copie \u00e0 la main : {nom}', {nom: esc(full)})));
       else say(T('Copie \u00e0 la main : {nom}', {nom: esc(full)})); };
     ajout(cp);
     const e=document.createElement('span'); e.className='etat'; e.dataset.e=etatSauvegarde;
-    e.textContent = etatSauvegarde || 'en ligne'; ajout(e);
+    e.textContent = etatSauvegarde || T('en ligne'); ajout(e);
   }
   const sep=document.createElement('span'); sep.className='sep'; ajout(sep);
-  const out=document.createElement('button'); out.className='btn'; out.textContent='Se d\u00e9connecter';
+  const out=document.createElement('button'); out.className='btn'; out.textContent=T('Se d\u00e9connecter');
   out.onclick=async()=>{ await store.deconnexion(); location.href='/'; };
   ajout(out);
 }
@@ -10979,6 +11863,7 @@ async function demarrer(){
      Et elle se lit dans l'adresse, donc avant le nettoyage de l'URL qui
      suit juste en dessous. */
   choisirLangue();
+  traduireLeCadre();
   // Le code de parrainage, puis l'adresse nettoyée : les deux avant tout
   // le reste, sinon un `history.replaceState` passerait après le premier
   // `pushState` du routeur et remettrait la query.
@@ -11083,20 +11968,21 @@ async function chargerMonCompte(){
          c'est le premier qui est perdu — la règle déjà écrite pour le
          quatrième pas du guide et le message d'arrivée. */
       const nouvelles=[];
-      if(motsNouveaux) nouvelles.push('<b>'+motsNouveaux+' nouveau'+(motsNouveaux>1?'x mots':' mot')+
-        '</b> sur ton \u00eele, et des <b>shells</b> avec');
+      if(motsNouveaux) nouvelles.push(motsNouveaux>1
+        ? T('<b>{n} nouveaux mots</b> sur ton \u00eele, et des <b>shells</b> avec',{n:motsNouveaux})
+        : T('<b>{n} nouveau mot</b> sur ton \u00eele, et des <b>shells</b> avec',{n:motsNouveaux}));
       /* **Ça nomme toujours quelqu'un.** Le premier jet disait « 2
          réponses à tes mots » dès qu'il y en avait deux : un compteur, là
          où tout l'intérêt est que *quelqu'un te parle*. Trouvé par le
          contrôle 21, qui cherchait le prénom et ne le trouvait pas. */
       if(reponsesNouvelles){
         const q=mesReponses.slice(0,reponsesNouvelles).map(r=>'<b>'+esc(r.qui)+'</b>');
-        nouvelles.push(q.length===1 ? q[0]+' t\u2019a r\u00e9pondu'
-          : q.length===2 ? q[0]+' et '+q[1]+' t\u2019ont r\u00e9pondu'
-          : q[0]+' et '+(q.length-1)+' autres t\u2019ont r\u00e9pondu');
+        nouvelles.push(q.length===1 ? T('{a} t\u2019a r\u00e9pondu',{a:q[0]})
+          : q.length===2 ? T('{a} et {b} t\u2019ont r\u00e9pondu',{a:q[0],b:q[1]})
+          : T('{a} et {n} autres t\u2019ont r\u00e9pondu',{a:q[0],n:q.length-1}));
       }
-      if(nouvelles.length) say(T('Depuis ton dernier passage : {a}. {b}', {a: nouvelles.join(' \u00b7 '), b: (reponsesNouvelles ? T('C\u2019est dans l\u2019onglet <b>Voisins</b>.')
-                           : T('Va les lire dans l\u2019onglet <b>\u00cele</b>.'))}), 0, 4200);
+      if(nouvelles.length) say(T('Depuis ton dernier passage : {a}. {b}', {a: nouvelles.join(' \u00b7 '), b: (reponsesNouvelles ? T('C\u2019est dans l\u2019onglet <b>{onglet}</b>.',{onglet:T('Voisins')})
+                           : T('Va les lire dans l\u2019onglet <b>{onglet}</b>.',{onglet:T('Île')}))}), 0, 4200);
       try{ await store.marquerVu(ile.id); }catch(e){}
       const grandi=rayonPour(mine.mots.length);
       if(grandi>(mine.rayon||RAYON0)){ mine.rayon=grandi; }
@@ -11211,7 +12097,8 @@ function cadrePhoto(){
 function appareilEnMain(){ return achete('appareil'); }
 function basculerViseur(){
   if(!appareilEnMain()){
-    say(T('Il te faut un <b>appareil photo</b> : il est à la Boutique, au rayon <b>Pour toi</b>.')); return; }
+    say(T('Il te faut un <b>appareil photo</b> : il est à la {boutique}, au rayon <b>{pourtoi}</b>.',
+      {boutique: T('Boutique'), pourtoi: T('Pour toi')})); return; }
   if(viseurOn){ declencher=true; return; }
   viseurOn=true; son('viseur'); hudSync();
   say(T('<b>Viseur ouvert.</b> Place-toi, cadre, puis appuie encore sur <b>P</b> ou sur 📷 pour déclencher.'), 'viseur');
@@ -11311,7 +12198,7 @@ function prendreLaPhoto(t){
   flashJusqua=t+180; son('photo'); fermerLeViseur();
   // La phrase dit maintenant ce qu'on peut en **faire**, pas seulement où
   // elle est allée : l'album n'est plus une impasse.
-  say(T('<b>Photo prise{a}.</b> Elle est enregistrée, et elle est dans ton album, onglet <b>Toi</b> — clique-la pour l’envoyer.', {a: (visiting ? T(' chez {hote}', {hote: esc(chez)}) : '')}));
+  say(T('<b>Photo prise{a}.</b> Elle est enregistrée, et elle est dans ton album, onglet <b>{toi}</b> — clique-la pour l’envoyer.', {toi: T('Moi'), a: (visiting ? T(' chez {hote}', {hote: esc(chez)}) : '')}));
   buildAll();
 }
 /* L'album. Une photo par prise, en JPEG.
@@ -11540,7 +12427,7 @@ function dessinerCartePostale(g,phrase){
   // La phrase. Elle est facultative : sans elle, la carte dit simplement
   // d'o\u00f9 elle vient, et c'est d\u00e9j\u00e0 une invitation.
   g.fillStyle='#3F6B85'; g.font='600 26px Nunito, sans-serif';
-  g.fillText(ligneCoupee(g,phrase||'Viens marcher chez moi.',760), m+12, y0+128);
+  g.fillText(ligneCoupee(g,phrase||T('Viens marcher chez moi.'),760), m+12, y0+128);
   g.fillStyle='#8AA3B2'; g.font='500 22px "DM Mono", ui-monospace, monospace';
   g.fillText(adr, m+12, y0+166);
 
@@ -11628,7 +12515,7 @@ function partagerWhatsApp(){
 }
 function copierLien(url,mot){
   if(navigator.clipboard) navigator.clipboard.writeText(url)
-    .then(()=>say(mot||'Lien copi\u00e9.'),()=>say(T('Copie \u00e0 la main : {nom}', {nom: esc(url)})));
+    .then(()=>say(mot||T('Lien copi\u00e9.')),()=>say(T('Copie \u00e0 la main : {nom}', {nom: esc(url)})));
   else say(T('Copie \u00e0 la main : {nom}', {nom: esc(url)}));
 }
 // Le comptoir de la carte postale, dans l'onglet Voisins. Il se ferme
@@ -11642,34 +12529,33 @@ function carteComptoir(){
 
   const f=field('Ta petite phrase');
   const i=document.createElement('input'); i.type='text'; i.maxLength=48;
-  i.placeholder='Viens marcher chez moi.'; i.value=cartePhrase;
+  i.placeholder=T('Viens marcher chez moi.'); i.value=cartePhrase;
   i.oninput=()=>{ cartePhrase=i.value.slice(0,48);
     dessinerCartePostale(c.getContext('2d'),cartePhrase); };
   f.appendChild(i); box.appendChild(f);
 
   const r1=document.createElement('div'); r1.className='row';
   const env=document.createElement('button'); env.className='btn primary';
-  env.textContent='\ud83d\udc8c Envoyer ma carte postale';
+  env.textContent=T('\ud83d\udc8c Envoyer ma carte postale');
   env.onclick=()=>envoyerCartePostale();
   const wa=document.createElement('button'); wa.className='btn whats';
-  wa.textContent='Partager sur WhatsApp';
+  wa.textContent=T('Partager sur WhatsApp');
   wa.onclick=()=>partagerWhatsApp();
   r1.appendChild(env); r1.appendChild(wa); box.appendChild(r1);
 
   const r2=document.createElement('div'); r2.className='row';
-  const sv=document.createElement('button'); sv.className='btn'; sv.textContent='Enregistrer l\u2019image';
+  const sv=document.createElement('button'); sv.className='btn'; sv.textContent=T('Enregistrer l\u2019image');
   sv.onclick=()=>enregistrerCarte();
-  const cl=document.createElement('button'); cl.className='btn'; cl.textContent='Copier le lien';
+  const cl=document.createElement('button'); cl.className='btn'; cl.textContent=T('Copier le lien');
   cl.onclick=()=>copierLien(lienCarte());
-  const fm=document.createElement('button'); fm.className='btn'; fm.textContent='Fermer';
+  const fm=document.createElement('button'); fm.className='btn'; fm.textContent=T('Fermer');
   fm.onclick=()=>{ carteOuverte=false; buildAll(); };
   r2.appendChild(sv); r2.appendChild(cl); r2.appendChild(fm); box.appendChild(r2);
 
   box.appendChild(hint(monSlug
-    ? ('Le lien m\u00e8ne \u00e0 ta carte, puis \u00e0 ton \u00eele : <span class="mono">'+esc(lienCarte())+'</span>. '+
-       'Qui cr\u00e9e son \u00eele en arrivant par l\u00e0 devient ton <b>filleul</b>, et vous recevez des shells tous les deux.')
-    : 'Ton \u00eele n\u2019a pas encore d\u2019adresse : la carte s\u2019enregistre et s\u2019envoie, mais le lien ram\u00e8ne \u00e0 l\u2019accueil. '+
-      'Donne-lui son adresse dans le bandeau, en haut de la page, et le lien m\u00e8nera chez toi.'));
+    ? T('Le lien m\u00e8ne \u00e0 ta carte, puis \u00e0 ton \u00eele : <span class="mono">{lien}</span>. Qui cr\u00e9e son \u00eele en arrivant par l\u00e0 devient ton <b>filleul</b>, et vous recevez des shells tous les deux.',
+        {lien:esc(lienCarte())})
+    : T('Ton \u00eele n\u2019a pas encore d\u2019adresse : la carte s\u2019enregistre et s\u2019envoie, mais le lien ram\u00e8ne \u00e0 l\u2019accueil. Donne-lui son adresse dans le bandeau, en haut de la page, et le lien m\u00e8nera chez toi.')));
   return box;
 }
 
@@ -11757,7 +12643,7 @@ function peindreGuide(){
     const n=document.createElement('span'); n.className='pas'; n.style.background='transparent';
     n.style.fontSize='17px'; n.textContent=noteIcone;
     const q=document.createElement('span'); q.className='quoi'; q.innerHTML=note1;
-    const ok=document.createElement('button'); ok.type='button'; ok.textContent='Compris';
+    const ok=document.createElement('button'); ok.type='button'; ok.textContent=T('Compris');
     ok.onclick=()=>fermerLaNote();
     guideEl.appendChild(n); guideEl.appendChild(q); guideEl.appendChild(ok);
     return;
@@ -11766,13 +12652,13 @@ function peindreGuide(){
   const p=PAS[guidePas];
   guideEl.hidden=false; guideEl.innerHTML='';
   const n=document.createElement('span'); n.className='pas'; n.textContent=String(guidePas);
-  const q=document.createElement('span'); q.className='quoi'; q.innerHTML=p.q;
+  const q=document.createElement('span'); q.className='quoi'; q.innerHTML=T(p.q);
   const pts=document.createElement('span'); pts.className='points';
   for(let i=1;i<=4;i++){ const d=document.createElement('i');
     d.className = i<guidePas ? 'fait' : (i===guidePas ? 'ici' : ''); pts.appendChild(d); }
-  const su=document.createElement('button'); su.type='button'; su.textContent='Suivant';
+  const su=document.createElement('button'); su.type='button'; su.textContent=T('Suivant');
   su.onclick=()=>avancerLeGuide();
-  const pa=document.createElement('button'); pa.type='button'; pa.textContent='Passer';
+  const pa=document.createElement('button'); pa.type='button'; pa.textContent=T('Passer');
   pa.onclick=()=>finirLeGuide(false);
   guideEl.appendChild(n); guideEl.appendChild(q); guideEl.appendChild(pts);
   guideEl.appendChild(su); guideEl.appendChild(pa);
@@ -11808,9 +12694,9 @@ function peindreInvite(){
   inviteEl.hidden=false; inviteEl.innerHTML='';
   const t=document.createElement('span');
   t.style.flex='1 1 170px';
-  t.innerHTML='Tu es chez <b>'+esc(world.owner||'quelqu’un')+'</b>. Toi aussi, tu peux avoir ton île.';
+  t.innerHTML=T('Tu es chez <b>{qui}</b>. Toi aussi, tu peux avoir ton île.',{qui:esc(world.owner||T('quelqu’un'))});
   const b=document.createElement('button'); b.className='btn'; b.type='button';
-  b.textContent='Créer mon île';
+  b.textContent=T('Créer mon île');
   b.onclick=()=>{
     if(world.slug) capterParrain(world.slug);
     go('me');
@@ -11851,25 +12737,25 @@ async function reglerLeParrainage(){
   try{ filleuls=await store.mesFilleuls(); }catch(e){}
   try{ localStorage.setItem(SHELLS1,'1'); }catch(e){}
   noteUneFois('\ud83d\udc8c',
-    '<b>+'+(r.gagne|0)+' shells</b> de bienvenue, offerts par <b>'+esc(code)+'</b> — '+
-    'et autant pour lui. Les shells servent à personnaliser ton île : va voir la <b>Boutique</b>.');
+    T('<b>+{n} shells</b> de bienvenue, offerts par <b>{qui}</b> — et autant pour lui. Les shells servent à personnaliser ton île : va voir la <b>{boutique}</b>.',
+      {n:(r.gagne|0), qui:esc(code), boutique:T('Boutique')}));
   buildAll();
 }
 function carteParrainage(){
   const f=field('Inviter quelqu’un');
   if(!monSlug){
-    f.appendChild(hint('Ton île n’a pas encore d’adresse. Donne-lui-en une dans le bandeau, en haut de '+
-      'la page : cette adresse sera aussi ton <b>code de parrainage</b>.'));
+    f.appendChild(hint(T('Ton île n’a pas encore d’adresse. Donne-lui-en une dans le bandeau, en haut de la page : cette adresse sera aussi ton <b>code de parrainage</b>.')));
     return f;
   }
   const l=document.createElement('ul'); l.className='gb';
   const li=document.createElement('li');
-  li.innerHTML='Quand quelqu’un crée son île depuis ton lien : <b>+'+GAIN_PARRAIN+' shells</b> pour toi, '+
-               '<b>+'+GAIN_BIENVENUE+'</b> pour lui.';
+  li.innerHTML=T('Quand quelqu’un crée son île depuis ton lien : <b>+{a} shells</b> pour toi, <b>+{b}</b> pour lui.',
+                 {a:GAIN_PARRAIN, b:GAIN_BIENVENUE});
   l.appendChild(li);
   if(filleuls){
     const li2=document.createElement('li');
-    li2.innerHTML='<b>'+filleuls+' île'+(filleuls>1?'s sont nées':' est née')+'</b> de tes liens. Merci pour l’archipel.';
+    li2.innerHTML=filleuls>1?T('<b>{n} îles sont nées</b> de tes liens. Merci pour l’archipel.',{n:filleuls})
+                        :T('<b>{n} île est née</b> de tes liens. Merci pour l’archipel.',{n:filleuls});
     l.appendChild(li2);
   }
   f.appendChild(l);
@@ -11887,10 +12773,9 @@ function expliquerLesShells(n){
     if(localStorage.getItem(SHELLS1)) return;
     localStorage.setItem(SHELLS1,'1');
   }catch(e){ return; }
+  const suite=T('Les shells servent à personnaliser ton île : des objets à poser, des meubles, des bottes pour marcher plus vite. Tout ça t’attend dans la <b>{boutique}</b>.',{boutique:T('Boutique')});
   noteUneFois('\ud83d\udc1a',
-    '<b>+'+n+' shell'+(n>1?'s':'')+'.</b> Les shells servent à personnaliser ton île : '+
-    'des objets à poser, des meubles, des bottes pour marcher plus vite. '+
-    'Tout ça t’attend dans la <b>Boutique</b>.');
+    n>1 ? T('<b>+{n} shells.</b> {suite}',{n,suite}) : T('<b>+{n} shell.</b> {suite}',{n,suite}));
 }
 
 /* ================= navigation ================= */
@@ -11999,9 +12884,9 @@ function hudSync(){
   // pas le paillasson, elle évite de le chercher.
   const hn=document.getElementById('hud-name');
   hn.classList.toggle('retour', dedans);
-  hn.textContent = dedans ? '← Ton île' : (world.name || 'Sans nom');
+  hn.textContent = dedans ? T('← Ton île') : (world.name || T('Sans nom'));
   hn.disabled = !dedans;
-  hn.setAttribute('aria-label', dedans ? 'Ressortir sur ton île' : 'Nom de l’île');
+  hn.setAttribute('aria-label', dedans ? T('Ressortir sur ton île') : T('Nom de l’île'));
   // Le compteur de la balade. Dans le bandeau et pas dans le murmure : le
   // murmure s'efface au premier panneau croisé, et le tour dure.
   const hb=document.getElementById('hud-balade');
@@ -12013,7 +12898,8 @@ function hudSync(){
   // bouton Son à la ligne, sur le ciel. On n'entre que chez soi, de toute
   // façon : « Chez toi » n'y apprend rien.
   m.textContent = dedans ? T(pieceDef(piece).n)
-    : (visiting ? 'Invité chez '+world.owner : (tool.mode==='marche'?'Chez toi':'Chez toi · édition'));
+    : (visiting ? T('Invité chez {qui}',{qui:world.owner})
+                : (tool.mode==='marche'?T('Chez toi'):T('Chez toi · édition')));
   m.className='plate'+(visiting?' guest':'');
   // Un gain qui se contente de changer un chiffre ne se voit pas. La
   // plaque sursaute quand la bourse monte : c'est le seul moment où le
@@ -12022,7 +12908,7 @@ function hudSync(){
   const hs=document.getElementById('hud-sous');
   // Le coquillage d'abord : une monnaie se reconnaît avant de se lire, et
   // en portrait étroit le mot part sans que la plaque cesse de parler.
-  hs.innerHTML = '🐚 <b>'+n+'</b> <span class="mot">shell'+(n>1?'s':'')+'</span>';
+  hs.innerHTML = '🐚 <b>'+n+'</b> <span class="mot">'+(n>1?T('shells'):T('shell'))+'</span>';
   if(sousAffiches!==null && n>sousAffiches){
     hs.classList.remove('gagne'); void hs.offsetWidth; hs.classList.add('gagne');
   }
@@ -12105,8 +12991,8 @@ mesurerEcran(); camSauter();
 // Le cadre est court en portrait : trois lignes de bulle couvraient
 // l'île qu'on vient d'ouvrir. Deux suffisent à dire la même chose.
 say(matchMedia('(pointer:coarse)').matches
-  ? 'Touche l\u2019île pour marcher. Avec un pinceau actif, la touche pose.'
-  : 'Flèches ou ZQSD pour marcher. Clic pour te déplacer, ou pour poser quand un pinceau est actif.');
+  ? T('Touche l\u2019île pour marcher. Avec un pinceau actif, la touche pose.')
+  : T('Flèches ou ZQSD pour marcher. Clic pour te déplacer, ou pour poser quand un pinceau est actif.'));
 demarrer();
 })();
 </script>

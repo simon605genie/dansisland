@@ -20,7 +20,7 @@ const s = await servir(8158);
    `page.evaluate` ne le voit pas. C'est la technique du 20/09 — instrumenter
    l'objet mesuré plutôt que de déduire son comportement d'un effet de bord. */
 const sonde = await servir(8160, src => remplacer(src, /function langueDuNavigateur\(\)\{/,
-  'window.__T=(k,v)=>T(k,v); window.__langue=()=>langue; window.__tables=()=>textesDeTable(); function langueDuNavigateur(){'));
+  'window.__T=(k,v)=>T(k,v); window.__langue=()=>langue; window.__tables=()=>textesDeTable(); window.__vus=()=>[...VUS]; function langueDuNavigateur(){'));
 const nav = await navigateur();
 const c = compteur();
 const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -138,7 +138,56 @@ c.titre('3. ce qui n’est pas traduit retombe sur le français, et rien ne cass
     await p.ctx.close();
     return r;
   })();
-  const uniques = [...new Set(cles.concat(tables))];
+  /* **Les libellés de l'interface sont des arguments, pas des littéraux.**
+     Depuis que `field()`, `chips()` et `textField()` traduisent eux-mêmes
+     leur libellé, la clé est écrite chez l'appelant — `field('Ta terre')` —
+     donc la regex sur `T('…')` ne la voit pas. Deux sources de plus, et
+     elles ne se recouvrent pas :
+
+     1. le **premier littéral** de chaque puits. Un seul par appel, jamais
+        le deuxième : `chips(label, path, …)` porterait sinon `me.genre`
+        comme phrase à traduire — mesuré, treize faux positifs.
+     2. le registre `VUS` du jeu, relu **après avoir ouvert les panneaux**.
+        C'est lui qui attrape les noms de puces, qui vivent dans des
+        tableaux en ligne et qu'aucune regex sûre ne peut extraire.
+
+     La première est statique, donc elle voit les branches qu'on ne visite
+     pas ; la seconde est une mesure, donc elle voit ce que la liste des
+     puits aurait oublié. C'est la leçon du contrôle 12 — quand le moteur
+     peut répondre, c'est à lui qu'il faut demander — et celle du repère
+     absent : les deux comptent ce qu'elles ont lu. */
+  const PUITS = ['field', 'chips', 'chipsLibre', 'swatches', 'textField', 'hint', 'rayon'];
+  const puits = [];
+  for (const f of PUITS)
+    for (const m of propre.matchAll(new RegExp('\\b' + f + "\\(\\s*'((?:[^'\\\\]|\\\\.)*)'", 'g')))
+      puits.push(lire(m[1]));
+  const vus = await (async () => {
+    const p = await ouvrir({ 'dansisland:langue': 'en' }, sonde.url);
+    const clic = async re => {
+      for (const b of await p.page.$$('.panel.on button')) {
+        const t = await b.textContent();
+        if (re.test(t)) { await b.scrollIntoViewIfNeeded(); await b.click(); return true; }
+      }
+      return false;
+    };
+    const tous = ['toi', 'maison', 'ile', 'voisins', 'boutique'];
+    const tour = async () => { for (const o of tous) {
+      await p.page.click('.tabs button[data-tab="' + o + '"]'); await attendre(220); } };
+    await tour();
+    await p.page.click('.tabs button[data-tab="voisins"]'); await attendre(220);
+    await clic(/postcard|postale/); await attendre(350);          // le comptoir de la carte
+    await p.page.click('.tabs button[data-tab="maison"]'); await attendre(220);
+    await clic(/inside|Entrer/); await attendre(650);              // dedans
+    await tour();
+    await p.page.click('#hud-name'); await attendre(650);          // et ressortir
+    await p.page.click('.tabs button[data-tab="voisins"]'); await attendre(220);
+    await clic(/^Visit|^Visiter/); await attendre(1100);           // chez un voisin
+    await tour();
+    const r = await p.page.evaluate(() => window.__vus());
+    await p.ctx.close();
+    return r;
+  })();
+  const uniques = [...new Set(cles.concat(tables, puits, vus))].filter(k => k);
   const bloc = (src.match(/TRAD\.en=\{([\s\S]*?)\n\};/) || [])[1] || '';
   const paires = [...bloc.matchAll(/^  '((?:[^'\\]|\\.)*)':\n    '((?:[^'\\]|\\.)*)',/gm)]
     .map(m => [lire(m[1]), lire(m[2])]);
@@ -147,6 +196,8 @@ c.titre('3. ce qui n’est pas traduit retombe sur le français, et rien ne cass
   // l'absoudre : sans clés lues, tout le reste serait vrai sans rien dire.
   c.dit(uniques.length > 120, uniques.length + ' phrases passent par T()');
   c.dit(tables.length > 100, 'dont ' + tables.length + ' venues des tables, que le jeu déclare lui-même');
+  c.dit(puits.length > 40, 'et ' + puits.length + ' sont des libellés passés à un puits');
+  c.dit(vus.length > 250, 'le jeu en a demandé ' + vus.length + ' en ouvrant tous les panneaux');
   c.dit(traduites.length > 120, traduites.length + ' sont traduites en anglais');
   console.log('     couverture : ' + Math.round(traduites.length * 100 / uniques.length) + ' %');
 
@@ -186,6 +237,19 @@ c.titre('3. ce qui n’est pas traduit retombe sur le français, et rien ne cass
         paires.length + ' paires relues en entier');
   c.dit(fantomes === 0, 'aucun trou de l’anglais n’est absent du français (' + fantomes + ')');
 
+  /* **Une traduction porte les mêmes balises que sa clé.** Toutes les
+     phrases ne sont pas rendues en `innerHTML` : la description d'un
+     article de la vitrine passe par `esc()`, donc un `<b>` ajouté dans
+     l'anglais s'affiche **en clair**, « you pick one in the <b>Me</b>
+     tab ». C'est le défaut que `balises.mjs` surveille depuis le 19/09 —
+     mais il tourne en français, et ne pouvait donc pas le voir. Trouvé en
+     lisant la page rendue en anglais, pas autrement. */
+  const bal = t => (t.match(/<\/?[a-z]+[^>]*>/gi) || []).sort().join('');
+  const mauvaises = paires.filter(([fr, en]) => bal(fr) !== bal(en));
+  for (const [fr] of mauvaises.slice(0, 4)) console.log('     balises : ' + fr.slice(0, 60));
+  c.dit(mauvaises.length === 0,
+        'et chaque traduction porte les mêmes balises que sa clé (' + mauvaises.length + ')');
+
   /* **La majuscule voyage avec le trou.** `unObjet(t, maj, …)` et
      `laPiece(k, maj, …)` décident d'une capitale à l'appel, donc pour
      *toutes* les langues à la fois — et une traduction qui déplace le trou
@@ -198,7 +262,13 @@ c.titre('3. ce qui n’est pas traduit retombe sur le français, et rien ne cass
      trou ouvre la phrase, **dans les deux langues**. Il ne vaut que pour
      ces deux fonctions — `{qui}` rend un prénom, toujours capitalisé, et
      `{n}` un nombre. */
-  const tete = (t, h) => new RegExp('^(?:<b>|📷 |↩ |<br>↩ )*\\{' + h + '\\}').test(t);
+  /* **Ouvrir une phrase, ce n'est pas forcément ouvrir la clé.** Une clé
+     peut porter deux phrases — « Trois pièces, et personne d'autre que toi
+     n'y entre. {piece} fait 6x5 cases » — et le trou y ouvre bien une
+     phrase, dans les deux langues. La règle est donc « début de clé **ou**
+     après une ponctuation de fin de phrase », et c'est ce qu'elle a
+     toujours voulu dire. */
+  const tete = (t, h) => new RegExp('(?:^|[.!?…]\\s+)(?:<b>|📷 |↩ |<br>↩ )*\\{' + h + '\\}').test(t);
   const anglais = Object.fromEntries(paires);
   const appels = /\bT\('((?:[^'\\]|\\.)*)',\s*\{/g;
   let m3, majVus = 0, majFaux = [];
@@ -258,11 +328,47 @@ c.titre('4. le câblage : plus une phrase ne monte un article à la main');
 
   /* Et le vrai garde-fou du point 1 : plus aucun `say()` ne monte une
      phrase française par morceaux. Un `+` entre deux textes, c'est un
-     ordre de mots figé, donc une phrase intraduisible. */
-  const assemblees = [...code.matchAll(/\bsay\(\s*'[^'\n]{12,}'\s*\+/g)];
-  for (const a of assemblees.slice(0, 4)) console.log('     reste : ' + a[0].slice(0, 70));
-  c.dit(assemblees.length === 0,
-        'aucun say() ne monte plus une phrase par morceaux (' + assemblees.length + ')');
+     ordre de mots figé, donc une phrase intraduisible.
+
+     **Cette règle ne regardait que le premier littéral**, juste après
+     `say(`. Elle rendait zéro, et il y avait **dix** sites : tous dans un
+     ternaire, `say(cond ? ('Tondu'+n+' shell…') : …)`, donc hors de sa
+     portée. C'est mot pour mot « un contrôle qui ne parcourt qu'un côté a
+     l'angle mort de l'autre », et il a fallu les libellés pour le voir.
+     Elle lit maintenant **tout l'argument**, `T(…)` imbriqués aveuglés —
+     le même découpage que la règle des trous, juste en dessous.
+
+     `bulle(k, html)` entre dans le même contrôle, mais par son **second**
+     argument : le premier est une clé de verrou (`'sign'+x+'-'+y`), et
+     l'y chercher rendait quatre faux positifs. */
+  const argDe = (nom, n0) => {           // l'argument n° n0 de chaque appel à `nom`
+    const out = [];
+    for (const m of code.matchAll(new RegExp('\\b' + nom + '\\(', 'g'))) {
+      let p = 1, k = m.index + m[0].length;
+      const deb = k;
+      for (; k < code.length && p; k++) {
+        const ch = code[k];
+        if (ch === '(') p++; else if (ch === ')') p--;
+      }
+      const tout = code.slice(deb, k - 1);
+      /* On découpe aux virgules de **niveau 0** et on prend l'argument
+         voulu — pas « tout ce qui suit ». `say(msg, lock)` porte une clé
+         de verrou en second, et la lire comme du texte rendait six faux
+         positifs : 'dessus', 'sol', 'panneau'. */
+      const args = []; let d = 0, q = null, deb2 = 0;
+      for (let i = 0; i <= tout.length; i++) {
+        if (i === tout.length) { args.push(tout.slice(deb2)); break; }
+        const ch = tout[i];
+        if (q) { if (ch === '\\') i++; else if (ch === q) q = null; continue; }
+        if ('"\'`'.includes(ch)) q = ch;
+        else if ('([{'.includes(ch)) d++;
+        else if (')]}'.includes(ch)) d--;
+        else if (ch === ',' && !d) { args.push(tout.slice(deb2, i)); deb2 = i + 1; }
+      }
+      if (args[n0] !== undefined) out.push(args[n0]);
+    }
+    return out;
+  };
 
   /* **Et l'autre moitié du même défaut, celle qui se cachait mieux :** une
      phrase traduite dont un trou reçoit du français écrit en dur. Ça rend
@@ -308,6 +414,50 @@ c.titre('4. le câblage : plus une phrase ne monte un article à la main');
   for (const t of recolles.slice(0, 6)) console.log('     recollé : ' + t);
   c.dit(recolles.length === 0,
         'aucun trou ne reçoit du français recollé (' + recolles.length + ')');
+
+  /* La même règle, appliquée à **tout l'argument** de `say()` et au second
+     de `bulle()`. Elle remplace celle qui ne lisait que le premier
+     littéral et qui rendait zéro sur dix vraies phrases assemblées. */
+  const morceaux = [];
+  for (const [nom, n0] of [['say', 0], ['bulle', 1]])
+    for (const arg of argDe(nom, n0))
+      for (const x of sansT(arg)
+             .matchAll(/(?:\+\s*)'((?:[^'\\]|\\.)*)'|'((?:[^'\\]|\\.)*)'(?=\s*\+)/g)) {
+        const t = x[1] ?? x[2];
+        if (motDedans(t)) morceaux.push(nom + ' : ' + t.slice(0, 56));
+      }
+  c.dit(argDe('say', 0).length > 40, argDe('say', 0).length + ' appels à say() lus');
+  for (const t of morceaux.slice(0, 6)) console.log('     ' + t);
+  c.dit(morceaux.length === 0,
+        'aucune bulle ne monte sa phrase par morceaux (' + morceaux.length + ')');
+
+  /* **Et le trou que ni l'un ni l'autre ne voyait : du texte qui ne passe
+     pas par `T()` du tout.** Six `bulle()` étaient dans ce cas — le coffre
+     plein, le coffre vide, la boîte vide, la crotte, la girouette, la
+     porte — et aucune regex sur `T('…')` ne peut les trouver, puisque
+     c'est l'absence de `T()` qui est le défaut. On lit donc l'argument :
+     un texte, c'est-à-dire un littéral à trois lettres, doit être dedans. */
+  const sansAppel = [];
+  for (const [nom, n0] of [['say', 0], ['bulle', 1]])
+    for (const arg of argDe(nom, n0))
+      for (const x of sansT(arg).matchAll(/'((?:[^'\\]|\\.)*)'/g))
+        // Une phrase a au moins un espace. Sans ça, les clés de verrou
+        // passées en second à `say()` — 'dessus', 'sol', 'panneau' — et la
+        // media query `(pointer:coarse)` rendaient six faux positifs.
+        if (motDedans(x[1]) && /\s/.test(x[1])) sansAppel.push(nom + ' : ' + x[1].slice(0, 56));
+  for (const t of sansAppel.slice(0, 6)) console.log('     hors T() : ' + t);
+  c.dit(sansAppel.length === 0,
+        'et pas une qui saute T() (' + sansAppel.length + ')');
+
+  /* **Une clé est un seul littéral.** `T('a'+'b')` marche à l'exécution —
+     JavaScript concatène avant l'appel — mais la clé vraie n'est écrite
+     nulle part : l'extraction de la section 3 n'en voit que le premier
+     morceau, donc la phrase se compte comme non traduite **pour
+     toujours**, et la traduction qu'on écrit pour elle reste orpheline.
+     Mesuré : zéro avant ce chantier, douze pendant, zéro après. */
+  const coupees = [...code.matchAll(/\bT\('(?:[^'\\]|\\.)*'\s*\+\s*'/g)];
+  c.dit(coupees.length === 0,
+        'une clé est un seul littéral, jamais une somme (' + coupees.length + ')');
 }
 
 c.titre('5. le lien emporte la langue, et lui seul');

@@ -5794,3 +5794,167 @@ règle, elle, se dit en une ligne.
 
 C'est le dernier morceau, et il se décide comme les autres : un libellé se
 traduit partout où il s'affiche, ou nulle part.
+
+### Les libellés de l'interface aussi — 22/09/2026 au soir
+
+**654 clés**, et c'est le dernier morceau : les onglets, les plaques du
+bandeau, les en-têtes de panneau, les puces, les boutons, les 46 notes
+grises, la carte de connexion. Plus un mot du cadre n'est en dur.
+
+**Aucune migration, aucune clé de plus dans `mondeNu()`** : une langue est
+un réglage de l'appareil qui regarde.
+
+#### Le libellé est une clé, et c'est le puits qui traduit
+
+`field('Ta terre')`, et c'est `field()` qui appelle `T()`. Pareil pour
+`chips()`, `chipsLibre()`, `swatches()` et `textField()` — libellé **et**
+exemple. Trente-neuf libellés, trente noms de puces et six champs sont donc
+devenus des clés sans qu'on les écrive une par une, et **un libellé neuf
+est couvert le jour où il est posé**.
+
+Ce que ça coûte, et il faut le dire : la clé n'est plus un littéral dans la
+source, c'est un **argument de l'appelant**. Aucune regex sur `T('…')` ne
+peut la voir. C'est ce qui a demandé les deux sources de clés de plus, plus
+bas.
+
+`field(label, pret)` a gagné un second paramètre pour le seul libellé
+**composé** du jeu, celui du livre d'or qui porte le nom de l'île : sans
+lui, la phrase montée serait demandée comme clé et ne se traduirait jamais.
+Même choix que le `saut` de `drawChar()`.
+
+Les libellés **écrits dans le HTML** portent `data-t` (« mon texte est ma
+clé ») ou `data-t-aria`. `traduireLeCadre()` les relit au démarrage et à
+chaque changement de langue, et la clé d'origine est retenue dans
+`data-tFr` — sinon un second passage prendrait la traduction pour clé.
+`data-t` ne va que sur une **feuille** : `textContent` détruirait les
+enfants, et c'est pour ça que l'invite de rotation porte l'attribut sur ses
+deux lignes et non sur le bouton.
+
+#### Une phrase qui nomme un bouton le reçoit en trou
+
+« Envoie ta carte postale, onglet **Voisins** » devenait faux à la seconde
+où l'onglet s'est appelé *Neighbours*. Vingt-et-une phrases nommaient un
+libellé en dur, des deux côtés — et **douze valeurs anglaises déjà écrites
+citaient le libellé français**, parce qu'au moment où elles ont été
+traduites, il n'y avait rien à traduire.
+
+Toutes passent par un trou, nourri par `T()` : `{voisins}`, `{boutique}`,
+`{gomme}`, `{tourner}`, `{sens}`, `{retour}`, `{entrer}`, `{pourtoi}`,
+`{son}`, `{musique}`, `{rayon}`. **C'est la seule forme où le texte et le
+bouton ne peuvent pas diverger**, et c'est la règle déjà tenue pour
+`PIVOT_ILE` dans la phrase du Sens et pour les prix SQL.
+
+Deux mots y échappent, et c'est raisonné : **« Dedans » et « pour toi »
+dans la phrase de la vitrine ne sont pas des libellés de bouton** — il n'y
+a plus d'onglet Dedans depuis le 18/09, et la phrase parle du rayon en
+minuscules. Les mettre en trou changeait le **français** (« ou dans
+Pièce »), ce que ce chantier s'est interdit.
+
+Noté au passage, pas corrigé : **la description du compagnon dit « onglet
+Toi » alors que l'onglet s'appelle « Moi »**. Elle est fausse en français
+depuis le 18/09. L'anglais dit « the <b>Me</b> tab », qui est juste ; le
+français reste tel quel, parce que le corriger serait changer le texte
+français dans un chantier qui garantit l'inverse.
+
+#### Les trois sources de clés, dont une est une mesure
+
+    T('…') dans la source        431 clés   statique, voit les branches non visitées
+    textesDeTable()              184        le registre que le jeu déclare
+    premier littéral d'un puits   57        field('…'), chips('…'), rayon('…')…
+    le registre VUS              373        ce que le jeu a vraiment demandé
+
+Le **premier** littéral, jamais le deuxième : `chips(label, path, …)`
+porterait sinon `me.genre` comme phrase à traduire — mesuré, treize faux
+positifs. Et `VUS` est le registre que `T()` remplit tout seul : le harnais
+ouvre les cinq onglets, le comptoir de la carte, l'intérieur et une visite
+chez un voisin, puis le relit. C'est lui qui attrape les **noms de puces**,
+qui vivent dans des tableaux en ligne et qu'aucune regex sûre n'extrait.
+
+Les deux se complètent exactement là où l'autre est aveugle : la statique
+voit ce qu'on ne visite pas, la mesure voit ce que la liste des puits
+aurait oublié. C'est la leçon du contrôle 12 — *quand le moteur peut
+répondre, c'est à lui qu'il faut demander* — doublée de celle du repère
+absent : les quatre comptes sont des assertions.
+
+#### Une clé est un seul littéral, jamais une somme
+
+`T('a'+'b')` marche à l'exécution — JavaScript concatène avant l'appel —
+mais la clé vraie n'est écrite nulle part : l'extraction n'en voit que le
+premier morceau, donc la phrase se compte comme non traduite **pour
+toujours**, et la traduction écrite pour elle reste orpheline. Zéro avant
+ce chantier, **douze pendant** (les miennes), zéro après, et c'est
+maintenant un contrôle.
+
+#### Ce que le contrôle 4 ne voyait pas, et qui était là depuis longtemps
+
+Sa règle lisait `say(\s*'…'\s*\+` — donc **le premier littéral seulement**.
+Elle rendait zéro, et il y avait **dix** `say()` montées par morceaux,
+toutes dans un ternaire : la tonte, la trouvaille ramassée, le départ et le
+retour du chien, le bonjour d'un habitant, la réponse envoyée, l'achat, la
+boîte aux lettres, Ctrl+Z, la pose d'un meuble. Hors de sa portée, donc
+invisibles.
+
+Elle lit maintenant **tout l'argument**, et le **second** de `bulle()` —
+le premier est une clé de verrou, et l'y chercher rendait quatre faux
+positifs. S'y ajoute l'invariant que ni l'une ni l'autre ne couvrait :
+**pas une bulle ne saute `T()`**. Il a trouvé **seize** textes qui
+n'appelaient pas `T()` du tout — six `bulle()` (le coffre plein, le coffre
+vide, la boîte vide, la crotte, la girouette, la porte) et dix `say()` —
+et aucune regex sur `T('…')` ne pouvait les voir, puisque c'est l'absence
+de `T()` qui est le défaut.
+
+C'est, mot pour mot, « un contrôle qui ne parcourt qu'un côté a l'angle
+mort de l'autre », et il a fallu traduire les libellés pour que ça se voie.
+Une phrase a au moins un espace : sans cette borne, les clés de verrou
+('dessus', 'sol', 'panneau') et la media query `(pointer:coarse)`
+rendaient six faux positifs.
+
+#### Un trou peut ouvrir une phrase au milieu de la clé
+
+La règle de la majuscule exigeait que le trou ouvre **la clé**. Or une clé
+porte parfois deux phrases — « Trois pièces, et personne d'autre que toi
+n'y entre. {piece} fait 6x5 cases » — et le trou y ouvre bien une phrase,
+dans les deux langues. La règle dit maintenant « début de clé **ou** après
+une ponctuation de fin de phrase », ce qu'elle a toujours voulu dire.
+Éprouvée en inversant un vrai `maj` : elle mord encore.
+
+#### Retirer un article est de la grammaire, pas une regex
+
+La vignette du sac montrait `NOM_TROUVAILLE[k].replace(/^(un|une) /,'')`.
+En anglais ça laissait « a shell ». `GRAMMAIRE[langue].nu` porte donc la
+forme à retirer, et `sansArticle()` est sa porte — huitième entrée du
+module, à côté de `de`, `venant`, `un`, `ton`, `ou`, `la`, `ala`. Et
+`listeEt()` joint une liste avec `T(' et ')`, parce que l'anglais dit
+« and » : une liste jointe en dur est un ordre de mots figé, exactement
+comme une phrase montée par morceaux.
+
+#### Ce qui reste en français, et c'est tout ce qui reste
+
+**Le voile d'accueil**, dont le texte est en dur dans le HTML parce que
+c'est le **seul** que Google puisse lire — le traduire demande de choisir
+entre un robot qui lit du français et un enfant qui lit sa langue, et ça se
+tranche avec des adresses par langue. **Les cinq pages éditoriales**, que
+la langue ne fait que traverser. Et **ce que les joueurs s'écrivent**, qui
+ne sera jamais traduit.
+
+#### La preuve de non-régression est celle des onze autres harnais
+
+Le français rend **octet pour octet** ce qu'il rendait avant : mesuré, en
+relevant le texte visible des cinq onglets, du bandeau, de la carte de
+connexion et de la colonne du bord droit, avant et après, dans un worktree
+sur le commit d'avant — **identique**, à la ligne du port près. Les douze
+harnais passent.
+
+Deux rendus français ont failli bouger, et c'est la mesure qui l'a dit :
+`listeEt()` qui ne mettait plus chaque article en gras, et les deux mots de
+la vitrine passés en trou. Les deux corrigés avant d'aller plus loin.
+
+#### Et cinq textes que seul le rendu a montrés
+
+La couverture disait 100 % et l'écran disait autre chose. Il a fallu
+**rendre les cinq onglets en anglais et lire la page** pour trouver, tous
+construits par concaténation hors de tout `T()` : la note de l'éditeur de
+visage, le « (20 shells à la Boutique) » de l'équipement, le compteur
+« 0 cran sur 10 · 0 mot dans ton livre d'or », la note de la peinture du
+sol, et **la carte de connexion entière**. C'est la règle du lit, des six
+bâtiments et du cadre-photo : *ça ne se voit que rendu.*
