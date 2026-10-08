@@ -5797,7 +5797,7 @@ traduit partout où il s'affiche, ou nulle part.
 
 ### Les libellés de l'interface aussi — 22/09/2026 au soir
 
-**654 clés**, et c'est le dernier morceau : les onglets, les plaques du
+**664 clés**, et c'est le dernier morceau : les onglets, les plaques du
 bandeau, les en-têtes de panneau, les puces, les boutons, les 46 notes
 grises, la carte de connexion. Plus un mot du cadre n'est en dur.
 
@@ -5858,10 +5858,12 @@ français dans un chantier qui garantit l'inverse.
 
 #### Les trois sources de clés, dont une est une mesure
 
-    T('…') dans la source        431 clés   statique, voit les branches non visitées
+    T('…') dans la source        441 clés   statique, voit les branches non visitées
     textesDeTable()              184        le registre que le jeu déclare
     premier littéral d'un puits   57        field('…'), chips('…'), rayon('…')…
-    le registre VUS              373        ce que le jeu a vraiment demandé
+    le registre VUS              374        ce que le jeu a vraiment demandé
+    ----------------------------------------------------------------------
+    663 clés distinctes, 664 traduites, couverture 100 %, 0 orpheline
 
 Le **premier** littéral, jamais le deuxième : `chips(label, path, …)`
 porterait sinon `me.genre` comme phrase à traduire — mesuré, treize faux
@@ -5875,6 +5877,15 @@ voit ce qu'on ne visite pas, la mesure voit ce que la liste des puits
 aurait oublié. C'est la leçon du contrôle 12 — *quand le moteur peut
 répondre, c'est à lui qu'il faut demander* — doublée de celle du repère
 absent : les quatre comptes sont des assertions.
+
+#### Une traduction porte les mêmes balises que sa clé
+
+Toutes les phrases ne sont pas rendues en `innerHTML` : la description d'un
+article de la vitrine passe par `esc()`. Un `<b>` ajouté dans l'anglais
+s'affichait donc **en clair** — « you pick one in the <b>Me</b> tab ». C'est
+le défaut que `balises.mjs` surveille depuis le 19/09, mais **il tourne en
+français**, et ne pouvait pas le voir. Trouvé en lisant la page rendue en
+anglais, pas autrement, et c'est maintenant un contrôle : une sur 664.
 
 #### Une clé est un seul littéral, jamais une somme
 
