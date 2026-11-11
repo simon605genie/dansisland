@@ -13,3 +13,8 @@ social/images/brut/
 # exactement ce qui fait que le Chromium du paquet et celui du conteneur ne
 # coïncident pas. C'est `DISPOSITIONS` dans `test/aide.mjs` qui absorbe ça.
 package-lock.json
+
+# La fabrique de Reels : polices rapatriées et sorties vidéo.
+social/reel/polices/
+social/reel/brut-*/
+social/reel/*.mp4
