@@ -8,3 +8,8 @@ dist/
 # Les cadres bruts de la fabrique Instagram : un intermédiaire de réglage,
 # 3,4 Mo pour huit images. Ce qui part en ligne, ce sont les cartes.
 social/images/brut/
+
+# Le lock n'est pas suivi : épingler un numéro de build de playwright est
+# exactement ce qui fait que le Chromium du paquet et celui du conteneur ne
+# coïncident pas. C'est `DISPOSITIONS` dans `test/aide.mjs` qui absorbe ça.
+package-lock.json
