@@ -30,16 +30,31 @@ const TYPES = {
    attendu par le paquet npm et celui qui est là ne coïncident pas
    forcément — et l'erreur ne dit que « Executable doesn't exist ». On se
    rabat donc sur le premier Chromium trouvé, plutôt que de demander à
-   quelqu'un de coller un chemin dans un fichier. */
+   quelqu'un de coller un chemin dans un fichier.
+
+   **Et la disposition du dossier change d'un conteneur à l'autre.** Celui-ci
+   range l'exécutable sous `chrome-linux64/chrome` ; le repli ne connaissait
+   que `chrome-linux/chrome`, donc il ne trouvait rien et `npm test` ne
+   pouvait pas tourner du tout. On essaie donc les dispositions connues, du
+   navigateur complet vers le shell sans tête — jamais une seule, et jamais
+   un chemin en dur : il serait faux sur l'autre machine. Un nom de plus
+   s'ajoute ici, et nulle part ailleurs. */
+const DISPOSITIONS = [
+  ['chrome-linux', 'chrome'],
+  ['chrome-linux64', 'chrome'],
+  ['chrome-headless-shell-linux64', 'chrome-headless-shell'],
+  ['chrome-linux', 'headless_shell'],
+];
 export async function navigateur(args = []) {
   try { return await chromium.launch({ args }); }
   catch (e) {
     const base = process.env.PLAYWRIGHT_BROWSERS_PATH;
     if (!base || !fs.existsSync(base)) throw e;
-    for (const d of fs.readdirSync(base).sort().reverse()) {
-      const p = path.join(base, d, 'chrome-linux', 'chrome');
-      if (fs.existsSync(p)) return chromium.launch({ executablePath: p, args });
-    }
+    for (const d of fs.readdirSync(base).sort().reverse())
+      for (const [dossier, bin] of DISPOSITIONS) {
+        const p = path.join(base, d, dossier, bin);
+        if (fs.existsSync(p)) return chromium.launch({ executablePath: p, args });
+      }
     throw e;
   }
 }
