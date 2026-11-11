@@ -1843,8 +1843,8 @@ TRAD.en={
     'one more thing on the sand',
   'tu as tout ramassé':
     'you have picked up everything',
-  'Tu ramasses {quoi}, mais la marée a déjà tout donné pour aujourd’hui : il ne rentre pas dans le sac non plus.':
-    'You pick up {quoi}, but the tide has already paid all it pays today: it does not go in the bag either.',
+  'Tu ramasses {quoi}, mais la marée a déjà tout donné pour aujourd’hui : rien ne rentre dans le sac non plus.':
+    'You pick up {quoi}, but the tide has already paid all it pays today: nothing goes in the bag either.',
   '<b>Le chien part devant.</b> Reste près de lui tout le tour de l’île : <b>{n} shells</b> à l’arrivée.':
     '<b>The dog sets off.</b> Stay close to him all the way round the island: <b>{n} shells</b> when you get back.',
   '<b>Le chien repart.</b> Il a déjà eu sa promenade du jour : celle-ci est pour le plaisir.':
@@ -8350,12 +8350,18 @@ function ramasserLaMaree(){
   const n=ramasser(c.t), reste=laisse.length;
   son('piece');
   say(n
-    ? T(n>1 ? 'Tu ramasses {quoi} et tu le mets dans ton sac. <b>+{n} shells</b> · {reste}'
-            : 'Tu ramasses {quoi} et tu le mets dans ton sac. <b>+{n} shell</b> · {reste}',
+    // Pas de pronom qui reprenne {quoi} : deux des quatre trouvailles sont
+    // féminines (une étoile de mer, une bouteille à la mer), et « tu **le**
+    // mets » était faux une fois sur deux. C'est la famille de « Un fleur de
+    // chez Lila » et de « Te voilà dans le chambre » — sauf qu'ici la phrase
+    // se réécrit sans pronom, ce qui vaut mieux qu'un accord à tenir : aucune
+    // langue n'a à le refaire. Même raison pour « rien ne rentre » plus bas.
+    ? T(n>1 ? 'Tu mets {quoi} dans ton sac. <b>+{n} shells</b> · {reste}'
+            : 'Tu mets {quoi} dans ton sac. <b>+{n} shell</b> · {reste}',
         {quoi:T(NOM_TROUVAILLE[c.t]), n,
          reste:(reste>1 ? T('encore {k} choses sur le sable',{k:reste})
                         : reste ? T('encore une chose sur le sable') : T('tu as tout ramassé'))})
-    : T('Tu ramasses {quoi}, mais la marée a déjà tout donné pour aujourd’hui : il ne rentre pas dans le sac non plus.',
+    : T('Tu ramasses {quoi}, mais la marée a déjà tout donné pour aujourd’hui : rien ne rentre dans le sac non plus.',
         {quoi:T(NOM_TROUVAILLE[c.t])}));
   buildAll();
 }

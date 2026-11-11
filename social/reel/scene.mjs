@@ -84,6 +84,11 @@ export const panneScene = src => {
                    +'\nwindow.__ou=()=>({x:+hero.x.toFixed(2),y:+hero.y.toFixed(2),dedans:!!dedans});'
                    +'\nwindow.__seuil=()=>{const c=porteIle(world.house)[0];return {x:c.x,y:c.y};};'
                    +'\nwindow.__outil=()=>({mode:tool.mode,kind:tool.kind,cible:target?{x:+target.x.toFixed(1),y:+target.y.toFixed(1)}:null,sas:!!sasArme});'
+                   +'\nwindow.__laisse=()=>laisse.map(c=>({x:c.x,y:c.y,t:c.t}));'
+                   +'\nwindow.__maison=()=>world.house?{x:world.house.x,y:world.house.y}:null;'
+                   +'\nwindow.__ciel=()=>world.sky;'
+                   +'\nwindow.__arc=()=>arcEnCiel();'
+                   +'\nwindow.__chien=()=>balade?{x:balade.x,y:balade.y,attend:!!balade.attend}:null;'
                    +'\nrequestAnimationFrame(frame);\n');
   return s;
 };
@@ -102,7 +107,9 @@ export async function casesLibres(p, mini = 6) {
     const out = [];
     for (let fy = 0.26; fy <= 0.82; fy += 0.04)
       for (let fx = 0.12; fx <= 0.88; fx += 0.04) {
-        const sx = x + w * fx, sy = y + h * fy, q = window.__case(sx, sy);
+        const sx = Math.round(x + w * fx), sy = Math.round(y + h * fy);
+        if (document.elementFromPoint(sx, sy)?.id !== 'world') continue;
+        const q = window.__case(sx, sy);
         if (q.ok) out.push({ sx, sy, tx: q.x, ty: q.y });
       }
     return out;
@@ -120,27 +127,75 @@ export async function casesLibres(p, mini = 6) {
 export async function pointDeCase(p, tx, ty) {
   const c = await cadreMonde(p);
   const q = await p.evaluate(({ x, y, w, h, tx, ty }) => {
-    for (let fy = 0.10; fy <= 0.92; fy += 0.012)
-      for (let fx = 0.06; fx <= 0.94; fx += 0.012) {
-        const sx = x + w * fx, sy = y + h * fy, k = window.__case(sx, sy);
-        if (k.x === tx && k.y === ty) return { sx, sy };
+    const bons = [];
+    for (let fy = 0.08; fy <= 0.94; fy += 0.008)
+      for (let fx = 0.04; fx <= 0.96; fx += 0.008) {
+        /* **Les coordonnées sont arrondies** : le pilote clique à l'entier le
+           plus proche, et un pixel suffit à tomber sur la case voisine — une
+           case fait 56 unités de monde pour ~25 pixels d'écran. Mesuré : on
+           visait (15,13) et le jeu recevait (14,13). On éprouve donc le point
+           exact qui sera cliqué, jamais celui qu'on a calculé.
+           Le pad de marche, les boutons ronds et les plaques recouvrent le
+           canvas : un clic y tombe sans jamais atteindre le jeu, et sans rien
+           dire. D'où `elementFromPoint`. */
+        const sx = Math.round(x + w * fx), sy = Math.round(y + h * fy);
+        if (document.elementFromPoint(sx, sy)?.id !== 'world') continue;
+        const k = window.__case(sx, sy);
+        if (k.x === tx && k.y === ty) bons.push({ sx, sy });
       }
-    return null;
+    if (!bons.length) return null;
+    // Le centre de ce qu'on peut viser, pas son premier pixel : un point au
+    // bord du losange est à un arrondi de la case d'à côté.
+    const cx = bons.reduce((a, b) => a + b.sx, 0) / bons.length;
+    const cy = bons.reduce((a, b) => a + b.sy, 0) / bons.length;
+    return bons.sort((a, b) => Math.hypot(a.sx - cx, a.sy - cy) - Math.hypot(b.sx - cx, b.sy - cy))[0];
   }, { ...c, tx, ty });
-  if (!q) throw new Error(`la case (${tx},${ty}) n'est pas à l'écran`);
+  if (!q) throw new Error(`la case (${tx},${ty}) n'est pas visée depuis le cadre`
+                          + ' (hors écran, ou recouverte par le pad ou une plaque)');
   const vue = await p.viewportSize();
   if (q.sx < 0 || q.sy < 0 || q.sx > vue.width || q.sy > vue.height)
-    throw new Error(`la case (${tx},${ty}) tombe hors de la fenêtre (${Math.round(q.sx)},${Math.round(q.sy)})`
+    throw new Error(`la case (${tx},${ty}) tombe hors de la fenêtre (${q.sx},${q.sy})`
                     + ' — la page a-t-elle défilé depuis le relevé ?');
   return q;
 }
 
-export async function fabriquer({ nom, scenes, port = 8212, memoire = {} }) {
+export const haut = p => p.evaluate(() => window.scrollTo(0, 0));
+export const dire = (p, gros, petit) => p.evaluate(([g, s]) => window.__bandeau(g, s), [gros, petit]);
+export const carte = (p, t, s) => p.evaluate(([a, b]) => window.__fin(a, b, true), [t, s]);
+
+/* Caler le panneau sur le pinceau armé, en haut de ce qu'on voit de lui.
+   `scrollIntoView` centre dans le conteneur de défilement, pas dans la
+   fenêtre : le panneau n'en montre que 170 px et les vignettes tombaient
+   sous le bord. On pose donc le décalage à la main. */
+export const caler = p => p.evaluate(() => {
+  const el = document.querySelector('.obj[aria-pressed="true"]');
+  const boite = el?.closest('.panel');
+  if (el && boite)
+    boite.scrollTop += el.getBoundingClientRect().top - boite.getBoundingClientRect().top - 10;
+  window.scrollTo(0, 0);
+});
+
+/* Marcher jusqu'à une case, au clic, comme un joueur. Tenir une flèche ne
+   marche que depuis une position connue ; un clic marche d'où qu'on soit.
+   La page a pu défiler depuis le dernier clic de panneau, d'où le `haut()`
+   **avant** le relevé : c'est le quart d'heure perdu du 20/09. */
+export async function allerA(p, tx, ty) {
+  await haut(p);
+  const q = await pointDeCase(p, tx, ty);
+  await p.mouse.click(q.sx, q.sy);
+  const t = await p.evaluate(() => window.__outil());
+  if (!t.cible) throw new Error(`le clic sur (${tx},${ty}) n'a posé aucune cible`);
+  await haut(p);
+  return q;
+}
+
+export async function fabriquer({ nom, scenes, port = 8212, memoire = {}, panne = null,
+                                  verifier = null, onglet: tab = 1, nomIle = 'L’île de Dan' }) {
   const brut = path.join(ICI, 'brut-' + nom);
   fs.rmSync(brut, { recursive: true, force: true });
   fs.mkdirSync(brut, { recursive: true });
 
-  const s = await servir(port, panneScene);
+  const s = await servir(port, panne ? src => panne(panneScene(src)) : panneScene);
   if (!s.pannePosee) throw new Error('la panne ne s\'est pas posée');
   const nav = await navigateur();
   const { page, erreurs } = await onglet(nav, {
@@ -150,11 +205,20 @@ export async function fabriquer({ nom, scenes, port = 8212, memoire = {} }) {
   await page.goto(s.url);
   await attendre(2500);
   await page.evaluate(() => document.fonts.ready);
+  /* Le faux serveur nomme l'île « L'île du filleul » : c'est de
+     l'échafaudage de test, et ça n'a rien à faire dans une vidéo publique.
+     On la renomme par le vrai champ du panneau, comme un joueur. */
+  await page.click('.tabs button:nth-child(3)');
+  await page.locator('#p-ile input[type="text"]').first().fill(nomIle);
+  await page.locator('#p-ile input[type="text"]').first().blur();
+  await page.click(`.tabs button:nth-child(${tab})`);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await attendre(250);
   await page.evaluate(() => { window.__manuel = true; });
 
   const t0 = 1000;
   let i = 0;
-  const journal = [];
+  const journal = [], murmures = [];
   for (const sc of scenes) {
     const n = Math.round(sc.duree * FPS);
     if (sc.avant) await sc.avant(page);
@@ -162,11 +226,15 @@ export async function fabriquer({ nom, scenes, port = 8212, memoire = {} }) {
     for (let k = 0; k < n; k++, i++) {
       if (sc.pendant) await sc.pendant(page, k, n);
       await page.evaluate(t => window.__pas(t), t0 + i * (1000 / FPS));
+      const m = (await page.evaluate(() => window.__murmure())).trim();
+      if (m && murmures[murmures.length - 1] !== m) murmures.push(m);
       await page.screenshot({ path: path.join(brut, String(i).padStart(4, '0') + '.png') });
     }
     journal.push(`${sc.nom} · ${(debut / FPS).toFixed(1)}s → ${(i / FPS).toFixed(1)}s · ${n} images`);
   }
   console.log(journal.join('\n'));
+  if (murmures.length) console.log('ce que le jeu a dit :\n  · ' + murmures.join('\n  · '));
+  if (verifier) await verifier({ murmures, page });
   console.log('erreurs de page :', erreurs.length ? erreurs : 'aucune');
   await nav.close(); s.fermer();
 

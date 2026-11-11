@@ -5200,6 +5200,123 @@ rouges qui ne disaient rien du jeu. Il ouvre maintenant le cadeau par le
 **vrai geste**, un coffre sous les pieds et la touche `E`, et sa première
 assertion refuse de mesurer si le coffre ne s'est pas ouvert.
 
+## Les Reels, et la caméra qui filmait le mauvais objet — 11/11/2026
+
+`social/reel/`, sept films portrait 1080x1920 fabriqués par
+`node reels.mjs [nom…]`. Rien n'approche le jeu : `build.sh` copie une liste
+explicite de fichiers, `social/` n'en fait pas partie, et l'empreinte du
+déploiement ne bouge pas d'un bit — mesuré, pas supposé.
+
+### Le défaut d'origine, et il tenait en une ligne
+
+La première version capturait `canvas.toDataURL()`. Ça **exclut par
+construction** les panneaux, les plaques et le murmure : on filmait une île
+qui respire, sans un mot de français à l'écran et sans qu'il s'y passe rien.
+Le reproche est tombé en une phrase — « mais le vrai jeu avec du texte, des
+actions, non ? » — et il était juste.
+
+On capture donc **la page**, en portrait téléphone 360x640 à dpr 3, soit
+exactement 1080x1920. Les onglets, « Chez toi · édition », les vignettes
+nommées, « ← Ton île », le murmure : tout est lisible à l'image, et c'est ça
+qui dit ce qu'est le jeu.
+
+**L'horloge est pilotée** (`window.__manuel`, `window.__pas(t)`). Une capture
+de page coûte ~150 ms : en laissant tourner `rAF` on échantillonnerait un jeu
+à sept images par seconde et la lecture serait trois fois trop rapide. Et
+comme `dt = t - last`, piloter `t` pilote aussi tout ce qui s'accumule en
+`dt` — le requin, le voilier, le phare.
+
+### Quatre choses mesurées, et chacune avait cassé une version
+
+1. **On pose avant de marcher.** La caméra suit le bonhomme, donc marcher
+   d'abord décentre l'île pour tous les plans suivants.
+2. **Les cases visées se demandent au jeu** (`__case`, qui passe par
+   `tileFrom()`). Des fractions de cadre écrites en dur tombent dans l'eau dès
+   que la caméra a bougé, et le Reel affichait alors un refus en plein écran :
+   « Le large ne t'appartient pas encore ».
+3. **On entre en marchant sur le seuil**, pas par un bouton : c'est le vrai
+   geste, et il amène sa propre phrase. Tenir une flèche ne marche que depuis
+   la case de départ, or le plan vient après une marche — on clique donc la
+   porte et le bonhomme y va seul.
+4. **Le salon est meublé** (`MAISON` de `maquettes.mjs`, semé par
+   `test:interieur`). Un plancher nu sous « trois pièces à meubler » ne montre
+   rien à meubler : la leçon était déjà écrite pour la fabrique d'images, et
+   elle s'est reposée telle quelle.
+
+### Cinq pièges rouverts, tous déjà dans ce fichier
+
+- **Cliquer une puce fait défiler la page.** Relever le cadre du monde avant
+  de remonter donne des clics hors de la fenêtre, et `mouse.click` à une
+  ordonnée négative est un geste perdu, silencieux. D'où le `haut()` **avant**
+  chaque relevé. C'est le quart d'heure du 20/09.
+- **Les coordonnées de clic sont arrondies.** Une case fait 56 unités de monde
+  pour ~25 pixels d'écran : un pixel suffit à tomber sur la voisine. Mesuré,
+  on visait (15,13) et le jeu recevait (14,13). `pointDeCase()` éprouve donc le
+  point **exact qui sera cliqué**, et vise le centre de ce qu'on peut toucher,
+  jamais son premier pixel.
+- **Le pad de marche recouvre le canvas.** Un clic y tombe sans jamais
+  atteindre le jeu. On demande `elementFromPoint` avant de retenir un point —
+  c'est pourquoi une trouvaille plein sud n'est pas atteignable.
+- **`#rose-btn` porte aussi le texte « Entrer » et il est `hidden`.** Un
+  sélecteur par texte seul tombe dessus et attend trente secondes.
+- **Les panneaux basculent par une classe, pas par `hidden`.** `.panel:not([hidden])`
+  les rend tous : c'est `offsetParent !== null` qu'il faut, exactement ce que
+  `balises.mjs` a appris le 19/09.
+
+### Chaque Reel se vérifie par ce que le jeu a dit
+
+`fabriquer()` relève le murmure à chaque image, et `verifier` exige la phrase
+qui prouve le plan : « Tu mets une étoile de mer dans ton sac » pour la marée,
+« Adam te fait signe » pour le village, « Mot planté » pour la visite. Un Reel
+qui promet des habitants qui saluent **échoue** si personne n'a parlé. La
+fabrication s'arrête aussi si le bonhomme n'entre pas, si un clic ne pose
+aucune cible, ou s'il n'y a pas assez de cases libres à l'écran : mieux vaut
+pas de vidéo qu'une vidéo qui ment.
+
+Les états rares sont forcés comme `test/vivant.mjs` les force — une panne sur
+le fichier servi, jamais un dessin truqué : `meteoDe()` pour la pluie,
+`test:maree` pour la mer basse, le bouton **Nuit** du panneau Île pour le
+ciel. L'arc-en-ciel ne se force pas directement : il se **déduit** d'une belle
+tranche qui suit une tranche de pluie, donc on fait alterner les tranches et
+la phase semée met la demi-tranche au sommet de l'arche (0,90 sur 0,90,
+mesuré). Et `meteoNow` ne bouge que dans `avancerMeteo()` : lire l'arc juste
+après avoir changé le temps rend toujours zéro, il faut qu'une image ait
+tourné.
+
+### Ce que seul le rendu a montré
+
+Le phare était à **fx 0,95**, collé au bord droit et à moitié hors cadre, sous
+une accroche qui disait « ton île a un phare ». Les vignettes de l'atelier
+tombaient sous le bord du panneau. Le chien se suivait par `balade.o`, qui
+garde sa case toute la balade — c'est `balade.x/y` qui bouge, donc le bonhomme
+ne bougeait pas du tout. Aucun des trois ne se voyait à la relecture : c'est la
+règle du lit, des six bâtiments et du cadre-photo.
+
+Et le faux serveur nomme l'île « L'île du filleul » : de l'échafaudage de test
+dans une vidéo publique. On la renomme par le vrai champ du panneau, comme un
+joueur.
+
+### Ce qu'aucun contrôle ne juge ici
+
+Le **rythme** et les **accroches**. Il n'y a pas d'assertion sur « est-ce que
+ça donne envie », et c'est la limite déjà écrite pour le son, pour les deux
+relevés de genres et pour les six bâtiments : il y a des choses dont le juge
+est quelqu'un. Les accroches sont toutes dans `reels.mjs`, une ligne chacune.
+
+### Deux défauts du jeu trouvés en filmant
+
+1. **« Tu ramasses une étoile de mer et tu *le* mets dans ton sac. »** Deux des
+   quatre trouvailles sont féminines. Corrigé en **retirant le pronom** plutôt
+   qu'en ajoutant un accord : « Tu mets {quoi} dans ton sac. » Aucune langue
+   n'a à le refaire — c'est le choix déjà fait le 22/09 pour les deux phrases
+   qui accordaient par suffixes. Idem pour « rien ne rentre dans le sac ».
+2. **Ces deux phrases étaient invisibles au harnais des langues.** Elles sont
+   écrites `T(n>1 ? '…' : '…')`, donc le littéral n'est pas l'argument direct
+   de `T()` et l'extraction ne le voit pas : la couverture annonçait 100 % en
+   les ignorant. C'est la même famille que `POUSSE_DIT` et les noms de
+   `PIECES`, lus par variable — **signalé, pas corrigé** : élargir
+   l'extraction aux ternaires est un chantier du harnais, et il se décide.
+
 ## Reste du contexte
 
 Voir README.md : modèle de données, file d'attente de sauvegarde, mise en route.
