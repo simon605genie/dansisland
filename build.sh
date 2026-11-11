@@ -13,6 +13,16 @@ cp manifest.webmanifest robots.txt dist/
 cp icone-192.png icone-512.png icone-maskable.png apple-touch-icon.png dist/
 cp src/config.js src/store.js dist/src/
 
+# Les Reels. L'API Instagram va chercher la vidéo **elle-même** à une URL
+# publique, et GitHub sert un .mp4 en `application/octet-stream` avec
+# `nosniff` — mesuré le 11/11, et c'est ce que le fetcher de Meta refuse.
+# C'est donc notre domaine qui doit les servir, avec le bon type.
+# Le `2>/dev/null || true` n'est pas de la négligence : un clone qui n'a pas
+# encore de vidéo ne doit pas empêcher de déployer un correctif du jeu.
+if ls social/reel/*.mp4 >/dev/null 2>&1; then
+  mkdir -p dist/reels && cp social/reel/*.mp4 dist/reels/
+fi
+
 # `functions/` n'est **pas** copié, et c'est important : Cloudflare lit les
 # Pages Functions à la racine du projet, pas dans le dossier de sortie.
 # Copiées dans dist/, elles seraient servies comme des fichiers texte — donc

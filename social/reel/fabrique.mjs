@@ -1,8 +1,8 @@
 /* ============================================================
    Les Reels de Dan's Island. Un fichier, sept films, un moteur.
 
-       node reels.mjs            tous
-       node reels.mjs nuit chien   ceux-là
+       node fabrique.mjs            tous
+       node fabrique.mjs nuit chien   ceux-là
 
    Chacun montre **le vrai jeu** : ses panneaux, ses plaques, son murmure,
    et un geste qu'on peut nommer. Rien n'est simulé — les états rares

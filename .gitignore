@@ -14,8 +14,11 @@ social/images/brut/
 # coïncident pas. C'est `DISPOSITIONS` dans `test/aide.mjs` qui absorbe ça.
 package-lock.json
 
-# La fabrique de Reels : polices rapatriées et sorties vidéo.
+# La fabrique de Reels : polices rapatriées, images brutes, planches contact.
+# Les .mp4, eux, **sont suivis** : mesuré le 11/11, GitHub sert un mp4 en
+# `application/octet-stream` avec `nosniff`, ce que le fetcher de Meta
+# n'accepte pas. C'est donc Cloudflare qui doit les servir, donc ils doivent
+# être dans `dist/`, donc dans le dépôt. Six méga-octets pour sept films.
 social/reel/polices/
 social/reel/brut-*/
-social/reel/*.mp4
 social/reel/*.png

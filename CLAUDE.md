@@ -5203,7 +5203,7 @@ assertion refuse de mesurer si le coffre ne s'est pas ouvert.
 ## Les Reels, et la caméra qui filmait le mauvais objet — 11/11/2026
 
 `social/reel/`, sept films portrait 1080x1920 fabriqués par
-`node reels.mjs [nom…]`. Rien n'approche le jeu : `build.sh` copie une liste
+`node social/reel/fabrique.mjs [nom…]`. Rien n'approche le jeu : `build.sh` copie une liste
 explicite de fichiers, `social/` n'en fait pas partie, et l'empreinte du
 déploiement ne bouge pas d'un bit — mesuré, pas supposé.
 
@@ -5301,7 +5301,7 @@ joueur.
 Le **rythme** et les **accroches**. Il n'y a pas d'assertion sur « est-ce que
 ça donne envie », et c'est la limite déjà écrite pour le son, pour les deux
 relevés de genres et pour les six bâtiments : il y a des choses dont le juge
-est quelqu'un. Les accroches sont toutes dans `reels.mjs`, une ligne chacune.
+est quelqu'un. Les accroches sont toutes dans `social/reel/fabrique.mjs`, une ligne chacune.
 
 ### Deux défauts du jeu trouvés en filmant
 
@@ -6086,3 +6086,114 @@ visage, le « (20 shells à la Boutique) » de l'équipement, le compteur
 « 0 cran sur 10 · 0 mot dans ton livre d'or », la note de la peinture du
 sol, et **la carte de connexion entière**. C'est la règle du lit, des six
 bâtiments et du cadre-photo : *ça ne se voit que rendu.*
+
+## Les Reels se publient tout seuls — 11/11/2026
+
+Le publieur d'Instagram sait maintenant poster une vidéo. **Un seul script,
+une seule file** : `social/file.mjs` fusionne les 31 images du calendrier et
+les 7 Reels, triées par `ordre`. Une publication par jour, quelle que soit
+sa forme.
+
+Deux workflows auraient voulu dire deux publications par jour sur un compte
+neuf, et c'est écrit depuis le 21/09 : elles ne font pas deux fois la
+portée, elles se la partagent. Les images portent `ordre = n*10` quand elles
+n'en déclarent pas, ce qui laisse neuf places libres entre deux — assez pour
+entrelacer sans renuméroter quoi que ce soit.
+
+### La mesure qui a décidé de l'hébergement
+
+L'API Instagram ne prend pas d'octets : elle va chercher le fichier
+elle-même à une URL publique. Mesuré le 11/11, avec un `.mp4` jetable
+poussé puis retiré :
+
+    raw.githubusercontent, un .png    image/png                      ✅
+    raw.githubusercontent, un .mp4    application/octet-stream       ❌
+                                      + x-content-type-options: nosniff
+
+Ce n'est donc pas un repli générique — GitHub sert correctement une image,
+c'est pourquoi le calendrier d'images passe par là — c'est **le choix de
+GitHub pour la vidéo**, et c'est ce que le fetcher de Meta refuse.
+
+Trois conséquences qui se tiennent :
+
+1. **Les vidéos sont servies par notre domaine.** `build.sh` copie
+   `social/reel/*.mp4` dans `dist/reels/`, donc Cloudflare les sert avec le
+   bon type.
+2. **Les `.mp4` sont donc suivis par git** (6,5 Mo pour sept). C'est un
+   revirement assumé par rapport au commit d'avant, et il vient de la
+   mesure : sans eux dans le dépôt, le runner n'a rien à déployer.
+3. **L'empreinte de déploiement ne bouge pas** : le workflow la calcule sur
+   `dist/index.html` seul, pas sur l'arborescence.
+
+Le `ls … || true` de `build.sh` n'est pas de la négligence : un clone sans
+vidéo ne doit pas empêcher de déployer un correctif du jeu en urgence.
+
+### Une vidéo n'est pas prête quand le conteneur répond
+
+Pour une image, le conteneur est utilisable tout de suite. Pour un Reel,
+Meta **transcode**. `attendrePret()` demande `status_code` jusqu'à
+`FINISHED` au lieu de dormir un nombre de secondes choisi au hasard : c'est
+la différence entre lire l'état réel et lire un souvenir de cet état, la
+règle que ce dépôt tient en SQL depuis `visites`.
+
+Et il s'arrête sur `ERROR` plutôt que d'épuiser ses tours : Meta y met la
+vraie cause — format, durée, URL injoignable — et attendre cinq minutes de
+plus ne la changerait pas.
+
+**`error_subcode=2207089` ne déclenche aucune nouvelle tentative.** Il tombe
+*après* un conteneur prêt, il n'a pas de correctif documenté, et réessayer à
+l'aveugle sur un compte public, c'est risquer de publier trois fois la même
+vidéo. Le publieur rapporte et s'arrête ; une personne décide de la suite.
+
+La couverture est à **900 ms, jamais zéro** : à t=0 le fondu de l'accroche
+n'a pas fini, et une vignette de Reel qui ne porte pas sa phrase ne donne
+aucune raison de cliquer. Le contrôle vérifie que chaque couverture tombe
+**dans** sa vidéo — la durée est mesurée par `ffprobe`, pas écrite à la
+main.
+
+### La file vit dans le jeu, pas dans le contrôle
+
+`social/file.mjs` est lu par le publieur **et** par le harnais. Recalculer
+le tri dans `test/instagram.mjs` aurait été un second tri à tenir d'accord
+avec le premier, et un contrôle qui modélise son objet à côté de lui finit
+par éprouver sa propre copie. C'est `textesDeTable()` du 22/09, transposé.
+
+Les cinq contrôles ajoutés ont été éprouvés en remettant le vrai défaut, un
+par un, et **chacun n'a fait rougir que ses propres lignes** :
+
+    le conteneur n'est plus déclaré REELS   → 1 rouge, et il dit ce qu'il a vu
+    on publie sans attendre FINISHED        → 6 rouges, sections 9 à 11
+    le type MIME n'est plus vérifié         → 2 rouges, section 12
+    on réessaie après 2207089               → 2 rouges, « 2 tentatives »
+
+**La deuxième panne a trouvé un défaut dans mon propre contrôle.** « Il ne
+publie qu'une fois la vidéo prête » comparait deux `indexOf`, et avec le
+transcodage débranché ça donne `-1 < 1`, donc vert. C'est le repère absent
+qui absout au lieu de faire échouer — nommé le 20/09 pour le rayon
+Bâtiments — commis cette fois **en écrivant le garde-fou contre lui**. Les
+deux repères doivent exister avant d'être comparés.
+
+### Deux noms trop proches, levés avant qu'ils ne coûtent
+
+`social/reels.mjs` est le manifeste ; `social/reel/reels.mjs` était la
+fabrique de vidéos. Deux fichiers d'un caractère d'écart, dans deux
+dossiers voisins, c'est la collision qui a coûté un village entier le 20/09
+(`empriseCases` contre `casesDe`) et qui s'est représentée le soir même
+(`peindreLeSol` contre `peindreCase`). La fabrique s'appelle maintenant
+`social/reel/fabrique.mjs`. Repérée avant de lancer quoi que ce soit, cette
+fois.
+
+### Ce qui n'est pas vérifiable d'ici, et qu'il ne faut pas prétendre
+
+1. **Que Cloudflare serve bien `video/mp4`.** `dansisland.app` répond 403 au
+   proxy du conteneur — je lisais la page d'erreur du proxy, et j'ai failli
+   conclure que Cloudflare servait un PNG en `text/plain`. Ça se mesurera au
+   premier déploiement, et le publieur le dira de toute façon : il refuse
+   avant de créer le conteneur.
+2. **L'API de Meta.** Le faux serveur rend ce que la documentation décrit.
+   Si Meta change la forme d'une réponse, seul un vrai appel le dira.
+3. **Les deux secrets.** `IG_USER_ID` et `IG_ACCESS_TOKEN` manquent toujours
+   dans *Settings → Secrets and variables → Actions*. Tant qu'ils ne sont
+   pas là, le premier pas du workflow échoue en disant lequel manque — ce
+   qui est exactement ce qu'on veut, et ce que le 19/09 a coûté treize
+   exécutions muettes à obtenir.

@@ -13,6 +13,11 @@
 #  test d'existence *est* l'écriture, parce qu'un `select` suivi d'un
 #  `insert` laisse passer deux appels lancés dans la même seconde.
 #
+#  **Images et Reels sont dans la même file**, triée par `ordre` dans
+#  `social/file.mjs` — une publication par jour, quelle que soit sa forme.
+#  Deux workflows voudraient dire deux par jour sur un compte neuf, et
+#  elles ne feraient pas deux fois la portée : elles se la partageraient.
+#
 # ------------------------------------------------------------
 #  Ce qu'il faut avoir mis dans les secrets du dépôt
 #
@@ -39,7 +44,8 @@ name: Publier sur Instagram
 on:
   schedule:
     # 19h30 à Bruxelles en heure d'été (UTC+2). Le cron est en UTC.
-    # Une publication par jour : voir `PAR_JOUR` dans social/calendrier.mjs.
+    # Une publication par jour, image ou Reel : la file est triée par
+    # `ordre` dans social/file.mjs, et `parJour` vaut 1.
     - cron: '30 17 * * *'
   workflow_dispatch:
     inputs:
